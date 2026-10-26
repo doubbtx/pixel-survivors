@@ -1,0 +1,196 @@
+# Pixel Survivors
+
+Przeglądarkowy survivors-like / bullet hell w stylu 16-bit: Canvas 2D + TypeScript, bez silnika, Vite jako bundler.
+
+## Styl graficzny
+
+- Ekran 480×270 skalowany całkowitoliczbowo (`imageSmoothingEnabled = false`). Świat rysowany w powiększeniu 1,5× (`ZOOM` w `core/renderer.ts`): logika gry działa w jednostkach świata, a sprite'y mają więcej detali niż hitboksy.
+- Paleta ENDESGA 32 z rampami cieniowania (`core/palette.ts`). Półprzezroczystość (cienie, poświaty stref, przyciemnienia) miesza kolory palety, jak „color math” na SNES-ie.
+- Sprite'y generowane w kodzie: `gfx/painter.ts` (cieniowanie rampą ze światłem z lewej-góry, automatyczny obrys), `gfx/actors.ts` (postacie z animacją: chód bohaterów, pulsowanie szlamów, machanie skrzydłami, mruganie, migotanie płomieni, „oddech” bossa), `gfx/icons.ts` (56 ikon 16×16: 20 broni z ewolucjami, 13 pasywek, 8 umiejętności, 4 usługi sklepu, odłamek, 10 tagów kart), `gfx/world.ts` (iskry trafień, obłoki śmierci, eksplozje, strzały w 16 kierunkach, 24 dekoracje terenu — 6 na biom). Gra odwołuje się tylko do nazw sprite'ów (`nazwa@klatka`), więc można je podmienić na sprite sheet bez zmian w logice.
+- Proporcjonalna czcionka pikselowa z małymi literami i polskimi znakami (`core/font.ts`), z cieniem albo obrysem.
+- Okna z fazowaną ramką i gradientem (dithering), paski z połyskiem, kursor-strzałka w menu, winieta, cienie pod postaciami, poświaty pocisków wrogów.
+- HUD: portret bohatera, gniazda broni i pasywek (puste też widoczne), umiejętności z ikonami, odnowieniem i ładunkiem ultimate, ozdobny pasek bossa; karty z narożnymi klejnotami, poświatą ikony i połyskiem kart pryzmatycznych; gradientowe logo.
+
+```bash
+npm install
+npm run dev       # serwer deweloperski
+npm run build     # statyczne pliki w dist/ (GitHub Pages / itch.io — ścieżki względne)
+npm run preview   # podgląd buildu
+```
+
+## Sterowanie
+
+| Akcja | Klawiatura / mysz | Pad (Xbox) |
+|---|---|---|
+| Ruch | WASD / strzałki | lewa gałka, D-pad |
+| Celowanie umiejętności | kursor myszy | prawa gałka |
+| Umiejętności | Q, E | X, B |
+| Unik / doskok | Spacja | A |
+| Ultimate | R | Y |
+| Pauza | Esc / P | Start |
+| Ekwipunek | I / Tab (albo Pauza → Ekwipunek) | LT |
+| Ekwipunek: załóż/zdejmij / rozłóż | Enter, klik / X | A / RB |
+| Awans: wybór | 1-4, strzałki + Enter, klik | D-pad + A |
+| Awans: losuj / pomiń / wygnaj | R / X / B | LB / RB / Back |
+| Kolekcja kart: wybór / ban / wróć | strzałki, mysz / B, Enter / Esc | D-pad / Back, A / B |
+| Karta: wybór / losuj zaznaczoną | 1-3, klik / R | D-pad + A / LB |
+| Sklep: kup / odśwież przedmioty / ekwipunek / kowadło / wyjdź | Enter, klik / R / I / K / Esc | A / LB / LT / - / B |
+| Kowadło: przedmiot / operacja / wybór bonusu i tagu / wróć | strzałki + Enter, klik / góra-dół + Enter / lewo-prawo / Esc | D-pad + A / B |
+| Debug (FPS, liczniki encji) | F3 lub ` | — |
+| Debug: przyspiesz cel poziomu / natychmiastowy awans / łup bossa | F4 / F6 / F7 (gdy debug włączony) | — |
+
+Celowanie umiejętności (bronie zawsze namierzają same) wybierasz w **Ustawieniach**: *automatyczne* (zawsze najbliższy wróg), *mieszane* (domyślne: mysz/prawa gałka, a bez nich najbliższy wróg) albo *ręczne* (tylko mysz/prawa gałka, bez nich kierunek ruchu).
+
+## Ustawienia
+
+Głośność, tryb celowania, liczby obrażeń nad wrogami, wstrząsy ekranu, auto-pauza po wyjściu z okna/karty, pełny ekran, licznik FPS/debug. Zapisują się w localStorage; nowe pola dostają wartości domyślne bez migracji zapisu (`Settings` w `core/save.ts`).
+
+## Struktura
+
+```
+src/
+  core/      pętla 60 Hz (stały krok), renderer 480×270 (świat ×1.5), input, pula obiektów, spatial hash,
+             czcionka pikselowa, paleta ENDESGA 32, dźwięk (Web Audio), zapis z migracjami
+  gfx/       malarz sprite'ów (cieniowanie, obrys), rejestr sprite'ów po nazwach, ikony (icons.ts, items.ts)
+  data/      balance.ts (wszystkie wzory), bronie, pasywki, wrogowie, fale, bohaterowie,
+             poziomy kampanii (levels.ts), karty (cards.ts), przedmioty (items.ts), sklep (shop.ts)
+  entities/  typy encji
+  systems/   gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans,
+             wieżyczki, zakupy w sklepie
+  game/      Run (postać + świat poziomu, obrażenia, hooki kart, snapshot), kampania, render świata
+  ui/        menu, Hardcore, wybór bohatera, HUD, awans, wybór karty, łup i ekwipunek (items.ts), sklep (shop.ts), pauza,
+             ukończenie poziomu, podsumowanie
+```
+
+### Dodawanie zawartości
+
+- **Broń**: wpis w `data/weapons.ts` (statystyki bazowe + przyrosty na poziom, opcjonalna ewolucja `{ passive, into }`). Nowy wzorzec ataku = nowa funkcja w `BEHAVIORS` w `systems/weapons.ts`.
+- **Pasywka**: jedna linia w `data/passives.ts` (statystyka + przyrost na poziom).
+- **Wróg**: wpis w `data/enemies.ts` (zachowanie `chase|fast|keep`, opcjonalny `shoot`: salwa `Volley` — kształt `fan|ring|gapRing|shotgun`, ruch pocisków `acc/turn/altTurn/wave`, celowanie `player|spin|random`, seria `burst`, zapowiedź `windup`), sprite w `gfx/actors.ts` i dodanie do `data/waves.ts`.
+- **Bohater**: wpis w `data/heroes.ts` — statystyki, broń startowa, pasywka, 4 umiejętności (`kind` → zachowanie w `systems/abilities.ts`).
+- **Karta**: wpis w `data/cards.ts` — rzadkość, 1-2 tagi, opcjonalnie bohater, a efekt jako `stats` (dodatki), `mul` (mnożniki), `flags` (przełączniki mechanik, lista w komentarzu pliku) i/lub `hooks` (`onHit`, `onKill`, `onAbilityCast`, `onDash`, `onDamageTaken`, `onLevelUp`, `onTick`). Silnika nie trzeba ruszać.
+- **Przedmiot**: nowy typ bazowy = wpis w `BASES` w `data/items.ts` + ikona `it_<id>` w `gfx/items.ts`; nowy afiks = wpis w `AFFIXES`; nowy super-bonus = wpis w `SUPERS` (zakres wartości, opis z `{v}`, `flags` albo `hooks` jak u kart — hook dostaje wartość bonusu jako ostatni argument).
+- **Synergia**: tagi źródeł w `data/synergies.ts` (`STAT_TAG`, `WEAPON_TAGS`, `SUPER_TAGS`, tagi bohatera w `heroes.ts`, tagi kart w `cards.ts`); nowy próg lub efekt = wpis w `SYNERGIES` (stats / mul / flags / hooks).
+- **Sklep**: nowa usługa = wpis w `SERVICES` w `data/shop.ts` + cena i zapas w `BAL.shopPrice` / `BAL.shopStock` + przypadek w `buyService` (`systems/shop.ts`); nowy eliksir = wpis w `ELIXIRS` (statystyka i wartość).
+- **Poziom kampanii**: generowany z numeru w `data/levels.ts` (biom, cel, przesunięcie fal, nazwa bossa); nowy biom = wpis w `BIOMES`.
+- **Balans**: tylko `data/balance.ts` — krzywa XP, skalowanie HP/obrażeń wrogów w czasie, gęstość fal, diminishing returns (pancerz, cdr, szybkość), limity wydajnościowe.
+
+## Stan: etapy 1-3 + przedmioty + etap 4 (sklep, synergie, kowadło, kolekcja kart) + etap 5 (meta-progresja, Endless) + etap 6 (telefon, optymalizacja, polish) + sekrety i mini-lochy
+
+**Etap 1 (MVP)** — ruch, automatyczna broń, wrogowie, kryształy XP, awans z wyborem 3 kart (4 z Koniczyną), zasoby runu: losowanie (3), pominięcie (2), wygnanie (2), śmierć, ekran podsumowania, restart.
+
+**Etap 2** — zawartość:
+- 10 broni (8 wspólnych wzorców: pocisk, orbita, aura, łańcuch, meteoryt/obszar, bumerang, laser, miny + broń podstawowa każdego bohatera) i 10 ewolucji (broń na max. poziomie + konkretna pasywka).
+- 13 pasywek.
+- 6 typów wrogów: pościgowy, szybki, tank, strzelcy z wzorami wachlarz / pierścień / spirala; elity z modyfikatorami (szybki, pancerny, regenerujący, olbrzymi, ostrzał) co ~55 s; pierścienie okrążenia.
+- Boss po wykonaniu celu poziomu, z 3 fazami (spirale, wachlarze, szarża z zapowiedzią, przywołania, pierścienie). Pokonanie = zwycięstwo.
+- Skrzynie od elit i bossa (od wersji 0.4 dają przedmioty ekwipunku, patrz niżej).
+- 2 bohaterów: **Kestra** (strzelec: Salwa, Sieć, Przewrót, Deszcz strzał) i **Borgun** (wojownik: Szarża, Wstrząs, Doskok, Gniew tytana). Ultimate ładuje się zabójstwami. Umiejętności Q/E/R awansują w puli level upów.
+- Rekordy per bohater w localStorage (wersjonowany zapis), ustawienia: głośność, wstrząsy ekranu, debug.
+
+**Etap 3** — kampania, Hardcore, karty:
+- Poziomy po kolei, bez końca: nieparzyste „przetrwaj X min”, parzyste „pokonaj N wrogów”, potem boss. 4 biomy (inne podłoże i kolory bossa) powtarzają się z numerem rzymskim. HP i obrażenia wrogów rosną wykładniczo z głębokością (`depthHpMul`, `depthDmgMul`), późniejsze poziomy startują z bogatszym składem fal.
+- **Hardcore**: po pokonaniu bossa ekran podsumowania i zapis postępu (wszystko zostaje: poziom postaci, bronie, pasywki, karty, złoto), +20% HP na start kolejnego poziomu. Śmierć albo poddanie = utrata całego runu i wpis do tablicy rekordów Hardcore (najdalszy poziom, czas); zamknięcie gry w trakcie poziomu wznawia go z ostatniego zapisu.
+- **Trening**: jeden poziom bez zapisu (dawny tryb z etapu 2).
+- **Karty (49)**: wybór co 5 poziomów postaci, po elicie i po bossie; 3 karty tej samej rzadkości (srebrna / złota / pryzmatyczna), szansa na wyższą rośnie z poziomem i głębokością, boss daje co najmniej złotą. Typy: statystyczne (kumulowane), modyfikujące umiejętności (Echo, Płonący ślad, Nawałnica…), zmieniające mechanikę (Rykoszet, Nadmiar życia, Wybuchowe zgony, wieżyczki…), przeklęte (Szklana armata, Pakt krwi…) i 8 kart bohaterów. Losowanie pojedynczej karty jako zasób (1 na start, +1 za bossa). Tagi są już w danych; zestawy dojdą w etapie 4.
+- Zapis w wersji 2 z migracją z wersji 1 (stare rekordy zostają).
+
+**Przedmioty (0.4)**:
+- 8 slotów (broń, hełm, zbroja, rękawice, buty, 2 pierścienie, amulet), 19 typów bazowych z własnymi ikonami, plecak na 24 przedmioty.
+- 5 stopni jakości: **Zwykły** (1 losowy bonus), **Magiczny** (2), **Rzadki** (3), **Epicki** (4), **Legendarny** (5). Wyższa jakość = więcej bonusów i mocniejsze wartości (×1–×1.8). Kolor ramki i nazwy zależy od jakości.
+- Każdy typ ma bonus bazowy (broń mnoży obrażenia, zbroja daje HP, hełm pancerz, rękawice krytyk, buty szybkość, pierścień odnowienie, amulet XP), skalowany poziomem przedmiotu (= głębokość kampanii), więc łupy z dalszych poziomów są wyraźnie mocniejsze.
+- 15 losowych bonusów (obrażenia, HP, regeneracja, pancerz, odnowienie, obszar, krytyk, obr. krytyczne, wampiryzm, szybkość, zbieranie, czas trwania, XP, złoto, +1 pocisk — ten ostatni od Epickiego).
+- **Super-bonusy** (12), szansa: Zwykły 1%, Magiczny 3%, Rzadki 8%, Epicki 20%, Legendarny zawsze: Egzekucja (0,1–0,2% szansy na natychmiastowe zabicie; boss traci 5% HP), Echo ciosu, Gniew burzy, Lodowy dotyk, Pocałunek wampira, Ognista dusza, Dotyk Midasa, Wir przyciągania, Tarcza bogów (blok trafienia co N s), Szał, Popiół feniksa (odrodzenie), Fortuna (lepsze łupy). Przedmiot z super-bonusem ma złotą gwiazdkę w rogu.
+- Źródła: elita (lepsze szanse), boss (co najmniej Rzadki), rzadko zwykły wróg (0,08%). Jakość rośnie z głębokością i z Fortuną.
+- Ekran łupu: nowy przedmiot obok założonego, z różnicami statystyk na zielono/czerwono; Załóż / Do plecaka / Rozłóż na złoto. Ekran ekwipunku: sloty, plecak, szczegóły z porównaniem.
+- Ekwipunek zapisuje się w slocie Hardcore (stare zapisy wczytują się z pustym ekwipunkiem).
+
+**Żywioły, kowadło, statystyki**:
+- **Żywioły** na broniach (kolorowa kropka w gnieździe broni w HUD, opis przy nowej broni): Ogień (Meteor, Miny — podpalenie: 3 s obrażeń), Lód (Magiczny pocisk, Święta aura — spowolnienie, co 5. trafienie zamrożenie), Błyskawica (Piorun, Promień — porażony wróg dostaje +20% obrażeń), Trucizna (Ostrza orbity — do 10 kumulujących się warstw). Stany widać na wrogach (płomyki, szron, iskry, bąbelki), obrażenia od podpalenia i trucizny mają własne kolory liczb. Nowa statystyka **siła żywiołów** (bonus przedmiotów „Żywiołów”, karta Moc żywiołów).
+- **Kowadło** to jedyne miejsce przekuwania: przycisk R przy każdym bonusie w karcie przedmiotu, „Przekuj wszystkie” pod kartą (taniej), w menu też rozkładanie przedmiotu. „Cel przekucia” usunięty, ekwipunek już nie przekuwa.
+- Przy każdym bonusie przedmiotu (ekwipunek, łup, sklep, kowadło) w nawiasie suma tej statystyki gracza, np. „+8% obrażeń (razem x1.45)”.
+- Pauza: łączny DPS i DPS każdej broni pod jej ikoną.
+- Ustawienie **Pociski gracza: ukryte** — działają, ale nie są rysowane (łatwiej widzieć pociski wrogów).
+
+**Etap 6 i nowości na mapach**:
+- **Telefon**: lewa połowa ekranu to wirtualny joystick (pojawia się pod palcem), gniazda Q / E / Spc / R w prawym dolnym rogu są przyciskami, pauza w prawym górnym rogu. W menu i nakładkach dotyk działa jak klik. Umiejętności celują same (najbliższy wróg).
+- **Efekty: pełne / oszczędne** (Ustawienia; na telefonie domyślnie oszczędne): mniej cząsteczek, bez cieni, poświat pocisków i winiety. Pomiar przy ~1000 wrogach (Chromium na PC): aktualizacja < 1 ms, rysowanie 7.6 ms (pełne) / 5.8 ms (oszczędne).
+- **Polish**: czerwony błysk krawędzi ekranu po trafieniu, pulsujące krawędzie poniżej 30% HP, płynne wyciemnienie przy zmianie ekranu.
+- **Widok leczenia**: zielone liczby „+X” nad postacią (zsumowane co pół sekundy), zielona poświata paska HP, suma leczenia na ekranie końca; wyłączalne w ustawieniach.
+- **Ulepszanie sklepu i kowadła** (na cały run): w sklepie pole „Rozbudowa” na końcu rzędu przedmiotów (5 poziomów: lepsza jakość, -6% cen za poziom, +1 przedmiot na poziomie 3 i 5); w kowadle przycisk / R „Ulepsz kowadło” (5 poziomów: -8% kosztów, bonusy losowane kilka razy z wyborem najlepszego, większa szansa na super-bonus przy podnoszeniu jakości).
+- **Kapliczki**: pojawiają się na mapie (niebieski znacznik na minimapie); stań na nich 2 s — losowe błogosławieństwo: Szał (+50% obrażeń, 20 s), Pośpiech (+50% szybkości ruchu i ataku, 20 s), Odnowa (pełne leczenie), Bogactwo (kryształy + złoto), Tarcza (40% HP).
+- **Mini-lochy**: czasem pojawia się portal (różowy znacznik). W środku arena ze ścianami i mrokiem, 3 fale wrogów (ostatnia ze Strażnikiem-elitą), potem dwie skrzynie, złoto i zielony portal powrotny.
+- **Sekrety**: Złoty szlam (bardzo rzadki, ucieka i znika po 25 s — złapany sypie złotem i daje skrzynię) i Miecz w kamieniu (czasem ukryty daleko od startu; widać go na minimapie dopiero z bliska; daje przedmiot Legendarny).
+
+**Etap 5: meta-progresja**:
+- **Esencja**: na końcu każdego runu (śmierć, poddanie, koniec treningu, Endless) — za głębokość, czas, zabójstwa i poziom postaci. Widać ją na ekranie końca.
+- **Rozwój** (menu główne): drzewko 4 gałęzi po 5 węzłów — Siła (obrażenia, krytyk, szybkość ataku, obrażenia krytyczne, +1 pocisk), Przetrwanie (HP, pancerz, regeneracja, leczenie z obrażeń, mniej otrzymywanych obrażeń), Fortuna (złoto i odłamki na start, XP, złoto, lepsze przedmioty), Taktyka (losowania, pominięcia, wygnania, losowania kart, więcej esencji). Węzeł wymaga poprzedniego w gałęzi; koszt rośnie z poziomem.
+- **Paragon**: poziom konta z całej zdobytej esencji (bez limitu): +1% obrażeń i maks. HP za poziom.
+- **Prestiż**: od 1500 wydanej esencji — drzewko i esencja się zerują, w zamian na stałe +5% obrażeń i HP oraz +15% esencji za każdy prestiż.
+- **Endless** (menu główne): jeden poziom bez końca, boss co 5:00; po bossie gra trwa dalej, głębia rośnie (silniejsi wrogowie, kolejny biom). Rekord czasu w Rekordach.
+- **Szybkość ataku**: nowa statystyka przyspieszająca bronie (pasywka Furia, bonus przedmiotów „Furii”, karta Szybkie ręce, Eliksir furii, synergia Szybkość, węzeł Furia). Odnowienie (Zegar, pierścienie) dotyczy teraz tylko umiejętności.
+- Duże liczby wszędzie przez `fmt` (1.2K, 3.4M...). Zapis w wersji 4.
+
+**Druga runda poprawek po testach**:
+- **Hardcore**: wyjście z gry (albo „Zapisz i wyjdź” w pauzie) nie kasuje runu — poziom wznawia się z ostatniego zapisu (co ~5 s: czas, zabójstwa, elity, HP bossa). Run przepada tylko po śmierci albo poddaniu.
+- **Obrażenia**: nie ma już globalnej nietykalności po trafieniu (z dużym leczeniem nie dało się zginąć). Każdy wróg może uderzyć wręcz raz na 0.7 s (`BAL.contactCooldown`), a pociski trafiają zawsze — tłum i salwy realnie zabijają.
+- **Łup**: wyraźniejsza poświata, rozchodzący się pierścień i słup światła już od Magicznego (wyższy z każdą jakością), z unoszącymi się iskrami.
+- **Minimapa** w prawym górnym rogu (wrogowie, elity, boss, skrzynie w kolorze jakości, widok kamery); wyłączalna w ustawieniach.
+- **Wszechstronność**: nadsynergia za różnorodny build — liczy aktywne synergie (próg I+). 4: +10% obrażeń i HP, 6: +1 pocisk i -10% odnowienia, 8: tęczowy wybuch co 10 s z leczeniem, 10 (wszystkie): Mistrz, +30% obrażeń, +10% krytyka, +1 karta przy awansie. Pasek na ekranie synergii i wpis w HUD.
+- **Przekuwanie myszką** (od kolejnej wersji tylko w kowadle): przycisk „R” przy każdym bonusie, „Przekuj wszystkie” 30% taniej niż po kolei.
+- **Ikony**: każda karta ma własną ikonę (dawniej tylko ikonę tagu), 8 nowych typów przedmiotów (buzdygan, różdżka, maska, płaszcz, szpony, nagolenniki, obrączka, wisior).
+- **Ewolucje umiejętności**: Q, E i R na maks. poziomie + aktywna synergia z opisu ewoluują (podpowiedź przy awansie). Kestra: Burza strzał (Pociski), Lodowa sieć (Obszar), Nawałnica z nieba (Umiejętności). Borgun: Taran tytana (Szybkość), Rozłam (Obszar), Awatar (Życie).
+
+**Czytelność i balans (po testach)**:
+- Awans: umiejętności pokazują, co daje następny poziom (np. „+10 obrażeń, +1 strzała, odnowienie krótsze o 0.4 s”), bronie mówią po ludzku („atakuje częściej”, „+1 ostrze”). Karty mają podpowiedzi ewolucji („Ewolucja: max poziom + Moc (masz)”, „Potrzebna do ewolucji: ...”), tagi z postępem synergii po wyborze (zielone = nowy próg) i znaczek **Polecane** przy najlepszej opcji. Oferta kart też pokazuje postęp synergii.
+- Łup na ziemi: przedmiot losuje się, gdy skrzynia spada — skrzynia świeci kolorem jakości, od Rzadkiego słup światła (wyższy dla Epickiego i Legendarnego), iskry przy super-bonusie, a dobre skrzynie poza ekranem mają znacznik na krawędzi.
+- Trudniej: wrogowie mają więcej HP i mocniej biją (w czasie i z głębokością), elity są twardsze, mniej leczenia między poziomami. Pocisków jest mniej (mniejsze salwy, limit 500), ale każdy boli bardziej (`BAL.bulletDmg`).
+- Echo: drugie Q po pół sekundy. Przejrzane opisy pasywek, bonusów przedmiotów, umiejętności i kart (bez „pocisk/ilość”, „wampiryzmu”, „kursora”).
+
+**Kolekcja i bany kart**:
+- Menu główne → **Kolekcja kart**: wszystkie 49 kart; odkryta jest każda, którą zobaczyłeś w ofercie (w dowolnym trybie), nieodkryte to „?”. Szczegóły karty i liczba wyborów.
+- **Bany**: do 5 odkrytych kart (B albo przycisk) — zbanowana karta nie pojawia się w żadnej ofercie, więc łatwiej trafić karty pod swoje synergie. Odbanowanie tym samym przyciskiem.
+- W ofercie kart nowa (nieodkryta) karta ma zielony napis „Nowa!”.
+- Zapis w wersji 3 (migracja z wersji 2: karty z trwającego runu Hardcore od razu trafiają do kolekcji).
+
+**Bullet hell w stylu ROTMG**:
+- Główne zagrożenie to pociski: strzelcy pojawiają się od 20. sekundy. Salwy mają czytelne kształty (wachlarz, pierścień, pierścień z luką, śrut) i ruch (pociski zwalniające i wiszące w powietrzu, skręcające „kwiaty”, wężyki). Wrogowie migają przed salwą (zapowiedź).
+- Nowi wrogowie: **Kultysta** (seria szybkich pocisków w gracza) i **Strażnik** (pierścień z luką, do której trzeba uciec).
+- Boss trzyma dystans i ma nazwane ataki z zapowiedzią: śrut, pierścienie z luką, kwiat, strumień, pole wiszących pocisków, wężykowe wachlarze.
+- Trafienie liczy się od małego rdzenia w środku postaci (biały punkt widoczny, gdy lecą pociski), więc można się przeciskać przez luki.
+
+**Kowadło**:
+- Między poziomami (ekran „Poziom ukończony”, przycisk w sklepie albo K). Waluta: złoto + **odłamki** z rozkładania przedmiotów (Zwykły 1 … Legendarny 12).
+- **Ulepsz**: +1 poziom przedmiotu. **Przekuj bonus**: przycisk R przy bonusie losuje go od nowa, „Przekuj wszystkie” — wszystkie naraz taniej. **Rozłóż**: na złoto i odłamki. **Jakość**: Zwykły → … → Legendarny (mocniejsze wartości, nowy bonus, Legendarny zawsze z super-bonusem). **Przenieś super-bonus**: na inny przedmiot, dawca przepada.
+- Ceny w `BAL.anvil` (złoto rośnie z poziomem przedmiotu).
+
+**Synergie (etap 4)**:
+- Wszystko ma tagi (10: Ogień, Krytyk, Pociski, Obszar, Tarcze, Życie, Szybkość, Umiejętności, Przywołania, Klątwa): bohater (2 tagi), bronie wg wzorca (ewolucja liczy się podwójnie), pasywki i afiksy przedmiotów wg statystyki, karty, super-bonusy.
+- Punkty tagu odblokowują progi 3 / 6 / 9 (Klątwa 2 / 3 / 4), które się kumulują: od statystyk po efekty (pożoga co 6 s, fala uderzeniowa, darmowe wieżyczki, reset odnowienia Q/E...).
+- Nowy próg ogłasza baner „Synergia: ...”. HUD pod portretem pokazuje aktywne i bliskie synergie (punkty / następny próg, kropki = progi). Pauza → Synergie: pełna lista. Karty awansu i przedmioty pokazują ikony tagów, które wzmacniają.
+
+**Balans**: tarcza Borguna za zabójstwa ma limit przyrostu (0,5% HP za zabójstwo, do 3% HP/s) — wcześniej szybkie zabijanie dawało nieśmiertelność; przerwa między trafieniami gracza 0,4 s (była 0,5).
+
+**Sklep (etap 4)**:
+- Po pokonaniu bossa w Hardcore ekran „Poziom ukończony” ma pozycję **Sklep**. Oferta losuje się raz na przerwę między poziomami i jest zapisana w runie, więc wyjście z gry jej nie odświeża. Po „Zapisz i wyjdź” → Kontynuuj gra zaczyna od sklepu, a dopiero „Do walki” startuje poziom (wtedy też +30% HP).
+- 4 przedmioty z poziomem następnego poziomu kampanii i nieco lepszą szansą na jakość (cena = 2,5× wartość rozłożenia; przedmiot do pustego slotu zakłada się sam, reszta trafia do plecaka). Odświeżenie przedmiotów kosztuje coraz więcej (×2 przy każdym użyciu).
+- Usługi: Mikstura (leczy do pełna), Karta (wybór karty jak za elitę), Kość losu (+1 losowanie awansu), Zwój wygnania (+1 wygnanie), Czterolistna talia (+1 losowanie karty).
+- 2 losowe eliksiry ze stałym bonusem (obrażenia, HP, pancerz, krytyk, obszar, odnowienie); każdy kupiony w runie podnosi cenę kolejnych o 35%.
+- Ceny rosną liniowo z głębokością (jak wartość rozkładania). Z poziomu sklepu [I] otwiera ekwipunek — można rozłożyć przedmioty na złoto i od razu wydać.
+
+### Jak przetestować
+
+1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
+2. F3 włącza licznik FPS i liczby encji; F4 przyspiesza cel poziomu (+30 s albo +60 zabójstw), więc szybko dojdziesz do bossa; F6 daje natychmiastowy awans — co 5. awans pojawia się wybór karty.
+3. Po bossie: nagrody (skrzynia, awanse, karta) → ekran „Poziom ukończony” → Dalej albo Zapisz i wyjdź. W menu Hardcore pojawi się Kontynuuj.
+4. Sklep: na ekranie „Poziom ukończony” wybierz Sklep; kup coś, wyjdź „Zapisz i wyjdź”, przeładuj stronę i Kontynuuj — sklep wraca w tym samym stanie.
+5. Przeładuj stronę w trakcie poziomu Hardcore i wybierz Kontynuuj: poziom wznowi się z zapisanym czasem i zabójstwami.
+6. Ewolucja: rozwiń broń do poziomu 8, weź pasywkę z jej opisu (np. Magiczny pocisk + Moc), a kolejny awans zaproponuje ewolucję.
+7. Przedmioty: włącz debug (F3) i wciśnij F7 kilka razy — każde to łup bossa. Załóż coś, potem I/Tab otwiera ekwipunek; najedź na przedmiot w plecaku, żeby zobaczyć porównanie. Pauza pokazuje założone przedmioty.
+8. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
+
+## Kolejne etapy
+
+4. Ekspedycja, sloty zapisu per tryb (gotowe: sklep między poziomami, zestawy tagów, kowadło, kolekcja i bany kart).
+5. Gotowe: meta-progresja, Paragon, prestiż, Endless, formatowanie liczb (break_infinity.js tylko, gdyby wartości wyszły poza zakres double).
+6. Gotowe: optymalizacja (tryb oszczędnych efektów), polish, wirtualny joystick i przyciski na telefonie.
