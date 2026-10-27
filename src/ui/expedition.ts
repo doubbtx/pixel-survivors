@@ -7,7 +7,7 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { BIOMES, objectiveLabel } from '../data/levels';
 import {
-  NODE_INFO, actBiome, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
+  NODE_INFO, actBiome, chooseTier, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
   type MapNode,
 } from '../data/expedition';
 import type { Run } from '../game/run';
@@ -17,6 +17,10 @@ import { dim, panel, slot, inside } from './widgets';
 const MAP_X = 8, MAP_Y = 30, MAP_W = W - 16, MAP_H = 136;
 const NODE = 20;
 const DET_Y = MAP_Y + MAP_H + 4;
+
+/** Przyciski poziomów trudności mapy w panelu szczegółów (lewy górny róg przycisku). */
+const TIER_W = 46;
+const tierPos = (i: number): [number, number] => [MAP_X + MAP_W - 8 - (4 - i) * (TIER_W + 3), DET_Y + 46];
 
 /** Środek węzła (rząd, kolumna) na ekranie. */
 function nodePos(row: number, lane: number): [number, number] {
@@ -63,6 +67,17 @@ export class ExpeditionMapView {
       if (input.pressed('click')) { this.sel = i; return { pick: lanes[i] }; }
     }
     this.lastMouse = m.lastMove;
+    // Poziom trudności zaznaczonej mapy: klawisze 1-4 albo klik w przycisk.
+    const node = this.run.expedition!.map[row][lanes[this.sel]];
+    if (node?.tiers) {
+      const keys = ['n1', 'n2', 'n3', 'n4'] as const;
+      node.tiers.forEach((_, t) => {
+        const [bx, by] = tierPos(t);
+        if (input.pressed(keys[t]) || (input.pressed('click') && inside(m.x, m.y, bx, by, TIER_W, 11))) {
+          if (chooseTier(node, t)) sfx.play('select');
+        }
+      });
+    }
     if (input.pressed('confirm')) return { pick: lanes[this.sel] };
     return null;
   }
@@ -144,6 +159,17 @@ export class ExpeditionMapView {
         const b = MAP_BONUS_BY_ID[m.bonus];
         drawText(g, `Bonus: ${b.name}`, rx, y0, C.lime, { align: 'right' });
         wrapText(b.desc, 170).forEach((l, i) => drawText(g, l, rx, y0 + 11 + i * 10, C.lgray, { align: 'right' }));
+      }
+      // Poziomy trudności (gdy wylosowane): przyciski 1-4.
+      if (m.tiers) {
+        drawText(g, 'Trudność:', tierPos(0)[0] - 4, tierPos(0)[1] + 1, C.lavender, { align: 'right', scale: 0.75 });
+        m.tiers.forEach((t, i) => {
+          const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i];
+          r.roundRect(bx, by, TIER_W, 11, 3, on ? C.dblue : C.black, on ? C.navy : C.black);
+          r.roundFrame(bx, by, TIER_W, 11, 3, on ? rr.color : C.slate, on ? 1 : 0.5);
+          drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 1.5, on ? rr.color : C.dgray, { align: 'center', scale: 0.75 });
+          drawText(g, `${t.length} mod.`, bx + TIER_W / 2, by + 12, C.dgray, { align: 'center', scale: 0.75 });
+        });
       }
       const rew = mapReward(m);
       if (rew > 0) drawText(g, `Nagroda: +${rew}% łupu i jakości, +${Math.round(rew * X.rewardEssence)}% esencji`, rx, y0 + 66, C.gold, { align: 'right' });

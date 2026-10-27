@@ -5,9 +5,9 @@ import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { RARITIES } from '../data/items';
-import { generateOptions, applyOption, canBanish, optionScore, type Option } from '../systems/levelup';
+import { generateOptions, applyOption, canBanish, optionScore, type Option, type Recipe } from '../systems/levelup';
 import type { Run } from '../game/run';
-import { panel, dim, inside } from './widgets';
+import { panel, dim, inside, slot } from './widgets';
 import { drawTagGain } from './synergies';
 
 const CARD_W = 108;
@@ -43,8 +43,10 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
     ly += 12;
   }
   ly += 4;
-  const hint = o.hint ? wrapText(o.hint, CARD_W - 12).slice(0, 2) : [];
-  const descMax = (o.tags.length ? 5 : 6) - hint.length;
+  // Z przepisem (ikony) podpowiedź tylko, gdy mieści się w jednej linii — ikony mówią to samo.
+  const hintAll = o.hint ? wrapText(o.hint, CARD_W - 12) : [];
+  const hint = o.recipe ? (hintAll.length === 1 ? hintAll : []) : hintAll.slice(0, 2);
+  const descMax = (o.tags.length ? 5 : 6) - hint.length - (o.recipe ? 2 : 0);
   for (const line of wrapText(o.desc, CARD_W - 14).slice(0, descMax)) {
     drawText(r.g, line, cx, ly, C.lgray, { align: 'center' });
     ly += 11;
@@ -53,8 +55,26 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
     drawText(r.g, line, cx, ly + 2, C.lavender, { align: 'center' });
     ly += 11;
   }
+  // Przepis ewolucji / fuzji ikonami, nad tagami synergii.
+  if (o.recipe) drawRecipe(r, o.recipe, cx, y + CARD_H - (o.tags.length ? 38 : 26));
   // Tagi synergii, które wzmacnia ta opcja, z postępem po wyborze.
   if (o.tags.length) drawTagGain(r, run, o.tags, cx, y + CARD_H - 14);
+}
+
+/** „A + B → C”: małe gniazda z ikonami składników, plus, strzałka i wynik w złotej ramce. */
+function drawRecipe(r: Renderer, rc: Recipe, cx: number, y: number): void {
+  const S = 18, gap = 9, n = rc.parts.length;
+  const w = (n + 1) * S + n * gap + 4;
+  let x = cx - w / 2;
+  rc.parts.forEach((icon, i) => {
+    slot(r, x, y, S, C.slate);
+    drawSprite(r.g, icon, x + S / 2, y + S / 2);
+    x += S;
+    drawText(r.g, i < n - 1 ? '+' : '>', x + gap / 2, y + 5, i < n - 1 ? C.lgray : C.yellow, { align: 'center', outline: C.black });
+    x += gap;
+  });
+  slot(r, x + 4, y, S, C.gold);
+  drawSprite(r.g, rc.result, x + 4 + S / 2, y + S / 2);
 }
 
 /**

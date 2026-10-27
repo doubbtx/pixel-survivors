@@ -89,6 +89,7 @@ export const MAP_RARITY = [
   { name: 'Zwykła', color: C.lgray, mods: [0, 0] },
   { name: 'Magiczna', color: C.blue, mods: [1, 2] },
   { name: 'Rzadka', color: C.yellow, mods: [3, 4] },
+  { name: 'Koszmarna', color: C.red, mods: [5, 6] },
 ] as const;
 
 /** Nazwy map w biomach aktów (kolejność jak BIOMES). */
@@ -115,6 +116,8 @@ export interface MapNode {
   name?: string;
   rarity?: number;
   mods?: string[];
+  /** Wylosowane modyfikatory dla każdego poziomu trudności (MAP_RARITY); gracz wybiera poziom przed wejściem (chooseTier). */
+  tiers?: string[][];
   bonus?: string;
 }
 
@@ -141,14 +144,24 @@ function rollMapNode(kind: NodeKind, act: number, row: number, used: Set<string>
   const names = MAP_NAMES[actBiome(act)].filter((n) => !used.has(n));
   const name = names.length ? rng.pick(names) : NODE_INFO[kind].name;
   used.add(name);
+  // Proponowany poziom trudności rośnie z aktem i rzędem; modyfikatory każdego poziomu losowane z góry.
   const p = Math.min(1, (act - 1) * X.rarityPerAct + row * X.rarityPerRow);
   const rarity = kind === 'boss' ? 0 : rng.chance(p * 0.5) ? 2 : rng.chance(0.25 + p) ? 1 : 0;
-  const [lo, hi] = MAP_RARITY[rarity].mods;
-  const pool = MAP_MODS.map((m) => m.id);
-  const mods: string[] = [];
-  for (let n = rng.int(lo, hi); n > 0 && pool.length; n--) mods.push(pool.splice(Math.floor(rng.next() * pool.length), 1)[0]);
+  const tiers = MAP_RARITY.map(({ mods: [lo, hi] }) => {
+    const pool = MAP_MODS.map((m) => m.id), out: string[] = [];
+    for (let n = rng.int(lo, hi); n > 0 && pool.length; n--) out.push(pool.splice(Math.floor(rng.next() * pool.length), 1)[0]);
+    return out;
+  });
   const bonus = kind === 'boss' || rng.chance(X.noBonusChance) ? undefined : rng.pick(MAP_BONUSES).id;
-  return { kind, name, rarity, mods, bonus };
+  return { kind, name, rarity, mods: tiers[rarity], tiers, bonus };
+}
+
+/** Wybór poziomu trudności mapy (gdy ma wylosowane poziomy). */
+export function chooseTier(m: MapNode, tier: number): boolean {
+  if (!m.tiers?.[tier] || m.rarity === tier) return false;
+  m.rarity = tier;
+  m.mods = m.tiers[tier];
+  return true;
 }
 
 /** Losuje mapę aktu: pierwszy rząd to walki, w środku mieszanka, ostatni rząd przed bossem gwarantuje obóz lub sklep. */

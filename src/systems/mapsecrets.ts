@@ -12,7 +12,7 @@ import { grantMat, grantScroll } from './forge';
 /**
  * Sekrety map (liczby w BAL.secretsMap):
  *  fontanna — stań w niej: płacisz złoto, los: błogosławieństwo, materiał, zwój albo klątwa (do 3 razy),
- *  runy     — 4 kamienie i malowidło z kolejnością kolorów: dobra kolejność = moc run na poziom i skrzynia, zła = zasadzka,
+ *  runy     — 4 kamienie i malowidło z kolejnością kolorów: dobra kolejność = moc run na poziom i skrzynia, zła = runy znikają i zasadzka,
  *  grzyby   — zjedzone dają losowy efekt (leczenie, XP, siła, szybkość albo odurzenie: odwrócone sterowanie),
  *  jeleń    — biały jeleń ucieka; zabity odsłania ukryty gaj z unikatem,
  *  mimik    — część zwykłych skrzyń gryzie: walka, potem dwie skrzynie,
@@ -88,9 +88,8 @@ export function touchSecret(run: Run, o: MapObject, dt: number): boolean {
         sfx.play('levelup');
         for (const m of run.mapObjects) if (m.kind === 'rune' || m.kind === 'mural') m.life = 0;
       } else {
-        // Zła kolejność: runy gasną i zasadzka.
-        for (const m of run.mapObjects) if (m.kind === 'rune') m.charge = 0;
-        run.cardState['runes.next'] = 0;
+        // Zła kolejność: runy i malowidło przepadają, zasadzka.
+        for (const m of run.mapObjects) if (m.kind === 'rune' || m.kind === 'mural') m.life = 0;
         const mix = currentMix(run.waveTime());
         for (let i = 0; i < S.ambush; i++) { const a = (i / S.ambush) * Math.PI * 2; spawnEnemy(run, rng.weighted(mix), o.x + Math.cos(a) * 60, o.y + Math.sin(a) * 60); }
         run.showBanner('Zła kolejność! Zasadzka');

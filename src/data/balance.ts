@@ -95,7 +95,7 @@ export const BAL = {
 
   // --- skalowanie wrogów (wykładniczo w czasie; łagodny start: obrażenia od 60% do pełnych w 1. minucie) ---
   enemyHpMul: (t: number) => Math.pow(1.38, t / 60),
-  enemyDmgMul: (t: number) => Math.pow(1.2, t / 60) * Math.min(1, 0.5 + t / 240),
+  enemyDmgMul: (t: number) => Math.pow(1.22, t / 60) * Math.min(1, 0.45 + t / 300),
   /** Docelowa liczba wrogów na mapie; spawner dąży do niej. */
   targetEnemies: (t: number) => Math.min(1000, 6 + 0.75 * t + 0.004 * t * t),
   /** Odstęp elit maleje w późnej grze (czas fal) do 35% wartości bazowej. */
@@ -113,7 +113,7 @@ export const BAL = {
     ttk: (t: number) => 0.06 + 0.06 * Math.exp(-t / 240),
     exp: 0.75,
     max: 60,
-    dmgExp: 0.2,
+    dmgExp: 0.45,
     levelHp: 0.01,
     levelDmg: 0.012,
   },
@@ -250,7 +250,7 @@ export const BAL = {
   // --- meta-progresja (data/meta.ts) ---
   meta: {
     /** Koszt kolejnego poziomu węzła = koszt bazowy × tyle^poziom. */
-    costGrowth: 1.6,
+    costGrowth: 1.8,
     /** Esencja za run: za poziom kampanii, za sekundę (dzielnik), za zabójstwa (dzielnik), za poziom postaci. */
     essencePerDepth: 12,
     essenceSecDiv: 20,
@@ -323,7 +323,7 @@ export const BAL = {
     noBonusChance: 0.35,
     /** Nagroda modyfikatorów: punkt ilości łupu (%) daje tyle szczęścia przedmiotów (× ułamek) i esencji (× ułamek). */
     rewardLuck: 1,
-    rewardEssence: 0.5,
+    rewardEssence: 0.15,
     /** Błogosławieństwo kapliczki działa na tyle kolejnych map z walką. */
     blessingMaps: 3,
     /** Cel pełnego poziomu aktu (boss): czas przetrwania (s) albo liczba zabójstw. */
@@ -347,7 +347,7 @@ export const BAL = {
     /** Fortuna skarbu (lepsza jakość przedmiotu). */
     treasureLuck: 2,
     /** Mnożnik esencji za ukończoną ekspedycję (sekretny akt 4: × voidEssenceMul) i szansa na ukryty węzeł w akcie 2-3. */
-    winEssenceMul: 2,
+    winEssenceMul: 1.5,
     voidEssenceMul: 1.5,
     secretChance: 0.5,
   },
@@ -393,8 +393,6 @@ export const BAL = {
   contactCooldown: 0.7,
   /** Czas mignięcia postaci po trafieniu (tylko efekt wizualny). */
   hurtFlash: 0.12,
-  /** Nietykalność po każdym trafieniu (s). */
-  hurtIframes: 0.35,
   /** Tarcza za zabójstwa (pasywka Borguna, karty): ułamek maks. HP za zabójstwo... */
   killShieldPerKill: 0.005,
   /** ...ale nie więcej niż tyle maks. HP na sekundę — szybkie zabijanie nie daje nieskończonej tarczy. */

@@ -1409,8 +1409,6 @@ export class Run {
     dmg -= absorbed;
     p.hp -= dmg;
     p.hurtCd = BAL.hurtFlash;
-    // Krótka nietykalność po trafieniu: salwa nie zabiera kilku trafień naraz.
-    p.iframes = Math.max(p.iframes, BAL.hurtIframes);
     this.hurtFx = 0.25;
     p.flash = 6;
     this.addShake(1.5);

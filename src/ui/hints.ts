@@ -23,7 +23,7 @@ export const HINTS = {
   synergy: 'Synergia aktywna! Lista pod portretem pokazuje tagi i progi. Pauza (Esc) pokazuje szczegóły.',
   augment: 'Augment (turkusowa karta) zmienia działanie broni, nie tylko liczby.',
   reaction: 'Reakcja żywiołów! Dwa różne żywioły na jednym wrogu dają dodatkowy efekt. Szczegóły w Pomocy.',
-  map: 'Mapa wyprawy: wybierz kolejny węzeł. Czerwone kropki pod mapą to modyfikatory: większe ryzyko, większa nagroda.',
+  map: 'Mapa wyprawy: wybierz kolejny węzeł. Klawisze 1-4 ustawiają trudność mapy: więcej modyfikatorów (czerwone kropki) to większa nagroda.',
   shop: 'Sklep: kup przedmioty i usługi. I otwiera ekwipunek (rozłóż zbędne przedmioty na złoto), K kowadło.',
   anvil: 'Kowadło: Kuźnia ulepsza przedmioty do +15 za złoto i materiały, ale może się nie udać. Przekuwanie kosztuje odłamki.',
   unique: 'Unikat! Ma stały efekt, który łamie zasady gry, zwykle za jakąś cenę. Nie da się go przekuć. Trafia do kolekcji.',

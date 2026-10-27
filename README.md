@@ -281,6 +281,12 @@ src/
 - Gra rysuje w wyższej rozdzielczości: gładkie, zaokrąglone okna, paski z gradientem, cieńszy obrys tekstu, nowy HUD i menu główne.
 - **Bossowie na uniki**: przy pojawieniu się bossa zwykli wrogowie znikają i nie przychodzą nowi, walka trwa ok. 1-2 minut, ataki mają zapowiedzi (krąg, linia szarży).
 
+**Balans i Ekspedycja (0.18)**:
+- Trudniejsza późna gra (obrażenia wrogów rosną razem z twoją siłą), łagodniejszy start, bez nietykalności po trafieniu.
+- Rozwój bohatera wolniejszy: ok. 10 wygranych wypraw na pełne drzewko.
+- Ekspedycja: przed wejściem na mapę wybierasz trudność (1-4: Zwykła, Magiczna, Rzadka, Koszmarna), modyfikatory są losowe.
+- Karty awansu pokazują przepis ewolucji i fuzji ikonami (broń + pasywka > ewolucja). Runy znikają po złej kolejności.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

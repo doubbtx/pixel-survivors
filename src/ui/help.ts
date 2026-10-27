@@ -96,7 +96,7 @@ const PAGES: { title: string; lines: string[] }[] = [
     lines: [
       'Księga sekretów: ukryte buildy (np. pełna trucizna, same bronie ognia, 4 żywioły). Spełnij warunek, a sekret obudzi się do końca runu. Zagadki: Kolekcja, Tab.',
       'Fontanna życzeń: stań w niej i zapłać złotem. Zwykle błogosławieństwo, czasem klątwa.',
-      'Runy: dotknij 4 kamieni w kolejności kolorów z malowidła. Zła kolejność to zasadzka.',
+      'Runy: dotknij 4 kamieni w kolejności kolorów z malowidła. Zła kolejność: runy znikają i jest zasadzka.',
       'Grzyby: zjedz na własne ryzyko. Biały jeleń: złap go, a odsłoni ukryty gaj z unikatem.',
       'Mimik: niektóre skrzynie gryzą. Pęknięta ściana (fioletowa szczelina): rozbij ją, za nią są schody do skarbca.',
       'Kurhan: zbierz 3 klucze z elit. W środku czeka Zapomniany Król i jego moc.',
@@ -109,7 +109,7 @@ const PAGES: { title: string; lines: string[] }[] = [
     lines: [
       'Trening: jeden poziom do nauki. Szybki run: 3 krótkie poziomy z bossami. Wyzwanie dnia: ten sam bohater i pakty dla wszystkich.',
       'Hardcore: poziomy po kolei z bossami i sklepem, śmierć kasuje run. Endless: jeden poziom bez końca, boss co 5 minut.',
-      'Ekspedycja: 3 akty map z modyfikatorami (ryzyko za lepsze nagrody), lochy, kapliczki, sklepy.',
+      'Ekspedycja: 3 akty map. Przed wejściem wybierasz trudność mapy (1-4): losowe modyfikatory ryzyka za lepsze nagrody.',
       'Rozwój: esencja z Ekspedycji kupuje węzły drzewka bohatera. Różowe klucze zmieniają umiejętności.',
       'Zapis: Hardcore, Endless i Ekspedycja zapisują się same. Wyjście z gry wznawia run.',
       'Osiągnięcia: odblokowują nowe karty w ofertach. Bestiariusz: zabijaj wrogów, by poznać opis i zdobyć bonus obrażeń.',
