@@ -19,7 +19,9 @@ import { dim, panel, slot, inside } from './widgets';
 const CELL = 28;
 const GAP = 35;
 const COL_X = 16;
-const ROW_Y = [52, 114];
+const ROW_Y = [52, 108, 164];
+/** Usługi kuźni (materiały i zwoje) — osobny, trzeci rząd. */
+const FORGE_SERVICES = new Set(['stone', 'ore', 'bless', 'dragon']);
 const DET_X = 278, DET_W = 196;
 const BTN_Y = 236;
 
@@ -33,7 +35,7 @@ type Entry =
 export type ShopAction = 'close' | 'inventory' | 'anvil' | null;
 
 /**
- * Sklep między poziomami: rząd przedmiotów i rząd usług/eliksirów, po prawej szczegóły
+ * Sklep między poziomami: rząd przedmiotów, rząd usług/eliksirów i rząd kuźni (materiały, zwoje), po prawej szczegóły
  * zaznaczonej pozycji (przedmiot z porównaniem do założonego). Enter/klik: kup, R: odśwież przedmioty,
  * I: ekwipunek (sprzedaż/zakładanie), K: kowadło, Esc: wyjdź. Karta otwiera wybór karty w tym samym oknie.
  */
@@ -56,8 +58,9 @@ export class ShopView {
   private row(cy: number): Entry[] {
     // Rząd przedmiotów kończy się rozbudową sklepu.
     if (cy === 0) return [...this.shop.items.map((_, i) => ({ kind: 'item', i }) as Entry), { kind: 'upgrade' }];
+    if (cy === 2) return SERVICES.filter((s) => FORGE_SERVICES.has(s.id)).map((s) => ({ kind: 'service', id: s.id }) as Entry);
     return [
-      ...SERVICES.map((s) => ({ kind: 'service', id: s.id }) as Entry),
+      ...SERVICES.filter((s) => !FORGE_SERVICES.has(s.id)).map((s) => ({ kind: 'service', id: s.id }) as Entry),
       ...this.shop.elixirs.map((id) => ({ kind: 'elixir', id }) as Entry),
     ];
   }
@@ -111,7 +114,8 @@ export class ShopView {
     if (input.pressed('back') || input.pressed('pause')) return 'close';
     if (input.pressed('inventory')) return 'inventory';
     if (input.pressed('anvil')) return 'anvil';
-    if (input.pressed('up') || input.pressed('down')) this.cy = 1 - this.cy;
+    if (input.pressed('up')) this.cy = (this.cy + 2) % 3;
+    if (input.pressed('down')) this.cy = (this.cy + 1) % 3;
     const n = this.row(this.cy).length;
     this.cx = Math.min(this.cx, n - 1);
     if (input.pressed('left')) this.cx = (this.cx - 1 + n) % n;
@@ -120,7 +124,7 @@ export class ShopView {
     if (input.pressed('reroll')) this.refresh();
 
     const m = input.mouse;
-    for (let cy = 0; cy < 2; cy++) {
+    for (let cy = 0; cy < 3; cy++) {
       const row = this.row(cy);
       for (let cx = 0; cx < row.length; cx++) {
         const [x, y] = this.cellPos(cx, cy);
@@ -150,8 +154,9 @@ export class ShopView {
 
     panel(r, 6, 34, 266, 196);
     drawText(g, `Przedmioty (poz. ${shop.depth})   sklep: poziom ${run.shopLevel}`, 14, 40, C.lavender);
-    drawText(g, 'Usługi i eliksiry', 14, 102, C.lavender);
-    for (let cy = 0; cy < 2; cy++) {
+    drawText(g, 'Usługi i eliksiry', 14, 97, C.lavender);
+    drawText(g, `Kuźnia: materiały i zwoje (masz: ${run.mats.stone} kam., ${run.mats.ore} rudy)`, 14, 153, C.lavender);
+    for (let cy = 0; cy < 3; cy++) {
       this.row(cy).forEach((e, cx) => {
         const [x, y] = this.cellPos(cx, cy);
         const on = cx === this.cx && cy === this.cy;
@@ -171,12 +176,10 @@ export class ShopView {
       });
     }
     const lines = [
-      `HP ${Math.ceil(run.player.hp)}/${Math.ceil(run.stats.maxHp)}   plecak ${run.bag.length}/${BAL.bagSize}   odłamki ${run.shards}`,
-      `Losowania ${run.rerolls}   wygnania ${run.banishes}   losowania kart ${run.cardRerolls}`,
-      'Przedmiot z pustym slotem zakłada się sam.',
+      `HP ${Math.ceil(run.player.hp)}/${Math.ceil(run.stats.maxHp)}  plecak ${run.bag.length}/${BAL.bagSize}  odł. ${run.shards}  losowania ${run.rerolls}/${run.banishes}/${run.cardRerolls}`,
       'Enter/klik: kup  R: odśwież  I: ekwipunek  K: kowadło',
     ];
-    lines.forEach((l, i) => drawText(g, l, 14, 166 + i * 13, i < 2 ? C.lgray : C.dgray));
+    lines.forEach((l, i) => drawText(g, l, 14, 206 + i * 11, i < 1 ? C.lgray : C.dgray));
 
     this.renderDetails(r);
 

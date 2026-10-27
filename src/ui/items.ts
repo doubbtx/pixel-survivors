@@ -7,13 +7,14 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { fmt } from '../util/format';
 import {
-  RARITIES, BASE_BY_ID, SLOTS, UNIQUE_BY_ID, UNIQUE_COLOR, implicitLine, statLine, statTotal, superLine, compareItems, salvageGold, salvageShards, itemColor,
+  RARITIES, BASE_BY_ID, SLOTS, UNIQUE_BY_ID, forgeMul, UNIQUE_COLOR, implicitLine, statLine, statTotal, superLine, compareItems, salvageGold, salvageShards, itemColor,
   type Item, type LootSource, type SlotId,
 } from '../data/items';
 import type { Run } from '../game/run';
 import type { Stats } from '../entities/types';
 import { Menu, dim, panel, slot, inside } from './widgets';
 import { itemTags } from '../data/synergies';
+import { AWAKENINGS } from '../data/forge';
 import { drawTagIcons } from './synergies';
 
 
@@ -37,6 +38,8 @@ export function drawItemSlot(r: Renderer, it: Item | null, x: number, y: number,
       r.rect(x + s - 5, y + 3, 2, 2, C.yellow);
     }
     if (it.fresh) drawText(r.g, '!', x + 3, y + 1, C.lime, { outline: C.black });
+    // Poziom kuźni (+N), na czerwono gdy pęknięty.
+    if (it.upg) drawText(r.g, `+${it.upg}`, x + s - 2, y + s - 11, it.cracked ? C.red : it.upg >= 9 ? C.cyan : C.white, { align: 'right', outline: C.black });
   } else if (ghost) {
     r.withAlpha(0.22, () => drawSprite(r.g, ghost, x + s / 2, y + s / 2));
   }
@@ -83,9 +86,10 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
   line(implicitLine(it) + (stats ? ` (${statTotal(it.implicit.stat, stats)})` : ''), C.white);
   r.rect(x + 8, ly + 1, w - 16, 1, C.slate);
   ly += 4;
+  const k = forgeMul(it);
   for (const a of it.affixes) {
     if (ly <= bottom) affixY.push(ly);
-    line(statLine(a.stat, a.value) + (stats ? ` (${statTotal(a.stat, stats)})` : ''), C.cyan, rerollButtons ? w - 34 : w - 16);
+    line(statLine(a.stat, a.value * (a.stat === 'amount' ? 1 : k)) + (stats ? ` (${statTotal(a.stat, stats)})` : ''), C.cyan, rerollButtons ? w - 34 : w - 16);
   }
   if (it.super) {
     ly += 2;
@@ -95,6 +99,14 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
     ly += 2;
     line(uniq.desc, UNIQUE_COLOR);
   }
+  // Kuźnia: Przebudzenie (+9, x2 od +15) i pęknięcie.
+  const lvl = it.upg ?? 0;
+  if (lvl >= 9) {
+    const awk = AWAKENINGS[base.kind];
+    ly += 2;
+    line(`${awk.name}: ${awk.desc(lvl >= 15 ? 2 : 1)}`, it.cracked ? C.dgray : C.cyan);
+  }
+  if (it.cracked) line(`Pęknięty: wartości -${Math.round((1 - BAL.forge.crackMul) * 100)}%, napraw w kowadle`, C.red);
   if (cmp === undefined) return affixY;
   ly += 3;
   r.rect(x + 8, ly, w - 16, 1, C.slate);

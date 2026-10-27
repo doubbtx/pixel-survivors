@@ -19,7 +19,7 @@ import { SRC_ELEMENT, ELEM, type Element } from '../data/elements';
 import type { MetaBonus } from '../data/meta';
 import { CARD_BY_ID, type CardSource, type HookName, type CardHooks, type Tag } from '../data/cards';
 import { SYNERGIES, VERSATILITY, tagPoints, tierOf, type SynergyTier } from '../data/synergies';
-import { equippedSupers, equippedUniques, salvageGold, salvageShards, slotKind, rollItem, rollUnique, BASE_BY_ID, type Item, type SlotId, type LootSource } from '../data/items';
+import { equippedSupers, equippedUniques, implicitOf, forgeMul, salvageGold, salvageShards, slotKind, rollItem, rollUnique, BASE_BY_ID, type Item, type SlotId, type LootSource } from '../data/items';
 import {
   SLOT, SLOT_COUNT, type Stats, type Player, type Enemy, type Projectile, type EnemyBullet, type Gem, type Pickup,
   type Particle, type DmgNum, type Zone, type Fx, type WeaponInst, type PassiveInst, type AbilityInst, type PickupKind,
@@ -44,6 +44,8 @@ import { updatePower } from '../systems/powers';
 import { updateTerrain, terrainBlast, type TerrainObj, type Arena } from '../systems/terrain';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { PACTS, pactLevel } from '../data/pacts';
+import { equippedAwakenings, forgeKillDrops, forgeBossDrops, grantMat, emptyMats, emptyScrolls } from '../systems/forge';
+import type { MatId, ScrollId } from '../data/forge';
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
@@ -158,6 +160,9 @@ export interface RunSnapshot {
   /** Pakty ryzyka runu i pokonani bossowie (od 0.13). */
   pacts?: Record<string, number>;
   bossKills?: number;
+  /** Materiały i zwoje kuźni (od 0.14). */
+  mats?: Partial<Record<MatId, number>>;
+  scrolls?: Partial<Record<ScrollId, number>>;
 }
 
 /**
@@ -294,6 +299,9 @@ export class Run {
   anvilLevel = 1;
   /** Odłamki z rozkładania przedmiotów — waluta kowadła. */
   shards = 0;
+  /** Kuźnia runiczna (systems/forge.ts): materiały do ulepszania i zwoje. */
+  mats = emptyMats();
+  scrolls = emptyScrolls();
   /** Id broni podstawowej bohatera (zmienia się po ewolucji) — dla pasywki "co N-ta salwa". */
   basicWeaponId: string;
 
@@ -596,6 +604,11 @@ export class Run {
       for (const [k, v] of Object.entries(u.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
       addHooks(u.hooks, 1);
     }
+    // Przebudzenia z kuźni (+9): Czujność bierze najkrótszy odstęp, jak Tarcza bogów.
+    for (const { def, v } of equippedAwakenings(this)) {
+      for (const [k, val] of Object.entries(def.flags?.(v) ?? {})) this.flags[k] = k === 'aegis' && this.flags[k] ? Math.min(this.flags[k], val) : (this.flags[k] ?? 0) + val;
+      addHooks(def.hooks, v);
+    }
     // Synergie: punkty tagów całego buildu → progi (kumulowane), efekty jak u kart.
     this.tagPts = tagPoints(this);
     const newTiers: string[] = [];
@@ -722,6 +735,9 @@ export class Run {
     for (const s of Object.keys(this.equipment) as SlotId[]) if (this.equipment[s] === it) this.equipment[s] = null;
     this.bag = this.bag.filter((b) => b !== it);
     const g = salvageGold(it, this.stats.greed);
+    // Kamienie kowalskie z rozkładania (wg jakości).
+    const stones = BAL.forge.salvageStones[it.rarity] ?? 0;
+    if (stones) this.mats.stone += stones;
     this.shards += salvageShards(it);
     this.gold += g;
     this.onBuildChanged();
@@ -831,14 +847,17 @@ export class Run {
     const itemMul: Partial<Record<keyof Stats, number>> = {};
     for (const it of Object.values(this.equipment)) {
       if (!it) continue;
-      if (it.implicit.mode === 'add') s[it.implicit.stat] += it.implicit.value;
-      else itemMul[it.implicit.stat] = (itemMul[it.implicit.stat] ?? 1) * it.implicit.value;
-      for (const a of it.affixes) s[a.stat] += a.value;
+      // Wartości po kuźni (pęknięcie, progi +6 i +15).
+      if (it.implicit.mode === 'add') s[it.implicit.stat] += implicitOf(it);
+      else itemMul[it.implicit.stat] = (itemMul[it.implicit.stat] ?? 1) * implicitOf(it);
+      const k = forgeMul(it);
+      for (const a of it.affixes) s[a.stat] += a.value * (a.stat === 'amount' ? 1 : k);
     }
     for (const u of equippedUniques(this)) {
       if (u.stats) add(u.stats);
       for (const k in u.mul ?? {}) itemMul[k as keyof Stats] = (itemMul[k as keyof Stats] ?? 1) * u.mul![k as keyof Stats]!;
     }
+    for (const { def, v } of equippedAwakenings(this)) if (def.stats) add(def.stats(v));
     const ult = this.abilities.ult;
     if (ult.def.kind === 'titan' && ult.activeT > 0) {
       s.might += ult.def.p.might + ult.def.pl.might * (ult.level - 1);
@@ -1117,6 +1136,7 @@ export class Run {
     }
     resourceOnKill(this, e);
     taskOnKill(this, e);
+    forgeKillDrops(this, e);
     this.emit('onKill', e);
     if (e.elite) {
       this.dropChest(e.x, e.y, 'elite');
@@ -1128,6 +1148,7 @@ export class Run {
       for (let i = 0; i < BAL.events.goldSlimeCoins; i++) this.spawnPickup(e.x + rng.range(-12, 12), e.y + rng.range(-12, 12), 'coin', 1);
       this.dropChest(e.x, e.y, 'elite');
       this.showBanner('Złoty szlam złapany!');
+      grantMat(this, 'heart', BAL.forge.slimeHeart);
     } else {
       if (rng.chance(BAL.itemDropChance * (1 + this.flag('mapLoot')))) this.dropChest(e.x, e.y, 'drop');
       else if (rng.chance(BAL.meatChance)) this.spawnPickup(e.x, e.y, 'meat', 0);
@@ -1143,6 +1164,7 @@ export class Run {
     this.pendingCards.push('boss');
     this.pendingPowers++;
     this.bossKills++;
+    forgeBossDrops(this);
     this.cardRerolls++;
     this.gold += 30 * this.stats.greed;
     // Endless: gra toczy się dalej — kolejna głębokość (silniejsi wrogowie, następny biom) i boss za BAL.endlessBossEvery.
@@ -1424,6 +1446,8 @@ export class Run {
       power: this.power ? [this.power.id, this.power.level] : undefined,
       pacts: { ...this.pacts },
       bossKills: this.bossKills,
+      mats: { ...this.mats },
+      scrolls: { ...this.scrolls },
     };
   }
 
@@ -1454,6 +1478,8 @@ export class Run {
     run.dmgBySource = new Map(s.dmgBySource);
     run.cardState = { ...s.cardState };
     run.pacts = { ...s.pacts };
+    run.mats = { ...run.mats, ...s.mats };
+    run.scrolls = { ...run.scrolls, ...s.scrolls };
     run.bossKills = s.bossKills ?? 0;
     // Przedmioty nieznanych typów (np. z nowszej wersji danych) są pomijane.
     const known = (it: Item | null | undefined): it is Item => !!it && !!BASE_BY_ID[it.base];

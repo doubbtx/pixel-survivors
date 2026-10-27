@@ -389,6 +389,42 @@ export const ICON_FNS: Record<string, IconFn> = {
     sparkle(p, 13, 3);
   },
 
+  // ===================== kuźnia: materiały i zwoje (data/forge.ts) =====================
+  mt_stone: (p) => {
+    p.polyShade([[2, 13], [3, 6], [8, 3], [13, 5], [14, 12], [9, 14.5]], RAMP.stone);
+    p.line(5, 8, 8, 6, C.white).line(9, 10, 12, 12, C.slate).px(6, 11, C.lgray);
+  },
+  mt_ore: (p) => {
+    p.polyShade([[1, 13], [3, 7], [8, 4], [14, 6], [15, 13], [8, 15]], RAMP.night);
+    for (const [x, y] of [[5, 9], [9, 7], [11, 11], [7, 12]]) p.rect(x, y, 2, 2, C.blue).px(x, y, C.cyan);
+    sparkle(p, 13, 3);
+  },
+  mt_heart: (p) => {
+    p.sphere(5.5, 6.5, 3.5, 3.5, RAMP.red).sphere(10.5, 6.5, 3.5, 3.5, RAMP.red);
+    p.poly([[2, 8], [14, 8], [8, 15]], C.red).line(4, 9, 8, 13, C.dred).px(4, 5, C.white).px(5, 4, C.salmon);
+    p.line(8, 5, 8, 11, C.orange).px(8, 7, C.yellow);
+  },
+  mt_tear: (p) => {
+    p.poly([[8, 1], [12, 8], [4, 8]], C.cyan).sphere(8, 10, 4.5, 4.5, RAMP.blue);
+    p.px(6, 8, C.white).px(6, 9, C.white).px(7, 4, C.white);
+  },
+  mt_void: (p) => {
+    p.sphere(8, 8, 6, 6, RAMP.purple).sphere(8, 8, 3, 3, [C.black, C.navy, C.plum, C.pink]);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.4; p.px(8 + Math.cos(a) * 7, 8 + Math.sin(a) * 7, C.white); }
+  },
+  sc_bless: (p) => {
+    p.block(3, 3, 10, 11, RAMP.bone).rect(2, 2, 12, 2, C.tan).rect(2, 13, 12, 2, C.tan);
+    p.poly([[8, 5], [11, 8], [8, 11], [5, 8]], C.yellow).px(8, 8, C.white);
+  },
+  sc_dragon: (p) => {
+    p.block(3, 3, 10, 11, RAMP.bone).rect(2, 2, 12, 2, C.tan).rect(2, 13, 12, 2, C.tan);
+    flame(p, 8, 9, 0.6);
+  },
+  sc_talisman: (p) => {
+    p.line(8, 1, 8, 4, C.brown).sphere(8, 9, 5, 5.5, RAMP.green);
+    p.rect(6, 7, 4, 4, C.dgreen).px(7, 8, C.lime).px(8, 9, C.lime);
+  },
+
   // ===================== moce bossów (data/enemies.ts BOSS_POWERS): oko otchłani + wzór salwy =====================
   bp_shotgun: (p) => {
     p.sphere(4, 8, 3.5, 3.5, RAMP.purple).px(3, 7, C.white);

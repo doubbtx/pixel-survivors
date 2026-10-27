@@ -6,6 +6,7 @@ import { rollItem } from '../data/items';
 import type { Stats } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnEnemy } from './spawner';
+import { grantMat } from './forge';
 
 /**
  * Zdarzenia mapy (sekrety i mini-lochy):
@@ -160,6 +161,7 @@ export function updateEvents(run: Run, dt: number): void {
         d.cleared = true;
         run.dropChest(d.cx - 14, d.cy, 'elite');
         run.dropChest(d.cx + 14, d.cy, 'boss');
+        grantMat(run, 'ore', BAL.forge.dungeonOre);
         for (let i = 0; i < 20; i++) run.spawnPickup(d.cx + rng.range(-30, 30), d.cy + rng.range(-30, 30), 'coin', 1);
         if (run.levelInfo.dungeon) { run.clearObjective(); return; }
         run.mapObjects.push({ kind: 'exit', x: d.cx, y: d.cy - 40, blessing: 0, charge: 0, life: Infinity });
@@ -204,6 +206,7 @@ export function updateEvents(run: Run, dt: number): void {
     } else if (near && o.kind === 'sword') {
       run.pendingLoot.push({ source: 'boss', item: rollLegendary(run) });
       run.showBanner('Miecz w kamieniu!');
+      grantMat(run, 'void');
       run.burst(o.x, o.y, C.gold, 40, 90);
       sfx.play('chest');
       o.life = 0;

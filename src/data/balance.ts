@@ -57,7 +57,7 @@ export const BAL = {
    * utrata HP, gdy gracz jest dalej niż `totemGuard`.
    * Krąg: promień. Złoto za zadanie × głębokość. Karna fala: zwykli wrogowie i elity.
    */
-  tasks: { first: 40, every: 60, acceptLife: 25, placeMin: 90, placeMax: 150, huntDist: 60, totemR: 40, totemDrain: 1.5, totemMax: 5, totemGuard: 70, totemAlone: 4, circleR: 32, gold: 25, failWave: 16, failElites: 2 },
+  tasks: { first: 40, every: 60, acceptLife: 25, placeMin: 90, placeMax: 150, huntDist: 60, totemR: 40, totemDrain: 1.5, totemMax: 5, totemGuard: 70, totemAlone: 4, circleR: 32, gold: 25, ore: 1, failWave: 16, failElites: 2 },
   /** Poziom broni, od którego przy awansie pojawiają się jej augmenty (data/augments.ts). */
   augmentMinLevel: 3,
   passiveSlots: 6,
@@ -126,6 +126,18 @@ export const BAL = {
   },
   /** Pakty ryzyka (data/pacts.ts): esencja × (1 + essencePer × poziom Paktu). */
   pacts: { essencePer: 0.08 },
+  /**
+   * Kuźnia runiczna (data/forge.ts, systems/forge.ts): litość za porażkę (+szansa), zwój smoka, bonus trybu ryzyka,
+   * pęknięcie (mnożnik wartości), naprawa (złoto x koszt ulepszenia, Ruda gwiezdna), progi +6 i +15.
+   * Dropy materiałów: szansa zwykłego wroga na kamień, rozkładanie (kamienie za rzadkość), elita (ruda), boss (serca,
+   * łzy od depthTear, iskry od depthVoid), zwoje z elit i bossów, materiały za zadanie i loch.
+   */
+  forge: {
+    pity: 0.05, dragon: 0.15, risk: 0.1, crackMul: 0.7, repairMul: 2, glowMul: 1.2, divineMul: 1.25,
+    stoneChance: 0.004, salvageStones: [0, 1, 1, 2, 3], eliteOre: [1, 2], bossHeart: [1, 2],
+    tearChance: 0.5, depthTear: 3, voidChance: 0.35, depthVoid: 5, pactVoid: 10,
+    scrollElite: 0.06, scrollBoss: 0.6, dungeonOre: 2, slimeHeart: 1, anvilStones: 2, anvilOre: 1,
+  },
   /** Moce bossów (systems/powers.ts): maks. poziom i przyrost obrażeń za poziom. */
   bossPowers: { maxLevel: 3, perLevel: 0.5 },
   /** Szansa, że łup bossa / elity (także skrzynia elity) to unikat (× (1 + Fortuna)). */
@@ -145,9 +157,9 @@ export const BAL = {
   /** Odświeżenie przedmiotów: cena bazowa, podwaja się przy każdym użyciu w tym samym sklepie. */
   shopRefresh: 10,
   /** Ceny bazowe usług (× shopScale). */
-  shopPrice: { potion: 15, card: 70, reroll: 12, banish: 12, cardReroll: 25, elixir: 40 },
+  shopPrice: { potion: 15, card: 70, reroll: 12, banish: 12, cardReroll: 25, elixir: 40, stone: 10, ore: 30, bless: 60, dragon: 50 },
   /** Zapas usług w jednym sklepie. */
-  shopStock: { potion: 1, card: 1, reroll: 2, banish: 1, cardReroll: 1, elixir: 1 },
+  shopStock: { potion: 1, card: 1, reroll: 2, banish: 1, cardReroll: 1, elixir: 1, stone: 3, ore: 2, bless: 1, dragon: 1 },
   /** Eliksirów w ofercie jednego sklepu. */
   shopElixirs: 2,
   /** Rozbudowa sklepu w runie (poziom 1-max): koszt w złocie, +szczęście przedmiotów i rabat na poziom; +1 przedmiot na poziomach 3 i 5. */
@@ -163,7 +175,7 @@ export const BAL = {
     shardsByRarity: [1, 2, 4, 7, 12],
     upgrade: { gold: 20, shards: 2 },
     /** Ulepszenie: limit, przyrost każdej wartości (ułamek wartości z łupu, losowy z zakresu), wzrost ceny na ulepszenie. */
-    maxUpgrades: 10,
+    maxUpgrades: 15,
     upgradeMin: 0.06,
     upgradeMax: 0.14,
     upgradeCostGrowth: 0.35,

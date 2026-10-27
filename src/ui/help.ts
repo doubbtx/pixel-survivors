@@ -26,7 +26,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Ulepszenia broni mają jakość: od Zwykłego do Legendarnego. Lepsza jakość daje dodatkowe bonusy.',
       'Ewolucja: broń na maksymalnym poziomie z pasywką z jej opisu zmienia się w mocniejszą wersję.',
       'Karty: rzadsze, mocne ulepszenia. Co 5 poziomów, po elicie i po bossie.',
-      'Przedmioty: skrzynie z elit i bossów. Kolor to jakość. Kowadło ulepsza je za złoto i odłamki.',
+      'Przedmioty: skrzynie z elit i bossów. Kolor to jakość. Kowadło: Kuźnia do +15, przekuwanie i jakość (strona Moce).',
       'Trafia cię tylko mały środek postaci: przeciskaj się między pociskami.',
     ],
   },
@@ -73,6 +73,17 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Pakty: przed runem (wybór bohatera, Tab) włączasz utrudnienia. Więcej esencji i odznaki za bossa.',
       'Teren: osłony blokują pociski (także twoje) i da się je zniszczyć. Beczki wybuchają, kolce ranią wszystkich.',
       'Bagno spowalnia ciebie i wrogów, na lodzie się ślizgasz. Przy bossie arena się zwęża.',
+    ],
+  },
+  {
+    title: 'Kuźnia',
+    lines: [
+      'Kuźnia: w kowadle ulepszasz przedmiot do +15. Każda próba kosztuje złoto i materiał, i może się nie udać.',
+      'Materiały: kamień kowalski (+1 do +3, wrogowie, rozkładanie), ruda gwiezdna (+4 do +6, elity, zadania, lochy), serce smoka (+7 do +9, bossowie), łza bogów (+10 do +12) i iskra pustki (+13 do +15).',
+      'Porażka: nic, spadek o poziom albo pęknięcie (wartości -30%, napraw rudą). Każda porażka dodaje 5% szansy na następną próbę (litość).',
+      'Zwoje: błogosławieństwo (bez spadku), smoka (+15% szansy), talizman (bez pęknięcia). Klawisze 1-3 w kuźni.',
+      'Tryb ryzyka (klawisz 4): +10% szansy, ale pęknięcie NISZCZY przedmiot, już od +4.',
+      'Progi: +3 nowy bonus, +6 blask (bonus bazowy x1.2), +9 Przebudzenie (efekt wg typu), +12 runa mocy (super-bonus), +15 Boski.',
     ],
   },
   {

@@ -12,7 +12,7 @@ import { rollItem, salvageValue, type Item } from './items';
  * Nowa usługa = wpis w SERVICES (+ cena i zapas w BAL.shopPrice / BAL.shopStock) i obsługa w systems/shop.ts.
  * Nowy eliksir = wpis w ELIXIRS (statystyka + wartość; HP rośnie z głębokością jak przedmioty).
  */
-export type ServiceId = 'potion' | 'card' | 'reroll' | 'banish' | 'cardReroll';
+export type ServiceId = 'potion' | 'card' | 'reroll' | 'banish' | 'cardReroll' | 'stone' | 'ore' | 'bless' | 'dragon';
 
 export interface ServiceDef {
   id: ServiceId;
@@ -27,6 +27,11 @@ export const SERVICES: ServiceDef[] = [
   { id: 'reroll', name: 'Kość losu', desc: '+1 losowanie przy awansie.', icon: 'sh_dice' },
   { id: 'banish', name: 'Zwój wygnania', desc: '+1 wygnanie przy awansie.', icon: 'sh_scroll' },
   { id: 'cardReroll', name: 'Czterolistna talia', desc: '+1 losowanie karty.', icon: 'pi_clover' },
+  // Kuźnia runiczna (data/forge.ts).
+  { id: 'stone', name: 'Kamień kowalski', desc: 'Materiał kuźni na +1 do +3.', icon: 'mt_stone' },
+  { id: 'ore', name: 'Ruda gwiezdna', desc: 'Materiał kuźni na +4 do +6 i naprawy.', icon: 'mt_ore' },
+  { id: 'bless', name: 'Zwój błogosławieństwa', desc: 'Kuźnia: porażka nie obniża poziomu.', icon: 'sc_bless' },
+  { id: 'dragon', name: 'Zwój smoka', desc: 'Kuźnia: +15% szansy na jedną próbę.', icon: 'sc_dragon' },
 ];
 
 export const SERVICE_BY_ID = Object.fromEntries(SERVICES.map((s) => [s.id, s])) as Record<ServiceId, ServiceDef>;

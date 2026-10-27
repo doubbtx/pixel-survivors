@@ -295,6 +295,8 @@ export class GameScreen implements Screen {
         break;
       case 'anvil':
         run.shards += X.anvilShards * ex.act;
+        run.mats.stone += BAL.forge.anvilStones * ex.act;
+        run.mats.ore += BAL.forge.anvilOre * ex.act;
         this.saveSlot(false);
         this.openAnvil('map');
         break;

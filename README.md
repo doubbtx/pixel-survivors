@@ -82,7 +82,7 @@ src/
 - **Poziom kampanii**: generowany z numeru w `data/levels.ts` (biom, cel, przesunięcie fal, nazwa bossa); nowy biom = wpis w `BIOMES`.
 - **Balans**: tylko `data/balance.ts` — krzywa XP, skalowanie HP/obrażeń wrogów w czasie, gęstość fal, diminishing returns (pancerz, cdr, szybkość), limity wydajnościowe.
 
-## Stan: etapy 1-3 + przedmioty + etap 4 (sklep, synergie, kowadło, kolekcja kart, Ekspedycja, sloty zapisu) + etap 5 (meta-progresja, Endless) + etap 6 (telefon, optymalizacja, polish) + sekrety i mini-lochy + 0.13 (zasoby, zadania, unikaty, moce bossów, fuzje, pakty, teren)
+## Stan: etapy 1-3 + przedmioty + etap 4 (sklep, synergie, kowadło, kolekcja kart, Ekspedycja, sloty zapisu) + etap 5 (meta-progresja, Endless) + etap 6 (telefon, optymalizacja, polish) + sekrety i mini-lochy + 0.13 (zasoby, zadania, unikaty, moce bossów, fuzje, pakty, teren) + 0.14 (Kuźnia runiczna)
 
 **Etap 1 (MVP)** — ruch, automatyczna broń, wrogowie, kryształy XP, awans z wyborem 3 kart (4 z Koniczyną), zasoby runu: losowanie (3), pominięcie (2), wygnanie (2), śmierć, ekran podsumowania, restart.
 
@@ -254,6 +254,13 @@ src/
 - **Teren**: osłony blokują pociski wrogów i twoje (da się je rozbić), beczki wybuchają łańcuchowo (zwabiaj wrogów), kolce ranią wszystkich, bagno spowalnia, na lodzie się ślizgasz; skład zależy od biomu. Przy bossie arena się zwęża.
 - Pomoc ma nowe strony (Zasoby, Moce) i nowe podpowiedzi.
 
+**Kuźnia runiczna (0.14)** — ulepszanie przedmiotów jak w Metinie:
+- Kowadło → Kuźnia: przedmiot ulepszasz do **+15**. Każda próba kosztuje złoto i **materiał**: Kamień kowalski (+1…+3), Ruda gwiezdna (+4…+6), Serce smoka (+7…+9), Łza bogów (+10…+12), Iskra pustki (+13…+15). Materiały dają wrogowie, rozkładanie, elity, zadania, lochy, bossowie, Złoty szlam, miecz w kamieniu i sklep (nowy rząd „Kuźnia”).
+- Szansa maleje od 100% (+1) do 5% (+15). **Porażka**: nic, spadek o poziom albo **pęknięcie** (wartości -30%, trzeba naprawić rudą). Każda porażka dodaje 5% szansy na następną próbę (litość).
+- **Zwoje**: błogosławieństwa (porażka nie obniża poziomu), smoka (+15% szansy), talizman kowala (chroni przed pęknięciem). **Tryb ryzyka**: +10% szansy, ale pęknięcie niszczy przedmiot na zawsze (z potwierdzeniem).
+- **Progi**: +3 nowy bonus, +6 blask (bonus bazowy x1.2), +9 **Przebudzenie** zależne od typu (broń: co 10. trafienie podwójne, hełm: blok trafienia, zbroja: tarcza, rękawice: krytyki porażają, buty: ogniste kroki, pierścień: szybsze umiejętności, amulet: XP i złoto), +12 runa mocy (super-bonus albo +50% jego wartości), +15 **Boski** (wszystko x1.25, Przebudzenie x2).
+- Animacja młota z iskrami i wielki napis wyniku; poziom +N widać na gnieździe przedmiotu, pęknięty na czerwono. Odłamki zostają do przekuwania i jakości.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
@@ -269,10 +276,12 @@ src/
 11. Moce bossów i unikaty: F3 + F4 kilka razy → boss → po nagrodach ekran „Moc bossa”. F7 daje łup bossa (12% na unikat); odkryte unikaty: Kolekcja → Tab.
 12. Fuzje: F6 do maks. poziomu dwóch broni z receptury (np. Strzała + Meteor u Kestry) — awans zaproponuje „Fuzja”.
 13. Pakty: wybór bohatera → Tab, ustaw poziomy strzałkami; poziom Paktu widać w HUD. Teren: bagno w biomie 2, lód w biomie 4 (Hardcore: poziomy 2 i 4), arena zwęża się przy bossie.
-14. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
+14. Kuźnia: Hardcore → po bossie Kowadło (albo węzeł kowadła w Ekspedycji, daje też materiały) → przedmiot → „Kuźnia”. Klawisze 1-4: zwoje i ryzyko, Enter: kuj.
+15. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
 
 ## Kolejne etapy
 
+0.14. Gotowe: Kuźnia runiczna (ulepszanie do +15 z szansą, materiały, zwoje, pęknięcia, progi).
 0.13. Gotowe: zasoby bohaterów, zadania, unikaty, moce bossów, fuzje broni, pakty ryzyka, teren.
 
 4. Gotowe: sklep między poziomami, zestawy tagów, kowadło, kolekcja i bany kart, Ekspedycja, sloty zapisu per tryb.

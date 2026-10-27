@@ -1,6 +1,6 @@
 import { BAL } from '../data/balance';
 import {
-  ELIXIR_BY_ID, elixirPrice, itemPrice, refreshPrice, rollShopItems, servicePrice, shopUpgradePrice,
+  ELIXIR_BY_ID, SERVICE_BY_ID, elixirPrice, itemPrice, refreshPrice, rollShopItems, servicePrice, shopUpgradePrice,
   type ServiceId,
 } from '../data/shop';
 import type { Run } from '../game/run';
@@ -44,6 +44,8 @@ export function buyService(run: Run, id: ServiceId): BuyResult {
     case 'reroll': run.rerolls++; return { ok: true, note: `Losowania: ${run.rerolls}` };
     case 'banish': run.banishes++; return { ok: true, note: `Wygnania: ${run.banishes}` };
     case 'cardReroll': run.cardRerolls++; return { ok: true, note: `Losowania kart: ${run.cardRerolls}` };
+    case 'stone': case 'ore': run.mats[id]++; return { ok: true, note: `${SERVICE_BY_ID[id].name}: ${run.mats[id]}` };
+    case 'bless': case 'dragon': run.scrolls[id]++; return { ok: true, note: `${SERVICE_BY_ID[id].name}: ${run.scrolls[id]}` };
   }
 }
 

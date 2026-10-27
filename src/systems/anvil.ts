@@ -1,10 +1,10 @@
 import { BAL } from '../data/balance';
-import { RARITIES, upgradeItem, rerollAffix, raiseRarity, type Item } from '../data/items';
+import { RARITIES, rerollAffix, raiseRarity, type Item } from '../data/items';
 import type { Run } from '../game/run';
 
 /**
  * Kowadło między poziomami: operacje na przedmiotach za złoto i odłamki (z rozkładania).
- *  upgrade   ulepszenie (do BAL.anvil.maxUpgrades): każda wartość rośnie, losowe jest tylko o ile
+ *  upgrade   koszt w złocie ulepszenia w Kuźni runicznej (systems/forge.ts: szansa, materiały, zwoje)
  *  reroll    nowy losowy afiks w miejsce wybranego (albo wszystkie naraz, taniej)
  *  rarity    wyższa jakość: mocniejsze wartości + nowy afiks
  *  transfer  super-bonus z przedmiotu-dawcy na inny przedmiot; dawca przepada
@@ -67,14 +67,6 @@ function done(run: Run, it: Item, c: Cost, note: string): AnvilResult {
   it.spent = { gold: (it.spent?.gold ?? 0) + c.gold, shards: (it.spent?.shards ?? 0) + c.shards };
   run.onBuildChanged();
   return { ok: true, note };
-}
-
-export function anvilUpgrade(run: Run, it: Item): AnvilResult {
-  const c = anvilCost(run, 'upgrade', it);
-  if ((it.upg ?? 0) >= BAL.anvil.maxUpgrades) return fail('Limit ulepszeń');
-  if (!canAfford(run, c)) return fail('Za mało złota lub odłamków');
-  upgradeItem(it);
-  return done(run, it, c, `Ulepszenie ${it.upg}/${BAL.anvil.maxUpgrades}`);
 }
 
 export function anvilReroll(run: Run, it: Item, idx: number): AnvilResult {

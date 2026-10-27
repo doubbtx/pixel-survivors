@@ -28,20 +28,20 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `actors.ts` (animowane postacie, `name@klatka`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów), `objects.ts` (kapliczki, portale, kamień zadania, totem, teren: `tcover@v`, `tbarrel`, `tspikes@0/1`).
 - `data/` — `balance.ts`, `weapons.ts` (z ewolucjami, hybrydy i `FUSIONS`), `passives.ts`, `enemies.ts` (Volley: kształt i ruch salw, `BOSS_POWERS`), `waves.ts`, `heroes.ts`,
   `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `upgrades.ts` (jakość ulepszeń broni, `WeaponBonus`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (88 kart: stats/mul/flags/hooks; lista flag w komentarzu pliku),
-  `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, unikaty `UNIQUES`, rollItem, rollUnique, porównania), `tasks.ts` (zadania), `pacts.ts` (pakty ryzyka, odznaki).
+  `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, unikaty `UNIQUES`, rollItem, rollUnique, porównania), `tasks.ts` (zadania), `pacts.ts` (pakty ryzyka, odznaki), `forge.ts` (Kuźnia: materiały, zwoje, `FORGE_STEPS`, progi, `AWAKENINGS`).
 - `entities/` — typy encji.
 - `systems/` — gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans (levelup), wieżyczki, sługi (`minions.ts`),
-  `resource.ts` (zasób bohatera), `tasks.ts` (zadania w trakcie poziomu), `powers.ts` (moce bossów), `terrain.ts` (teren i arena bossa),
-  sklep (zakupy), kowadło (`anvil.ts`: ulepsz, przekuj, jakość, przenieś super-bonus).
+  `resource.ts` (zasób bohatera), `tasks.ts` (zadania w trakcie poziomu), `powers.ts` (moce bossów), `terrain.ts` (teren i arena bossa), `forge.ts` (próby kucia, naprawa, dropy materiałów, przebudzenia),
+  sklep (zakupy), kowadło (`anvil.ts`: koszt w złocie ulepszenia, przekuj, jakość, przenieś super-bonus).
 - `game/run.ts` — klasa `Run`: postać + świat poziomu, `damageEnemy` (jedyne miejsce utraty HP wroga), `killEnemy`,
   `hurtPlayer`, `recomputeStats` (bohater + pasywki + karty + ekwipunek), `indexEffects` (flagi i hooki z kart i super-bonusów),
   `emit` hooków (onHit, onKill, onAbilityCast, onDash, onDamageTaken, onLevelUp, onTick), ekwipunek (`equip`, `unequip`,
   `salvage`, `slotFor`), `toSnapshot`/`fromSnapshot`.
 - `game/` — też `render.ts` (świat), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy, tablica Hardcore).
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
-  `shop.ts` (ShopView), `anvil.ts` (AnvilView), `expedition.ts` (ExpeditionMapView), `collection.ts` (kolekcja i bany kart, zakładka Unikaty), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb).
+  `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (kolekcja i bany kart, zakładka Unikaty), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb).
 
-## Stan (wersja 0.13.0)
+## Stan (wersja 0.14.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -162,10 +162,23 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
      kolce, bagno (spowolnienie), lód (bezwładność `Player.vx/vy`), zwężająca się arena bossa (gracz i wrogowie w środku).
   Pomoc: strony Zasoby i Moce; podpowiedzi `resource`, `task`, `unique`, `power`, `fusion`, `terrain`.
 
+- Etap 0.14 (Kuźnia runiczna jak w Metinie, `data/forge.ts`, `systems/forge.ts`, `BAL.forge`): ulepszanie do +15
+  (`BAL.anvil.maxUpgrades`) z szansą (`FORGE_STEPS`: szansa, materiał i liczba, szansa spadku i pęknięcia), litość `Item.pity`
+  (+5% za porażkę), materiały `run.mats` (kamień, ruda, serce smoka, łza bogów, iskra pustki) i zwoje `run.scrolls`
+  (błogosławieństwo = bez spadku, smok = +15%, talizman = bez pęknięcia) w zapisie runu (`mats`, `scrolls`).
+  Porażka: nic / `downgradeItem` / pęknięcie `Item.cracked` (wartości × `crackMul`, bez kucia i przebudzenia, `repairItem` za rudę).
+  Tryb ryzyka: +10% szansy, pęknięcie od +4 i = zniszczenie przedmiotu (potwierdzenie drugim Enterem).
+  Progi (`FORGE_TIERS`): +3 `addForgeAffix` i +12 `empowerSuper` raz (`Item.peak`), +6 bonus bazowy × `glowMul`, +9 przebudzenie
+  wg typu (`AWAKENINGS`, `equippedAwakenings` w indexEffects/recomputeStats), +15 wszystko × `divineMul`, przebudzenie × 2.
+  Wartości efektywne: `implicitOf`, `forgeMul` (Run, porównania, karta przedmiotu). Dropy: `forgeKillDrops` (kamienie, ruda i zwoje
+  z elit), `forgeBossDrops` (serca, łzy od głębi 3, iskry od 5 / Paktu 10), rozkładanie (kamienie), zadania i lochy (ruda), Złoty szlam,
+  miecz w kamieniu, węzeł kowadła Ekspedycji. Sklep: trzeci rząd (kamień, ruda, zwoje). Pomoc: strona Kuźnia.
+
 ## Plan dalej
 
 - Kolejni bohaterowie: zostały 2 role (np. zabójca, kapłan) — wszystko oryginalne, od razu z zasobem (`HeroDef.resource`, systems/resource.ts).
 - Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby, zadania (totem), moce bossów, hybrydy, teren (gęstość osłon).
+- Sekrety (uzgodnione pomysły): Księga sekretów z ukrytymi buildami (np. pełna trucizna), sekrety map (pęknięta ściana, fontanna, mimik, kurhan).
 - Pomysły: więcej unikatów i receptur fuzji, moce z bossów aktów Ekspedycji z własnymi atakami, odblokowania za odznaki Paktu.
 
 ## Testowanie

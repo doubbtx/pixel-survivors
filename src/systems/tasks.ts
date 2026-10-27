@@ -8,6 +8,7 @@ import { ELITE_MODS } from '../data/enemies';
 import type { Enemy } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnEnemy, currentMix } from './spawner';
+import { grantMat } from './forge';
 
 /** Trwające albo czekające na start zadanie (kamień na mapie). */
 export interface Task {
@@ -86,6 +87,7 @@ function finish(run: Run, ok: boolean): void {
     return;
   }
   run.tasksDone++;
+  grantMat(run, 'ore', BAL.tasks.ore);
   switch (t.def.reward) {
     case 'chest': run.dropChest(p.x + rng.range(-16, 16), p.y - 20, 'elite'); break;
     case 'card': run.pendingCards.push('elite'); break;

@@ -393,6 +393,13 @@ export interface Item {
   fresh?: boolean;
   /** Unikat: id z UNIQUES (stała nazwa, afiksy i efekt). */
   unique?: string;
+  /**
+   * Kuźnia (data/forge.ts): pęknięty (wartości x BAL.forge.crackMul do naprawy, bez kucia), najwyższy osiągnięty poziom
+   * (progi +3 i +12 dają nagrodę raz) i litość (+szansa po porażkach, zerowana po sukcesie).
+   */
+  cracked?: boolean;
+  peak?: number;
+  pity?: number;
 }
 
 /** Źródło przedmiotu; 'shop' = oferta sklepu między poziomami. */
@@ -519,6 +526,50 @@ export function upgradeItem(it: Item): boolean {
   return true;
 }
 
+/** Kuźnia +3 (Hartowanie): nowy afiks ponad limit jakości. False = brak kandydatów. */
+export function addForgeAffix(it: Item): boolean {
+  const a = newAffix(it);
+  if (!a) return false;
+  const up = upOf(it);
+  it.affixes.push({ stat: a.stat, value: affixValue(a, it.ilvl, RARITIES[it.rarity].power) * (1 + up), up });
+  return true;
+}
+
+/** Kuźnia +12 (Runa mocy): super-bonus, a gdy już jest — o połowę mocniejszy (dla bonusów „co X s” krótszy odstęp). */
+export function empowerSuper(it: Item): void {
+  if (!it.super) { it.super = rollSuper(it.rarity); return; }
+  const def = SUPER_BY_ID[it.super.id];
+  it.super.value = def.min > def.max ? it.super.value / 1.5 : it.super.value * 1.5;
+}
+
+/** Kuźnia: spadek o poziom — każda wartość traci średni przyrost jednego ulepszenia. */
+export function downgradeItem(it: Item): void {
+  const n = it.upg ?? 0;
+  if (n <= 0) return;
+  const avg = (BAL.anvil.upgradeMin + BAL.anvil.upgradeMax) / 2;
+  const imp = it.implicit;
+  imp.up = Math.max(0, (imp.up ?? 0) - avg);
+  imp.value = implicitValue(BASE_BY_ID[it.base].kind, it.ilvl, RARITIES[it.rarity].power, imp.up);
+  for (const a of it.affixes) {
+    if (a.stat === 'amount') continue;
+    const up = a.up ?? 0, next = Math.max(0, up - avg);
+    a.value *= (1 + next) / (1 + up);
+    a.up = next;
+  }
+  it.upg = n - 1;
+}
+
+/** Mnożnik wartości z kuźni: pęknięcie osłabia, +15 (Boski) wzmacnia. */
+export function forgeMul(it: Item): number {
+  return ((it.upg ?? 0) >= 15 ? BAL.forge.divineMul : 1) * (it.cracked ? BAL.forge.crackMul : 1);
+}
+
+/** Bonus bazowy po kuźni (+6: Blask x BAL.forge.glowMul; mnożnik broni rośnie tylko ponad 1). */
+export function implicitOf(it: Item): number {
+  const k = forgeMul(it) * ((it.upg ?? 0) >= 6 ? BAL.forge.glowMul : 1), v = it.implicit.value;
+  return it.implicit.mode === 'mul' ? 1 + (v - 1) * k : v * k;
+}
+
 /** Kowadło: nowy losowy afiks w miejsce afiksu `idx`. False = brak kandydatów. */
 export function rerollAffix(it: Item, idx: number, rolls = 1): boolean {
   const old = it.affixes[idx];
@@ -612,7 +663,7 @@ export function statTotal(stat: keyof Stats, s: Stats): string {
 
 export function implicitLine(it: Item): string {
   const i = it.implicit;
-  return i.mode === 'mul' ? `Obrażenia x${i.value.toFixed(2)}` : statLine(i.stat, i.value);
+  return i.mode === 'mul' ? `Obrażenia x${implicitOf(it).toFixed(2)}` : statLine(i.stat, implicitOf(it));
 }
 
 export function superLine(it: Item): string {
@@ -625,8 +676,9 @@ export function superLine(it: Item): string {
 export function itemStats(it: Item | null): Partial<Record<keyof Stats, number>> {
   const out: Partial<Record<keyof Stats, number>> = {};
   if (!it) return out;
-  if (it.implicit.mode === 'add') out[it.implicit.stat] = it.implicit.value;
-  for (const a of it.affixes) out[a.stat] = (out[a.stat] ?? 0) + a.value;
+  if (it.implicit.mode === 'add') out[it.implicit.stat] = implicitOf(it);
+  const k = forgeMul(it);
+  for (const a of it.affixes) out[a.stat] = (out[a.stat] ?? 0) + a.value * (a.stat === 'amount' ? 1 : k);
   return out;
 }
 
@@ -641,8 +693,8 @@ export function compareItems(next: Item, cur: Item | null): { text: string; bett
     const line = statLine(k, Math.abs(d));
     out.push({ text: (d > 0 ? line : line.replace(/^[+-]/, '-')), better: d > 0 });
   }
-  const ma = next.implicit.mode === 'mul' ? next.implicit.value : 1;
-  const mb = cur?.implicit.mode === 'mul' ? cur.implicit.value : 1;
+  const ma = next.implicit.mode === 'mul' ? implicitOf(next) : 1;
+  const mb = cur?.implicit.mode === 'mul' ? implicitOf(cur) : 1;
   if (Math.abs(ma - mb) > 1e-6) out.unshift({ text: `Obrażenia x${(ma / mb).toFixed(2)}`, better: ma > mb });
   return out;
 }
