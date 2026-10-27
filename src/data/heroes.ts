@@ -42,6 +42,21 @@ export interface AbilityDef {
  */
 export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast' | 'killSummon';
 
+/**
+ * Zasób bohatera (pasek pod HP, systems/resource.ts, liczby w BAL.resource):
+ * focus — celność z trafień z dystansu (krytyki, przy pełnej darmowa Salwa), fury — furia z walki wręcz i obrywania
+ * (obrażenia i redukcja, opada poza walką), heat — żar z czarów (mocniejsze czary, przegrzanie rani, unik zrzuca żar),
+ * souls — dusze z zabitych w pobliżu (przy pełnych sługa, R zużywa wszystkie).
+ */
+export type ResourceKind = 'focus' | 'fury' | 'heat' | 'souls';
+
+export interface ResourceDef {
+  kind: ResourceKind;
+  name: string;
+  desc: string;
+  color: number;
+}
+
 export interface HeroDef {
   id: string;
   name: string;
@@ -53,6 +68,7 @@ export interface HeroDef {
   /** Tagi synergii bohatera (po 1 punkcie, data/synergies.ts). */
   tags: Tag[];
   passive: { name: string; desc: string; kind: HeroPassiveKind; value: number };
+  resource: ResourceDef;
   abilities: AbilityDef[];
 }
 
@@ -99,6 +115,7 @@ export const HEROES: HeroDef[] = [
     weapon: 'arrow',
     tags: ['Pociski', 'Krytyk'],
     passive: { name: 'Sokole oko', desc: 'Co 4. strzał z łuku wypuszcza 2 dodatkowe strzały, zawsze krytyczne.', kind: 'nthVolley', value: 4 },
+    resource: { kind: 'focus', name: 'Celność', color: C.lime, desc: 'Trafienia z dystansu dają celność (więcej krytyków). Pełna celność wypuszcza darmową Salwę. Trafienie cię zabiera połowę.' },
     abilities: [
       {
         id: 'k_volley', name: 'Salwa', icon: 'ab_k_volley', desc: 'Wachlarz strzał w stronę celownika, każda przebija kilku wrogów.', slot: 'q', kind: 'volley', color: C.peach,
@@ -131,6 +148,7 @@ export const HEROES: HeroDef[] = [
     weapon: 'axe',
     tags: ['Tarcze', 'Obszar'],
     passive: { name: 'Żelazna wola', desc: 'Zabójstwa dają tarczę (0.5% HP każde, do 3% HP na sekundę, maks. 15% HP).', kind: 'killShield', value: 0.15 },
+    resource: { kind: 'fury', name: 'Furia', color: C.red, desc: 'Rośnie od ciosów z bliska i obrywania: więcej obrażeń i mniej otrzymanych. Poza walką opada.' },
     abilities: [
       {
         id: 'b_charge', name: 'Szarża', icon: 'ab_b_charge', desc: 'Pędzisz w stronę celownika, raniąc i ogłuszając wrogów na drodze.', slot: 'q', kind: 'charge', color: C.orange,
@@ -163,6 +181,7 @@ export const HEROES: HeroDef[] = [
     weapon: 'staff',
     tags: ['Ogień', 'Umiejętności'],
     passive: { name: 'Echo mocy', desc: 'Co 3. użycie Q lub E powtarza się po chwili za darmo.', kind: 'echoCast', value: 3 },
+    resource: { kind: 'heat', name: 'Żar', color: C.orange, desc: 'Q i E rozgrzewają: czary są mocniejsze, ale przegrzanie rani. Unik zrzuca żar wybuchem ognia.' },
     abilities: [
       {
         id: 'i_fireball', name: 'Kula ognia', icon: 'ab_i_fireball', desc: 'Kula ognia w miejscu celownika: wybuch i płonąca ziemia.', slot: 'q', kind: 'fireball', color: C.orange,
@@ -195,6 +214,7 @@ export const HEROES: HeroDef[] = [
     weapon: 'souls',
     tags: ['Przywołania', 'Klątwa'],
     passive: { name: 'Zew dusz', desc: 'Co 15. zabójstwo z ciała wroga powstaje duch-sługa na 8 s.', kind: 'killSummon', value: 15 },
+    resource: { kind: 'souls', name: 'Dusze', color: C.pink, desc: 'Wrogowie ginący w pobliżu dają dusze. Pełne zamieniają się w sługę, a R zużywa wszystkie: mocniejsza armia.' },
     abilities: [
       {
         id: 'm_raise', name: 'Przywołanie', icon: 'ab_m_raise', desc: 'Przywołujesz duchy-sługi, które gonią i ranią wrogów.', slot: 'q', kind: 'summon', color: C.pink,

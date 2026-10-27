@@ -14,6 +14,9 @@ import { abilitySlotPos, ABILITY_SLOT, TOUCH_PAUSE, STICK_R, type Input } from '
 import type { Run } from '../game/run';
 import { bar, slot, plate } from './widgets';
 import { drawSynergyHud } from './synergies';
+import { resFrac, resMax } from '../systems/resource';
+import { taskStatus } from '../systems/tasks';
+import { REWARD_LABEL } from '../data/tasks';
 
 const KEY_LABEL: Record<AbilitySlot, string> = { q: 'Q', e: 'E', dash: 'Spc', ult: 'R' };
 const OUT = { outline: C.black } as const;
@@ -58,6 +61,32 @@ function drawMinimap(r: Renderer, run: Run, x: number, y: number, w: number, h: 
   r.rect(cx - 1, cy - 1, 2, 2, C.white);
 }
 
+/** Rampy pasków zasobów bohaterów. */
+const RES_RAMP = { focus: RAMP.green, fury: RAMP.red, heat: RAMP.fire, souls: RAMP.purple } as const;
+
+/** Pasek zasobu bohatera pod HP: nazwa i wartość po prawej, miganie przy pełnym zasobie i przegrzaniu (żar). */
+function drawResource(r: Renderer, run: Run, x: number, y: number): void {
+  const res = run.hero.resource, fr = resFrac(run);
+  const hot = res.kind === 'heat' && run.res > BAL.resource.heat.burnFrom;
+  bar(r, x, y, 126, 5, fr, RES_RAMP[res.kind], C.navy);
+  if (res.kind === 'heat') r.rect(x + Math.round((126 * BAL.resource.heat.burnFrom) / resMax(run)), y, 1, 5, C.yellow);
+  if ((hot || fr >= 0.95) && run.step % 16 < 8) r.withAlpha(0.5, () => r.rect(x + 1, y + 1, 124, 3, C.white));
+  drawText(r.g, `${res.name} ${Math.floor(run.res)}`, x + 130, y - 4, hot ? C.red : res.color, OUT);
+}
+
+/** Panel zadania (prawa strona): nazwa, nagroda, postęp i pasek czasu (przed startem: czas do zniknięcia kamienia). */
+function drawTask(r: Renderer, run: Run, x: number, y: number): void {
+  const t = run.task!, g = r.g, rw = REWARD_LABEL[t.def.reward];
+  const w = 110;
+  plate(r, x, y, w, 38);
+  r.frame(x, y, w, 38, t.started ? C.cyan : C.slate);
+  drawText(g, t.def.name, x + 4, y + 1, C.cyan, OUT);
+  drawText(g, taskStatus(run), x + 4, y + 12, C.white, OUT);
+  drawText(g, rw.name, x + w - 4, y + 12, rw.color, { align: 'right', ...OUT });
+  const low = t.started && t.life < 5 && run.step % 20 < 10;
+  bar(r, x + 4, y + 27, w - 8, 6, t.life / t.max, low ? RAMP.red : RAMP.blue, C.navy);
+}
+
 export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean, minimap: boolean, input: Input): void {
   const g = r.g;
   const p = run.player;
@@ -95,12 +124,13 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   if (run.healGlow > 0) r.withAlpha(run.healGlow * 2, () => r.frame(39, 10, 128, 13, C.lime));
   drawText(g, `${fmt(p.hp)} / ${fmt(st.maxHp)}`, 103, 10, C.white, { align: 'center', ...OUT });
   if (p.shield > 0) bar(r, 40, 23, Math.max(6, Math.round(126 * Math.min(1, p.shield / st.maxHp))), 5, 1, RAMP.blue);
+  drawResource(r, run, 40, 29);
   const hc = run.mode === 'hardcore';
   const ex = run.expedition;
-  drawText(g, ex ? `Akt ${ex.act}, głębia ${run.depth}` : `Poziom ${run.depth}`, 41, 30, hc ? C.orange : C.lgray, OUT);
-  if (hc) drawText(g, 'Hardcore', 89, 30, C.salmon, OUT);
+  drawText(g, ex ? `Akt ${ex.act}, głębia ${run.depth}` : `Poziom ${run.depth}`, 41, 36, hc ? C.orange : C.lgray, OUT);
+  if (hc) drawText(g, 'Hardcore', 89, 36, C.salmon, OUT);
   // Aktywne błogosławieństwa kapliczek z czasem.
-  if (run.buffs.length) drawText(g, run.buffs.map((b) => (Number.isFinite(b.t) ? `${b.name} ${Math.ceil(b.t)}s` : b.name)).join('  '), 41, 42, C.yellow, OUT);
+  if (run.buffs.length) drawText(g, run.buffs.map((b) => (Number.isFinite(b.t) ? `${b.name} ${Math.ceil(b.t)}s` : b.name)).join('  '), 41, 47, C.yellow, OUT);
 
   // Czas na płytce + cel poziomu albo pasek bossa.
   plate(r, W / 2 - 36, 7, 72, 25);
@@ -129,6 +159,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   drawSprite(g, 'coin', W - 76, 30);
   drawText(g, fmt(run.gold), W - 9, 24, C.gold, { align: 'right', ...OUT });
   if (minimap) drawMinimap(r, run, W - 86, 41, 82, 56);
+  if (run.task) drawTask(r, run, W - 114, minimap ? 100 : 41);
 
   // Baner (zapowiedzi, fazy bossa, elity).
   if (run.bannerT > 0 && run.step % 10 < 8) {

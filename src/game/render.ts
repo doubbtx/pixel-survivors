@@ -9,6 +9,7 @@ import { effectiveStats, orbitRadius, auraRadius } from '../systems/weapons';
 import { RARITIES } from '../data/items';
 import { BAL } from '../data/balance';
 import type { Run } from './run';
+import { taskTarget } from '../systems/tasks';
 
 const MARGIN = 40;
 const FIRE_COLS = [C.red, C.orange, C.gold, C.yellow, C.orange];
@@ -208,6 +209,34 @@ export function renderWorld(run: Run, r: Renderer): void {
     }
   }
 
+  // Zadanie: kamień przed startem, krąg mocy, totem z paskiem HP, znacznik nad ściganą elitą.
+  const task = run.task;
+  if (task) {
+    const tx = X(task.x), ty = Y(task.y), kind = task.def.kind;
+    if (task.started && kind === 'circle') {
+      const R = Math.round(BAL.tasks.circleR * ZOOM), inCircle = (task.x - p.x) ** 2 + (task.y - p.y) ** 2 < BAL.tasks.circleR ** 2;
+      r.withAlpha(inCircle ? 0.28 : 0.15, () => r.circle(tx, ty, R, C.cyan, true));
+      r.circle(tx, ty, R, inCircle ? C.white : C.cyan);
+      r.withAlpha(0.6, () => r.circle(tx, ty, Math.max(1, Math.round(R * Math.min(1, task.progress / task.def.need))), C.cyan));
+    } else if (task.started && kind === 'totem' && vis(task.x, task.y)) {
+      r.withAlpha(0.15, () => r.circle(tx, ty, Math.round(BAL.tasks.totemR * ZOOM), C.red, true));
+      drawShadow(g, tx, ty + 12, 16);
+      drawSprite(g, 'totem', tx, ty);
+      r.rect(tx - 12, ty - 22, 24, 4, C.black);
+      r.rect(tx - 11, ty - 21, Math.round(22 * Math.max(0, task.hp)), 2, task.hp > 0.35 ? C.lime : C.red);
+    } else if (!task.started && vis(task.x, task.y)) {
+      r.withAlpha(0.2 + 0.12 * Math.sin(run.time * 5), () => r.circle(tx, ty - 2, 16, C.cyan, true));
+      drawShadow(g, tx, ty + 11, 14);
+      drawSprite(g, 'taskstone', tx, ty);
+    } else if (task.started && kind === 'hunt') {
+      const e = run.enemies.items.find((x) => x.uid === task.target && !x.dead);
+      if (e && vis(e.x, e.y) && run.step % 20 < 14) {
+        const ex = X(e.x), ey = Y(e.y - e.radius) - 10;
+        r.rect(ex - 3, ey - 4, 7, 3, C.black); r.rect(ex - 2, ey - 3, 5, 1, C.red); r.rect(ex - 1, ey - 2, 3, 2, C.red); r.rect(ex, ey, 1, 1, C.red);
+      }
+    }
+  }
+
   // Znajdźki.
   for (const gm of run.gems.items) {
     if (!vis(gm.x, gm.y)) continue;
@@ -391,17 +420,21 @@ export function renderWorld(run: Run, r: Renderer): void {
 
   if (fancy) g.drawImage(getVignette(), 0, 0);
 
-  // Dobre skrzynie poza ekranem (Rzadki+ albo super-bonus): znacznik na krawędzi w stronę skrzyni.
-  for (const it of run.pickups.items) {
-    if (!it.item || vis(it.x, it.y) || (it.item.rarity < 2 && !it.item.super)) continue;
-    const dx = X(it.x) - px, dy = Y(it.y) - py;
+  // Znaczniki poza ekranem na krawędzi w stronę celu: dobre skrzynie (Rzadki+ albo super-bonus) i cel zadania.
+  const marker = (x: number, y: number, col: number) => {
+    const dx = X(x) - px, dy = Y(y) - py;
     const k = Math.min((W / 2 - 12) / Math.max(1, Math.abs(dx)), (H / 2 - 12) / Math.max(1, Math.abs(dy)));
     const mx = Math.round(px + dx * k), my = Math.round(py + dy * k);
-    const col = RARITIES[it.item.rarity].color;
     r.circle(mx, my, 5, C.black, true);
     r.circle(mx, my, 4, col, true);
     if (run.step % 30 < 15) r.rect(mx - 1, my - 1, 2, 2, C.white);
+  };
+  for (const it of run.pickups.items) {
+    if (!it.item || vis(it.x, it.y) || (it.item.rarity < 2 && !it.item.super)) continue;
+    marker(it.x, it.y, RARITIES[it.item.rarity].color);
   }
+  const goal = taskTarget(run);
+  if (goal && !vis(goal.x, goal.y)) marker(goal.x, goal.y, C.cyan);
 
   // Celownik.
   const ax = X(run.aimX), ay = Y(run.aimY);

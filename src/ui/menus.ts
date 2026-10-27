@@ -1,6 +1,6 @@
 import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { drawText, wrapText, textWidth } from '../core/font';
 import { sfx } from '../core/audio';
 import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
 import { drawSprite, drawShadow, getSprite, TILE } from '../gfx/sprites';
@@ -239,7 +239,7 @@ function renderBoard(app: App, x: number, y: number, w: number, rows: number): v
 }
 
 const LIST_X = 12, LIST_W = 140, ROW_H = 36, TOP = 38;
-const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 204;
+const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212;
 
 /** Wybór bohatera: lista po lewej (do 6 bohaterów), szczegóły zaznaczonego po prawej. */
 export class HeroSelect implements Screen {
@@ -303,7 +303,16 @@ export class HeroSelect implements Screen {
     drawText(g, `Pasywka: ${h.passive.name}`, x + 12, y + 84, C.yellow);
     let ly = y + 97;
     for (const line of wrapText(h.passive.desc, DET_W - 24)) { drawText(g, line, x + 12, ly, C.lgray); ly += 11; }
-    ly += 4;
+    // Zasób bohatera: nazwa w kolorze paska, opis w tej samej linii.
+    const head = `Zasób: ${h.resource.name}. `;
+    wrapText(head + h.resource.desc, DET_W - 24).forEach((line, i) => {
+      if (i === 0) {
+        drawText(g, head, x + 12, ly + 2, h.resource.color);
+        drawText(g, line.slice(head.length), x + 12 + textWidth(head), ly + 2, C.lgray);
+      } else drawText(g, line, x + 12, ly + 2, C.lgray);
+      ly += 11;
+    });
+    ly += 6;
     // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa.
     h.abilities.forEach((a, i) => {
       const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
@@ -317,12 +326,10 @@ export class HeroSelect implements Screen {
     const best = m === 'hardcore' ? `Najdalej: poziom ${rec.bestDepth}`
       : m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}`
       : m === 'endless' ? `Rekord: ${fmtTime(rec.bestEndless)}` : `Rekord: ${fmtTime(rec.bestTime)}   wygrane: ${rec.wins}`;
-    drawText(g, best, x + 12, y + DET_H - 20, C.dgray);
+    drawText(g, best, x + 12, y + DET_H - 14, C.dgray);
     if (m === 'expedition') {
       const hm = heroMeta(this.app.save.meta, h.id);
-      drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 32, C.cyan);
-    } else {
-      drawText(g, 'Bez Rozwoju (meta-bonusy tylko w Ekspedycji)', x + 12, y + DET_H - 32, C.dgray);
+      drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
     }
     drawText(g, 'Strzałki: wybór    Enter: start    Esc: wstecz', W / 2, H - 16, C.lavender, { align: 'center' });
   }

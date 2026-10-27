@@ -43,6 +43,8 @@ import { spawnTurret } from '../systems/turrets';
  *  counterSlam     oberwanie wyzwala darmowe E (wartość = odstęp w s)
  *  minionDmg / minionSpeed / minionLife   mocniejsze, szybsze, dłużej żyjące sługi (systems/minions.ts)
  *  dashSummon      unik przywołuje ducha-sługę
+ *  res.gain / res.power / res.max   zasób bohatera: szybszy przyrost, silniejszy efekt, większa pojemność (systems/resource.ts)
+ *  heat.safe / heat.vent            Żar Ignary: przegrzanie nie rani, mocniejszy Wydech żaru
  * Flagi map Ekspedycji (data/expedition.ts, na czas poziomu):
  *  enemyDmg / enemyCount / eliteRate / bulletDensity   silniejsi, liczniejsi wrogowie, częstsze elity, gęstsze salwy
  *  healCut         leczenie słabsze o ułamek
@@ -380,6 +382,11 @@ export const CARDS: CardDef[] = [
     id: 'c_ritual', name: 'Krwawy rytuał', rarity: 'prism', tags: ['Klątwa', 'Życie'], cursed: true, desc: '+50% obrażeń i +25% obszaru, ale co 10 s tracisz 5% HP (nie zabija).', stats: { might: 0.5, area: 0.25 },
     hooks: { onTick: (run, dt) => { if (every(run, 'c_ritual', dt, 10)) run.player.hp = Math.max(1, run.player.hp - run.stats.maxHp * 0.05); } },
   },
+  // Zasoby bohaterów (systems/resource.ts).
+  { id: 'h_k_focus', name: 'Spokojna ręka', rarity: 'silver', tags: ['Krytyk'], hero: 'kestra', desc: 'Celność rośnie 40% szybciej i daje 30% więcej krytyka.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
+  { id: 'h_b_fury', name: 'Krwawy szał', rarity: 'silver', tags: ['Tarcze'], hero: 'borgun', desc: 'Furia rośnie 40% szybciej i daje 30% silniejsze efekty.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
+  { id: 'h_i_heat', name: 'Serce żaru', rarity: 'gold', tags: ['Ogień'], hero: 'ignara', desc: 'Przegrzanie cię nie rani, a Wydech żaru zadaje 2x obrażeń.', flags: { 'heat.safe': 1, 'heat.vent': 1 } },
+  { id: 'h_m_souls', name: 'Zbieracz dusz', rarity: 'silver', tags: ['Przywołania'], hero: 'morwen', desc: '+15 maks. dusz, a każde zabójstwo daje o 30% więcej dusz.', stackable: true, flags: { 'res.max': 15, 'res.gain': 0.3 } },
   {
     id: 'h_k_inspire', name: 'Natchnienie', rarity: 'prism', tags: ['Umiejętności'], hero: 'kestra', desc: 'Przez 4 s po Deszczu strzał Q i E odnawiają się 3x szybciej.',
     hooks: {
@@ -416,6 +423,7 @@ const CARD_ICONS: Record<string, string> = {
   h_k_cover: 'ab_k_rain', h_b_counter: 'ab_b_titan', h_i_vortex: 'ab_i_ring_evo',
   h_m_call: 'ab_m_raise', h_m_army: 'ab_m_raise_evo', h_m_swamp: 'ab_m_curse', h_m_lich: 'ab_m_legion_evo',
   p_catalyst: 'cd_nova', p_overdrive: 'pi_fury', c_ritual: 'cd_blood', h_k_inspire: 'ab_k_rain_evo',
+  h_k_focus: 'pi_crit', h_b_fury: 'pi_fury', h_i_heat: 'ab_i_ring_evo', h_m_souls: 'ab_m_legion',
 };
 for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;
 

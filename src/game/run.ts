@@ -38,6 +38,8 @@ import { updateEffects } from '../systems/effects';
 import { updateTurrets } from '../systems/turrets';
 import { updateMinions, spawnMinion } from '../systems/minions';
 import { updateEvents, startDungeon, type MapObject, type Buff, type Dungeon } from '../systems/events';
+import { updateResource, resourceOnHit, resourceOnHurt, resourceOnKill, resourceDamageMul, resourceCrit, resourceTakenMul } from '../systems/resource';
+import { updateTasks, taskOnHurt, taskOnKill, type Task } from '../systems/tasks';
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
@@ -145,6 +147,8 @@ export interface RunSnapshot {
   dpsEma?: number;
   /** Augmenty broni. */
   augments?: string[];
+  /** Zasób bohatera (od 0.13). */
+  resource?: number;
 }
 
 /**
@@ -243,6 +247,10 @@ export class Run {
   /** Zatrzymanie klatki (s, ekran gry wstrzymuje symulację) i chwila, od której można zatrzymać ponownie. */
   hitstop = 0;
   private hitstopAt = 0;
+  /** Zasób bohatera (systems/resource.ts): wartość, czas do kolejnego przyrostu z trafień, czas od ostatniej walki (furia). */
+  res = 0;
+  resGap = 0;
+  resIdle = 0;
   /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej). */
   reactions = 0;
   /** Błysk paska XP po zebraniu kryształu (s). */
@@ -285,6 +293,10 @@ export class Run {
   shrineT = 0;
   portalT = 0;
   swordRolled = false;
+  /** Zadanie poziomu (systems/tasks.ts): trwające albo czekające kamieniem, czas do następnego i licznik wykonanych w runie. */
+  task: Task | null = null;
+  taskT: number = BAL.tasks.first;
+  tasksDone = 0;
   /** Czas do możliwego pojawienia się następnego Złotego szlamu. */
   goldSlimeT = 0;
   /** HP bossa po wznowieniu przerwanego poziomu (ułamek; 1 = pełne). */
@@ -372,6 +384,8 @@ export class Run {
     this.shrineT = BAL.events.shrineEvery * 0.5;
     this.portalT = BAL.events.portalEvery;
     this.swordRolled = false;
+    this.task = null;
+    this.taskT = BAL.tasks.first;
     this.goldSlimeT = BAL.events.goldSlimeGap * 0.5;
     delete this.cardState['aug.orbit'];
     for (const p of [this.enemies, this.projectiles, this.bullets, this.gems, this.pickups, this.particles, this.dmgNums, this.zones, this.fx, this.turrets, this.minions] as Pool<{ _i: number }>[]) p.clear();
@@ -379,6 +393,8 @@ export class Run {
     const p = this.player;
     p.x = 0; p.y = 0; p.dashT = 0; p.iframes = 1; p.hurtCd = 0;
     for (const a of Object.values(this.abilities)) { a.cd = 0; a.activeT = 0; }
+    // Dusze zostają między poziomami, pozostałe zasoby budują się od nowa.
+    if (this.hero.resource.kind !== 'souls') this.res = 0;
     // Błogosławieństwo kapliczki Ekspedycji na kolejne mapy (trwa cały poziom).
     const bless = this.expedition?.blessing ? EX_BLESSINGS.find((b) => b.id === this.expedition!.blessing!.id) : null;
     if (bless) this.buffs.push({ name: bless.name, stats: bless.stats, t: Infinity });
@@ -444,7 +460,9 @@ export class Run {
     this.rebuildHash();
     updatePlayer(this, input, dt);
     updateEvents(this, dt);
+    updateTasks(this, dt);
     updateAbilities(this, input, dt);
+    updateResource(this, dt);
     updateWeapons(this, dt);
     updateTurrets(this, dt);
     updateMinions(this, dt);
@@ -868,7 +886,7 @@ export class Run {
     if (e.dead || (e.boss && e.invuln > 0)) return;
     const st = this.stats;
     let mult = 1;
-    if (!o.dot && (o.forceCrit || rng.chance(Math.min(1, st.crit + (this.srcCrit.get(src) ?? 0))))) {
+    if (!o.dot && (o.forceCrit || rng.chance(Math.min(1, st.crit + (this.srcCrit.get(src) ?? 0) + resourceCrit(this))))) {
       mult = st.critMult;
       if (this.flag('overcrit') > 0 && st.crit > 1 && rng.chance(Math.min(1, st.crit - 1))) mult *= st.critMult;
     }
@@ -881,7 +899,7 @@ export class Run {
     let brittle = 1;
     if (e.brittle > 0 && !o.dot) { brittle = e.brittle; e.brittle = 0; }
     const big = e.boss || e.elite ? 1 + this.flag('bossDmg') : 1;
-    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * (1 - e.dr));
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * resourceDamageMul(this, src) * (1 - e.dr));
     e.hp -= dmg;
     e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dmg);
@@ -912,6 +930,7 @@ export class Run {
     }
     if (o.dot) { if (e.hp <= 0 && !e.dead) this.killEnemy(e); return; }
     // Trafienia procentowe i reakcji nie nakładają żywiołów (inaczej reakcje napędzałyby się same).
+    if (!pct) resourceOnHit(this, e);
     if (!pct && REACTION_COL[src] === undefined) {
       const el = this.augElem.get(src) ?? SRC_ELEMENT[src];
       if (el) this.applyElement(e, el, dmg * (1 + (this.srcElem.get(src) ?? 0)));
@@ -1042,6 +1061,8 @@ export class Run {
     if (this.aug('souls_raise') && (this.lastHitSrc === 'Duszki' || this.lastHitSrc === 'Rój dusz') && rng.chance(BAL.minions.harvestChance)) {
       spawnMinion(this, e.x, e.y, this.cardDamage(BAL.minions.passiveDmg), BAL.minions.passiveLife, false, 'Żniwo');
     }
+    resourceOnKill(this, e);
+    taskOnKill(this, e);
     this.emit('onKill', e);
     if (e.elite) {
       this.dropChest(e.x, e.y, 'elite');
@@ -1133,7 +1154,7 @@ export class Run {
       if (f) f.r = 14;
       return false;
     }
-    let dmg = base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken')));
+    let dmg = base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this);
     const total = dmg;
     const absorbed = Math.min(p.shield, dmg);
     p.shield -= absorbed;
@@ -1147,6 +1168,8 @@ export class Run {
     const n = this.dmgNums.obtain();
     if (n) { n.x = p.x; n.y = p.y - 8; n.life = 0.7; n.text = fmt(total); n.col = C.red; }
     if (total >= this.stats.maxHp * BAL.juice.hurtBig) this.freeze(BAL.juice.hitstopHurt);
+    resourceOnHurt(this, total);
+    taskOnHurt(this);
     this.emit('onDamageTaken', total);
     // Odwet (węzeł Rozwoju Borguna): oberwanie wyzwala darmowy Wstrząs (najwyżej co `counterSlam` s).
     const counter = this.flag('counterSlam');
@@ -1335,6 +1358,7 @@ export class Run {
       expedition: this.expedition ? structuredClone(this.expedition) : undefined,
       dpsEma: this.dpsEma,
       augments: [...this.augments],
+      resource: this.res,
     };
   }
 
@@ -1384,6 +1408,8 @@ export class Run {
     run.augments = (s.augments ?? []).filter((id) => AUGMENT_BY_ID[id]);
     run.indexAugments();
     run.startLevel(s.depth);
+    // Zasób: przerwany poziom wraca z zapisaną wartością, dusze zostają także między poziomami.
+    if (s.inProgress || run.hero.resource.kind === 'souls') run.res = s.resource ?? 0;
     // Przerwany poziom: wznowienie od zapisanego postępu (boss, jeśli był, wraca z zapisanym HP).
     if (s.inProgress && s.stage) {
       run.time = s.stage.time;

@@ -31,7 +31,7 @@ const PAGES: { title: string; lines: string[] }[] = [
     ],
   },
   {
-    title: 'Żywioły i reakcje',
+    title: 'Żywioły',
     lines: [
       'Ogień: podpalenie (obrażenia w czasie). Lód: spowolnienie, co 5. trafienie zamraża.',
       'Błyskawica: wróg dostaje więcej obrażeń. Trucizna: kumulujące się warstwy.',
@@ -43,7 +43,7 @@ const PAGES: { title: string; lines: string[] }[] = [
     ],
   },
   {
-    title: 'Synergie, augmenty',
+    title: 'Synergie',
     lines: [
       'Synergie: bohater, bronie, pasywki, karty i przedmioty dają punkty tagów (Ogień, Krytyk...).',
       'Progi 3, 6 i 9 punktów włączają kolejne bonusy. Lista jest pod portretem, szczegóły w pauzie.',
@@ -53,7 +53,19 @@ const PAGES: { title: string; lines: string[] }[] = [
     ],
   },
   {
-    title: 'Tryby i Rozwój',
+    title: 'Zasoby',
+    lines: [
+      'Zasób bohatera: pasek pod HP. Każdy bohater ma własny i zmienia on styl gry.',
+      'Celność (Kestra): trafienia z dystansu dają więcej krytyków. Pełna wypuszcza darmową Salwę, oberwanie zabiera połowę.',
+      'Furia (Borgun): rośnie od ciosów z bliska i obrywania. Daje obrażenia i redukcję obrażeń, poza walką opada.',
+      'Żar (Ignara): Q i E rozgrzewają, czary są mocniejsze. Powyżej żółtej kreski żar cię rani. Unik zrzuca żar wybuchem.',
+      'Dusze (Morwen): wrogowie ginący w pobliżu dają dusze. Pełne stają się sługą, R zużywa wszystkie na mocniejszą armię.',
+      'Zadania: co minutę pojawia się turkusowy kamień. Dotknij go: zadanie z zegarem (panel po prawej) i nagrodą.',
+      'Rodzaje zadań: Łowy, Obrona totemu, Krąg mocy, Bez skazy, Próba żywiołu. Porażka w części z nich przyzywa karną falę.',
+    ],
+  },
+  {
+    title: 'Tryby',
     lines: [
       'Trening: jeden poziom, dobry na start i do nauki bohaterów.',
       'Hardcore: poziomy po kolei z bossami i sklepem między nimi. Śmierć kasuje cały run.',
@@ -65,6 +77,9 @@ const PAGES: { title: string; lines: string[] }[] = [
   },
 ];
 
+/** Szerokość zakładki: wszystkie strony w jednym rzędzie. */
+const TAB_W = Math.floor((W - 20) / PAGES.length) - 3;
+
 /**
  * Pomoc (menu główne i pauza): strony ze sterowaniem i zasadami. Strzałki lewo/prawo albo klik w zakładkę: strona, Esc: wróć.
  */
@@ -74,7 +89,7 @@ export class HelpScreen implements Screen {
   constructor(private readonly app: App, private readonly back: Screen) {}
 
   private tabX(i: number): number {
-    return 10 + i * 93;
+    return 10 + i * (TAB_W + 3);
   }
 
   update(): void {
@@ -83,7 +98,7 @@ export class HelpScreen implements Screen {
     if (inp.pressed('left') || inp.pressed('up')) { this.page = (this.page - 1 + n) % n; sfx.play('select'); }
     if (inp.pressed('right') || inp.pressed('down') || inp.pressed('confirm')) { this.page = (this.page + 1) % n; sfx.play('select'); }
     if (inp.pressed('click')) {
-      PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, this.tabX(i), 30, 88, 16)) { this.page = i; sfx.play('select'); } });
+      PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, this.tabX(i), 30, TAB_W, 16)) { this.page = i; sfx.play('select'); } });
       if (inside(inp.mouse.x, inp.mouse.y, W / 2 - 40, H - 22, 80, 16)) this.app.go(this.back);
     }
   }
@@ -94,8 +109,8 @@ export class HelpScreen implements Screen {
     drawText(g, 'Pomoc', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
     PAGES.forEach((p, i) => {
       const on = i === this.page;
-      panel(r, this.tabX(i), 30, 88, 16, on ? C.gold : C.slate);
-      drawText(g, p.title, this.tabX(i) + 44, 32, on ? C.white : C.lgray, { align: 'center' });
+      panel(r, this.tabX(i), 30, TAB_W, 16, on ? C.gold : C.slate);
+      drawText(g, p.title, this.tabX(i) + TAB_W / 2, 32, on ? C.white : C.lgray, { align: 'center' });
     });
     panel(r, 10, 52, W - 20, H - 80, C.gold);
     let y = 62;

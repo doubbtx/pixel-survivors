@@ -4,7 +4,7 @@ import { BIOMES, type Biome } from '../data/levels';
 import { Painter } from './painter';
 import { ICON_FNS } from './icons';
 import { ACTORS, boss } from './actors';
-import { shrine, swordStone, portal } from './objects';
+import { shrine, swordStone, portal, taskStone, totem } from './objects';
 import { spark, poof, boom, arrowSprite, prop, patch, uiSkull } from './world';
 
 /**
@@ -212,6 +212,8 @@ function build(name: string): HTMLCanvasElement {
   if (base.startsWith('shrine')) return shrine(Number(base.slice(6))).canvas();
   if (base === 'portal' || base === 'exitportal') return portal(f, base === 'exitportal').canvas();
   if (base === 'swordstone') return swordStone().canvas();
+  if (base === 'taskstone') return taskStone().canvas();
+  if (base === 'totem') return totem().canvas();
   if (ICON_FNS[name]) {
     const p = new Painter(16, 16);
     ICON_FNS[name](p);

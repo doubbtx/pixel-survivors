@@ -34,6 +34,30 @@ export const BAL = {
   },
   /** Sługi (systems/minions.ts): limit naraz, szybkość, zasięg szukania celu, odstęp ciosów, promień zwarcia, odległość od gracza bez celu. */
   minions: { cap: 40, speed: 85, range: 180, hitEvery: 0.5, radius: 6, bigRadius: 10, follow: 26, passiveDmg: 12, passiveLife: 8, harvestChance: 0.1 },
+  /**
+   * Zasoby bohaterów (systems/resource.ts). Karty: res.gain (+przyrost), res.power (+siła efektu), res.max (+pojemność).
+   * focus: trafienie wroga dalej niż `range` daje 1 (najwyżej co `gap` s); +`crit` krytyka za punkt; pełna = darmowa Salwa i zostaje `keep`;
+   *        oberwanie zabiera ułamek `hurtLoss`.
+   * fury: cios we wroga bliżej niż `meleeR` daje `hit` (co `gap` s), oberwanie `hurt` × ułamek maks. HP × 100; przy pełnej
+   *       +`might` obrażeń i -`dr` otrzymanych; po `idle` s bez walki opada o `decay`/s.
+   * heat: Q/E dają `cast`; czary zadają do +`spell` obrażeń; powyżej `burnFrom` tracisz `burn` maks. HP/s (nie zabija); opada `decay`/s;
+   *       unik od `ventMin` zrzuca żar: wybuch (promień `ventR`, obrażenia kart `vent` × żar) i płonąca ziemia.
+   * souls: zabity wróg bliżej niż `range` daje 1; pełne: sługa za `auto` dusz; R zużywa wszystkie: +`ultDmg` obrażeń sług za duszę,
+   *        +1 sługa za każde `ultExtra` dusz.
+   */
+  resource: {
+    focus: { max: 40, range: 70, gap: 0.15, crit: 0.005, keep: 0.25, hurtLoss: 0.5 },
+    fury: { max: 100, meleeR: 52, hit: 1.2, gap: 0.12, hurt: 4, might: 0.4, dr: 0.2, idle: 3, decay: 15 },
+    heat: { max: 100, cast: 20, spell: 0.6, burnFrom: 75, burn: 0.03, decay: 3, ventMin: 40, ventR: 50, vent: 0.7 },
+    souls: { max: 30, range: 150, auto: 10, ultDmg: 0.03, ultExtra: 10 },
+  },
+  /**
+   * Zadania w trakcie poziomu (data/tasks.ts, systems/tasks.ts): pierwsze po `first` s, kolejne co `every` s; kamień czeka `acceptLife` s
+   * w odległości placeMin-placeMax. Łowy: elita w odległości `huntDist` od kamienia. Totem: promień, utrata HP (% na s za wroga, liczonych najwyżej `totemMax`),
+   * utrata HP, gdy gracz jest dalej niż `totemGuard`.
+   * Krąg: promień. Złoto za zadanie × głębokość. Karna fala: zwykli wrogowie i elity.
+   */
+  tasks: { first: 40, every: 60, acceptLife: 25, placeMin: 90, placeMax: 150, huntDist: 60, totemR: 40, totemDrain: 1.5, totemMax: 5, totemGuard: 70, totemAlone: 4, circleR: 32, gold: 25, failWave: 16, failElites: 2 },
   /** Poziom broni, od którego przy awansie pojawiają się jej augmenty (data/augments.ts). */
   augmentMinLevel: 3,
   passiveSlots: 6,

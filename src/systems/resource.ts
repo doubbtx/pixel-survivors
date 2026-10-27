@@ -1,0 +1,142 @@
+import { C } from '../core/palette';
+import { rng } from '../core/rng';
+import { sfx } from '../core/audio';
+import { BAL } from '../data/balance';
+import type { AbilitySlot } from '../data/heroes';
+import type { Enemy } from '../entities/types';
+import type { Run } from '../game/run';
+import { castAbility } from './abilities';
+import { spawnMinion } from './minions';
+
+/**
+ * Zasoby bohaterów (HeroDef.resource, liczby w BAL.resource): stan w `run.res`, zdarzenia wołane z Run i umiejętności.
+ * Karty i węzły: res.gain (szybszy przyrost), res.power (silniejszy efekt), res.max (większa pojemność),
+ * heat.safe (przegrzanie nie rani), heat.vent (mocniejszy Wydech żaru).
+ */
+const R = BAL.resource;
+/** Nazwa źródła obrażeń zrzutu żaru (Ignara). */
+export const VENT_SRC = 'Wydech żaru';
+
+export function resMax(run: Run): number {
+  return R[run.hero.resource.kind].max + run.flag('res.max');
+}
+
+export function resFrac(run: Run): number {
+  return Math.min(1, run.res / resMax(run));
+}
+
+function gain(run: Run, v: number): void {
+  run.res = Math.min(resMax(run), run.res + v * (1 + run.flag('res.gain')));
+}
+
+const power = (run: Run) => 1 + run.flag('res.power');
+
+/** Czy źródło to czar bohatera (Q, E, R — także po ewolucji, bo nazwa pochodzi z bieżącej definicji). */
+function isSpell(run: Run, src: string): boolean {
+  const a = run.abilities;
+  return src === a.q.def.name || src === a.e.def.name || src === a.ult.def.name;
+}
+
+/** Mnożnik obrażeń zadawanych: furia (wszystko) i żar (czary). */
+export function resourceDamageMul(run: Run, src: string): number {
+  const k = run.hero.resource.kind;
+  if (k === 'fury') return 1 + R.fury.might * resFrac(run) * power(run);
+  if (k === 'heat' && isSpell(run, src)) return 1 + R.heat.spell * resFrac(run) * power(run);
+  return 1;
+}
+
+/** Dodatkowa szansa na krytyk z celności. */
+export function resourceCrit(run: Run): number {
+  return run.hero.resource.kind === 'focus' ? run.res * R.focus.crit * power(run) : 0;
+}
+
+/** Mnożnik otrzymywanych obrażeń (furia). */
+export function resourceTakenMul(run: Run): number {
+  return run.hero.resource.kind === 'fury' ? Math.max(0.3, 1 - R.fury.dr * resFrac(run) * power(run)) : 1;
+}
+
+/** Trafienie wroga (bez obrażeń od stanów i procentowych): celność z dystansu, furia z bliska. */
+export function resourceOnHit(run: Run, e: Enemy): void {
+  const k = run.hero.resource.kind;
+  if ((k !== 'focus' && k !== 'fury') || run.resGap > 0) return;
+  const p = run.player, d2 = (e.x - p.x) ** 2 + (e.y - p.y) ** 2;
+  if (k === 'focus') {
+    const F = R.focus;
+    if (d2 < F.range * F.range) return;
+    run.resGap = F.gap;
+    gain(run, 1);
+    if (run.res < resMax(run)) return;
+    // Pełna celność: darmowa Salwa (w następnym kroku — trafienie może być w środku zapytania o wrogów).
+    run.res = resMax(run) * F.keep;
+    run.schedule(0, () => castAbility(run, 'q', true));
+    run.popText(p.x, p.y - 14, 'Celny strzał!', C.lime);
+  } else {
+    const F = R.fury;
+    if (d2 > F.meleeR * F.meleeR) return;
+    run.resGap = F.gap;
+    run.resIdle = 0;
+    gain(run, F.hit);
+  }
+}
+
+/** Oberwanie: celność spada, furia rośnie (wg ułamka maks. HP). */
+export function resourceOnHurt(run: Run, dmg: number): void {
+  const k = run.hero.resource.kind;
+  if (k === 'focus') run.res *= 1 - R.focus.hurtLoss;
+  else if (k === 'fury') { run.resIdle = 0; gain(run, (R.fury.hurt * 100 * dmg) / run.stats.maxHp); }
+}
+
+/** Użycie umiejętności (bez darmowych powtórzeń): Q/E rozgrzewają, unik zrzuca żar. */
+export function resourceOnCast(run: Run, slot: AbilitySlot): void {
+  if (run.hero.resource.kind !== 'heat') return;
+  if (slot === 'q' || slot === 'e') gain(run, R.heat.cast);
+  else if (slot === 'dash') vent(run);
+}
+
+/** Wydech żaru: wybuch ognia wokół Ignary za cały zgromadzony żar. */
+function vent(run: Run): void {
+  const H = R.heat, heat = run.res;
+  if (heat < H.ventMin) return;
+  run.res = 0;
+  const p = run.player, r = H.ventR * run.stats.area;
+  const dmg = run.cardDamage(H.vent * heat) * power(run) * (1 + run.flag('heat.vent'));
+  run.explode(p.x, p.y, r, dmg, VENT_SRC, C.orange, 5);
+  run.addFire(p.x, p.y, r * 0.6, dmg * 0.08, 2 * run.stats.duration, VENT_SRC);
+  run.popText(p.x, p.y - 14, 'Wydech!', C.orange);
+}
+
+/** Zabójstwo: dusze z wrogów ginących w pobliżu; pełne zamieniają się w sługę. */
+export function resourceOnKill(run: Run, e: Enemy): void {
+  if (run.hero.resource.kind !== 'souls') return;
+  const S = R.souls, p = run.player;
+  if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 > S.range * S.range) return;
+  gain(run, e.boss ? 10 : e.elite ? 3 : 1);
+  if (run.res < resMax(run)) return;
+  run.res -= S.auto;
+  spawnMinion(run, e.x, e.y, run.cardDamage(BAL.minions.passiveDmg) * power(run), BAL.minions.passiveLife, false, run.hero.resource.name);
+}
+
+/** Armia umarłych zużywa wszystkie dusze: mnożnik obrażeń sług i dodatkowi wojownicy. */
+export function spendSouls(run: Run): { mul: number; extra: number } {
+  if (run.hero.resource.kind !== 'souls' || run.res < 1) return { mul: 1, extra: 0 };
+  const S = R.souls, n = run.res;
+  run.res = 0;
+  run.popText(run.player.x, run.player.y - 16, `Dusze: ${Math.floor(n)}`, C.pink);
+  return { mul: 1 + S.ultDmg * n * power(run), extra: Math.floor(n / S.ultExtra) };
+}
+
+/** Odliczanie, opadanie furii poza walką, stygnięcie i przegrzanie żaru. */
+export function updateResource(run: Run, dt: number): void {
+  run.resGap = Math.max(0, run.resGap - dt);
+  run.resIdle += dt;
+  const k = run.hero.resource.kind;
+  if (k === 'fury' && run.resIdle > R.fury.idle) run.res = Math.max(0, run.res - R.fury.decay * dt);
+  if (k !== 'heat') return;
+  const H = R.heat, p = run.player;
+  run.res = Math.max(0, run.res - H.decay * dt);
+  if (run.res <= H.burnFrom) return;
+  if (run.step % 6 === 0) run.burst(p.x + rng.range(-3, 3), p.y - 4, rng.chance(0.5) ? C.orange : C.gold, 1, 30);
+  if (run.flag('heat.safe') > 0) return;
+  p.hp = Math.max(1, p.hp - run.stats.maxHp * H.burn * dt);
+  if (run.step % 40 === 0) { p.flash = 3; sfx.play('burn'); }
+}

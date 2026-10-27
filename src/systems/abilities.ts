@@ -7,6 +7,7 @@ import { abilityParam, abilityCooldown, type AbilityKind, type AbilitySlot } fro
 import { SLOT, type AbilityInst } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnMinion } from './minions';
+import { resourceOnCast, spendSouls } from './resource';
 
 const ORDER: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
 
@@ -194,7 +195,9 @@ const CASTS: Record<AbilityKind, Cast> = {
 
   legion(run, a, P) {
     const p = run.player;
-    for (let i = 0; i < Math.round(P('count')); i++) spawnMinion(run, p.x, p.y, P('damage') * run.stats.might, P('duration'), true, a.def.name, !!a.def.evolved);
+    // Dusze (zasób Morwen): mocniejsi i liczniejsi wojownicy.
+    const souls = spendSouls(run);
+    for (let i = 0; i < Math.round(P('count')) + souls.extra; i++) spawnMinion(run, p.x, p.y, P('damage') * souls.mul * run.stats.might, P('duration'), true, a.def.name, !!a.def.evolved);
     run.showBanner(a.def.name + '!');
     run.addShake(5);
   },
@@ -245,6 +248,7 @@ export function castAbility(run: Run, slot: AbilitySlot, free = false): void {
   if (a.def.evolved) EVO_EXTRA[a.def.id]?.(run, a, P);
   if (a.def.kind !== 'dash') sfx.play('ability');
   if (free) return;
+  resourceOnCast(run, slot);
   // Węzły Rozwoju (data/meta.ts, flagi): powtórzenie umiejętności, Przewrót skraca Q / zostawia Sieć, tarcza z Pierścienia.
   for (let i = 0; i < run.flag(`echo.${slot}`); i++) run.schedule(0.4 * (i + 1), () => castAbility(run, slot, true));
   if (slot === 'dash') {

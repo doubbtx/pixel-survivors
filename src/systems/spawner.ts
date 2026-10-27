@@ -66,7 +66,8 @@ function ringPos(run: Run, a: number, r = SPAWN_R): [number, number] {
   return [run.player.x + Math.cos(a) * r, run.player.y + Math.sin(a) * r];
 }
 
-function currentMix(t: number): [string, number][] {
+/** Skład fali (id wroga, waga) dla czasu fal `t`. */
+export function currentMix(t: number): [string, number][] {
   let mix = WAVES[0].mix;
   for (const w of WAVES) if (w.from <= t) mix = w.mix;
   return mix;

@@ -26,6 +26,27 @@ export function swordStone(): Painter {
   return p.outline();
 }
 
+/** Kamień zadania (systems/tasks.ts): obelisk z turkusową runą. */
+export function taskStone(): Painter {
+  const p = new Painter(16, 26);
+  p.block(2, 21, 12, 4, RAMP.stone).rect(2, 21, 12, 1, C.lgray);
+  p.block(4, 4, 8, 17, RAMP.stone).rect(5, 2, 6, 2, C.lavender).rect(6, 1, 4, 1, C.lgray);
+  p.rect(7, 7, 2, 1, C.cyan).rect(6, 9, 4, 1, C.cyan).rect(7, 11, 2, 4, C.cyan).px(7, 7, C.white).px(7, 11, C.white);
+  p.rect(6, 16, 4, 1, C.blue);
+  return p.outline();
+}
+
+/** Totem do obrony (zadanie): rzeźbiony słup z czaszką i piórami. */
+export function totem(): Painter {
+  const p = new Painter(18, 30);
+  p.block(3, 25, 12, 4, RAMP.stone);
+  p.block(5, 8, 8, 17, RAMP.wood).line(5, 14, 12, 14, C.ddbrown).line(5, 20, 12, 20, C.ddbrown);
+  p.rect(7, 16, 1, 2, C.gold).rect(10, 16, 1, 2, C.gold);
+  p.sphere(9, 6, 4.5, 4.5, RAMP.bone).rect(7, 5, 1, 2, C.black).rect(10, 5, 1, 2, C.black).rect(8, 8, 2, 1, C.dgray);
+  p.rect(2, 9, 3, 1, C.red).rect(1, 10, 3, 1, C.salmon).rect(13, 9, 3, 1, C.red).rect(14, 10, 3, 1, C.salmon);
+  return p.outline();
+}
+
 /** Portal: wir z obracającymi się ramionami (klatka 0-2); `exit` = portal powrotny (zielony). */
 export function portal(f: number, exit: boolean): Painter {
   const p = new Painter(26, 30);
