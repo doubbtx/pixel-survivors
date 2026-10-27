@@ -1,7 +1,8 @@
 import { rng } from '../core/rng';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
-import { WEAPONS, WEAPON_BY_ID, maxLevel, describeLevel, type WeaponDef } from '../data/weapons';
+import { WEAPONS, WEAPON_BY_ID, FUSIONS, fusionOf, maxLevel, describeLevel, type WeaponDef } from '../data/weapons';
+import type { WeaponInst } from '../entities/types';
 import { PASSIVES, PASSIVE_BY_ID } from '../data/passives';
 import { describeAbilityLevel, evolveAbility, type AbilitySlot } from '../data/heroes';
 import type { Run } from '../game/run';
@@ -13,8 +14,11 @@ import { AUGMENTS, weaponBase } from '../data/augments';
 import { rollQuality, rollWeaponBonus, addWeaponBonus, bonusLines, type WeaponBonus } from '../data/upgrades';
 import { RARITIES } from '../data/items';
 
-/** 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts); 'augment' = augment broni (data/augments.ts). */
-export type OptionKind = 'weaponNew' | 'weaponUp' | 'passiveNew' | 'passiveUp' | 'ability' | 'abilityEvolve' | 'evolve' | 'augment' | 'stat';
+/**
+ * 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts); 'augment' = augment broni (data/augments.ts);
+ * 'fusion' = połączenie dwóch broni w hybrydę (data/weapons.ts FUSIONS, `id` = id hybrydy).
+ */
+export type OptionKind = 'weaponNew' | 'weaponUp' | 'passiveNew' | 'passiveUp' | 'ability' | 'abilityEvolve' | 'evolve' | 'fusion' | 'augment' | 'stat';
 
 /** Jedna karta wyboru przy awansie. */
 export interface Option {
@@ -38,7 +42,7 @@ export interface Option {
 const tagsOf = (stat: keyof Stats): Tag[] => (STAT_TAG[stat] ? [STAT_TAG[stat]!] : []);
 
 const WEIGHTS: Record<OptionKind, number> = {
-  evolve: 6, abilityEvolve: 6, weaponUp: 2.2, passiveUp: 1.4, ability: 1.6, weaponNew: 1.2, passiveNew: 1, augment: 1.1, stat: 1,
+  evolve: 6, abilityEvolve: 6, fusion: 6, weaponUp: 2.2, passiveUp: 1.4, ability: 1.6, weaponNew: 1.2, passiveNew: 1, augment: 1.1, stat: 1,
 };
 
 /** Podpowiedź ewolucji dla broni: jaka pasywka jest potrzebna. */
@@ -48,6 +52,23 @@ function evolveHint(run: Run, def: WeaponDef): string {
   const p = PASSIVE_BY_ID[ev.passive];
   const has = run.passives.some((x) => x.id === ev.passive);
   return `Ewolucja: max poziom + ${p.name}${has ? ' (masz)' : ''}`;
+}
+
+/** Broń gotowa do fuzji: na maks. poziomie albo po ewolucji (hybryda już nie łączy się dalej). */
+const fusionReady = (w: WeaponInst) => !w.def.fused && (!!w.def.evolved || w.level >= maxLevel(w.def));
+
+/** Posiadana broń o danym id bazowym (także po ewolucji). */
+const ownedBase = (run: Run, base: string) => run.weapons.find((w) => weaponBase(w.def) === base);
+
+/** Podpowiedź fuzji: z którą posiadaną bronią ta broń może się połączyć (pierwsza pasująca receptura). */
+function fusionHint(run: Run, def: WeaponDef): string {
+  const base = weaponBase(def);
+  for (const f of FUSIONS) {
+    const other = f.a === base ? f.b : f.b === base ? f.a : '';
+    const w = other ? ownedBase(run, other) : undefined;
+    if (w && w.def !== def) return `Fuzja z: ${w.def.name} (obie na max)`;
+  }
+  return '';
 }
 
 /** Podpowiedź dla pasywki: którą posiadaną broń pozwala rozwinąć w ewolucję. */
@@ -74,8 +95,14 @@ function candidates(run: Run): Option[] {
       const q = rollQuality(run.stats.luck), bonus = rollWeaponBonus(w.def, q);
       const extra = bonusLines(bonus);
       const desc = describeLevel(w.def, w.level + 1) + (extra.length ? `. Bonus: ${extra.join(', ')}` : '');
-      out.push({ kind: 'weaponUp', id: w.def.id, name: w.def.name, desc, hint: evolveHint(run, w.def), icon: w.def.icon, tag: `${q ? RARITIES[q].name.pl : 'Poziom'} ${w.level + 1}/${maxLevel(w.def)}`, color: q ? RARITIES[q].color : w.def.color, tags: [], quality: q, bonus });
+      out.push({ kind: 'weaponUp', id: w.def.id, name: w.def.name, desc, hint: fusionHint(run, w.def) || evolveHint(run, w.def), icon: w.def.icon, tag: `${q ? RARITIES[q].name.pl : 'Poziom'} ${w.level + 1}/${maxLevel(w.def)}`, color: q ? RARITIES[q].color : w.def.color, tags: [], quality: q, bonus });
     }
+  }
+  // Fuzje: obie bronie-rodzice gotowe.
+  for (const f of FUSIONS) {
+    const a = ownedBase(run, f.a), b = ownedBase(run, f.b), into = WEAPON_BY_ID[f.into];
+    if (!a || !b || !fusionReady(a) || !fusionReady(b)) continue;
+    out.push({ kind: 'fusion', id: f.into, name: into.name, desc: into.desc, hint: `Łączy: ${a.def.name} + ${b.def.name}, zwalnia slot`, icon: into.icon, tag: 'Fuzja', color: into.color, tags: [] });
   }
   // Augmenty: broń od BAL.augmentMinLevel (ewolucja zawsze), każdy augment raz.
   for (const w of run.weapons) {
@@ -92,7 +119,7 @@ function candidates(run: Run): Option[] {
       if (d.evolved || ownedW.has(d.id) || run.banished.has(d.id) || (d.hero && d.hero !== run.hero.id)) continue;
       const el = WEAPON_ELEMENT[d.id];
       const desc = el ? `${d.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : d.desc;
-      out.push({ kind: 'weaponNew', id: d.id, name: d.name, desc, hint: evolveHint(run, d), icon: d.icon, tag: 'Nowa broń', color: d.color, tags: WEAPON_TAGS[d.kind] });
+      out.push({ kind: 'weaponNew', id: d.id, name: d.name, desc, hint: fusionHint(run, d) || evolveHint(run, d), icon: d.icon, tag: 'Nowa broń', color: d.color, tags: WEAPON_TAGS[d.kind] });
     }
   }
   for (const p of run.passives) {
@@ -131,10 +158,10 @@ export function reachesThreshold(run: Run, t: Tag): boolean {
  * > rozwój posiadanej broni > reszta. Prosta heurystyka — ma pomóc, nie grać za gracza.
  */
 export function optionScore(run: Run, o: Option): number {
-  let s = { evolve: 100, abilityEvolve: 95, augment: 24, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, stat: 0 }[o.kind];
+  let s = { evolve: 100, fusion: 98, abilityEvolve: 95, augment: 24, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, stat: 0 }[o.kind];
   s += (o.quality ?? 0) * 6;
   if (o.tags.some((t) => reachesThreshold(run, t))) s += 40;
-  if (o.hint.startsWith('Potrzebna do ewolucji') || o.hint.endsWith('(masz)')) s += 25;
+  if (o.hint.startsWith('Potrzebna do ewolucji') || o.hint.endsWith('(masz)') || o.hint.startsWith('Fuzja z')) s += 25;
   return s;
 }
 
@@ -148,12 +175,12 @@ function statOptions(): Option[] {
 }
 
 /**
- * Losuje `count` różnych opcji (ważonych). Dostępna ewolucja jest zawsze wśród nich
+ * Losuje `count` różnych opcji (ważonych). Dostępna ewolucja (albo fuzja) jest zawsze wśród nich
  * (dawniej gwarantowała ją skrzynia, która teraz daje przedmioty). Brakujące miejsca dopełniają premie statystyk.
  */
 export function generateOptions(run: Run, count: number, exclude: Option[] = []): Option[] {
   const pool = candidates(run).filter((o) => !exclude.some((x) => key(x) === key(o)));
-  const evo = pool.find((o) => o.kind === 'evolve' || o.kind === 'abilityEvolve');
+  const evo = pool.find((o) => o.kind === 'evolve' || o.kind === 'abilityEvolve' || o.kind === 'fusion');
   const out: Option[] = evo ? pool.splice(pool.indexOf(evo), 1) : [];
   while (out.length < count && pool.length) {
     const pick = rng.weighted(pool.map((o) => [o, WEIGHTS[o.kind]] as const));
@@ -187,6 +214,18 @@ export function applyOption(run: Run, o: Option): void {
       if (run.basicWeaponId === w.def.id) run.basicWeaponId = into;
       w.def = WEAPON_BY_ID[into];
       w.level = 1;
+      break;
+    }
+    case 'fusion': {
+      // Hybryda zajmuje slot pierwszej broni, druga znika; bonusy jakości obu się sumują.
+      const f = fusionOf(o.id)!;
+      const a = ownedBase(run, f.a)!, b = ownedBase(run, f.b)!;
+      if (run.basicWeaponId === a.def.id || run.basicWeaponId === b.def.id) run.basicWeaponId = o.id;
+      addWeaponBonus(a.bonus, b.bonus);
+      a.def = WEAPON_BY_ID[o.id];
+      a.level = 1;
+      run.weapons = run.weapons.filter((w) => w !== b);
+      run.showBanner(`Fuzja: ${a.def.name}!`);
       break;
     }
     case 'passiveNew':

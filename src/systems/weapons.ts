@@ -82,6 +82,11 @@ function fireProjectile(run: Run, w: WeaponInst, s: EffWeapon, angle: number, fo
   if (base === 'arrow' && run.aug('arrow_split')) pr.splitEnd = 1;
   if (base === 'boomerang' && run.aug('boom_return')) pr.retMul = 2;
   if (base === 'staff' && run.aug('staff_blast')) pr.blast = 0.5;
+  // Hybrydy z fuzji (data/weapons.ts): wybuch, rozszczepienie, naprowadzanie.
+  const hy = w.def.hybrid;
+  if (hy?.blast) pr.blast = Math.max(pr.blast, hy.blast);
+  if (hy?.split) pr.split = 1;
+  if (hy?.seek) pr.retarget = 2;
 }
 
 /** Pocisk-odłamek z augmentu (bez dalszych augmentów). */

@@ -1,4 +1,4 @@
-import { C, RAMP, type Ramp } from '../core/palette';
+import { C, RAMP, PAL, type Ramp } from '../core/palette';
 import { Rng } from '../core/rng';
 import { BIOMES, type Biome } from '../data/levels';
 import { Painter } from './painter';
@@ -212,6 +212,19 @@ function build(name: string): HTMLCanvasElement {
   if (base.startsWith('shrine')) return shrine(Number(base.slice(6))).canvas();
   if (base === 'portal' || base === 'exitportal') return portal(f, base === 'exitportal').canvas();
   if (base === 'swordstone') return swordStone().canvas();
+  // Ikona hybrydy z fuzji: 'fu:<ikona A>:<ikona B>' — A w całości, B pomniejszona w prawym dolnym rogu.
+  if (base.startsWith('fu:')) {
+    const [, a, b] = base.split(':');
+    const c = document.createElement('canvas');
+    c.width = c.height = 16;
+    const g = c.getContext('2d')!;
+    g.imageSmoothingEnabled = false;
+    g.drawImage(getSprite(a).img, 0, 0);
+    g.fillStyle = PAL[C.black];
+    g.fillRect(7, 7, 9, 9);
+    g.drawImage(getSprite(b).img, 8, 8, 8, 8);
+    return c;
+  }
   if (base === 'taskstone') return taskStone().canvas();
   if (base === 'totem') return totem().canvas();
   if (ICON_FNS[name]) {

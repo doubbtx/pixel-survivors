@@ -5,7 +5,7 @@ import type { Run } from '../game/run';
 import { spawnTurret } from '../systems/turrets';
 import { CARD_BY_ID, type CardHooks, type Tag } from './cards';
 import { PASSIVE_BY_ID } from './passives';
-import type { WeaponKind } from './weapons';
+import { WEAPON_BY_ID, fusionOf, type WeaponKind } from './weapons';
 import type { Item } from './items';
 
 /**
@@ -196,7 +196,12 @@ export function tagPoints(run: Run): Record<Tag, number> {
   const pts = Object.fromEntries(TAGS.map((t) => [t, 0])) as Record<Tag, number>;
   const add = (t: Tag | undefined, n = 1) => { if (t) pts[t] += n; };
   for (const t of run.hero.tags) add(t);
-  for (const w of run.weapons) for (const t of WEAPON_TAGS[w.def.kind]) add(t, w.def.evolved ? 2 : 1);
+  for (const w of run.weapons) {
+    // Hybryda z fuzji liczy się jak dwie bronie po ewolucji (tagi wzorców obu rodziców).
+    const f = w.def.fused ? fusionOf(w.def.id) : undefined;
+    const kinds = f ? [WEAPON_BY_ID[f.a].kind, WEAPON_BY_ID[f.b].kind] : [w.def.kind];
+    for (const k of kinds) for (const t of WEAPON_TAGS[k]) add(t, w.def.evolved ? 2 : 1);
+  }
   for (const p of run.passives) add(STAT_TAG[PASSIVE_BY_ID[p.id].stat]);
   for (const c of run.cards) for (const t of CARD_BY_ID[c.id].tags) add(t, c.stacks);
   for (const it of Object.values(run.equipment)) if (it) for (const t of itemTags(it)) add(t);

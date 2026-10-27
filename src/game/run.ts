@@ -835,7 +835,9 @@ export class Run {
   }
 
   addWeapon(id: string): void {
-    const slot = this.weapons.length;
+    // Najmniejszy wolny indeks slotu (po fuzji w środku listy może zostać luka).
+    let slot = 0;
+    while (this.weapons.some((w) => w.slot === slot)) slot++;
     this.weapons.push({ def: WEAPON_BY_ID[id], level: 1, timer: 0.3, slot, angle: 0, shots: 0, bonus: {} });
   }
 

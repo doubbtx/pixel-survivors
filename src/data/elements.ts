@@ -25,6 +25,9 @@ export const WEAPON_ELEMENT: Record<string, Element> = {
   meteor: 'fire', meteor_evo: 'fire', mines: 'fire', mines_evo: 'fire',
   orbit: 'poison', orbit_evo: 'poison',
   staff: 'fire', staff_evo: 'fire', souls: 'poison', souls_evo: 'poison',
+  // Hybrydy z fuzji (data/weapons.ts FUSIONS).
+  f_firearrow: 'fire', f_stormarrow: 'lightning', f_frostwhirl: 'ice', f_stormstaff: 'lightning', f_comet: 'fire', f_soulwhirl: 'poison',
+  f_gravemines: 'poison', f_thunderorb: 'lightning', f_frostring: 'ice', f_firefield: 'fire', f_mirror: 'lightning',
 };
 
 /** Źródła obrażeń spoza broni z żywiołem (karty, synergie, umiejętności). */

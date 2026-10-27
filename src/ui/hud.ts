@@ -172,13 +172,13 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   // Gniazda broni (górny rząd) i pasywek (dolny rząd); puste gniazda też widać.
   for (let i = 0; i < BAL.weaponSlots; i++) {
     const w = run.weapons[i], x = 4 + i * (SLOT + 2), y = H - 2 * SLOT - 6;
-    slot(r, x, y, SLOT, w?.def.evolved ? C.gold : C.slate);
+    slot(r, x, y, SLOT, w?.def.fused ? C.cyan : w?.def.evolved ? C.gold : C.slate);
     if (!w) continue;
     drawSprite(g, w.def.icon, x + SLOT / 2, y + SLOT / 2);
     // Żywioł broni: kolorowa kropka w lewym górnym rogu gniazda.
     const el = WEAPON_ELEMENT[w.def.id];
     if (el) { r.rect(x + 2, y + 2, 4, 4, C.black); r.rect(x + 3, y + 3, 2, 2, ELEMENTS[el].color); }
-    drawText(g, w.def.evolved ? '*' : String(w.level), x + SLOT - 2, y + SLOT - 11, w.def.evolved ? C.yellow : C.white, { align: 'right', ...OUT });
+    drawText(g, w.def.fused ? '+' : w.def.evolved ? '*' : String(w.level), x + SLOT - 2, y + SLOT - 11, w.def.fused ? C.cyan : w.def.evolved ? C.yellow : C.white, { align: 'right', ...OUT });
   }
   for (let i = 0; i < BAL.passiveSlots; i++) {
     const pa = run.passives[i], x = 4 + i * (SLOT + 2), y = H - SLOT - 4;

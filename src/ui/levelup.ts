@@ -27,7 +27,7 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   panel(r, x, y, CARD_W, CARD_H, warn ? C.red : selected ? C.gold : q ? qCol : recommended ? C.yellow : C.slate);
   const cx = x + CARD_W / 2;
   const isNew = o.kind === 'weaponNew' || o.kind === 'passiveNew';
-  const evolve = o.kind === 'evolve' || o.kind === 'abilityEvolve';
+  const evolve = o.kind === 'evolve' || o.kind === 'abilityEvolve' || o.kind === 'fusion';
   const augment = o.kind === 'augment';
   const tagCol = q ? RARITIES[q].color : evolve ? C.yellow : isNew ? C.lime : augment ? C.cyan : C.lavender;
   drawText(r.g, o.tag, cx, y + 7, tagCol, { align: 'center', shadow: C.black });

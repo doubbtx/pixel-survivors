@@ -388,6 +388,7 @@ export class GameScreen implements Screen {
       this.state = 'levelup';
       this.hints.show('levelup');
       if (this.levelUp.options.some((o) => o.kind === 'augment')) this.hints.show('augment');
+      if (this.levelUp.options.some((o) => o.kind === 'fusion')) this.hints.show('fusion');
     } else if (run.pendingCards.length > 0) {
       this.cardPick = new CardPickView(run, run.pendingCards.shift()!);
       this.state = 'cards';
