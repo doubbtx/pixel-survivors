@@ -249,6 +249,30 @@ export const SUPERS: SuperDef[] = [
     id: 'phoenix', name: 'Popiół feniksa', min: 1, max: 1, pct: false, flags: ['revive'],
     desc: 'Raz na poziom odradzasz się po śmierci',
   },
+  // Żywioły (etap B): podpalenie krytykami, lód, siła reakcji, porażenie, zaraza.
+  {
+    id: 'ignite', name: 'Płomienne krytyki', min: 0.3, max: 0.5, pct: true,
+    desc: '{v} szansy, że trafienie krytyczne podpali wroga',
+    hooks: { onHit: (run, e, dmg, crit, v) => { if (crit && rng.chance(chance(v))) run.applyElement(e, 'fire', dmg); } },
+  },
+  {
+    id: 'frostbite', name: 'Mroźny oddech', min: 0.05, max: 0.1, pct: true,
+    desc: '{v} szansy przy trafieniu na nałożenie lodu',
+    flags: ['elemChance.ice'],
+  },
+  {
+    id: 'conductor', name: 'Przewodnik', min: 0.3, max: 0.6, pct: true, flags: ['reactPower'],
+    desc: 'Reakcje żywiołów silniejsze o {v}',
+  },
+  {
+    id: 'thunder', name: 'Burzowe serce', min: 0.1, max: 0.2, pct: true, flags: ['shockBonus'],
+    desc: 'Porażeni wrogowie dostają dodatkowo {v} obrażeń',
+  },
+  {
+    id: 'plague', name: 'Zaraza', min: 0.05, max: 0.1, pct: true,
+    desc: '{v} szansy przy trafieniu na zatrucie wroga',
+    flags: ['elemChance.poison'],
+  },
   {
     id: 'fortune', name: 'Fortuna', min: 0.3, max: 0.6, pct: true, flags: ['itemLuck'],
     desc: '+{v} szansy na lepszą jakość przedmiotów',

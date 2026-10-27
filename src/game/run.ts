@@ -12,6 +12,7 @@ import { WEAPON_BY_ID } from '../data/weapons';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { levelDef, type LevelDef } from '../data/levels';
 import { nodeLevel, type ExpeditionState } from '../data/expedition';
+import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import type { ShopState } from '../data/shop';
 import { SRC_ELEMENT, ELEM, type Element } from '../data/elements';
 import type { MetaBonus } from '../data/meta';
@@ -60,6 +61,10 @@ export interface DamageOpts {
   /** Obrażenia od stanu (podpalenie, trucizna): bez krytyka, bez nakładania żywiołu i bez hooków onHit. */
   dot?: boolean;
 }
+
+const ELEMENT_LIST: Element[] = ['fire', 'ice', 'lightning', 'poison'];
+/** Kolory liczb obrażeń reakcji żywiołów (po nazwie źródła). */
+const REACTION_COL: Record<string, number> = { 'Para': C.lgray, 'Wybuch toksyn': C.lime, 'Przeciążenie': C.orange };
 
 export interface ProjectileSpec {
   x: number;
@@ -135,6 +140,8 @@ export interface RunSnapshot {
   expedition?: ExpeditionState;
   /** Średni DPS (siła buildu, BAL.power) — żeby po wczytaniu wrogowie nie byli na chwilę za słabi. */
   dpsEma?: number;
+  /** Augmenty broni. */
+  augments?: string[];
 }
 
 /**
@@ -271,6 +278,9 @@ export class Run {
   goldSlimeT = 0;
   /** HP bossa po wznowieniu przerwanego poziomu (ułamek; 1 = pełne). */
   bossHpFrac = 1;
+  /** Augmenty broni (id z data/augments.ts) i nadane przez nie żywioły (nazwa źródła → żywioł). */
+  augments: string[] = [];
+  augElem = new Map<string, Element>();
   /** Ekspedycja: mapa aktu i pozycja (null w innych trybach). */
   expedition: ExpeditionState | null = null;
   /** Endless: czas poziomu, w którym pojawi się następny boss. */
@@ -347,6 +357,7 @@ export class Run {
     this.portalT = BAL.events.portalEvery;
     this.swordRolled = false;
     this.goldSlimeT = BAL.events.goldSlimeGap * 0.5;
+    delete this.cardState['aug.orbit'];
     for (const p of [this.enemies, this.projectiles, this.bullets, this.gems, this.pickups, this.particles, this.dmgNums, this.zones, this.fx, this.turrets] as Pool<{ _i: number }>[]) p.clear();
     this.timers = [];
     const p = this.player;
@@ -554,7 +565,25 @@ export class Run {
   }
 
   /** Po każdej zmianie buildu (broń, pasywka, karta, przedmiot): flagi, hooki, synergie i statystyki. */
+  /** Czy run ma augment broni o danym id. */
+  aug(id: string): boolean {
+    return this.augments.includes(id);
+  }
+
+  /** Żywioły z augmentów dla nazw posiadanych broni (także po ewolucji). */
+  private indexAugments(): void {
+    this.augElem.clear();
+    for (const w of this.weapons) {
+      const base = weaponBase(w.def);
+      for (const id of this.augments) {
+        const a = AUGMENT_BY_ID[id];
+        if (a?.elem && a.weapon === base) this.augElem.set(w.def.name, a.elem);
+      }
+    }
+  }
+
   onBuildChanged(): void {
+    this.indexAugments();
     this.indexEffects();
     this.recomputeStats();
   }
@@ -802,8 +831,12 @@ export class Run {
     // Szał (super-bonus): obrażenia rosną z brakującym HP gracza.
     const rage = this.flag('rage') > 0 ? 1 + this.flag('rage') * (1 - this.player.hp / st.maxHp) : 1;
     // Porażenie (błyskawica): wróg otrzymuje więcej obrażeń ze wszystkich źródeł.
-    const shock = e.shockT > 0 ? ELEM.shockMul : 1;
-    const dmg = Math.max(0.01, base * mult * rage * shock * (1 - e.dr));
+    const shock = e.shockT > 0 ? ELEM.shockMul + this.flag('shockBonus') : 1;
+    // Kruszenie (reakcja): następne trafienie wzmocnione; Pogromca olbrzymów: elity i bossowie.
+    let brittle = 1;
+    if (e.brittle > 0 && !o.dot) { brittle = e.brittle; e.brittle = 0; }
+    const big = e.boss || e.elite ? 1 + this.flag('bossDmg') : 1;
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * (1 - e.dr));
     e.hp -= dmg;
     e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dmg);
@@ -823,7 +856,7 @@ export class Run {
       n.y = e.y - e.radius - 2;
       n.life = 0.6;
       n.text = fmt(dmg);
-      n.col = o.dot ? (src === 'Trucizna' ? C.lime : C.orange) : mult > st.critMult ? C.orange : crit ? C.yellow : C.white;
+      n.col = REACTION_COL[src] ?? (o.dot ? (src === 'Trucizna' ? C.lime : C.orange) : mult > st.critMult ? C.orange : crit ? C.yellow : C.white);
     }
     if (!this.lowFx && this.sparksThisStep < BAL.fx.sparksPerStep && rng.chance(0.5)) {
       this.sparksThisStep++;
@@ -831,8 +864,19 @@ export class Run {
       if (s) s.r = crit ? 2 : 1;
     }
     if (o.dot) { if (e.hp <= 0 && !e.dead) this.killEnemy(e); return; }
-    const el = SRC_ELEMENT[src];
-    if (el && !pct) this.applyElement(e, el, dmg);
+    // Trafienia procentowe i reakcji nie nakładają żywiołów (inaczej reakcje napędzałyby się same).
+    if (!pct && REACTION_COL[src] === undefined) {
+      const el = this.augElem.get(src) ?? SRC_ELEMENT[src];
+      if (el) this.applyElement(e, el, dmg);
+      // Karty i super-bonusy: szansa na żywioł przy trafieniu, krytyki porażają.
+      for (const k of ELEMENT_LIST) if (!e.dead && this.flag(`elemChance.${k}`) > 0 && rng.chance(this.flag(`elemChance.${k}`))) this.applyElement(e, k, dmg);
+      const any = this.flag('elemChance.any');
+      if (any > 0 && !e.dead && rng.chance(any)) this.applyElement(e, rng.pick(ELEMENT_LIST), dmg);
+      if (crit && this.flag('critShock') > 0 && !e.dead) this.applyElement(e, 'lightning', dmg);
+    }
+    // Ścinacz: zwykli wrogowie i elity poniżej progu HP giną od razu.
+    const cull = this.flag('cull');
+    if (cull > 0 && !e.boss && e.hp > 0 && e.hp < e.maxHp * cull) e.hp = 0;
     sfx.play('hit');
     if (pct) this.pctDepth++;
     this.emit('onHit', e, dmg, crit);
@@ -840,8 +884,9 @@ export class Run {
     if (e.hp <= 0 && !e.dead) this.killEnemy(e);
   }
 
-  /** Nakłada stan żywiołu po trafieniu (siła z `elemPower`). */
-  private applyElement(e: Enemy, el: Element, dmg: number): void {
+  /** Nakłada stan żywiołu po trafieniu (siła z `elemPower`); najpierw sprawdza reakcję z innym stanem na wrogu. */
+  applyElement(e: Enemy, el: Element, dmg: number): void {
+    if (e.dead || this.react(e, el, dmg)) return;
     const ep = 1 + this.stats.elemPower;
     switch (el) {
       case 'fire':
@@ -862,6 +907,62 @@ export class Run {
         e.poisonUnit = Math.max(e.poisonUnit, dmg * ELEM.poisonRatio * ep);
         break;
     }
+  }
+
+  /**
+   * Reakcja żywiołów (BAL.reactions): nowy żywioł `el` spotyka inny stan na wrogu. Zwraca true, gdy reakcja
+   * zużyła nowy żywioł (nie jest już nakładany). Napis nad wrogiem i liczby w kolorze reakcji.
+   */
+  private react(e: Enemy, el: Element, dmg: number): boolean {
+    if (e.reactT > 0) return false;
+    const has = (k: Element) => k !== el && (k === 'fire' ? e.burnT > 0 : k === 'ice' ? e.slowT > 0 : k === 'lightning' ? e.shockT > 0 : e.poisonStacks > 0);
+    const pair = (a: Element, b: Element) => (el === a && has(b)) || (el === b && has(a));
+    const R = BAL.reactions, power = 1 + this.flag('reactPower');
+    const label = (text: string, col: number) => {
+      e.reactT = R.cd * Math.max(0, 1 - this.flag('reactCd'));
+      this.popText(e.x, e.y - e.radius - 10, text, col);
+    };
+    if (pair('fire', 'ice')) {
+      label('Para!', C.lgray);
+      e.slowT = 0; e.slowF = 0; e.chill = 0; e.burnT = 0; e.burnDps = 0;
+      this.damageEnemy(e, dmg * R.steam.mul * power, 'Para', { stun: R.steam.stun });
+      return true;
+    }
+    if (pair('lightning', 'ice')) {
+      label('Kruszenie!', C.cyan);
+      e.slowT = 0; e.slowF = 0; e.chill = 0;
+      e.brittle = R.shatter.mul * power;
+      return true;
+    }
+    if (pair('fire', 'poison')) {
+      label('Wybuch toksyn!', C.lime);
+      const d = e.poisonUnit * e.poisonStacks * R.toxic.mul * power;
+      e.poisonStacks = 0; e.poisonUnit = 0; e.poisonT = 0;
+      this.explode(e.x, e.y, R.toxic.r * this.stats.area, d, 'Wybuch toksyn', C.lime, 2);
+      return true;
+    }
+    if (pair('lightning', 'poison')) {
+      label('Przewodzenie!', C.yellow);
+      const src = e, hit = [e.uid];
+      for (let i = 0; i < R.conduct.n; i++) {
+        const t = this.nearestEnemy(src.x, src.y, R.conduct.r, hit);
+        if (!t) break;
+        hit.push(t.uid);
+        t.poisonStacks = Math.max(t.poisonStacks, src.poisonStacks);
+        t.poisonUnit = Math.max(t.poisonUnit, src.poisonUnit);
+        t.poisonT = ELEM.poisonTime;
+        const f = this.addFx('line', src.x, src.y, C.lime, 0.15);
+        if (f) { f.x2 = t.x; f.y2 = t.y; }
+      }
+      return false;
+    }
+    if (pair('fire', 'lightning')) {
+      label('Przeciążenie!', C.orange);
+      e.shockT = 0;
+      this.explode(e.x, e.y, R.overload.r * this.stats.area, dmg * R.overload.mul * power, 'Przeciążenie', C.orange, R.overload.knock);
+      return true;
+    }
+    return false;
   }
 
   killEnemy(e: Enemy): void {
@@ -1063,6 +1164,7 @@ export class Run {
     pr.forceCrit = s.forceCrit ?? false;
     pr.t = 0;
     pr.bounces = this.flag('bounce');
+    pr.retarget = 0; pr.split = 0; pr.splitEnd = 0; pr.retMul = 1; pr.blast = 0;
     return pr;
   }
 
@@ -1162,6 +1264,7 @@ export class Run {
       } : undefined,
       expedition: this.expedition ? structuredClone(this.expedition) : undefined,
       dpsEma: this.dpsEma,
+      augments: [...this.augments],
     };
   }
 
@@ -1203,6 +1306,8 @@ export class Run {
     run.anvilLevel = s.anvilLevel ?? 1;
     run.expedition = s.expedition ? structuredClone(s.expedition) : null;
     run.dpsEma = s.dpsEma ?? 0;
+    run.augments = (s.augments ?? []).filter((id) => AUGMENT_BY_ID[id]);
+    run.indexAugments();
     run.startLevel(s.depth);
     // Przerwany poziom: wznowienie od zapisanego postępu (boss, jeśli był, wraca z zapisanym HP).
     if (s.inProgress && s.stage) {
@@ -1225,7 +1330,7 @@ function newEnemy(): Enemy {
     _i: -1, uid: 0, def: null!, sprite: '', x: 0, y: 0, kx: 0, ky: 0, hp: 0, maxHp: 0, speed: 0, damage: 0, radius: 4, xp: 0,
     flash: 0, slowT: 0, slowF: 0, stunT: 0, shootT: 0, shootA: 0, age: 0, dead: false, elite: null, boss: false,
     scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0,
-    burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, hitStamp: new Int32Array(SLOT_COUNT),
+    burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, reactT: 0, brittle: 0, hitStamp: new Int32Array(SLOT_COUNT),
     phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0,
   };
 }
@@ -1234,6 +1339,7 @@ function newProjectile(): Projectile {
   return {
     _i: -1, x: 0, y: 0, vx: 0, vy: 0, life: 0, damage: 0, radius: 2, pierce: 0, hits: [], sprite: '', src: '',
     kind: 'normal', returning: false, knock: 0, forceCrit: false, t: 0, bounces: 0,
+    retarget: 0, split: 0, splitEnd: 0, retMul: 1, blast: 0,
   };
 }
 

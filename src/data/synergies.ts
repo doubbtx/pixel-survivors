@@ -48,6 +48,7 @@ export const WEAPON_TAGS: Record<WeaponKind, Tag[]> = {
 export const SUPER_TAGS: Record<string, Tag> = {
   execute: 'Krytyk', echo: 'Krytyk', storm: 'Pociski', frost: 'Tarcze', vampire: 'Życie', pyre: 'Ogień',
   midas: 'Szybkość', vortex: 'Szybkość', aegis: 'Tarcze', rage: 'Klątwa', phoenix: 'Ogień', fortune: 'Klątwa',
+  ignite: 'Ogień', frostbite: 'Tarcze', conductor: 'Obszar', thunder: 'Krytyk', plague: 'Obszar',
 };
 
 /** Różne tagi przedmiotu (afiksy + super-bonus) — do punktów i do opisu na karcie przedmiotu. */

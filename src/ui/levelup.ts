@@ -24,10 +24,11 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   const cx = x + CARD_W / 2;
   const isNew = o.kind === 'weaponNew' || o.kind === 'passiveNew';
   const evolve = o.kind === 'evolve' || o.kind === 'abilityEvolve';
-  const tagCol = evolve ? C.yellow : isNew ? C.lime : C.lavender;
+  const augment = o.kind === 'augment';
+  const tagCol = evolve ? C.yellow : isNew ? C.lime : augment ? C.cyan : C.lavender;
   drawText(r.g, o.tag, cx, y + 7, tagCol, { align: 'center', shadow: C.black });
   if (recommended) drawText(r.g, 'Polecane', cx, y - 11, C.yellow, { align: 'center', outline: C.black });
-  const glow = evolve ? C.gold : isNew ? C.lime : C.blue;
+  const glow = evolve ? C.gold : isNew ? C.lime : augment ? C.cyan : C.blue;
   r.withAlpha(0.2, () => r.circle(cx, y + 36, 20, glow, true));
   r.withAlpha(0.6, () => r.circle(cx, y + 36, 16, C.black, true));
   r.circle(cx, y + 36, 17, glow);

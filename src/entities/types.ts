@@ -105,6 +105,9 @@ export interface Enemy extends Poolable {
   poisonUnit: number;
   /** Odliczanie do następnego ticku podpalenia / trucizny. */
   dotT: number;
+  /** Odnowienie reakcji żywiołów na tym wrogu (s) i mnożnik następnego trafienia po Kruszeniu (0 = brak). */
+  reactT: number;
+  brittle: number;
   // — tylko boss —
   phase: number;
   invuln: number;
@@ -135,6 +138,15 @@ export interface Projectile extends Poolable {
   t: number;
   /** Pozostałe odbicia od krawędzi ekranu (karta Rykoszet). */
   bounces: number;
+  /**
+   * Augmenty broni (data/augments.ts): skoki do kolejnego wroga po wyczerpaniu przebić, odłamki przy trafieniu,
+   * rozpad na końcu (po wyczerpaniu przebić), mnożnik obrażeń w drodze powrotnej, wybuch przy trafieniu (ułamek obrażeń).
+   */
+  retarget: number;
+  split: number;
+  splitEnd: number;
+  retMul: number;
+  blast: number;
 }
 
 export interface EnemyBullet extends Poolable {

@@ -2,6 +2,7 @@ import { sfx } from '../core/audio';
 import { C } from '../core/palette';
 import type { Zone } from '../entities/types';
 import type { Run } from '../game/run';
+import { shardProjectile } from './weapons';
 
 /** Wybuch obszarowy: obrażenia z odrzutem od środka + efekty. */
 function explode(run: Run, z: Zone, col: number): void {
@@ -28,12 +29,32 @@ export function updateZones(run: Run, dt: number): void {
     const tick = run.step % z.tick === 0;
     switch (z.kind) {
       case 'meteor':
-        if (z.t >= z.delay) { explode(run, z, C.orange); run.zones.release(z); }
+        if (z.t >= z.delay) {
+          explode(run, z, C.orange);
+          // Augmenty meteoru: płonący krater, odłamki skał.
+          if (run.aug('meteor_crater')) run.addFire(z.x, z.y, z.r * 0.8, z.damage * 0.1, 3, z.src);
+          if (run.aug('meteor_shards')) for (let k = 0; k < 5; k++) shardProjectile(run, z.x, z.y, (k / 5) * Math.PI * 2 + z.t, z.damage * 0.3, z.src, 'ember');
+          run.zones.release(z);
+        }
         break;
       case 'mine': {
         let trigger = z.t >= z.life;
-        if (!trigger && z.t > 0.4) run.enemiesInCircle(z.x, z.y, 8, () => (trigger = true));
-        if (trigger) { explode(run, z, C.red); run.zones.release(z); }
+        if (!trigger && z.t > 0.4) {
+          run.enemiesInCircle(z.x, z.y, 8, () => (trigger = true));
+          // Magnetyczne miny (augment): uzbrojona mina sunie do najbliższego wroga.
+          const t = !trigger && run.aug('mine_magnet') ? run.nearestEnemy(z.x, z.y, 70) : null;
+          if (t) { const d = Math.hypot(t.x - z.x, t.y - z.y) || 1; z.x += ((t.x - z.x) / d) * 60 * dt; z.y += ((t.y - z.y) / d) * 60 * dt; }
+        }
+        if (trigger) {
+          explode(run, z, C.red);
+          // Miny kasetowe (augment): 3 mniejsze miny (len = 1 oznacza minę z kasety — bez kolejnych).
+          if (run.aug('mine_cluster') && z.len !== 1) for (let k = 0; k < 3; k++) {
+            const a = (k / 3) * Math.PI * 2;
+            const m = run.addZone('mine', z.x + Math.cos(a) * 14, z.y + Math.sin(a) * 14, z.r * 0.6, z.damage * 0.4, 2, z.slot, z.src);
+            if (m) { m.len = 1; m.knock = z.knock; }
+          }
+          run.zones.release(z);
+        }
         break;
       }
       case 'net':

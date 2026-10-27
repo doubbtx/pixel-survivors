@@ -27,6 +27,7 @@ import { metaBonus, runEssence } from '../data/meta';
 import { rollItem } from '../data/items';
 import { NODE_INFO, advanceAct, currentNode, isCombat, newExpedition, nodeDepth } from '../data/expedition';
 import { ExpeditionMapView } from './expedition';
+import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 
 type State = 'play' | 'levelup' | 'cards' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'pause' | 'cleared' | 'map' | 'end';
@@ -522,6 +523,9 @@ export class GameScreen implements Screen {
       drawSprite(g, w.def.icon, x + 7, y + 7);
       drawText(g, w.def.evolved ? '*' : String(w.level), x + 16, y + 6, C.white, { align: 'right', outline: C.black });
       drawText(g, fmt((run.dmgBySource.get(w.def.name) ?? 0) / time), x + 7, y + 16, C.gold, { align: 'center' });
+      // Augmenty broni: turkusowe kropki nad ikoną.
+      const augs = run.augments.filter((id) => AUGMENT_BY_ID[id].weapon === weaponBase(w.def)).length;
+      for (let k = 0; k < augs; k++) r.rect(x + k * 4, y - 3, 3, 2, C.cyan);
     });
     drawText(g, 'DPS', px + pw - 10, 92, C.dgray, { align: 'right' });
     run.passives.forEach((p, i) => {

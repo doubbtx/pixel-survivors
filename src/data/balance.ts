@@ -14,6 +14,8 @@ export const BAL = {
   skips: 2,
   banishes: 2,
   weaponSlots: 6,
+  /** Poziom broni, od którego przy awansie pojawiają się jej augmenty (data/augments.ts). */
+  augmentMinLevel: 3,
   passiveSlots: 6,
 
   // --- doświadczenie ---
@@ -147,6 +149,23 @@ export const BAL = {
     { stat: 'speedBonus', value: 0.03, name: 'Zwinność', desc: '+3% szybkości ruchu.', icon: 'pi_wings' },
     { stat: 'cdr', value: 0.02, name: 'Skupienie', desc: 'Umiejętności odnawiają się 2% szybciej.', icon: 'pi_clock' },
   ] as { stat: keyof Stats; value: number; name: string; desc: string; icon: string }[],
+  /**
+   * Reakcje żywiołów (dwa stany naraz na wrogu, game/run.ts react): odnowienie na wrogu (s) i parametry.
+   * Obrażenia liczone od trafienia wywołującego reakcję (× mnożnik × (1 + flaga reactPower)).
+   */
+  reactions: {
+    cd: 0.6,
+    /** Ogień + Lód: ogłuszenie i obrażenia; zużywa oba stany. */
+    steam: { mul: 1.2, stun: 1 },
+    /** Błyskawica + Lód: następne trafienie × mul; zużywa lód. */
+    shatter: { mul: 2 },
+    /** Ogień + Trucizna: wybuch (promień) za wszystkie warstwy trucizny × mul (za sekundę trucizny); zużywa truciznę. */
+    toxic: { r: 30, mul: 3 },
+    /** Błyskawica + Trucizna: trucizna przeskakuje na `n` wrogów w promieniu. */
+    conduct: { r: 55, n: 3 },
+    /** Ogień + Błyskawica: mały wybuch z odrzutem; zużywa porażenie. */
+    overload: { r: 22, mul: 0.8, knock: 6 },
+  },
   /** Ekspedycja (data/expedition.ts): 3 akty map z węzłami. */
   expedition: {
     acts: 3,

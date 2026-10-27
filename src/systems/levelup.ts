@@ -9,9 +9,10 @@ import type { Tag } from '../data/cards';
 import type { Stats } from '../entities/types';
 import { WEAPON_TAGS, STAT_TAG, SYNERGY_BY_TAG, tierOf } from '../data/synergies';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
+import { AUGMENTS, weaponBase } from '../data/augments';
 
-/** 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts). */
-export type OptionKind = 'weaponNew' | 'weaponUp' | 'passiveNew' | 'passiveUp' | 'ability' | 'abilityEvolve' | 'evolve' | 'stat';
+/** 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts); 'augment' = augment broni (data/augments.ts). */
+export type OptionKind = 'weaponNew' | 'weaponUp' | 'passiveNew' | 'passiveUp' | 'ability' | 'abilityEvolve' | 'evolve' | 'augment' | 'stat';
 
 /** Jedna karta wyboru przy awansie. */
 export interface Option {
@@ -32,7 +33,7 @@ export interface Option {
 const tagsOf = (stat: keyof Stats): Tag[] => (STAT_TAG[stat] ? [STAT_TAG[stat]!] : []);
 
 const WEIGHTS: Record<OptionKind, number> = {
-  evolve: 6, abilityEvolve: 6, weaponUp: 2.2, passiveUp: 1.4, ability: 1.6, weaponNew: 1.2, passiveNew: 1, stat: 1,
+  evolve: 6, abilityEvolve: 6, weaponUp: 2.2, passiveUp: 1.4, ability: 1.6, weaponNew: 1.2, passiveNew: 1, augment: 1.1, stat: 1,
 };
 
 /** Podpowiedź ewolucji dla broni: jaka pasywka jest potrzebna. */
@@ -65,6 +66,16 @@ function candidates(run: Run): Option[] {
       out.push({ kind: 'evolve', id: w.def.id, name: into.name, desc: into.desc, hint: `Zastępuje: ${w.def.name}`, icon: into.icon, tag: 'Ewolucja', color: into.color, tags: WEAPON_TAGS[into.kind] });
     } else if (w.level < maxLevel(w.def)) {
       out.push({ kind: 'weaponUp', id: w.def.id, name: w.def.name, desc: describeLevel(w.def, w.level + 1), hint: evolveHint(run, w.def), icon: w.def.icon, tag: `Poziom ${w.level + 1}/${maxLevel(w.def)}`, color: w.def.color, tags: [] });
+    }
+  }
+  // Augmenty: broń od BAL.augmentMinLevel (ewolucja zawsze), każdy augment raz.
+  for (const w of run.weapons) {
+    if (!w.def.evolved && w.level < BAL.augmentMinLevel) continue;
+    const base = weaponBase(w.def);
+    for (const a of AUGMENTS) {
+      if (a.weapon !== base || run.aug(a.id)) continue;
+      const el = a.elem ? ` Żywioł: ${ELEMENTS[a.elem].name}.` : '';
+      out.push({ kind: 'augment', id: a.id, name: a.name, desc: a.desc + el, hint: `Augment broni: ${w.def.name}`, icon: w.def.icon, tag: 'Augment', color: C.cyan, tags: [] });
     }
   }
   if (run.weapons.length < BAL.weaponSlots) {
@@ -111,7 +122,7 @@ export function reachesThreshold(run: Run, t: Tag): boolean {
  * > rozwój posiadanej broni > reszta. Prosta heurystyka — ma pomóc, nie grać za gracza.
  */
 export function optionScore(run: Run, o: Option): number {
-  let s = { evolve: 100, abilityEvolve: 95, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, stat: 0 }[o.kind];
+  let s = { evolve: 100, abilityEvolve: 95, augment: 24, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, stat: 0 }[o.kind];
   if (o.tags.some((t) => reachesThreshold(run, t))) s += 40;
   if (o.hint.startsWith('Potrzebna do ewolucji') || o.hint.endsWith('(masz)')) s += 25;
   return s;
@@ -179,6 +190,9 @@ export function applyOption(run: Run, o: Option): void {
       a.def = evolveAbility(a.def);
       break;
     }
+    case 'augment':
+      run.augments.push(o.id);
+      break;
     case 'stat': {
       const b = BAL.statBoosts.find((x) => String(x.stat) === o.id)!;
       run.addBonus(b.stat, b.value);

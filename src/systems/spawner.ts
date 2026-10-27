@@ -25,12 +25,13 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   e.sprite = def.behavior === 'boss' ? `boss${run.levelInfo.biome}` : def.sprite;
   e.x = x; e.y = y; e.kx = 0; e.ky = 0;
   e.maxHp = e.hp = def.hp * hpMul;
-  e.speed = def.speed * rng.range(0.9, 1.1);
+  e.speed = def.speed * rng.range(0.9, 1.1) * (1 + run.flag('enemySpeed'));
   e.damage = def.damage * BAL.enemyDmgMul(run.time) * BAL.depthDmgMul(run.depth) * Math.pow(run.powerMul, P.dmgExp) * (1 + P.levelDmg * lvl);
   e.radius = def.radius;
   e.xp = def.xp;
   e.flash = 0; e.slowT = 0; e.slowF = 0; e.stunT = 0;
   e.burnT = 0; e.burnDps = 0; e.chill = 0; e.shockT = 0; e.poisonT = 0; e.poisonStacks = 0; e.poisonUnit = 0; e.dotT = 0;
+  e.reactT = 0; e.brittle = 0;
   e.shootT = def.shoot ? rng.range(0.5, def.shoot.cooldown) : 0;
   e.shootA = rng.range(0, Math.PI * 2);
   e.age = 0; e.dead = false; e.elite = null; e.boss = false; e.scale = 1;

@@ -200,6 +200,15 @@ src/
 - Wydajność wybuchów: limit cząsteczek i iskier na krok, scalanie efektów bliskich wybuchów, liczby obrażeń z gotowych obrazków, grafika wybuchów budowana przy starcie.
 - Ustawienia (z włączonym debug) → **Podgląd balansu**: HP zbroi z poziomem i po ulepszeniach, skalowanie wrogów w czasie, miękkie limity.
 
+**Etap B: żywioły i nowa zawartość (0.8)**:
+- **Reakcje żywiołów**, gdy na wrogu spotkają się dwa stany (napis nad wrogiem, własny kolor liczb, odnowienie 0,6 s na wrogu):
+  Ogień + Lód = **Para** (ogłuszenie 1 s i obrażenia), Błyskawica + Lód = **Kruszenie** (następne trafienie x2),
+  Ogień + Trucizna = **Wybuch toksyn** (obszarowy, zużywa truciznę), Błyskawica + Trucizna = **Przewodzenie** (trucizna przeskakuje na 3 wrogów),
+  Ogień + Błyskawica = **Przeciążenie** (mały wybuch z odrzutem). Liczby w `BAL.reactions`.
+- **Augmenty broni**: nowy rodzaj opcji przy awansie (turkusowe karty, od 3. poziomu broni albo po ewolucji), po 2 na każdą broń, np. Rykoszet i Rozprysk (Magiczny pocisk), Płonące groty i Rozszczepienie (Strzała), Żarłoczne i Ciskane ostrza (Orbita), Puls i Wysysanie (Aura), Krater i Odłamki skał (Meteor), Magnetyczne i kasetowe miny, Fala ostrza i Krwawe cięcie (Topór), Wybuchowe kule (Ognisty kostur). W pauzie kropki nad bronią = augmenty.
+- **25 nowych kart** (razem 78): żywiołowe (Krzesiwo, Szron, Jad, Ładunek, Pryzmat żywiołów, Reaktor, Burza żywiołów, Zaraza, Katalizator), późna gra (Weteran, Pogromca olbrzymów, Ścinacz, Przeładowanie, Mądrość), przeklęte (Kruche kości, Nawiedzenie, Krwawy rytuał) i augmenty bohaterów zmieniające umiejętności (Kestra: Sidła, Ogień zaporowy, Natchnienie; Borgun: Lądowanie, Tarcza szarży, Kontratak; Ignara: Ognisty skok, Wir płomieni).
+- **Żywioły na przedmiotach**: super-bonusy Płomienne krytyki, Mroźny oddech, Przewodnik, Burzowe serce, Zaraza.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

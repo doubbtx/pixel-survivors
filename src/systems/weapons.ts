@@ -5,6 +5,7 @@ import { BAL } from '../data/balance';
 import { weaponStatsAt, type WeaponKind, type WeaponStats } from '../data/weapons';
 import type { Enemy, WeaponInst } from '../entities/types';
 import type { Run } from '../game/run';
+import { weaponBase } from '../data/augments';
 
 /** Statystyki broni po uwzględnieniu statystyk gracza (moc, obszar, szybkość ataku, ilość…). */
 export interface EffWeapon extends WeaponStats {
@@ -16,12 +17,14 @@ export function effectiveStats(run: Run, w: WeaponInst): EffWeapon {
   const s = weaponStatsAt(w.def, w.level);
   const st = run.stats;
   const cooldown = s.cooldown * BAL.attackSpeedMul(st.atkSpeed);
+  // Żarłoczne ostrza (augment): orbita rośnie z zabójstwami na tym poziomie.
+  const grow = w.def.kind === 'orbit' ? 1 + (run.cardState['aug.orbit'] ?? 0) : 1;
   return {
     damage: s.damage * st.might,
     cooldown,
     amount: Math.max(0, s.amount + st.amount),
     speed: s.speed * st.projSpeed,
-    area: s.area * st.area,
+    area: s.area * st.area * grow,
     duration: s.duration * st.duration,
     pierce: s.pierce,
     knock: s.knock,
@@ -59,7 +62,20 @@ function fireProjectile(run: Run, w: WeaponInst, s: EffWeapon, angle: number, fo
     sprite: w.def.proj ?? 'bolt', kind: boomerang ? 'boomerang' : w.def.proj === 'arrow' ? 'arrow' : 'normal',
     pierce: s.pierce, life: boomerang ? s.duration * 2 + 1.5 : s.duration, radius: 3 * s.area, knock: s.knock, forceCrit,
   });
-  if (pr && boomerang) pr.t = -s.duration; // bumerang: t<0 = lot w przód
+  if (!pr) return;
+  if (boomerang) pr.t = -s.duration; // bumerang: t<0 = lot w przód
+  // Augmenty pocisków (data/augments.ts).
+  const base = weaponBase(w.def);
+  if ((base === 'bolt' && run.aug('bolt_seek')) || (base === 'staff' && run.aug('staff_seek'))) pr.retarget = 2;
+  if (base === 'bolt' && run.aug('bolt_split')) pr.split = 1;
+  if (base === 'arrow' && run.aug('arrow_split')) pr.splitEnd = 1;
+  if (base === 'boomerang' && run.aug('boom_return')) pr.retMul = 2;
+  if (base === 'staff' && run.aug('staff_blast')) pr.blast = 0.5;
+}
+
+/** Pocisk-odłamek z augmentu (bez dalszych augmentów). */
+export function shardProjectile(run: Run, x: number, y: number, angle: number, damage: number, src: string, sprite: string, pierce = 0): void {
+  run.spawnProjectile({ x, y, angle, speed: 170, damage, src, sprite, kind: sprite === 'arrow' ? 'arrow' : 'normal', pierce, life: 0.45, radius: 2 });
 }
 
 const BEHAVIORS: Record<WeaponKind, Behavior> = {
@@ -93,12 +109,19 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     const n = Math.max(1, s.amount);
     const R = orbitRadius(s.area);
     const p = run.player;
+    const grow = run.aug('orbit_grow');
+    // Ciskane ostrza (augment): co 3 s każde ostrze wylatuje na zewnątrz.
+    const fling = run.aug('orbit_fling') && (w.timer -= dt) <= 0;
+    if (fling) w.timer = 3;
     for (let k = 0; k < n; k++) {
       const a = w.angle + (k * Math.PI * 2) / n;
       const bx = p.x + Math.cos(a) * R, by = p.y + Math.sin(a) * R;
       run.enemiesInCircle(bx, by, 4 * s.area, (e) => {
-        if (run.canHit(e, w.slot, s.hitSteps)) run.damageEnemy(e, s.damage, w.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: s.knock });
+        if (!run.canHit(e, w.slot, s.hitSteps)) return;
+        run.damageEnemy(e, s.damage, w.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: s.knock });
+        if (grow && e.dead) run.cardState['aug.orbit'] = Math.min(0.6, (run.cardState['aug.orbit'] ?? 0) + 0.03);
       });
+      if (fling) shardProjectile(run, bx, by, a, s.damage * 0.6, w.def.name, w.def.proj ?? 'blade', 2);
     }
   },
 
@@ -106,11 +129,18 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
   aura(run, w, s, dt) {
     if (!ready(w, s, dt)) return;
     const p = run.player;
-    run.enemiesInCircle(p.x, p.y, auraRadius(s.area), (e) => {
-      run.damageEnemy(e, s.damage, w.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: s.knock });
+    // Puls (augment): co 4. tick fala z mocnym odrzutem; Wysysanie: leczenie za trafionych.
+    const pulse = run.aug('aura_pulse') && ++w.shots % 4 === 0;
+    const R = auraRadius(s.area) * (pulse ? 1.3 : 1);
+    let hits = 0;
+    run.enemiesInCircle(p.x, p.y, R, (e) => {
+      run.damageEnemy(e, s.damage * (pulse ? 1.5 : 1), w.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: pulse ? 8 : s.knock });
       e.slowT = 0.6;
       e.slowF = Math.max(e.slowF, 0.35);
+      hits++;
     });
+    if (pulse) { const f = run.addFx('ring', p.x, p.y, w.def.color, 0.3); if (f) f.r = R; }
+    if (hits && run.aug('aura_drain')) run.heal(run.stats.maxHp * Math.min(0.01, hits * 0.002));
   },
 
   /** Błyskawica: pierwszy cel najbliższy, potem skoki do najbliższego nietrafionego. */
@@ -118,17 +148,21 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     if (!ready(w, s, dt)) return;
     const p = run.player;
     const hit: number[] = [];
+    const stun = run.aug('chain_stun') ? 0.3 : 0, burst = run.aug('chain_burst');
     for (let c = 0; c < s.amount; c++) {
       let cur = c === 0 ? run.nearestEnemy(p.x, p.y, 170) : run.nearestEnemy(p.x + rng.range(-80, 80), p.y + rng.range(-60, 60), 120, hit);
-      let fx = p.x, fy = p.y;
+      let fx = p.x, fy = p.y, any = false;
       for (let j = 0; j <= s.pierce && cur; j++) {
         hit.push(cur.uid);
         const f = run.addFx('line', fx, fy, j % 2 ? C.white : w.def.color, 0.15);
         if (f) { f.x2 = cur.x; f.y2 = cur.y; }
         fx = cur.x; fy = cur.y;
-        run.damageEnemy(cur, s.damage, w.def.name);
+        any = true;
+        run.damageEnemy(cur, s.damage, w.def.name, { stun });
         cur = run.nearestEnemy(fx, fy, 55 * s.area, hit);
       }
+      // Przeładowany łańcuch (augment): wybuch na ostatnim celu.
+      if (burst && any) run.explode(fx, fy, 22 * s.area, s.damage * 0.6, w.def.name, w.def.color, 2);
     }
     if (hit.length) sfx.play('zap');
     else w.timer = 0.2;
@@ -164,8 +198,14 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     const t = run.nearestEnemy(p.x, p.y, 200);
     const base = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx);
     for (let i = 0; i < s.amount; i++) {
+      const a = base + (i - (s.amount - 1) / 2) * 0.35;
       const z = run.addZone('beam', p.x, p.y, 3 * s.area, s.damage, s.duration, w.slot, w.def.name);
-      if (z) { z.angle = base + (i - (s.amount - 1) / 2) * 0.35; z.len = 170; z.tick = 6; }
+      if (z) { z.angle = a; z.len = 170; z.tick = 6; }
+      // Rozszczepienie światła (augment): dwa krótsze promienie pod kątem.
+      if (run.aug('laser_prism')) for (const d of [-0.5, 0.5]) {
+        const zz = run.addZone('beam', p.x, p.y, 2 * s.area, s.damage * 0.5, s.duration, w.slot, w.def.name);
+        if (zz) { zz.angle = a + d; zz.len = 85; zz.tick = 6; }
+      }
     }
     sfx.play('zap');
   },
@@ -187,16 +227,23 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     const R = 26 * s.area;
     const t = run.nearestEnemy(p.x, p.y, R + 30);
     const base = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx);
+    let hits = 0;
     for (let k = 0; k < Math.max(1, s.amount); k++) {
       const a = base + (k * Math.PI * 2) / Math.max(1, s.amount);
       run.enemiesInCircle(p.x, p.y, R, (e) => {
         let d = Math.atan2(e.y - p.y, e.x - p.x) - a;
         d = Math.atan2(Math.sin(d), Math.cos(d));
-        if (Math.abs(d) <= 1.05) run.damageEnemy(e, s.damage, w.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: s.knock });
+        if (Math.abs(d) > 1.05) return;
+        run.damageEnemy(e, s.damage, w.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: s.knock });
+        hits++;
       });
+      // Fala ostrza (augment): przebijająca fala w kierunku cięcia.
+      if (run.aug('axe_wave')) shardProjectile(run, p.x, p.y, a, s.damage * 0.7, w.def.name, 'blade', 99);
       const f = run.addFx('arc', p.x, p.y, w.def.color, 0.15);
       if (f) { f.r = R; f.a0 = a - 1.05; f.a1 = a + 1.05; }
     }
+    // Krwawe cięcie (augment): leczenie za trafionych.
+    if (hits && run.aug('axe_blood')) run.heal(Math.min(5, hits * 0.5));
     sfx.play('dash');
   },
 };

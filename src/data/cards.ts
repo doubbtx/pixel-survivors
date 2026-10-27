@@ -1,7 +1,7 @@
 import { C } from '../core/palette';
 import { rng } from '../core/rng';
 import { BAL } from './balance';
-import type { Enemy, Stats } from '../entities/types';
+import { SLOT, type Enemy, type Stats } from '../entities/types';
 import type { AbilitySlot } from './heroes';
 import type { Run } from '../game/run';
 import { castAbility } from '../systems/abilities';
@@ -28,6 +28,14 @@ import { spawnTurret } from '../systems/turrets';
  *  overcrit        szansa krytyczna >100% daje podwójny krytyk
  *  meatHeal        mocniejsze leczenie z mięsa
  *  turretRate      szybsze strzelanie wieżyczek
+ *  elemChance.fire / .ice / .lightning / .poison / .any   szansa na żywioł przy trafieniu (any = losowy)
+ *  critShock       trafienia krytyczne porażają
+ *  reactPower      mocniejsze reakcje żywiołów (+ułamek)
+ *  reactCd         krótsze odnowienie reakcji na wrogu (ułamek)
+ *  shockBonus      porażeni wrogowie dostają dodatkowe obrażenia (+ułamek)
+ *  bossDmg         +obrażenia przeciw elitom i bossom
+ *  cull            wrogowie (nie bossowie) poniżej tego ułamka HP giną od trafienia
+ *  enemySpeed      +szybkość wrogów
  *  cd.q / cd.e / cd.dash        skrócenie odnowienia danej umiejętności
  *  passive.n / passive.extra / passive.shieldCap   modyfikacje pasywki bohatera
  *  <idUmiejętności>.<parametr>  dodatek do parametru umiejętności (np. k_volley.count)
@@ -117,6 +125,32 @@ export const CARDS: CardDef[] = [
   { id: 's_roll', name: 'Akrobata', rarity: 'silver', tags: ['Szybkość', 'Umiejętności'], desc: 'Unik odnawia się 30% szybciej.', stackable: true, flags: { 'cd.dash': 0.3 } },
   { id: 's_warm', name: 'Ciepły posiłek', rarity: 'silver', tags: ['Życie'], desc: 'Mięso leczy 2x mocniej, +0.2 HP na sekundę.', flags: { meatHeal: 1 }, stats: { regen: 0.2 } },
   { id: 'h_k_net', name: 'Kolczasta sieć', rarity: 'silver', tags: ['Umiejętności', 'Obszar'], hero: 'kestra', desc: 'Sieć: +6 obrażeń co pół sekundy i jest większa.', stackable: true, flags: { 'k_net.damage': 6, 'k_net.radius': 10 } },
+  { id: 's_tinder', name: 'Krzesiwo', rarity: 'silver', tags: ['Ogień'], desc: 'Trafienia mają 8% szans podpalić wroga.', stackable: true, flags: { 'elemChance.fire': 0.08 } },
+  { id: 's_rime', name: 'Szron', rarity: 'silver', tags: ['Obszar'], desc: 'Trafienia mają 8% szans nałożyć lód.', stackable: true, flags: { 'elemChance.ice': 0.08 } },
+  { id: 's_venom', name: 'Jad', rarity: 'silver', tags: ['Pociski'], desc: 'Trafienia mają 8% szans zatruć wroga.', stackable: true, flags: { 'elemChance.poison': 0.08 } },
+  { id: 's_static', name: 'Ładunek', rarity: 'silver', tags: ['Krytyk'], desc: 'Trafienia krytyczne porażają wroga (+obrażenia od wszystkich źródeł).', flags: { critShock: 1 } },
+  { id: 's_wisdom', name: 'Mądrość', rarity: 'silver', tags: ['Umiejętności'], desc: '+15% doświadczenia.', stackable: true, stats: { growth: 0.15 } },
+  {
+    id: 'h_k_trapper', name: 'Sidła', rarity: 'silver', tags: ['Obszar', 'Szybkość'], hero: 'kestra', desc: 'Przewrót zostawia w miejscu startu sieć, która spowalnia i rani.',
+    hooks: {
+      onDash: (run) => {
+        const z = run.addZone('net', run.player.x, run.player.y, 26 * run.stats.area, run.cardDamage(6), 2.5 * run.stats.duration, SLOT.card, 'Sidła');
+        if (z) { z.slow = 0.6; z.tick = 30; }
+      },
+    },
+  },
+  {
+    id: 'h_b_landing', name: 'Lądowanie', rarity: 'silver', tags: ['Obszar', 'Tarcze'], hero: 'borgun', desc: 'Doskok kończy się uderzeniem, które rani i odpycha wrogów.',
+    hooks: { onDash: (run) => run.schedule(0.16, () => run.explode(run.player.x, run.player.y, 30 * run.stats.area, run.cardDamage(20), 'Lądowanie', C.brown, 5)) },
+  },
+  {
+    id: 'h_b_chargeshield', name: 'Tarcza szarży', rarity: 'silver', tags: ['Tarcze'], hero: 'borgun', desc: 'Szarża daje tarczę 8% HP (maks. 30% HP).', stackable: true,
+    hooks: { onAbilityCast: (run, slot, n) => { if (slot === 'q') run.addShield(run.stats.maxHp * 0.08 * n, 0.3); } },
+  },
+  {
+    id: 'h_i_blinkfire', name: 'Ognisty skok', rarity: 'silver', tags: ['Ogień', 'Szybkość'], hero: 'ignara', desc: 'Mignięcie zostawia wybuch ognia w miejscu startu.',
+    hooks: { onDash: (run) => run.explode(run.player.x, run.player.y, 26 * run.stats.area, run.cardDamage(25), 'Ognisty skok', C.orange, 4) },
+  },
   { id: 'h_i_kindle', name: 'Rozżarzenie', rarity: 'silver', tags: ['Ogień', 'Obszar'], hero: 'ignara', desc: 'Kula ognia: +15 obrażeń, +6 promienia.', stackable: true, flags: { 'i_fireball.damage': 15, 'i_fireball.radius': 6 } },
   { id: 'h_b_hide', name: 'Twarda skóra', rarity: 'silver', tags: ['Tarcze'], hero: 'borgun', desc: 'Tarcza z Żelaznej woli może urosnąć o 10% HP więcej. +2 pancerza.', stackable: true, flags: { 'passive.shieldCap': 0.1 }, stats: { armor: 2 } },
 
@@ -198,6 +232,61 @@ export const CARDS: CardDef[] = [
   },
   { id: 'h_i_ring', name: 'Wieczny płomień', rarity: 'gold', tags: ['Ogień', 'Umiejętności'], hero: 'ignara', desc: 'Pierścień ognia: +2 s, +8 obrażeń co tick, +10 promienia.', stackable: true, flags: { 'i_ring.duration': 2, 'i_ring.damage': 8, 'i_ring.radius': 10 } },
   { id: 'h_i_inferno', name: 'Ognisty deszcz', rarity: 'gold', tags: ['Ogień', 'Obszar'], hero: 'ignara', desc: 'Inferno: +2 s, +20 obrażeń, +8 promienia wybuchów.', stackable: true, flags: { 'i_inferno.duration': 2, 'i_inferno.damage': 20, 'i_inferno.blast': 8 } },
+  { id: 'g_prism', name: 'Pryzmat żywiołów', rarity: 'gold', tags: ['Ogień', 'Krytyk'], desc: 'Trafienia mają 15% szans nałożyć losowy żywioł.', stackable: true, flags: { 'elemChance.any': 0.15 } },
+  { id: 'g_reactor', name: 'Reaktor', rarity: 'gold', tags: ['Obszar', 'Ogień'], desc: 'Reakcje żywiołów są o 50% silniejsze.', stackable: true, flags: { reactPower: 0.5 } },
+  { id: 'g_storm', name: 'Burza żywiołów', rarity: 'gold', tags: ['Umiejętności'], desc: '+30% siły żywiołów, porażeni wrogowie dostają dodatkowe +10% obrażeń.', stats: { elemPower: 0.3 }, flags: { shockBonus: 0.1 } },
+  {
+    id: 'g_spread', name: 'Zaraza', rarity: 'gold', tags: ['Obszar'], desc: 'Zabity wróg przekazuje swoje żywioły najbliższemu wrogowi.',
+    hooks: {
+      onKill: (run, e) => {
+        if (e.burnT <= 0 && e.slowT <= 0 && e.shockT <= 0 && e.poisonStacks <= 0) return;
+        const t = run.nearestEnemy(e.x, e.y, 50, [e.uid]);
+        if (!t) return;
+        if (e.burnT > 0) { t.burnT = Math.max(t.burnT, e.burnT); t.burnDps = Math.max(t.burnDps, e.burnDps); }
+        if (e.slowT > 0) { t.slowT = Math.max(t.slowT, e.slowT); t.slowF = Math.max(t.slowF, e.slowF); }
+        if (e.shockT > 0) t.shockT = Math.max(t.shockT, e.shockT);
+        if (e.poisonStacks > 0) { t.poisonStacks = Math.max(t.poisonStacks, e.poisonStacks); t.poisonUnit = Math.max(t.poisonUnit, e.poisonUnit); t.poisonT = Math.max(t.poisonT, e.poisonT); }
+      },
+    },
+  },
+  {
+    id: 'g_veteran', name: 'Weteran', rarity: 'gold', tags: ['Życie'], desc: 'Od 20. poziomu postaci każdy awans: +1% obrażeń i +2 maks. HP na stałe.', stackable: true,
+    hooks: { onLevelUp: (run, n) => { if (run.level > 20) { run.addBonus('might', 0.01 * n); run.addBonus('maxHp', 2 * n); } } },
+  },
+  { id: 'g_giant', name: 'Pogromca olbrzymów', rarity: 'gold', tags: ['Krytyk'], desc: '+40% obrażeń przeciw elitom i bossom.', stackable: true, flags: { bossDmg: 0.4 } },
+  { id: 'g_cull', name: 'Ścinacz', rarity: 'gold', tags: ['Krytyk', 'Obszar'], desc: 'Wrogowie (poza bossami) poniżej 12% HP giną od trafienia.', flags: { cull: 0.12 } },
+  { id: 'c_brittle', name: 'Kruche kości', rarity: 'gold', tags: ['Klątwa', 'Szybkość'], cursed: true, desc: '+40% szybkości ataku, ale -6 pancerza.', stats: { atkSpeed: 0.4, armor: -6 } },
+  { id: 'c_haunt', name: 'Nawiedzenie', rarity: 'gold', tags: ['Klątwa', 'Ogień'], cursed: true, desc: '+50% siły żywiołów i reakcji, ale wrogowie są 15% szybsi.', stats: { elemPower: 0.5 }, flags: { reactPower: 0.5, enemySpeed: 0.15 } },
+  {
+    id: 'h_k_cover', name: 'Ogień zaporowy', rarity: 'gold', tags: ['Obszar', 'Umiejętności'], hero: 'kestra', desc: 'Salwa zostawia w miejscu celownika krótki deszcz strzał.',
+    hooks: {
+      onAbilityCast: (run, slot) => {
+        if (slot !== 'q') return;
+        const z = run.addZone('rain', run.aimX, run.aimY, 30 * run.stats.area, run.cardDamage(10), 1.5 * run.stats.duration, SLOT.card, 'Ogień zaporowy');
+        if (z) z.tick = 15;
+      },
+    },
+  },
+  {
+    id: 'h_b_counter', name: 'Kontratak', rarity: 'gold', tags: ['Tarcze', 'Umiejętności'], hero: 'borgun', desc: 'Gdy oberwiesz, Szarża jest od razu gotowa (najwyżej co 4 s).',
+    hooks: {
+      onDamageTaken: (run) => {
+        if (run.totalTime < (run.cardState.counterAt ?? 0)) return;
+        run.cardState.counterAt = run.totalTime + 4;
+        run.abilities.q.cd = 0;
+      },
+    },
+  },
+  {
+    id: 'h_i_vortex', name: 'Wir płomieni', rarity: 'gold', tags: ['Ogień', 'Obszar'], hero: 'ignara', desc: 'Pierścień ognia najpierw wciąga wrogów z dalszej okolicy do kręgu.',
+    hooks: {
+      onAbilityCast: (run, slot) => {
+        if (slot !== 'e') return;
+        const p = run.player;
+        run.enemiesInCircle(p.x, p.y, 110 * run.stats.area, (e) => { if (!e.boss) { e.kx += (p.x - e.x) * 4; e.ky += (p.y - e.y) * 4; } });
+      },
+    },
+  },
 
   // ======================= PRYZMATYCZNE =======================
   { id: 'p_bloodpact', name: 'Pakt krwi', rarity: 'prism', tags: ['Klątwa', 'Krytyk'], cursed: true, desc: '+100% obrażeń, ale nie możesz się leczyć.', stats: { might: 1 }, flags: { noHeal: 1 } },
@@ -260,6 +349,34 @@ export const CARDS: CardDef[] = [
     id: 'h_i_echo', name: 'Podwójne echo', rarity: 'prism', tags: ['Umiejętności', 'Ogień'], hero: 'ignara', desc: 'Echo mocy działa co 2. użycie Q lub E zamiast co 3., a odnowienie umiejętności jest o 15% krótsze.',
     flags: { 'passive.n': 1 }, stats: { cdr: 0.15 },
   },
+  { id: 'p_catalyst', name: 'Katalizator', rarity: 'prism', tags: ['Ogień', 'Obszar'], desc: 'Reakcje żywiołów są 2x silniejsze i odnawiają się na wrogu 2x szybciej.', flags: { reactPower: 1, reactCd: 0.5 } },
+  {
+    id: 'p_overdrive', name: 'Przeładowanie', rarity: 'prism', tags: ['Umiejętności', 'Szybkość'], desc: 'Co 10 s bronie atakują 3x szybciej przez 3 s.',
+    hooks: {
+      onTick: (run, dt) => {
+        if (!every(run, 'p_overdrive', dt, 10)) return;
+        run.buffs.push({ name: 'Przeładowanie', stats: { atkSpeed: 2 }, t: 3 });
+        run.recomputeStats();
+      },
+    },
+  },
+  {
+    id: 'c_ritual', name: 'Krwawy rytuał', rarity: 'prism', tags: ['Klątwa', 'Życie'], cursed: true, desc: '+50% obrażeń i +25% obszaru, ale co 10 s tracisz 5% HP (nie zabija).', stats: { might: 0.5, area: 0.25 },
+    hooks: { onTick: (run, dt) => { if (every(run, 'c_ritual', dt, 10)) run.player.hp = Math.max(1, run.player.hp - run.stats.maxHp * 0.05); } },
+  },
+  {
+    id: 'h_k_inspire', name: 'Natchnienie', rarity: 'prism', tags: ['Umiejętności'], hero: 'kestra', desc: 'Przez 4 s po Deszczu strzał Q i E odnawiają się 3x szybciej.',
+    hooks: {
+      onAbilityCast: (run, slot) => { if (slot === 'ult') run.cardState.inspire = 4; },
+      onTick: (run, dt) => {
+        const t = run.cardState.inspire ?? 0;
+        if (t <= 0) return;
+        run.cardState.inspire = t - dt;
+        run.abilities.q.cd -= dt * 2;
+        run.abilities.e.cd -= dt * 2;
+      },
+    },
+  },
 ];
 
 /** Ikony kart: pasujące ikony broni, pasywek i umiejętności albo własne (gfx/card-icons.ts, cd_*). */
@@ -276,6 +393,12 @@ const CARD_ICONS: Record<string, string> = {
   p_frost: 'cd_frost', p_shrapnel: 'cd_shrapnel', p_legion: 'tag:Przywołania', p_overcrit: 'tag:Krytyk', p_hourglass: 'ic_bolt_evo',
   h_k_hawk: 'ic_arrow_evo', h_b_quake: 'ab_b_slam',
   h_i_kindle: 'ab_i_fireball', h_i_ring: 'ab_i_ring', h_i_inferno: 'ab_i_inferno', h_i_echo: 'cd_echo',
+  s_tinder: 'tag:Ogień', s_rime: 'cd_frost', s_venom: 'ic_orbit', s_static: 'ic_chain', s_wisdom: 'gem2',
+  h_k_trapper: 'ab_k_net', h_b_landing: 'ab_b_leap', h_b_chargeshield: 'ab_b_charge', h_i_blinkfire: 'ab_i_blink',
+  g_prism: 'syn_all', g_reactor: 'cd_explode', g_storm: 'cd_tempest', g_spread: 'ic_orbit_evo', g_veteran: 'pi_heart',
+  g_giant: 'ui_skull', g_cull: 'ic_axe_evo', c_brittle: 'cd_glass', c_haunt: 'cd_fever',
+  h_k_cover: 'ab_k_rain', h_b_counter: 'ab_b_titan', h_i_vortex: 'ab_i_ring_evo',
+  p_catalyst: 'cd_nova', p_overdrive: 'pi_fury', c_ritual: 'cd_blood', h_k_inspire: 'ab_k_rain_evo',
 };
 for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;
 

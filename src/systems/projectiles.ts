@@ -2,6 +2,7 @@ import { C } from '../core/palette';
 import { VIEW_W, VIEW_H } from '../core/renderer';
 import { BAL } from '../data/balance';
 import type { Run } from '../game/run';
+import { shardProjectile } from './weapons';
 
 /** Pociski gracza: ruch, bumerangi, kolizje przez spatial hash, przebicia. */
 export function updateProjectiles(run: Run, dt: number): void {
@@ -49,8 +50,25 @@ export function updateProjectiles(run: Run, dt: number): void {
       const rr = pr.radius + e.radius;
       if ((e.x - pr.x) ** 2 + (e.y - pr.y) ** 2 > rr * rr || pr.hits.includes(e.uid)) continue;
       pr.hits.push(e.uid);
-      run.damageEnemy(e, pr.damage, pr.src, { kx: pr.vx, ky: pr.vy, knock: pr.knock, forceCrit: pr.forceCrit });
-      if (--pr.pierce < 0) { run.projectiles.release(pr); break; }
+      run.damageEnemy(e, pr.damage * (pr.returning ? pr.retMul : 1), pr.src, { kx: pr.vx, ky: pr.vy, knock: pr.knock, forceCrit: pr.forceCrit });
+      // Augmenty (data/augments.ts): odłamki na boki, wybuch przy trafieniu.
+      const dir = Math.atan2(pr.vy, pr.vx);
+      if (pr.split) for (const d of [-0.7, 0.7]) shardProjectile(run, pr.x, pr.y, dir + d, pr.damage * 0.4, pr.src, pr.sprite);
+      if (pr.blast) run.explode(pr.x, pr.y, 18, pr.damage * pr.blast, pr.src, C.orange, 2);
+      if (--pr.pierce >= 0) continue;
+      // Skok do następnego wroga zamiast zniknięcia.
+      const next = pr.retarget > 0 ? run.nearestEnemy(pr.x, pr.y, 90, pr.hits) : null;
+      if (next) {
+        pr.retarget--;
+        pr.pierce = 0;
+        const sp = Math.hypot(pr.vx, pr.vy), a = Math.atan2(next.y - pr.y, next.x - pr.x);
+        pr.vx = Math.cos(a) * sp; pr.vy = Math.sin(a) * sp;
+        pr.life = Math.max(pr.life, 0.6);
+        break;
+      }
+      if (pr.splitEnd) for (const d of [-0.4, 0, 0.4]) shardProjectile(run, pr.x, pr.y, dir + d, pr.damage * 0.5, pr.src, pr.sprite, 1);
+      run.projectiles.release(pr);
+      break;
     }
   }
 }

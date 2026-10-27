@@ -261,6 +261,7 @@ export function updateEnemies(run: Run, dt: number): void {
 
     // Uderzenie wręcz: każdy wróg osobno co BAL.contactCooldown (tłum jest groźny, leczenie go nie przebije).
     if (e.touchCd > 0) e.touchCd -= dt;
+    if (e.reactT > 0) e.reactT -= dt;
     else if (e.damage > 0 && dist < e.radius + p.r && run.hurtPlayer(e.damage)) e.touchCd = BAL.contactCooldown;
   }
 }

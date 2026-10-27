@@ -31,7 +31,7 @@ export const WEAPON_ELEMENT: Record<string, Element> = {
 const EXTRA_SOURCES: Record<string, Element> = {
   'Iskra': 'fire', 'Płonący ślad': 'fire', 'Synergia: Ogień': 'fire', 'Ognista dusza': 'fire', 'Wybuchowe zgony': 'fire',
   'Gniew burzy': 'lightning', 'Krytyczna masa': 'lightning',
-  'Sieć': 'ice', 'Lodowa sieć': 'ice',
+  'Sieć': 'ice', 'Lodowa sieć': 'ice', 'Sidła': 'ice', 'Ognisty skok': 'fire',
   'Kula ognia': 'fire', 'Słońce': 'fire', 'Pierścień ognia': 'fire', 'Płomienna bariera': 'fire', 'Inferno': 'fire', 'Kataklizm': 'fire',
 };
 
