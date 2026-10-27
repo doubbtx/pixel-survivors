@@ -94,7 +94,8 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   drawText(g, `${fmt(p.hp)} / ${fmt(st.maxHp)}`, 103, 10, C.white, { align: 'center', ...OUT });
   if (p.shield > 0) bar(r, 40, 23, Math.max(6, Math.round(126 * Math.min(1, p.shield / st.maxHp))), 5, 1, RAMP.blue);
   const hc = run.mode === 'hardcore';
-  drawText(g, `Poziom ${run.depth}`, 41, 30, hc ? C.orange : C.lgray, OUT);
+  const ex = run.expedition;
+  drawText(g, ex ? `Akt ${ex.act}, głębia ${run.depth}` : `Poziom ${run.depth}`, 41, 30, hc ? C.orange : C.lgray, OUT);
   if (hc) drawText(g, 'Hardcore', 89, 30, C.salmon, OUT);
   // Aktywne błogosławieństwa kapliczek z czasem.
   if (run.buffs.length) drawText(g, run.buffs.map((b) => `${b.name} ${Math.ceil(b.t)}s`).join('  '), 41, 42, C.yellow, OUT);

@@ -1,4 +1,4 @@
-import type { RunSnapshot } from '../game/run';
+import type { RunSnapshot, SlotMode } from '../game/run';
 import type { MetaState } from '../data/meta';
 
 /**
@@ -7,7 +7,7 @@ import type { MetaState } from '../data/meta';
  * która przekształca dane do wersji o 1 wyższej. Ładowanie aplikuje migracje po kolei.
  */
 const KEY = 'pixel-survivors-save';
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export interface HeroRecord {
   bestTime: number;
@@ -17,6 +17,9 @@ export interface HeroRecord {
   bestDepth: number;
   /** Najdłużej przetrwany czas w trybie Endless (s). */
   bestEndless: number;
+  /** Ekspedycja: najwięcej ukończonych węzłów i liczba ukończonych wypraw. */
+  bestExpedition: number;
+  expeditionWins: number;
   wins: number;
   runs: number;
 }
@@ -67,8 +70,10 @@ export interface SaveData {
   version: number;
   settings: Settings;
   records: Record<string, HeroRecord>;
-  /** Slot Hardcore: trwający run (zapisany między poziomami) i tablica rekordów. */
-  hardcore: { run: RunSnapshot | null; board: HardcoreEntry[] };
+  /** Sloty zapisu per tryb: trwający run (między poziomami albo w trakcie poziomu). */
+  slots: Record<SlotMode, RunSnapshot | null>;
+  /** Tablica rekordów Hardcore. */
+  board: HardcoreEntry[];
   /** Komunikat do pokazania w menu przy następnym uruchomieniu (np. przerwany run). */
   notice: string;
   collection: CardCollection;
@@ -96,6 +101,14 @@ const MIGRATIONS: Record<number, Migration> = {
     for (const r of Object.values(records)) r.bestEndless ??= 0;
     return { ...old, version: 4, records, meta: { essence: 0, total: 0, nodes: {}, prestige: 0 } };
   },
+  // 4 → 5: sloty zapisu per tryb (Hardcore, Endless, Ekspedycja) i rekordy Ekspedycji.
+  4: (old) => {
+    const hc = (old.hardcore ?? {}) as { run?: unknown; board?: unknown[] };
+    const records = (old.records ?? {}) as Record<string, Record<string, unknown>>;
+    for (const r of Object.values(records)) { r.bestExpedition ??= 0; r.expeditionWins ??= 0; }
+    const { hardcore: _, ...rest } = old;
+    return { ...rest, version: 5, records, slots: { hardcore: hc.run ?? null, endless: null, expedition: null }, board: hc.board ?? [] };
+  },
 };
 
 function defaults(): SaveData {
@@ -106,7 +119,8 @@ function defaults(): SaveData {
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
       hideProjectiles: false },
     records: {},
-    hardcore: { run: null, board: [] },
+    slots: { hardcore: null, endless: null, expedition: null },
+    board: [],
     notice: '',
     collection: { seen: [], picks: {}, banned: [] },
     meta: { essence: 0, total: 0, nodes: {}, prestige: 0 },
@@ -135,7 +149,8 @@ export function loadSave(): SaveData {
     version: SAVE_VERSION,
     settings: { ...base.settings, ...d.settings },
     records: { ...d.records },
-    hardcore: { ...base.hardcore, ...d.hardcore },
+    slots: { ...base.slots, ...d.slots },
+    board: d.board ?? [],
     notice: d.notice ?? '',
     collection: { ...base.collection, ...d.collection },
     meta: { ...base.meta, ...d.meta },
@@ -151,12 +166,12 @@ export function writeSave(d: SaveData): void {
 }
 
 export function heroRecord(d: SaveData, heroId: string): HeroRecord {
-  return (d.records[heroId] ??= { bestTime: 0, bestKills: 0, bestLevel: 0, bestDepth: 0, bestEndless: 0, wins: 0, runs: 0 });
+  return (d.records[heroId] ??= { bestTime: 0, bestKills: 0, bestLevel: 0, bestDepth: 0, bestEndless: 0, bestExpedition: 0, expeditionWins: 0, wins: 0, runs: 0 });
 }
 
 /** Dodaje wynik do tablicy Hardcore (top 10: najdalszy poziom, potem krótszy czas). */
 export function addHardcoreEntry(d: SaveData, e: HardcoreEntry): void {
-  d.hardcore.board.push(e);
-  d.hardcore.board.sort((a, b) => b.depth - a.depth || a.time - b.time);
-  d.hardcore.board.length = Math.min(d.hardcore.board.length, 10);
+  d.board.push(e);
+  d.board.sort((a, b) => b.depth - a.depth || a.time - b.time);
+  d.board.length = Math.min(d.board.length, 10);
 }

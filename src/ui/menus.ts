@@ -8,8 +8,9 @@ import { animFrame } from '../gfx/actors';
 import { HEROES, HERO_BY_ID } from '../data/heroes';
 import { WEAPON_BY_ID } from '../data/weapons';
 import { levelDef, objectiveLabel } from '../data/levels';
-import { loseHardcoreRun } from '../game/campaign';
-import type { Mode } from '../game/run';
+import { BAL } from '../data/balance';
+import { endSlotRun } from '../game/campaign';
+import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
 import { Menu, panel, inside, slot } from './widgets';
@@ -49,14 +50,15 @@ export class MainMenu implements Screen {
 
   constructor(private readonly app: App) {
     this.menu = new Menu([
-      { label: () => 'Kampania Hardcore', act: () => app.go(new HardcoreScreen(app)) },
+      { label: () => 'Kampania Hardcore', act: () => app.go(new SlotScreen(app, 'hardcore')) },
+      { label: () => 'Ekspedycja (3 akty)', act: () => app.go(new SlotScreen(app, 'expedition')) },
+      { label: () => 'Endless (bez końca)', act: () => app.go(new SlotScreen(app, 'endless')) },
       { label: () => 'Trening (jeden poziom)', act: () => app.go(new HeroSelect(app, 'training')) },
-      { label: () => 'Endless (bez końca)', act: () => app.go(new HeroSelect(app, 'endless')) },
       { label: () => `Rozwój (${fmt(app.save.meta.essence)} esencji)`, act: () => app.go(new MetaScreen(app, this)) },
       { label: () => 'Kolekcja kart', act: () => app.go(new CollectionScreen(app, this)) },
       { label: () => 'Rekordy', act: () => app.go(new RecordsScreen(app)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-    ], W / 2, 90, 220, 15);
+    ], W / 2, 86, 220, 14);
   }
 
   update(dt: number): void {
@@ -85,33 +87,42 @@ export class MainMenu implements Screen {
       g.restore();
     }
     drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 70, C.lavender, { align: 'center', shadow: C.black });
-    if (this.app.save.notice) drawText(g, this.app.save.notice, W / 2, 88, C.orange, { align: 'center', outline: C.black });
+    if (this.app.save.notice) drawText(g, this.app.save.notice, W / 2, 74, C.orange, { align: 'center', outline: C.black });
     this.menu.render(this.app.r);
-    drawText(g, 'WASD / strzałki: ruch    Enter / klik: wybór', W / 2, 196, C.slate, { align: 'center' });
+    drawText(g, 'WASD / strzałki: ruch    Enter / klik: wybór', W / 2, 200, C.slate, { align: 'center' });
   }
 }
 
-/** Slot kampanii Hardcore: kontynuacja zapisanego runu, porzucenie albo nowa kampania + tablica rekordów. */
-export class HardcoreScreen implements Screen {
+const SLOT_TITLE: Record<SlotMode, string> = { hardcore: 'Kampania Hardcore', expedition: 'Ekspedycja', endless: 'Endless' };
+const SLOT_COLOR: Record<SlotMode, number> = { hardcore: C.salmon, expedition: C.lime, endless: C.pink };
+const SLOT_NEW: Record<SlotMode, string> = { hardcore: 'Nowa kampania', expedition: 'Nowa ekspedycja', endless: 'Nowy run' };
+const SLOT_RULES: Record<SlotMode, string> = {
+  hardcore: 'Poziomy po kolei: cel, potem boss. Po zwycięstwie zachowujesz wszystko i idziesz dalej. Śmierć lub poddanie kasuje cały postęp. Wyjście z gry zapisuje run.',
+  expedition: `Wyprawa przez ${BAL.expedition.acts} akty. Na mapie wybierasz drogę: krótkie walki, elity, skarby, sklepy, kowadła i obozy. Na końcu aktu boss. Śmierć kasuje wyprawę, ukończenie daje x${BAL.expedition.winEssenceMul} esencji.`,
+  endless: 'Jeden poziom bez końca: boss co kilka minut, potem silniejsi wrogowie i następny biom. Wyjście z gry zapisuje run, śmierć go kończy.',
+};
+
+/** Slot trybu (Hardcore, Ekspedycja, Endless): kontynuacja zapisanego runu, porzucenie albo nowy run + rekordy. */
+export class SlotScreen implements Screen {
   private menu: Menu;
   private confirmAbandon = false;
 
-  constructor(private readonly app: App) {
-    const slot = app.save.hardcore;
-    this.menu = new Menu(slot.run ? [
-      { label: () => 'Kontynuuj', act: () => { const s = slot.run!; app.go(new GameScreen(app, s.hero, 'hardcore', s)); } },
+  constructor(private readonly app: App, private readonly mode: SlotMode) {
+    const run = app.save.slots[mode];
+    this.menu = new Menu(run ? [
+      { label: () => 'Kontynuuj', act: () => app.go(new GameScreen(app, run.hero, mode, run)) },
       {
         label: () => (this.confirmAbandon ? 'Na pewno? Run przepadnie' : 'Porzuć run'),
         act: () => {
           if (!this.confirmAbandon) { this.confirmAbandon = true; return; }
-          loseHardcoreRun(app.save, slot.run!);
+          endSlotRun(app.save, mode, run);
           app.persist();
-          app.go(new HardcoreScreen(app));
+          app.go(new SlotScreen(app, mode));
         },
       },
       { label: () => 'Wstecz', act: () => app.go(new MainMenu(app)) },
     ] : [
-      { label: () => 'Nowa kampania', act: () => app.go(new HeroSelect(app, 'hardcore')) },
+      { label: () => SLOT_NEW[mode], act: () => app.go(new HeroSelect(app, mode)) },
       { label: () => 'Wstecz', act: () => app.go(new MainMenu(app)) },
     ], 124, 196, 220);
   }
@@ -124,30 +135,60 @@ export class HardcoreScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
-    drawText(g, 'Kampania Hardcore', W / 2, 10, C.salmon, { align: 'center', scale: 2, outline: C.dred });
-    panel(r, 12, 40, 224, 146, C.red);
-    const s = this.app.save.hardcore.run;
+    const col = SLOT_COLOR[this.mode];
+    drawText(g, SLOT_TITLE[this.mode], W / 2, 10, col, { align: 'center', scale: 2, outline: C.black });
+    panel(r, 12, 40, 224, 146, col);
+    const s = this.app.save.slots[this.mode];
     if (s) {
       const h = HERO_BY_ID[s.hero];
-      const next = levelDef(s.depth);
       drawSprite(g, h.sprite, 38, 70, { scale: 2 });
       drawText(g, h.name, 62, 54, h.color, { scale: 2, shadow: C.black });
       drawText(g, h.role, 62, 78, C.lavender);
-      const lines = [
-        s.inProgress ? `W trakcie poziomu ${s.depth} (${fmtTime(s.stage?.time ?? 0)})` : `Następny poziom: ${s.depth}`,
-        next.name,
-        `Cel: ${objectiveLabel(next.objective)}`,
+      const lines = [...slotLines(this.mode, s),
         `LV ${s.level}   karty ${s.cards.reduce((n, c) => n + c[1], 0)}   złoto ${fmt(s.gold)}`,
         `Czas ${fmtTime(s.totalTime)}   zabójstwa ${fmt(s.kills)}`,
       ];
       lines.forEach((l, i) => drawText(g, l, 24, 104 + i * 13, i === 0 ? C.yellow : C.lgray));
     } else {
-      const rules = 'Poziomy po kolei: cel, potem boss. Po zwycięstwie zachowujesz wszystko i idziesz dalej. Śmierć lub poddanie kasuje cały postęp. Wyjście z gry w trakcie poziomu też.';
-      wrapText(rules, 200).forEach((l, i) => drawText(g, l, 24, 52 + i * 13, C.lgray));
+      wrapText(SLOT_RULES[this.mode], 200).forEach((l, i) => drawText(g, l, 24, 52 + i * 13, C.lgray));
     }
     this.menu.render(r);
-    renderBoard(this.app, 246, 40, 224, 8);
+    if (this.mode === 'hardcore') renderBoard(this.app, 246, 40, 224, 8);
+    else renderHeroBests(this.app, this.mode, 246, 40, 224);
   }
+}
+
+/** Opis zapisanego runu w slocie (pierwsza linia wyróżniona). */
+function slotLines(mode: SlotMode, s: RunSnapshot): string[] {
+  if (mode === 'hardcore') {
+    const next = levelDef(s.depth);
+    return [
+      s.inProgress ? `W trakcie poziomu ${s.depth} (${fmtTime(s.stage?.time ?? 0)})` : `Następny poziom: ${s.depth}`,
+      next.name,
+      `Cel: ${objectiveLabel(next.objective)}`,
+    ];
+  }
+  if (mode === 'endless') return [`Głębia ${s.depth}, czas poziomu ${fmtTime(s.stage?.time ?? 0)}`];
+  const ex = s.expedition;
+  return [
+    s.inProgress ? `W trakcie walki (${fmtTime(s.stage?.time ?? 0)})` : 'Na mapie, wybór drogi',
+    `Akt ${ex?.act ?? 1}/${BAL.expedition.acts}, rząd ${ex?.path.length ?? 0}/${BAL.expedition.rows}`,
+    `Ukończone węzły: ${ex?.cleared ?? 0}`,
+  ];
+}
+
+/** Rekordy bohaterów w trybie bez tablicy (Endless: najdłuższy czas, Ekspedycja: węzły i ukończone wyprawy). */
+function renderHeroBests(app: App, mode: SlotMode, x: number, y: number, w: number): void {
+  const r = app.r, g = r.g;
+  panel(r, x, y, w, 26 + HEROES.length * 13, C.gold);
+  drawText(g, 'Rekordy bohaterów', x + 12, y + 8, C.yellow, { shadow: C.black });
+  HEROES.forEach((h, i) => {
+    const rec = heroRecord(app.save, h.id);
+    const yy = y + 24 + i * 13;
+    drawText(g, h.name, x + 12, yy, h.color);
+    const v = mode === 'endless' ? fmtTime(rec.bestEndless) : `węzły ${rec.bestExpedition}   ukończone ${rec.expeditionWins}`;
+    drawText(g, v, x + w - 12, yy, C.white, { align: 'right' });
+  });
 }
 
 /** Tablica rekordów Hardcore (najdalszy poziom, potem czas). */
@@ -155,7 +196,7 @@ function renderBoard(app: App, x: number, y: number, w: number, rows: number): v
   const r = app.r, g = r.g;
   panel(r, x, y, w, 26 + rows * 13, C.gold);
   drawText(g, 'Rekordy Hardcore', x + 12, y + 8, C.yellow, { shadow: C.black });
-  const board = app.save.hardcore.board;
+  const board = app.save.board;
   if (board.length === 0) drawText(g, 'Brak wpisów', x + 12, y + 24, C.dgray);
   board.slice(0, rows).forEach((e, i) => {
     const h = HERO_BY_ID[e.hero];
@@ -190,7 +231,7 @@ export class HeroSelect implements Screen {
     if (inp.pressed('left')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
     if (inp.pressed('right')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
     if (inp.pressed('confirm')) this.start();
-    if (inp.pressed('back')) this.app.go(this.mode === 'hardcore' ? new HardcoreScreen(this.app) : new MainMenu(this.app));
+    if (inp.pressed('back')) this.app.go(this.mode === 'training' ? new MainMenu(this.app) : new SlotScreen(this.app, this.mode));
     if (inp.pressed('click')) {
       HEROES.forEach((_, i) => {
         if (!inside(inp.mouse.x, inp.mouse.y, this.cardX(i), 38, CARD_W, CARD_H)) return;
@@ -203,9 +244,9 @@ export class HeroSelect implements Screen {
   render(): void {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
-    const hc = this.mode === 'hardcore';
-    const title = hc ? 'Hardcore: wybierz bohatera' : this.mode === 'endless' ? 'Endless: wybierz bohatera' : 'Trening: wybierz bohatera';
-    drawText(g, title, W / 2, 10, hc ? C.salmon : this.mode === 'endless' ? C.pink : C.yellow, { align: 'center', scale: 2, outline: C.black });
+    const m = this.mode;
+    const title = `${m === 'training' ? 'Trening' : SLOT_TITLE[m].split(' ').pop()}: wybierz bohatera`;
+    drawText(g, title, W / 2, 10, m === 'training' ? C.yellow : SLOT_COLOR[m], { align: 'center', scale: 2, outline: C.black });
     HEROES.forEach((h, i) => {
       const x = this.cardX(i), y = 38, on = i === this.sel;
       panel(r, x, y, CARD_W, CARD_H, on ? C.gold : C.slate);
@@ -231,7 +272,10 @@ export class HeroSelect implements Screen {
         drawText(g, a.name, ax + 22, ay + 8, a.color);
       });
       const rec = heroRecord(this.app.save, h.id);
-      drawText(g, hc ? `Najdalej: poziom ${rec.bestDepth}` : `Rekord: ${fmtTime(rec.bestTime)}   wygrane: ${rec.wins}`, x + 12, y + CARD_H - 20, C.dgray);
+      const best = m === 'hardcore' ? `Najdalej: poziom ${rec.bestDepth}`
+        : m === 'expedition' ? `Najwięcej węzłów: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}`
+        : m === 'endless' ? `Rekord: ${fmtTime(rec.bestEndless)}` : `Rekord: ${fmtTime(rec.bestTime)}   wygrane: ${rec.wins}`;
+      drawText(g, best, x + 12, y + CARD_H - 20, C.dgray);
     });
     drawText(g, 'Strzałki: wybór    Enter: start    Esc: wstecz', W / 2, H - 18, C.lavender, { align: 'center' });
   }
@@ -251,12 +295,12 @@ export class RecordsScreen implements Screen {
     drawText(g, 'Rekordy', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
     renderBoard(this.app, 120, 34, 240, 10);
     panel(r, 20, 200, 440, 56, C.slate);
-    const cols = [32, 96, 160, 226, 284, 350, 410];
-    ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Hardcore', 'Endless', 'Trening'].forEach((s, i) => drawText(g, s, cols[i], 208, C.lavender));
+    const cols = [30, 84, 136, 192, 240, 290, 340, 408];
+    ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Hardcore', 'Endless', 'Ekspedycja', 'Trening'].forEach((s, i) => drawText(g, s, cols[i], 208, C.lavender));
     HEROES.forEach((h, i) => {
       const rec = heroRecord(this.app.save, h.id);
       const y = 222 + i * 12;
-      [h.name, fmtTime(rec.bestTime), fmt(rec.bestKills), String(rec.bestLevel), `poziom ${rec.bestDepth}`, fmtTime(rec.bestEndless), `${rec.wins}/${rec.runs}`]
+      [h.name, fmtTime(rec.bestTime), fmt(rec.bestKills), String(rec.bestLevel), `poz. ${rec.bestDepth}`, fmtTime(rec.bestEndless), `${rec.bestExpedition} (${rec.expeditionWins})`, `${rec.wins}/${rec.runs}`]
         .forEach((s, j) => drawText(g, s, cols[j], y, j === 0 ? h.color : C.white));
     });
   }

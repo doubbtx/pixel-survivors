@@ -16,7 +16,7 @@ kartami-augmentami i ekwipunkiem z jakościami. Wszystko po polsku.
 ## Technologia
 
 HTML5 Canvas 2D + TypeScript + Vite. Bufor 480×270 skalowany całkowitoliczbowo, świat rysowany z ZOOM 1.5.
-Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 4).
+Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 5).
 Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków).
 
 ## Struktura `src/`
@@ -27,7 +27,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `icons.ts` (ikony 16×16: `ic_<broń>`, `pi_<pasywka>`, `ab_<umiejętność>`, `tag:<Tag>`), `items.ts` (`it_<przedmiot>`),
   `actors.ts` (animowane postacie, `name@klatka`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów).
 - `data/` — `balance.ts`, `weapons.ts` (z ewolucjami), `passives.ts`, `enemies.ts` (Volley: kształt i ruch salw), `waves.ts`, `heroes.ts`,
-  `levels.ts` (biomy, cele poziomów), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewko rozwoju, Paragon, prestiż, esencja), `cards.ts` (49 kart: stats/mul/flags/hooks; lista flag w komentarzu pliku),
+  `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (węzły, mapa aktu, `levelAt`, `nextLanes`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewko rozwoju, Paragon, prestiż, esencja), `cards.ts` (49 kart: stats/mul/flags/hooks; lista flag w komentarzu pliku),
   `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, rollItem, porównania).
 - `entities/` — typy encji.
 - `systems/` — gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans (levelup), wieżyczki,
@@ -36,11 +36,11 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `hurtPlayer`, `recomputeStats` (bohater + pasywki + karty + ekwipunek), `indexEffects` (flagi i hooki z kart i super-bonusów),
   `emit` hooków (onHit, onKill, onAbilityCast, onDash, onDamageTaken, onLevelUp, onTick), ekwipunek (`equip`, `unequip`,
   `salvage`, `slotFor`), `toSnapshot`/`fromSnapshot`.
-- `game/` — też `render.ts` (świat), `campaign.ts` (Hardcore: przegrana).
+- `game/` — też `render.ts` (świat), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy, tablica Hardcore).
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
-  `shop.ts` (ShopView), `anvil.ts` (AnvilView), `collection.ts` (kolekcja i bany kart), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `game-screen.ts` (stany: play/levelup/cards/loot/inventory/shop/anvil/synergies/pause/cleared/end), `menus.ts`.
+  `shop.ts` (ShopView), `anvil.ts` (AnvilView), `expedition.ts` (ExpeditionMapView), `collection.ts` (kolekcja i bany kart), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `game-screen.ts` (stany: play/levelup/cards/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb).
 
-## Stan (wersja 0.4.0)
+## Stan (wersja 0.5.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -88,14 +88,19 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   wstrząsy, auto-pauza po utracie fokusu, pełny ekran, debug.
 - Etap 4 (część): sklep między poziomami Hardcore (4 przedmioty z poziomem następnego poziomu, odświeżanie,
   mikstura, karta, zasoby wyboru, 2 eliksiry ze stałym bonusem; oferta zapisana w runie, po wczytaniu gra startuje od sklepu).
+- Etap 4 (koniec): Ekspedycja (`mode: 'expedition'`, `run.expedition`: akt, mapa, `path`, `cleared`) — 3 akty map z węzłami
+  walka/elita/skarb/sklep/kowadło/obóz/boss (`data/expedition.ts`, `BAL.expedition`); walki bez bossa kończy `run.clearObjective()`
+  (spawner, gdy `!levelInfo.boss`), nagroda karta 'fight'/'elite'. Sloty zapisu per tryb: `save.slots` (hardcore/expedition/endless,
+  `SlotMode`), `save.board` (tablica Hardcore), rekordy `bestExpedition`/`expeditionWins`. Endless też zapisuje i wznawia run (`stage.nextBossAt`).
 
 ## Plan dalej
 
-- Reszta etapu 4: Ekspedycja, sloty zapisu per tryb.
 - Kolejni bohaterowie (docelowo 6 ról, wszystko oryginalne).
+- Balans Ekspedycji po testach (długość walk, nagrody węzłów).
 
 ## Testowanie
 
 - `npm run dev`, w grze F3 = debug, F4 = przyspiesz cel poziomu, F6 = awans, F7 = łup bossa.
-- Sklep bez grania do bossa: wstrzyknij w localStorage zapis Hardcore z `inProgress: false` i polem `shop`, potem Kontynuuj.
+- Sklep bez grania do bossa: wstrzyknij w localStorage zapis w `slots.hardcore` z `inProgress: false` i polem `shop`, potem Kontynuuj.
+- Ekspedycja: zapis w `slots.expedition` z polem `expedition` (np. `path` przed bossem) pozwala od razu testować bossa i przejście aktu.
 - Szczegóły sterowania i dodawania zawartości: README.md.

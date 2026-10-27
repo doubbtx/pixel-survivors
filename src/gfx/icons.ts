@@ -268,6 +268,44 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.sphere(8, 8, 3, 3, RAMP.bone).px(7, 7, C.white);
   },
 
+  // ===================== węzły mapy Ekspedycji =====================
+  ex_fight: (p) => {
+    // Skrzyżowane miecze: ostrza, jelce, rękojeści.
+    p.line(2, 2, 11, 11, C.lgray).line(3, 2, 12, 11, C.white);
+    p.line(14, 2, 5, 11, C.lgray).line(13, 2, 4, 11, C.white);
+    p.line(9, 12, 13, 8, C.gold).line(3, 8, 7, 12, C.gold);
+    p.line(12, 12, 14, 14, C.brown).line(4, 12, 2, 14, C.brown);
+  },
+  ex_elite: (p) => {
+    p.poly([[2, 1], [5, 5], [3, 6]], C.cream).poly([[14, 1], [11, 5], [13, 6]], C.cream);
+    skull(p, 8, 8);
+    p.px(5, 7, C.red).px(10, 7, C.red);
+  },
+  ex_boss: (p) => {
+    p.poly([[2, 5], [5, 9], [8, 3], [11, 9], [14, 5], [13, 13], [3, 13]], C.gold);
+    p.rect(3, 11, 11, 2, C.orange).rect(3, 13, 11, 1, C.dbrown);
+    p.px(8, 8, C.red).px(5, 11, C.cyan).px(11, 11, C.cyan).px(8, 4, C.yellow).px(4, 9, C.yellow);
+  },
+  ex_chest: (p) => {
+    p.block(2, 7, 12, 7, RAMP.wood).sphere(8, 7, 6, 3.5, RAMP.wood);
+    p.rect(2, 8, 12, 1, C.gold).rect(7, 7, 2, 4, C.yellow).px(7, 10, C.dbrown);
+    p.rect(3, 5, 1, 9, C.gold).rect(12, 5, 1, 9, C.gold);
+  },
+  ex_shop: (p) => {
+    p.sphere(8, 10, 5.5, 4.5, RAMP.wood).rect(6, 3, 4, 2, C.brown).line(5, 5, 11, 5, C.gold);
+    p.disc(8, 10, 2.5, C.gold).px(8, 10, C.yellow).px(7, 9, C.white);
+  },
+  ex_anvil: (p) => {
+    p.block(3, 4, 11, 4, RAMP.stone).poly([[1, 4], [3, 4], [3, 6]], C.dgray);
+    p.rect(6, 8, 5, 3, C.dgray).block(4, 11, 9, 3, RAMP.night);
+    p.rect(3, 4, 11, 1, C.white);
+    sparkle(p, 12, 2);
+  },
+  ex_rest: (p) => {
+    p.line(3, 14, 13, 11, C.brown).line(3, 11, 13, 14, C.dbrown);
+    flame(p, 8, 8, 0.8);
+  },
+
   // ===================== tagi kart =====================
   'tag:Ogień': (p) => flame(p, 8, 8, 1),
   'tag:Krytyk': (p) => {

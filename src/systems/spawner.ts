@@ -81,6 +81,10 @@ export function updateSpawner(run: Run, dt: number): void {
   const t = run.time;
   const waveT = t + run.levelInfo.waveOffset;
 
+  if (!run.bossSpawned && run.objectiveProgress() >= 1 && !run.levelInfo.boss) {
+    run.clearObjective();
+    return;
+  }
   if (!run.bossSpawned && run.objectiveProgress() >= 1) {
     run.bossSpawned = true;
     // Boss musi się pojawić nawet przy pełnej puli — zwalniamy miejsce kosztem zwykłego wroga.
@@ -106,7 +110,7 @@ export function updateSpawner(run: Run, dt: number): void {
 
   run.eliteT -= dt;
   if (run.eliteT <= 0) {
-    run.eliteT = BAL.eliteEvery;
+    run.eliteT = BAL.eliteEvery * run.levelInfo.eliteMul;
     const mods = Object.keys(ELITE_MODS);
     const picked = [rng.pick(mods)];
     if (waveT > 150) {

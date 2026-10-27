@@ -106,6 +106,39 @@ export const BAL = {
   },
   /** Endless: boss co tyle sekund; każdy pokonany boss podnosi głębokość (trudność). */
   endlessBossEvery: 300,
+  /** Ekspedycja (data/expedition.ts): 3 akty map z węzłami. */
+  expedition: {
+    acts: 3,
+    /** Rzędy mapy aktu (ostatni = boss) i kolumny. */
+    rows: 6,
+    lanes: 3,
+    /** Szansa, że boczna kolumna rzędu jest pusta. */
+    emptyChance: 0.3,
+    /** Wagi typów węzłów w środkowych rzędach. */
+    weights: [['fight', 40], ['elite', 16], ['treasure', 9], ['shop', 12], ['anvil', 9], ['rest', 12]] as const,
+    /** Cel pełnego poziomu aktu (boss): czas przetrwania (s) albo liczba zabójstw. */
+    objTime: (act: number) => 150 + 30 * act,
+    objKills: (act: number) => 300 + 250 * act,
+    /** Długość celu zwykłej walki i elity względem pełnego poziomu. */
+    fightScale: 0.5,
+    /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */
+    waveOffsetPerDepth: 50,
+    /** Elity w węźle elity pojawiają się co eliteEvery × ten mnożnik. */
+    eliteEveryMul: 0.35,
+    /** O ile rośnie głębokość z każdym aktem. */
+    depthPerAct: 2,
+    /** Złoto za walkę (× głębokość × chciwość). */
+    fightGold: 20,
+    /** Obóz: leczenie (ułamek maks. HP) i stały bonus maks. HP. */
+    restHeal: 0.5,
+    restMaxHp: 10,
+    /** Kowadło: darmowe odłamki (× akt). */
+    anvilShards: 3,
+    /** Fortuna skarbu (lepsza jakość przedmiotu). */
+    treasureLuck: 2,
+    /** Mnożnik esencji za ukończoną ekspedycję. */
+    winEssenceMul: 2,
+  },
 
   // --- karty (augmenty) ---
   /** Ile kart można zbanować w kolekcji (zbanowane nie pojawiają się w ofertach). */

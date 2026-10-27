@@ -58,7 +58,7 @@ src/
   systems/   gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans,
              wieżyczki, zakupy w sklepie
   game/      Run (postać + świat poziomu, obrażenia, hooki kart, snapshot), kampania, render świata
-  ui/        menu, Hardcore, wybór bohatera, HUD, awans, wybór karty, łup i ekwipunek (items.ts), sklep (shop.ts), pauza,
+  ui/        menu, sloty trybów, mapa Ekspedycji (expedition.ts), wybór bohatera, HUD, awans, wybór karty, łup i ekwipunek (items.ts), sklep (shop.ts), pauza,
              ukończenie poziomu, podsumowanie
 ```
 
@@ -75,7 +75,7 @@ src/
 - **Poziom kampanii**: generowany z numeru w `data/levels.ts` (biom, cel, przesunięcie fal, nazwa bossa); nowy biom = wpis w `BIOMES`.
 - **Balans**: tylko `data/balance.ts` — krzywa XP, skalowanie HP/obrażeń wrogów w czasie, gęstość fal, diminishing returns (pancerz, cdr, szybkość), limity wydajnościowe.
 
-## Stan: etapy 1-3 + przedmioty + etap 4 (sklep, synergie, kowadło, kolekcja kart) + etap 5 (meta-progresja, Endless) + etap 6 (telefon, optymalizacja, polish) + sekrety i mini-lochy
+## Stan: etapy 1-3 + przedmioty + etap 4 (sklep, synergie, kowadło, kolekcja kart, Ekspedycja, sloty zapisu) + etap 5 (meta-progresja, Endless) + etap 6 (telefon, optymalizacja, polish) + sekrety i mini-lochy
 
 **Etap 1 (MVP)** — ruch, automatyczna broń, wrogowie, kryształy XP, awans z wyborem 3 kart (4 z Koniczyną), zasoby runu: losowanie (3), pominięcie (2), wygnanie (2), śmierć, ekran podsumowania, restart.
 
@@ -178,6 +178,12 @@ src/
 - 2 losowe eliksiry ze stałym bonusem (obrażenia, HP, pancerz, krytyk, obszar, odnowienie); każdy kupiony w runie podnosi cenę kolejnych o 35%.
 - Ceny rosną liniowo z głębokością (jak wartość rozkładania). Z poziomu sklepu [I] otwiera ekwipunek — można rozłożyć przedmioty na złoto i od razu wydać.
 
+**Ekspedycja i sloty zapisu (0.5, koniec etapu 4)**:
+- **Ekspedycja** (menu główne): wyprawa przez 3 akty (Mroczna łąka, Nocne bagno, Spalone pustkowie). Każdy akt to mapa 5 rzędów węzłów i boss na końcu; z węzła idzie się do sąsiednich kolumn następnego rzędu.
+- Węzły: **Walka** (krótki cel bez bossa, złoto i karta „za walkę”), **Elita** (częste elity, przedmiot jak od bossa i karta jak za elitę), **Skarb** (przedmiot wysokiej jakości), **Sklep**, **Kowadło** (plus darmowe odłamki), **Obóz** (leczenie 50% i +10 maks. HP), **Boss** (pełny poziom aktu, potem +20% HP i nowa mapa).
+- Siła wrogów i łupu (głębokość) rośnie co 2 rzędy i z każdym aktem. Ukończenie wyprawy daje x2 esencji; rekordy: najwięcej ukończonych węzłów i liczba ukończonych wypraw. Liczby w `BAL.expedition`.
+- **Sloty zapisu per tryb**: Hardcore, Ekspedycja i Endless mają osobne sloty (ekran slotu: Kontynuuj / Porzuć run / Nowy run). Każdy zapisuje się co ~5 s w trakcie poziomu i przez „Zapisz i wyjdź”; Endless też da się teraz przerwać i wznowić. Zapis w wersji 5 (migracja: run Hardcore i tablica rekordów przechodzą do nowych pól).
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
@@ -187,10 +193,12 @@ src/
 5. Przeładuj stronę w trakcie poziomu Hardcore i wybierz Kontynuuj: poziom wznowi się z zapisanym czasem i zabójstwami.
 6. Ewolucja: rozwiń broń do poziomu 8, weź pasywkę z jej opisu (np. Magiczny pocisk + Moc), a kolejny awans zaproponuje ewolucję.
 7. Przedmioty: włącz debug (F3) i wciśnij F7 kilka razy — każde to łup bossa. Załóż coś, potem I/Tab otwiera ekwipunek; najedź na przedmiot w plecaku, żeby zobaczyć porównanie. Pauza pokazuje założone przedmioty.
-8. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
+8. Ekspedycja: menu → Ekspedycja → Nowa ekspedycja → bohater. Na mapie strzałki/mysz wybierają węzeł, Enter/klik wchodzi. W walce F3 + F4 szybko kończy cel. Esc na mapie → „Zapisz i wyjdź”, przeładuj stronę → Kontynuuj wraca na mapę (albo do przerwanej walki / otwartego sklepu).
+9. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
 
 ## Kolejne etapy
 
-4. Ekspedycja, sloty zapisu per tryb (gotowe: sklep między poziomami, zestawy tagów, kowadło, kolekcja i bany kart).
+4. Gotowe: sklep między poziomami, zestawy tagów, kowadło, kolekcja i bany kart, Ekspedycja, sloty zapisu per tryb.
+7. Kolejni bohaterowie (docelowo 6 ról).
 5. Gotowe: meta-progresja, Paragon, prestiż, Endless, formatowanie liczb (break_infinity.js tylko, gdyby wartości wyszły poza zakres double).
 6. Gotowe: optymalizacja (tryb oszczędnych efektów), polish, wirtualny joystick i przyciski na telefonie.

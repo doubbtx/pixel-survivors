@@ -11,6 +11,7 @@ import { HERO_BY_ID, evolveAbility, type HeroDef, type AbilitySlot } from '../da
 import { WEAPON_BY_ID } from '../data/weapons';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { levelDef, type LevelDef } from '../data/levels';
+import { nodeLevel, type ExpeditionState } from '../data/expedition';
 import type { ShopState } from '../data/shop';
 import { SRC_ELEMENT, ELEM, type Element } from '../data/elements';
 import type { MetaBonus } from '../data/meta';
@@ -71,14 +72,17 @@ export interface ProjectileSpec {
 }
 
 /**
- * Tryb gry: Hardcore (kampania z pełną utratą przy śmierci), trening (jeden poziom, bez zapisu)
- * albo Endless (jeden poziom bez końca, boss co BAL.endlessBossEvery s, każdy boss podnosi głębokość).
+ * Tryb gry: Hardcore (kampania z pełną utratą przy śmierci), trening (jeden poziom, bez zapisu),
+ * Endless (jeden poziom bez końca, boss co BAL.endlessBossEvery s, każdy boss podnosi głębokość)
+ * albo Ekspedycja (3 akty map z węzłami, data/expedition.ts).
  */
-export type Mode = 'hardcore' | 'training' | 'endless';
+export type Mode = 'hardcore' | 'training' | 'endless' | 'expedition';
+/** Tryby z własnym slotem zapisu (core/save.ts): wyjście z gry wznawia run. */
+export type SlotMode = Exclude<Mode, 'training'>;
 /** Wynik bieżącego poziomu: 'victory' = boss pokonany, poziom ukończony. */
 export type Outcome = 'none' | 'dead' | 'victory';
 
-/** Zapis runu między poziomami (Hardcore). `depth` = poziom, który gracz rozegra jako następny. */
+/** Zapis runu (slot trybu). `depth` = poziom, który gracz rozegra jako następny (albo trwający, gdy `inProgress`). */
 export interface RunSnapshot {
   hero: string;
   mode: Mode;
@@ -120,7 +124,9 @@ export interface RunSnapshot {
   /** Umiejętności po ewolucji. */
   abilityEvo?: AbilitySlot[];
   /** Postęp przerwanego poziomu (zapis w trakcie): czas, zabójstwa, elity, zdarzenia, HP bossa (ułamek). */
-  stage?: { time: number; kills: number; eliteT: number; nextEvent: number; bossHpFrac: number };
+  stage?: { time: number; kills: number; eliteT: number; nextEvent: number; bossHpFrac: number; nextBossAt?: number };
+  /** Mapa i pozycja Ekspedycji. */
+  expedition?: ExpeditionState;
 }
 
 /**
@@ -251,6 +257,8 @@ export class Run {
   swordRolled = false;
   /** HP bossa po wznowieniu przerwanego poziomu (ułamek; 1 = pełne). */
   bossHpFrac = 1;
+  /** Ekspedycja: mapa aktu i pozycja (null w innych trybach). */
+  expedition: ExpeditionState | null = null;
   /** Endless: czas poziomu, w którym pojawi się następny boss. */
   nextBossAt: number = BAL.endlessBossEvery;
   boss: Enemy | null = null;
@@ -301,13 +309,13 @@ export class Run {
   /** Czyści świat i zaczyna poziom `depth`. Postać, karty i postęp zostają. */
   startLevel(depth: number): void {
     this.depth = depth;
-    this.levelInfo = levelDef(depth);
+    this.levelInfo = this.expedition ? nodeLevel(this.expedition) : levelDef(depth);
     this.shop = null;
     this.time = 0;
     this.levelKills = 0;
     this.boss = null;
     this.bossSpawned = false;
-    this.eliteT = BAL.eliteEvery;
+    this.eliteT = BAL.eliteEvery * this.levelInfo.eliteMul;
     this.nextEvent = 0;
     this.spawnAcc = 0;
     this.outcome = 'none';
@@ -325,7 +333,7 @@ export class Run {
     for (const a of Object.values(this.abilities)) { a.cd = 0; a.activeT = 0; }
     this.recomputeStats();
     this.revivesLeft = this.flag('revive');
-    this.showBanner(`Poziom ${depth}: ${this.levelInfo.name}`);
+    this.showBanner(this.expedition ? this.levelInfo.name : `Poziom ${depth}: ${this.levelInfo.name}`);
   }
 
   /** Postęp celu poziomu 0..1. Po jego osiągnięciu pojawia się boss. */
@@ -836,13 +844,52 @@ export class Run {
     }
   }
 
-  /** Boss pokonany = poziom ukończony. Łupy trafiają od razu do gracza (świat zaraz się wyczyści). */
+  /** Boss pokonany = poziom ukończony. */
   private onBossKilled(): void {
     this.boss = null;
     this.pendingLoot.push(this.rollLoot('boss'));
     this.pendingCards.push('boss');
     this.cardRerolls++;
     this.gold += 30 * this.stats.greed;
+    // Endless: gra toczy się dalej — kolejna głębokość (silniejsi wrogowie, następny biom) i boss za BAL.endlessBossEvery.
+    if (this.mode === 'endless') {
+      this.collectAll();
+      this.bossSpawned = false;
+      this.nextBossAt = this.time + BAL.endlessBossEvery;
+      this.depth++;
+      this.levelInfo = levelDef(this.depth);
+      this.showBanner(`Boss pokonany! Głębia ${this.depth}`);
+      sfx.play('explode');
+      return;
+    }
+    this.finishLevel('Boss pokonany!');
+  }
+
+  /**
+   * Cel poziomu bez bossa wykonany (Ekspedycja: walka, elita) — nagroda zależy od węzła.
+   * Wywoływane przez spawner w miejscu pojawienia się bossa.
+   */
+  clearObjective(): void {
+    this.bossSpawned = true;
+    const elite = this.levelInfo.eliteMul < 1;
+    if (elite) this.pendingLoot.push(this.rollLoot('boss'));
+    this.pendingCards.push(elite ? 'elite' : 'fight');
+    this.gold += BAL.expedition.fightGold * this.depth * this.stats.greed;
+    this.finishLevel(elite ? 'Elity pokonane!' : 'Walka wygrana!');
+  }
+
+  /** Koniec poziomu: zbiera wszystko z ziemi, czyści wrogów i pociski, ustawia zwycięstwo. */
+  private finishLevel(banner: string): void {
+    this.collectAll();
+    for (const e of this.enemies.items) if (!e.dead) { e.dead = true; this.burst(e.x, e.y, e.def.color, 2, 30); }
+    this.showBanner(banner);
+    this.outcome = 'victory';
+    this.outcomeT = 2.5;
+    sfx.play('explode');
+  }
+
+  /** Klejnoty, monety i skrzynie z całej mapy trafiają od razu do gracza; pociski wrogów znikają. */
+  private collectAll(): void {
     for (const g of this.gems.items) this.addXp(g.value);
     this.gems.clear();
     for (const it of this.pickups.items) {
@@ -853,21 +900,6 @@ export class Run {
     for (const b of this.bullets.items) this.burst(b.x, b.y, C.pink, 1, 20);
     this.bullets.clear();
     this.shake = 10;
-    // Endless: gra toczy się dalej — kolejna głębokość (silniejsi wrogowie, następny biom) i boss za BAL.endlessBossEvery.
-    if (this.mode === 'endless') {
-      this.bossSpawned = false;
-      this.nextBossAt = this.time + BAL.endlessBossEvery;
-      this.depth++;
-      this.levelInfo = levelDef(this.depth);
-      this.showBanner(`Boss pokonany! Głębia ${this.depth}`);
-      sfx.play('explode');
-      return;
-    }
-    for (const e of this.enemies.items) if (!e.dead) { e.dead = true; this.burst(e.x, e.y, e.def.color, 2, 30); }
-    this.showBanner('Boss pokonany!');
-    this.outcome = 'victory';
-    this.outcomeT = 2.5;
-    sfx.play('explode');
   }
 
   /** Obrażenia dla gracza: nietykalność (unik), pancerz (diminishing returns), karty, tarcza, odrodzenie, śmierć. Zwraca true, gdy trafiło. */
@@ -1069,7 +1101,11 @@ export class Run {
       equipment: { ...this.equipment }, bag: [...this.bag],
       shop: this.shop, elixirsBought: this.elixirsBought, shards: this.shards, healed: this.healed, shopLevel: this.shopLevel, anvilLevel: this.anvilLevel,
       abilityEvo: (Object.keys(ab) as AbilitySlot[]).filter((k) => ab[k].def.evolved),
-      stage: inProgress ? { time: this.time, kills: this.levelKills, eliteT: this.eliteT, nextEvent: this.nextEvent, bossHpFrac: this.boss ? this.boss.hp / this.boss.maxHp : 1 } : undefined,
+      stage: inProgress ? {
+        time: this.time, kills: this.levelKills, eliteT: this.eliteT, nextEvent: this.nextEvent,
+        bossHpFrac: this.boss ? this.boss.hp / this.boss.maxHp : 1, nextBossAt: this.nextBossAt,
+      } : undefined,
+      expedition: this.expedition ? structuredClone(this.expedition) : undefined,
     };
   }
 
@@ -1109,6 +1145,7 @@ export class Run {
     run.healed = s.healed ?? 0;
     run.shopLevel = s.shopLevel ?? 1;
     run.anvilLevel = s.anvilLevel ?? 1;
+    run.expedition = s.expedition ? structuredClone(s.expedition) : null;
     run.startLevel(s.depth);
     // Przerwany poziom: wznowienie od zapisanego postępu (boss, jeśli był, wraca z zapisanym HP).
     if (s.inProgress && s.stage) {
@@ -1117,6 +1154,7 @@ export class Run {
       run.eliteT = s.stage.eliteT;
       run.nextEvent = s.stage.nextEvent;
       run.bossHpFrac = s.stage.bossHpFrac;
+      run.nextBossAt = s.stage.nextBossAt ?? BAL.endlessBossEvery;
       run.showBanner(`Wznowiono poziom ${s.depth}`);
     }
     // Sklep przed poziomem, który dopiero się zacznie (zapis między poziomami).

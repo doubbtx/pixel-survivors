@@ -265,7 +265,8 @@ for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;
 
 export const CARD_BY_ID: Record<string, CardDef> = Object.fromEntries(CARDS.map((c) => [c.id, c]));
 
-export type CardSource = 'level' | 'elite' | 'boss' | 'shop';
+/** Źródło oferty kart; 'fight' = wygrana walka w Ekspedycji. */
+export type CardSource = 'level' | 'fight' | 'elite' | 'boss' | 'shop';
 
 /** Rzadkość oferty: wszystkie 3 karty w ofercie mają tę samą rzadkość. */
 export function rollRarity(depth: number, lvl: number, source: CardSource): Rarity {

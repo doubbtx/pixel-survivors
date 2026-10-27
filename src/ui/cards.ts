@@ -16,7 +16,7 @@ const CARD_Y = 34;
 const BTN_Y = 208;
 const PRISM_CYCLE = [C.pink, C.blue, C.cyan, C.lime, C.yellow, C.orange, C.salmon];
 
-const SOURCE_LABEL: Record<CardSource, string> = { level: 'za awans', elite: 'za elitę', boss: 'za bossa', shop: 'ze sklepu' };
+const SOURCE_LABEL: Record<CardSource, string> = { level: 'za awans', fight: 'za walkę', elite: 'za elitę', boss: 'za bossa', shop: 'ze sklepu' };
 
 /** Kolor ramki karty; pryzmatyczne mienią się kolorami. */
 export function rarityColor(r: Rarity, step: number): number {

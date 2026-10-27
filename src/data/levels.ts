@@ -36,6 +36,10 @@ export interface LevelDef {
   /** Przesunięcie czasu fal (s): późniejsze poziomy od startu mają bogatszy skład wrogów. */
   waveOffset: number;
   bossName: string;
+  /** Czy po celu pojawia się boss (Ekspedycja: zwykłe walki kończą się po wykonaniu celu). */
+  boss: boolean;
+  /** Mnożnik odstępu między elitami (mniej = częściej). */
+  eliteMul: number;
 }
 
 const ROMAN = ['', '', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];
@@ -56,6 +60,8 @@ export function levelDef(depth: number): LevelDef {
     objective,
     waveOffset: Math.min(240, (depth - 1) * 70),
     bossName: b.bossName + suffix,
+    boss: true,
+    eliteMul: 1,
   };
 }
 
