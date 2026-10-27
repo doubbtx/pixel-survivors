@@ -1,7 +1,7 @@
 import { rng } from '../core/rng';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
-import { FORGE_STEPS, MATERIALS, MAT_BY_ID, SCROLLS, SCROLL_BY_ID, AWAKENINGS, type AwakenDef, type ForgeStep, type MatId, type ScrollId } from '../data/forge';
+import { FORGE_STEPS, MATERIALS, MAT_BY_ID, SCROLLS, SCROLL_BY_ID, AWAKENINGS, type AwakenDef, type CraftDef, type ForgeStep, type MatId, type ScrollId } from '../data/forge';
 import { upgradeItem, downgradeItem, addForgeAffix, empowerSuper, BASE_BY_ID, type Item } from '../data/items';
 import type { Enemy } from '../entities/types';
 import type { Run } from '../game/run';
@@ -165,3 +165,36 @@ export function emptyScrolls(): Record<ScrollId, number> {
 
 /** Kolor wyniku kucia (napisy w kuźni). */
 export const OUTCOME_COL: Record<ForgeOutcome, number> = { success: C.lime, fail: C.lgray, down: C.orange, crack: C.red, destroy: C.hotpink };
+
+/** Warsztat: szansa przepisu (z poziomem kowadła) i koszt w złocie (× głębokość). */
+export function craftChance(run: Run, c: CraftDef): number {
+  return Math.min(1, c.chance + BAL.forge.craftPerAnvil * (run.anvilLevel - 1));
+}
+
+export function craftGold(run: Run, c: CraftDef): number {
+  return Math.round(c.gold * BAL.shopScale(run.depth));
+}
+
+/** Czego brakuje do przepisu (null = można). */
+export function craftBlock(run: Run, c: CraftDef): string | null {
+  for (const [id, n] of Object.entries(c.need) as [MatId, number][]) if (run.mats[id] < n) return `Brak: ${MAT_BY_ID[id].name} (${run.mats[id]}/${n})`;
+  if (run.shards < c.shards) return `Brak odłamków (${run.shards}/${c.shards})`;
+  if (run.gold < craftGold(run, c)) return 'Za mało złota';
+  return null;
+}
+
+/** Przetopienie: zapłata, rzut; porażka zwraca część składników (reszta przepada). */
+export function craft(run: Run, c: CraftDef): { ok: boolean; note: string } {
+  const block = craftBlock(run, c);
+  if (block) return { ok: false, note: block };
+  run.gold -= craftGold(run, c);
+  run.shards -= c.shards;
+  for (const [id, n] of Object.entries(c.need) as [MatId, number][]) run.mats[id] -= n;
+  if (rng.chance(craftChance(run, c))) {
+    run.mats[c.out]++;
+    return { ok: true, note: `Wytopiono: ${MAT_BY_ID[c.out].name}` };
+  }
+  // Porażka: wraca (1 - craftLoss) składników, zaokrąglone w dół.
+  for (const [id, n] of Object.entries(c.need) as [MatId, number][]) run.mats[id] += Math.floor(n * (1 - BAL.forge.craftLoss));
+  return { ok: false, note: 'Przetapianie nieudane, część składników przepadła' };
+}

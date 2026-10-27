@@ -27,8 +27,8 @@ export const MATERIALS: MatDef[] = [
   { id: 'stone', name: 'Kamień kowalski', icon: 'mt_stone', color: C.lgray, from: 'wrogowie, rozkładanie, sklep' },
   { id: 'ore', name: 'Ruda gwiezdna', icon: 'mt_ore', color: C.blue, from: 'elity, zadania, lochy, sklep' },
   { id: 'heart', name: 'Serce smoka', icon: 'mt_heart', color: C.red, from: 'bossowie, Złoty szlam' },
-  { id: 'tear', name: 'Łza bogów', icon: 'mt_tear', color: C.cyan, from: 'bossowie od 3. poziomu, bossowie aktów' },
-  { id: 'void', name: 'Iskra pustki', icon: 'mt_void', color: C.pink, from: 'bossowie od 5. poziomu, miecz w kamieniu, Pakt 10+' },
+  { id: 'tear', name: 'Łza bogów', icon: 'mt_tear', color: C.cyan, from: 'warsztat, rzadko bossowie od 3. poziomu' },
+  { id: 'void', name: 'Iskra pustki', icon: 'mt_void', color: C.pink, from: 'warsztat, sekrety, rzadko bossowie od 5. poziomu' },
 ];
 
 export const MAT_BY_ID = Object.fromEntries(MATERIALS.map((m) => [m.id, m])) as Record<MatId, MatDef>;
@@ -110,3 +110,23 @@ export const AWAKENINGS: Record<ItemKind, AwakenDef> = {
   ring: { name: 'Pierścień czasu', desc: (v) => `umiejętności odnawiają się ${5 * v}% szybciej`, stats: (v) => ({ cdr: 0.05 * v }) },
   amulet: { name: 'Mądrość wieków', desc: (v) => `+${10 * v}% doświadczenia i złota`, stats: (v) => ({ growth: 0.1 * v, greed: 0.1 * v }) },
 };
+
+/**
+ * Warsztat kuźni: przetapianie niższych materiałów w wyższe. Wyższe stopnie prawie nie wypadają same (BAL.forge),
+ * więc droga na +10 i dalej prowadzi przez warsztat: składniki, odłamki jako katalizator i złoto (× głębokość).
+ * Szansa rośnie z poziomem kowadła (BAL.forge.craftPerAnvil); porażka zabiera część składników (BAL.forge.craftLoss).
+ */
+export interface CraftDef {
+  out: MatId;
+  need: Partial<Record<MatId, number>>;
+  shards: number;
+  gold: number;
+  chance: number;
+}
+
+export const CRAFTS: CraftDef[] = [
+  { out: 'ore', need: { stone: 4 }, shards: 0, gold: 15, chance: 1 },
+  { out: 'heart', need: { ore: 3, stone: 2 }, shards: 3, gold: 40, chance: 0.8 },
+  { out: 'tear', need: { heart: 2, ore: 2 }, shards: 10, gold: 90, chance: 0.6 },
+  { out: 'void', need: { tear: 2, heart: 1 }, shards: 25, gold: 180, chance: 0.4 },
+];

@@ -130,12 +130,14 @@ export const BAL = {
    * Kuźnia runiczna (data/forge.ts, systems/forge.ts): litość za porażkę (+szansa), zwój smoka, bonus trybu ryzyka,
    * pęknięcie (mnożnik wartości), naprawa (złoto x koszt ulepszenia, Ruda gwiezdna), progi +6 i +15.
    * Dropy materiałów: szansa zwykłego wroga na kamień, rozkładanie (kamienie za rzadkość), elita (ruda), boss (serca,
-   * łzy od depthTear, iskry od depthVoid), zwoje z elit i bossów, materiały za zadanie i loch.
+   * łzy od depthTear, iskry od depthVoid — rzadko, główna droga to warsztat), zwoje z elit i bossów, materiały za zadanie i loch.
+   * Warsztat (CRAFTS): +szansa za poziom kowadła, ułamek składników traconych przy porażce.
    */
   forge: {
     pity: 0.05, dragon: 0.15, risk: 0.1, crackMul: 0.7, repairMul: 2, glowMul: 1.2, divineMul: 1.25,
     stoneChance: 0.004, salvageStones: [0, 1, 1, 2, 3], eliteOre: [1, 2], bossHeart: [1, 2],
-    tearChance: 0.5, depthTear: 3, voidChance: 0.35, depthVoid: 5, pactVoid: 10,
+    tearChance: 0.15, depthTear: 3, voidChance: 0.08, depthVoid: 5, pactVoid: 10,
+    craftPerAnvil: 0.05, craftLoss: 0.5,
     scrollElite: 0.06, scrollBoss: 0.6, dungeonOre: 2, slimeHeart: 1, anvilStones: 2, anvilOre: 1,
   },
   /** Moce bossów (systems/powers.ts): maks. poziom i przyrost obrażeń za poziom. */

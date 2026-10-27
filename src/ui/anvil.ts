@@ -8,9 +8,10 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { fmt } from '../util/format';
 import { RARITIES, BASE_BY_ID, SLOTS, salvageGold, salvageShards, superLine, itemColor, type Item } from '../data/items';
-import { MATERIALS, MAT_BY_ID, SCROLLS, FORGE_TIERS, AWAKENINGS, type ScrollId } from '../data/forge';
+import { MATERIALS, MAT_BY_ID, SCROLLS, FORGE_TIERS, AWAKENINGS, CRAFTS, type MatId, type ScrollId } from '../data/forge';
 import {
   nextStep, forgeChance, failRisks, forgeGold, forgeBlock, forgeAttempt, repairCost, repairItem, OUTCOME_COL,
+  craft, craftBlock, craftChance, craftGold,
   type ForgeOpts, type ForgeOutcome,
 } from '../systems/forge';
 import {
@@ -29,7 +30,9 @@ const COLS = 8, ROWS = 4;
 const RB_X = DET_X + DET_W - 22, RB_W = 14, RB_H = 12;
 const ALL_Y = 232;
 
-type Stage = 'pick' | 'ops' | 'target' | 'forge';
+type Stage = 'pick' | 'ops' | 'target' | 'forge' | 'craft';
+/** Warsztat: wysokość wiersza przepisu i przycisk w etapie wyboru. */
+const CRAFT_Y = 54, CRAFT_H = 40, WORKSHOP_Y = 212;
 
 /** Kuźnia: przełączniki zwojów i trybu ryzyka (klawisze 1-4), wiersze na panelu. */
 const OPT_KEYS: (ScrollId | 'risk')[] = ['bless', 'dragon', 'talisman', 'risk'];
@@ -69,6 +72,8 @@ export class AnvilView {
   private result: { text: string; outcome: ForgeOutcome; t: number } | null = null;
   private confirmRisk = false;
   private sparks: { x: number; y: number; vx: number; vy: number; t: number }[] = [];
+  /** Warsztat: zaznaczony przepis. */
+  private craftSel = 0;
 
   /** `onChange` — po każdej udanej operacji (zapis runu). */
   constructor(private readonly run: Run, private readonly onChange: () => void) {
@@ -220,6 +225,49 @@ export class AnvilView {
     if (inside(m.x, m.y, DET_X + 40, FORGE_BTN_Y, DET_W - 80, 16)) this.strike();
   }
 
+  /** Warsztat: strzałki wybierają przepis, Enter / klik (drugi raz w ten sam) przetapia, Esc wraca. */
+  private updateCraft(input: Input, back: boolean): void {
+    const n = CRAFTS.length;
+    if (back) { this.stage = 'pick'; return; }
+    if (input.pressed('up')) this.craftSel = (this.craftSel + n - 1) % n;
+    if (input.pressed('down')) this.craftSel = (this.craftSel + 1) % n;
+    let go = input.pressed('confirm');
+    if (input.pressed('click')) CRAFTS.forEach((_, i) => {
+      if (!inside(input.mouse.x, input.mouse.y, DET_X, CRAFT_Y + i * CRAFT_H, DET_W, CRAFT_H - 2)) return;
+      if (this.craftSel === i) go = true;
+      this.craftSel = i;
+    });
+    if (go) {
+      const res = craft(this.run, CRAFTS[this.craftSel]);
+      this.apply(res);
+      if (res.ok) for (let i = 0; i < 12; i++) this.sparks.push({ x: DET_X + 20, y: CRAFT_Y + this.craftSel * CRAFT_H + 14, vx: rng.range(-60, 60), vy: rng.range(-90, -20), t: rng.range(0.3, 0.6) });
+    }
+  }
+
+  /** Panel warsztatu: przepisy (wynik, składniki z zapasem, odłamki, złoto, szansa). */
+  private renderCraft(r: Renderer): void {
+    const g = r.g, run = this.run;
+    panel(r, DET_X, 32, DET_W, 196, C.orange);
+    drawText(g, 'Warsztat: przetapianie', DET_X + DET_W / 2, 37, C.orange, { align: 'center' });
+    CRAFTS.forEach((c, i) => {
+      const y = CRAFT_Y + i * CRAFT_H, on = i === this.craftSel, out = MAT_BY_ID[c.out], block = craftBlock(run, c);
+      panel(r, DET_X + 4, y, DET_W - 8, CRAFT_H - 2, on ? C.gold : C.slate);
+      drawSprite(g, out.icon, DET_X + 18, y + 13);
+      drawText(g, out.name, DET_X + 30, y + 3, out.color);
+      drawText(g, `${Math.round(craftChance(run, c) * 100)}%   ${fmt(craftGold(run, c))} zł`, DET_X + DET_W - 10, y + 3, block ? C.dgray : C.yellow, { align: 'right' });
+      // Składniki: ikona i zapas/potrzeba, odłamki jako katalizator.
+      let x = DET_X + 30;
+      for (const [id, n] of Object.entries(c.need) as [MatId, number][]) {
+        drawSprite(g, MAT_BY_ID[id].icon, x + 6, y + 24);
+        drawText(g, `${run.mats[id]}/${n}`, x + 15, y + 19, run.mats[id] >= n ? C.white : C.salmon);
+        x += 44;
+      }
+      if (c.shards) { drawSprite(g, 'sh_shard', x + 6, y + 24); drawText(g, `${run.shards}/${c.shards}`, x + 15, y + 19, run.shards >= c.shards ? C.white : C.salmon); }
+    });
+    for (const sp of this.sparks) r.rect(sp.x, sp.y, 2, 2, sp.t > 0.3 ? C.yellow : C.orange);
+    drawText(g, 'Enter: przetop   Esc: wróć   Porażka: połowa składników przepada   Szansa rośnie z poziomem kowadła', W / 2, 234, C.dgray, { align: 'center' });
+  }
+
   /** Zwraca true, gdy kowadło ma zostać zamknięte. */
   update(input: Input, dt: number): boolean {
     this.noteT = Math.max(0, this.noteT - dt);
@@ -245,9 +293,12 @@ export class AnvilView {
       if (back) return true;
       // Ulepszenie kowadła: R albo przycisk pod siatką.
       if (input.pressed('reroll') || (input.pressed('click') && inside(input.mouse.x, input.mouse.y, 14, 192, 200, 18))) this.apply(upgradeAnvil(this.run));
+      else if (input.pressed('banish') || (input.pressed('click') && inside(input.mouse.x, input.mouse.y, 14, WORKSHOP_Y, 200, 16))) { this.stage = 'craft'; sfx.play('select'); }
       else if (this.gridInput(input, true)) { this.stage = 'ops'; this.menu.sel = 0; }
     } else if (this.stage === 'forge') {
       this.updateForge(input, back);
+    } else if (this.stage === 'craft') {
+      this.updateCraft(input, back);
     } else if (this.stage === 'ops') {
       if (back) this.stage = 'pick';
       // Klik w siatkę zmienia przedmiot bez wychodzenia z menu; klawisze sterują menu.
@@ -297,7 +348,10 @@ export class AnvilView {
     }
 
     const it = this.item();
-    if (it && this.stage === 'forge') {
+    if (this.stage === 'craft') {
+      this.affixY = [];
+      this.renderCraft(r);
+    } else if (it && this.stage === 'forge') {
       this.affixY = [];
       this.renderForge(r, it);
     } else if (it) {
@@ -323,8 +377,9 @@ export class AnvilView {
       const max = run.anvilLevel >= BAL.anvilUpgrade.max;
       panel(r, 14, 192, 200, 18, max ? C.gold : C.orange);
       drawText(g, max ? `Kowadło poziom ${run.anvilLevel} (max)` : `[R] Ulepsz kowadło (poz. ${run.anvilLevel}): ${costText(anvilUpgradeCost(run))}`, 114, 195, max ? C.gold : C.white, { align: 'center' });
-      drawText(g, 'Taniej, lepsze bonusy, częściej super-bonus', 114, 214, C.dgray, { align: 'center' });
-      drawText(g, 'Enter / klik: wybierz przedmiot', 114, 228, C.dgray, { align: 'center' });
+      panel(r, 14, WORKSHOP_Y, 200, 16, C.orange);
+      drawText(g, '[B] Warsztat: przetapianie materiałów', 114, WORKSHOP_Y + 2, C.white, { align: 'center' });
+      drawText(g, 'Enter / klik: wybierz przedmiot', 114, 232, C.dgray, { align: 'center' });
     }
     // Wynik ostatniej próby kucia (także po wyjściu z panelu, np. po zniszczeniu przedmiotu).
     if (this.result && this.stage !== 'forge') drawText(g, this.result.text, W / 2, H - 26, OUTCOME_COL[this.result.outcome], { align: 'center', outline: C.black });

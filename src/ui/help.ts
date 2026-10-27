@@ -80,6 +80,7 @@ const PAGES: { title: string; lines: string[] }[] = [
     lines: [
       'Kuźnia: w kowadle ulepszasz przedmiot do +15. Każda próba kosztuje złoto i materiał, i może się nie udać.',
       'Materiały: kamień kowalski (+1 do +3, wrogowie, rozkładanie), ruda gwiezdna (+4 do +6, elity, zadania, lochy), serce smoka (+7 do +9, bossowie), łza bogów (+10 do +12) i iskra pustki (+13 do +15).',
+      'Warsztat (B w kowadle): przetapiasz niższe materiały w wyższe za odłamki i złoto. Łzy i iskry prawie tylko stąd. Może się nie udać.',
       'Porażka: nic, spadek o poziom albo pęknięcie (wartości -30%, napraw rudą). Każda porażka dodaje 5% szansy na następną próbę (litość).',
       'Zwoje: błogosławieństwo (bez spadku), smoka (+15% szansy), talizman (bez pęknięcia). Klawisze 1-3 w kuźni.',
       'Tryb ryzyka (klawisz 4): +10% szansy, ale pęknięcie NISZCZY przedmiot, już od +4.',
