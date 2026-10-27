@@ -32,7 +32,10 @@ export class MetaScreen implements Screen {
   private noteT = 0;
   private confirmPrestige = false;
 
-  constructor(private readonly app: App, private readonly back: Screen) {}
+  /** `heroId`: otwarta zakładka bohatera (domyślnie ostatnio grany). */
+  constructor(private readonly app: App, private readonly back: Screen, heroId = app.save.lastHero) {
+    this.hero = Math.max(0, HEROES.findIndex((h) => h.id === heroId));
+  }
 
   private get heroId(): string {
     return HEROES[this.hero].id;

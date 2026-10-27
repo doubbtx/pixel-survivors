@@ -299,6 +299,13 @@ src/
 - Ekwipunek: opis zaznaczonego przedmiotu (co daje slot, rzadkość, gwiazdka, kowadło).
 - Przyciski podświetlają się pod myszą (kursor-rączka), pulsujące ramki i strzałki pokazują, gdzie jest więcej informacji.
 
+**Sekrety na wierzchu i Arsenał (0.21)**:
+- Różowe strzałki przy krawędzi ekranu wskazują sekrety mapy (fontanna, runy, grzyby, kurhan, schody, gaj, miecz, biały jeleń, pęknięta ściana).
+- Księga sekretów pokazuje warunek wprost i efekt, także nieodkrytych; Pomoc wyjaśnia Pustkę, Rozdarcie i kod w menu.
+- Kolekcja: nowa zakładka **Arsenał** (każda broń: ewolucja, fuzje, augmenty; każda pasywka), opisy nieodkrytych kart.
+- Po Ekspedycji od razu przejście do Rozwoju granego bohatera.
+- Dobre przedmioty rzadsze (szczególnie legendarne i unikaty).
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

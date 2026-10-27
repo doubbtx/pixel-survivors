@@ -34,6 +34,8 @@ import { HelpScreen } from './help';
 import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import { bonusLines } from '../data/upgrades';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
+import { MetaScreen } from './meta';
+import { HERO_BY_ID } from '../data/heroes';
 import { PowerPickView } from './powers';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { heroSkins } from '../data/pacts';
@@ -152,8 +154,12 @@ export class GameScreen implements Screen {
     this.endMenu = new Menu(daily || rush || quick ? [
       { label: () => 'Spróbuj ponownie', act: () => app.go(new GameScreen(app, heroId, mode, undefined, opts)) },
       { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
-    ] : hc || mode === 'expedition' ? [
-      { label: () => (hc ? 'Nowa kampania' : 'Nowa ekspedycja'), act: () => app.go(new HeroSelect(app, mode)) },
+    ] : mode === 'expedition' ? [
+      { label: () => `Rozwój: ${HERO_BY_ID[heroId].name}`, act: () => app.go(new MetaScreen(app, new MainMenu(app), heroId)) },
+      { label: () => 'Nowa ekspedycja', act: () => app.go(new HeroSelect(app, mode)) },
+      { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
+    ] : hc ? [
+      { label: () => 'Nowa kampania', act: () => app.go(new HeroSelect(app, mode)) },
       { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
     ] : [
       { label: () => 'Zagraj ponownie', act: () => app.go(new GameScreen(app, heroId, mode)) },

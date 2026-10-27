@@ -1362,7 +1362,7 @@ export class Run {
   clearObjective(): void {
     this.bossSpawned = true;
     const elite = this.levelInfo.eliteMul < 1;
-    if (elite) this.pendingLoot.push(this.rollLoot('boss'));
+    if (elite) this.pendingLoot.push(this.rollLoot('elite'));
     this.pendingCards.push(elite ? 'elite' : 'fight');
     this.gold += BAL.expedition.fightGold * this.depth * this.stats.greed;
     this.finishLevel(elite ? 'Elity pokonane!' : 'Walka wygrana!');

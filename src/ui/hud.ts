@@ -1,7 +1,8 @@
 import { W, H, VIEW_W, VIEW_H, type Renderer } from '../core/renderer';
 import { itemColor } from '../data/items';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
-import { C, RAMP } from '../core/palette';
+import { C, RAMP, PAL } from '../core/palette';
+import type { MapObject, MapObjectKind } from '../systems/events';
 import { drawText, textWidth } from '../core/font';
 import { drawSprite } from '../gfx/sprites';
 import type { AbilitySlot } from '../data/heroes';
@@ -63,6 +64,60 @@ function drawMinimap(r: Renderer, run: Run, x: number, y: number, w: number, h: 
     dot(o.x - 1, o.y - 1, 3, col);
   }
   r.rect(cx - 1, cy - 1, 2, 2, C.white);
+}
+
+/** Nazwy sekretów mapy na strzałkach przy krawędzi ekranu. */
+const SECRET_LABEL: Partial<Record<MapObjectKind, string>> = {
+  fountain: 'Fontanna', mural: 'Runy', mushroom: 'Grzyby', stairs: 'Schody', barrow: 'Kurhan', grove: 'Gaj', sword: 'Miecz',
+};
+/** Pęknięta ściana pokazywana strzałką z takiej odległości (jednostki świata). */
+const WALL_HINT_R = 400;
+/** Odstęp strzałek od krawędzi ekranu (poziomo, pionowo): poza portretem, minimapą i slotami. */
+const ARROW_MX = 30, ARROW_MY = 66;
+
+/**
+ * Strzałki przy krawędzi ekranu do sekretów poza widokiem: obiekty mapy (grzyby: najbliższy), biały jeleń
+ * i najbliższa pęknięta ściana. Pulsują, z nazwą i odległością.
+ */
+function drawSecretArrows(r: Renderer, run: Run): void {
+  const p = run.player, k = W / VIEW_W;
+  const targets: { x: number; y: number; label: string }[] = [];
+  let mush: MapObject | null = null;
+  const d2 = (x: number, y: number) => (x - p.x) ** 2 + (y - p.y) ** 2;
+  for (const o of run.mapObjects) {
+    const label = SECRET_LABEL[o.kind];
+    if (!label) continue;
+    if (o.kind === 'mushroom') { if (!mush || d2(o.x, o.y) < d2(mush.x, mush.y)) mush = o; continue; }
+    targets.push({ x: o.x, y: o.y, label });
+  }
+  if (mush) targets.push({ x: mush.x, y: mush.y, label: 'Grzyby' });
+  for (const e of run.enemies.items) if (!e.dead && e.def.id === 'stag') targets.push({ x: e.x, y: e.y, label: 'Jeleń' });
+  let wall: { x: number; y: number } | null = null;
+  for (const t of run.terrain) if (t.secret && t.hp > 0 && d2(t.x, t.y) < WALL_HINT_R ** 2 && (!wall || d2(t.x, t.y) < d2(wall.x, wall.y))) wall = t;
+  if (wall) targets.push({ x: wall.x, y: wall.y, label: 'Ściana' });
+  const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 160);
+  for (const t of targets) {
+    const sx = (t.x - run.camX) * k, sy = (t.y - run.camY) * k;
+    if (sx > 0 && sx < W && sy > 0 && sy < H) continue;
+    // Punkt na brzegu wewnętrznego prostokąta (omija portret, minimapę i sloty) w kierunku celu.
+    const cx = W / 2, cy = H / 2, dx = sx - cx, dy = sy - cy;
+    const s = Math.min((W / 2 - ARROW_MX) / Math.max(1e-6, Math.abs(dx)), (H / 2 - ARROW_MY) / Math.max(1e-6, Math.abs(dy)));
+    const ax = cx + dx * s, ay = cy + dy * s, a = Math.atan2(dy, dx);
+    const tri = (len: number, wid: number, col: number) => {
+      r.g.fillStyle = PAL[col];
+      r.g.beginPath();
+      r.g.moveTo(ax + Math.cos(a) * len, ay + Math.sin(a) * len);
+      r.g.lineTo(ax + Math.cos(a + 2.4) * wid, ay + Math.sin(a + 2.4) * wid);
+      r.g.lineTo(ax + Math.cos(a - 2.4) * wid, ay + Math.sin(a - 2.4) * wid);
+      r.g.fill();
+    };
+    r.withAlpha(pulse, () => { tri(11, 8, C.black); tri(9, 6, C.hotpink); });
+    // Podpis po wewnętrznej stronie strzałki, na płytce.
+    const text = `${t.label} ${Math.round(Math.sqrt(d2(t.x, t.y)) / 10)}m`, tw = textWidth(text) * 0.75 + 8;
+    const lx = Math.max(tw / 2 + 2, Math.min(W - tw / 2 - 2, ax - Math.cos(a) * 20)), ly = ay - Math.sin(a) * 14 - 4;
+    r.withAlpha(0.7, () => r.roundRect(lx - tw / 2, ly - 1, tw, 9, 4, C.black));
+    drawText(r.g, text, lx, ly, C.pink, { align: 'center', ...SMALL });
+  }
 }
 
 /** Rampy pasków zasobów bohaterów. */
@@ -191,6 +246,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   drawSprite(g, 'coin', W - 76, 30);
   drawText(g, fmt(run.gold), W - 9, 24, C.gold, { align: 'right', ...OUT });
   if (minimap) drawMinimap(r, run, W - 86, 41, 82, 56);
+  drawSecretArrows(r, run);
   if (run.task) drawTask(r, run, W - 114, minimap ? 100 : 41);
 
   // Baner (zapowiedzi, fazy bossa, elity): wstęga z cienkimi złotymi liniami, wsuwa się i znika.

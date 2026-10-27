@@ -94,14 +94,17 @@ const PAGES: { title: string; lines: string[] }[] = [
   {
     title: 'Sekrety',
     lines: [
-      'Księga sekretów: ukryte buildy (np. pełna trucizna, same bronie ognia, 4 żywioły). Spełnij warunek, a sekret obudzi się do końca runu. Zagadki: Kolekcja, Tab.',
+      'Księga sekretów: ukryte buildy (np. pełna trucizna, same bronie ognia, 4 żywioły). Spełnij warunek, a sekret obudzi się do końca runu. Zagadki i warunki wprost: Kolekcja, zakładka Sekrety.',
       'Fontanna życzeń: stań w niej i zapłać złotem. Zwykle błogosławieństwo, czasem klątwa.',
       'Runy: dotknij 4 kamieni w kolejności kolorów z malowidła. Zła kolejność: runy znikają i jest zasadzka.',
       'Grzyby: zjedz na własne ryzyko. Biały jeleń: złap go, a odsłoni ukryty gaj z unikatem.',
       'Mimik: niektóre skrzynie gryzą. Pęknięta ściana (fioletowa szczelina): rozbij ją, za nią są schody do skarbca.',
       'Kurhan: zbierz 3 klucze z elit. W środku czeka Zapomniany Król i jego moc.',
       'Bezbłędnie: pokonaj bossa bez trafienia, a dostaniesz dodatkową moc bossa. Wyczyny (poziom bez trafienia, bez uniku, Rzeź...): nagrody, lista w Kolekcji.',
-      'Plotki: odważni z Paktem 5+ widzieli biom spoza mapy, na mapie wyprawy bywa pole ze znakiem zapytania, a w menu działa stary kod z automatów.',
+      'Pustka: Kampania Hardcore z Paktem 5 lub wyżej; po pełnym cyklu 4 biomów (poziom 5, 9...) zamiast zwykłego biomu czeka Pustka.',
+      'Rozdarcie: na mapie Ekspedycji (akty 2-3) bywa pole ze znakiem zapytania. Wygrana walka w Pustce daje Klucz Pustki i sekretny akt 4.',
+      'Kod w menu głównym: góra, góra, dół, dół, lewo, prawo, lewo, prawo, B, A (strzałki, potem klawisze B i A) otwiera tryb Głowy bossów.',
+      'W grze różowe strzałki przy krawędzi ekranu wskazują sekrety mapy poza widokiem (z nazwą i odległością).',
     ],
   },
   {
@@ -153,20 +156,24 @@ export class HelpScreen implements Screen {
       button(r, this.tabX(i), 30, TAB_W, 16, p.title, { active: on, accent: C.gold });
     });
     panel(r, 10, 52, W - 20, H - 80, C.gold);
+    // Strona, która nie mieści się w ramce, rysuje się mniejszym tekstem.
+    const lines = PAGES[this.page].lines;
+    const fits = lines.reduce((h, l) => h + wrapText(l, W - 44).length * 11 + 5, 0) <= H - 92;
+    const sc = fits ? 1 : 0.75, lh = fits ? 11 : 8.5, gap = fits ? 5 : 3;
     let y = 62;
-    for (const line of PAGES[this.page].lines) {
+    for (const line of lines) {
       const cut = line.indexOf(':');
-      const wrapped = wrapText(line, W - 44);
+      const wrapped = wrapText(line, (W - 44) / sc);
       wrapped.forEach((l, k) => {
         // Wyróżnienie nazwy przed dwukropkiem w pierwszej linii akapitu.
         if (k === 0 && cut > 0 && cut < l.length) {
           const head = l.slice(0, cut + 1);
-          drawText(g, head, 22, y, C.yellow);
-          drawText(g, l.slice(cut + 1), 22 + textWidth(head), y, C.lgray);
-        } else drawText(g, l, 22, y, C.lgray);
-        y += 11;
+          drawText(g, head, 22, y, C.yellow, { scale: sc });
+          drawText(g, l.slice(cut + 1), 22 + textWidth(head, sc), y, C.lgray, { scale: sc });
+        } else drawText(g, l, 22, y, C.lgray, { scale: sc });
+        y += lh;
       });
-      y += 5;
+      y += gap;
     }
     button(r, W / 2 - 40, H - 22, 80, 16, 'Wróć');
     // Kolejna strona: strzałka i podpis.

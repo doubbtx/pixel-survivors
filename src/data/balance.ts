@@ -203,7 +203,7 @@ export const BAL = {
   /** Moce bossów (systems/powers.ts): maks. poziom i przyrost obrażeń za poziom. */
   bossPowers: { maxLevel: 3, perLevel: 0.5 },
   /** Szansa, że łup bossa / elity (także skrzynia elity) to unikat (× (1 + Fortuna)). */
-  uniques: { boss: 0.12, elite: 0.02 },
+  uniques: { boss: 0.08, elite: 0.02 },
   /** Szansa, że zwykły wróg upuści skrzynię z przedmiotem. */
   itemDropChance: 0.0008,
   bagSize: 24,
@@ -215,7 +215,12 @@ export const BAL = {
   /** Cena przedmiotu = wartość rozłożenia × narzut (rozkładanie zakupów nigdy się nie opłaca). */
   shopItemMarkup: 2.5,
   /** Szansa na lepszą jakość przedmiotów w sklepie (jak u elity, ale słabsza). */
-  shopItemBoost: 1.3,
+  shopItemBoost: 1.15,
+  /**
+   * Jakość łupu (data/items.ts rollRarity): waga rzadkości i rośnie jak boost^i, boost = (1 + `depth` × (głębokość - 1))
+   * × (1 + `luck` × szczęście) × źródło (`boss`, `elite`). Boss nie daje Zwykłych.
+   */
+  loot: { depth: 0.1, luck: 0.5, boss: 1.8, elite: 1.3 },
   /** Odświeżenie przedmiotów: cena bazowa, podwaja się przy każdym użyciu w tym samym sklepie. */
   shopRefresh: 10,
   /** Ceny bazowe usług (× shopScale). */

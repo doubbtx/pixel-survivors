@@ -18,6 +18,10 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import { FEATS } from '../data/feats';
 import { CARD_BY_ID } from '../data/cards';
 import { fmt } from '../util/format';
+import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel } from '../data/weapons';
+import { PASSIVES, PASSIVE_BY_ID } from '../data/passives';
+import { AUGMENTS } from '../data/augments';
+import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 
 const COLS = 15, TILE = 17, STEP = 18;
 const GRID_X = 12, GRID_Y = 50;
@@ -29,9 +33,19 @@ const U_COLS = 5, U_TILE = 28, U_STEP = 32, U_X = 24, U_Y = 56;
 const U_SAMPLES: Item[] = UNIQUES.map((u) => rollUnique(1, u.id));
 
 /** Zakładki w kolejności przełączania (Tab), nazwy i kolory nagłówków. */
-type Tab = 'cards' | 'uniques' | 'secrets' | 'bestiary' | 'achievements' | 'feats';
-const TABS: Tab[] = ['cards', 'uniques', 'secrets', 'bestiary', 'achievements', 'feats'];
-const TAB_NAME: Record<Tab, string> = { cards: 'Karty', uniques: 'Unikaty', secrets: 'Sekrety', bestiary: 'Bestiariusz', achievements: 'Osiągnięcia', feats: 'Wyczyny' };
+type Tab = 'cards' | 'arsenal' | 'uniques' | 'secrets' | 'bestiary' | 'achievements' | 'feats';
+const TABS: Tab[] = ['cards', 'arsenal', 'uniques', 'secrets', 'bestiary', 'achievements', 'feats'];
+const TAB_NAME: Record<Tab, string> = { cards: 'Karty', arsenal: 'Arsenał', uniques: 'Unikaty', secrets: 'Sekrety', bestiary: 'Bestiariusz', achievements: 'Osiągnięcia', feats: 'Wyczyny' };
+
+/** Arsenał: bronie bazowe i pasywki (siatka 7 kolumn, dwie grupy). */
+const ARS_WEAPONS = WEAPONS.filter((w) => !w.evolved);
+const A_COLS = 7, A_TILE = 24, A_STEP = 28, A_X = 16, A_WY = 50, A_PY = 50 + 2 * A_STEP + 22;
+const ARS_N = ARS_WEAPONS.length + PASSIVES.length;
+const SMALL = { scale: 0.75 } as const;
+const arsPos = (i: number): [number, number] => {
+  const p = i >= ARS_WEAPONS.length, k = p ? i - ARS_WEAPONS.length : i;
+  return [A_X + (k % A_COLS) * A_STEP, (p ? A_PY : A_WY) + Math.floor(k / A_COLS) * A_STEP];
+};
 
 /** Bestiariusz: siatka 6 kolumn. */
 const B_COLS = 6, B_TILE = 28, B_STEP = 32, B_X = 18, B_Y = 50;
@@ -51,6 +65,7 @@ export class CollectionScreen implements Screen {
   private bSel = 0;
   private aSel = 0;
   private uSel = 0;
+  private wSel = 0;
   private step = 0;
   private lastMouse = 0;
   private note = '';
@@ -94,6 +109,7 @@ export class CollectionScreen implements Screen {
       return;
     }
     if (this.tab === 'uniques') { this.updateUniques(); return; }
+    if (this.tab === 'arsenal') { this.updateArsenal(); return; }
     if (this.tab === 'secrets') { this.updateSecrets(); return; }
     if (this.tab === 'bestiary') { this.updateBestiary(); return; }
     if (this.tab === 'achievements') { this.updateAchievements(); return; }
@@ -128,6 +144,79 @@ export class CollectionScreen implements Screen {
     });
     if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
+  }
+
+  private updateArsenal(): void {
+    const inp = this.app.input, n = ARS_N;
+    if (inp.pressed('left')) this.wSel = (this.wSel + n - 1) % n;
+    if (inp.pressed('right')) this.wSel = (this.wSel + 1) % n;
+    if (inp.pressed('up')) this.wSel = (this.wSel + n - A_COLS) % n;
+    if (inp.pressed('down')) this.wSel = (this.wSel + A_COLS) % n;
+    const m = inp.mouse;
+    for (let i = 0; i < n; i++) {
+      const [x, y] = arsPos(i);
+      if (inside(m.x, m.y, x, y, A_TILE, A_TILE) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.wSel = i;
+    }
+    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
+    this.lastMouse = m.lastMove;
+  }
+
+  /**
+   * Zakładka Arsenał: wszystkie bronie bazowe i pasywki. Broń: opis, żywioł, ewolucja (broń + pasywka), fuzje i augmenty;
+   * pasywka: opis na poziom i bronie, które ewoluuje.
+   */
+  private renderArsenal(): void {
+    const r = this.app.r, g = r.g;
+    panel(r, 6, 32, 214, 196, C.slate);
+    drawText(g, 'Bronie', A_X, 38, C.lavender);
+    drawText(g, 'Pasywki', A_X, A_PY - 12, C.lavender);
+    for (let i = 0; i < ARS_N; i++) {
+      const [x, y] = arsPos(i), w = ARS_WEAPONS[i], p = PASSIVES[i - ARS_WEAPONS.length];
+      slot(r, x, y, A_TILE, w ? (w.hero ? HERO_BY_ID[w.hero].color : C.blue) : C.lime);
+      drawSprite(g, w ? w.icon : p.icon, x + A_TILE / 2, y + A_TILE / 2);
+      if (i === this.wSel) r.frame(x - 2, y - 2, A_TILE + 4, A_TILE + 4, C.white);
+    }
+    const X = 228, PW = W - X - 6, TW = (PW - 20) / SMALL.scale;
+    panel(r, X, 32, PW, 212, C.gold);
+    let y = 40;
+    const head = (s: string, col: number = C.lavender) => { y += 3; drawText(g, s, X + 10, y, col); y += 11; };
+    const text = (s: string, col: number = C.lgray) => { for (const l of wrapText(s, TW)) { if (y > 236) return; drawText(g, l, X + 10, y, col, SMALL); y += 8.5; } };
+    const w = ARS_WEAPONS[this.wSel];
+    if (w) {
+      drawSprite(g, w.icon, X + 20, y + 10, { scale: 2 });
+      drawText(g, w.name, X + 40, y + 1, w.color, { shadow: C.black });
+      const el = WEAPON_ELEMENT[w.id];
+      drawText(g, `${w.hero ? `tylko ${HERO_BY_ID[w.hero].name}, ` : ''}poz. maks. ${maxLevel(w)}${el ? `, ${ELEMENTS[el].name.toLowerCase()}` : ''}`, X + 40, y + 12, C.dgray);
+      y += 26;
+      text(el ? `${w.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : w.desc, C.white);
+      if (w.evolve) {
+        const ev = WEAPON_BY_ID[w.evolve.into], pa = PASSIVE_BY_ID[w.evolve.passive];
+        head(`Ewolucja: ${ev.name}`, C.yellow);
+        text(`Broń na poz. ${maxLevel(w)} + pasywka ${pa.name}, potem awans. ${ev.desc}`);
+      }
+      const fus = FUSIONS.filter((f) => f.a === w.id || f.b === w.id);
+      if (fus.length) {
+        head('Fuzje (obie bronie na maks. albo po ewolucji)', C.pink);
+        for (const f of fus) text(`+ ${WEAPON_BY_ID[f.a === w.id ? f.b : f.a].name}: ${WEAPON_BY_ID[f.into].name}. ${WEAPON_BY_ID[f.into].desc}`);
+      }
+      const augs = AUGMENTS.filter((a) => a.weapon === w.id);
+      if (augs.length) {
+        head(`Augmenty (od poz. ${BAL.augmentMinLevel})`, C.cyan);
+        for (const a of augs) text(`${a.name}: ${a.desc}${a.elem ? ` Żywioł: ${ELEMENTS[a.elem].name}.` : ''}`);
+      }
+      return;
+    }
+    const p = PASSIVES[this.wSel - ARS_WEAPONS.length];
+    drawSprite(g, p.icon, X + 20, y + 10, { scale: 2 });
+    drawText(g, p.name, X + 40, y + 1, C.lime, { shadow: C.black });
+    drawText(g, `Pasywka, poz. maks. ${p.maxLevel}`, X + 40, y + 12, C.dgray);
+    y += 26;
+    text(`${p.desc} na każdy poziom.`, C.white);
+    const evo = WEAPONS.filter((x) => x.evolve?.passive === p.id);
+    if (evo.length) {
+      head('Ewoluuje bronie', C.yellow);
+      for (const x of evo) text(`${x.name} > ${WEAPON_BY_ID[x.evolve!.into].name}`);
+    }
   }
 
   private updateSecrets(): void {
@@ -226,26 +315,28 @@ export class CollectionScreen implements Screen {
     });
   }
 
-  /** Zakładka Sekrety: lista (odkryte z nazwą, nieodkryte jako ???) i szczegóły: zagadka, a po odkryciu efekt. */
+  /** Zakładka Sekrety: lista (nieodkryte wyszarzone) i szczegóły: zagadka, warunek wprost i efekt. */
   private renderSecrets(): void {
     const r = this.app.r, g = r.g, found = this.col.secrets;
     SECRETS.forEach((s, i) => {
       const y = 40 + i * 14, known = found.includes(s.id), on = i === this.sSel;
       panel(r, 10, y, 200, 13, on ? C.hotpink : C.slate);
-      drawText(g, known ? s.name : '???', 18, y + 1, known ? C.white : C.dgray);
+      drawText(g, s.name, 18, y + 1, known ? C.white : C.dgray);
       if (s.hero) drawText(g, HERO_BY_ID[s.hero].name, 204, y + 1, HERO_BY_ID[s.hero].color, { align: 'right' });
     });
     const s = SECRETS[this.sSel], known = found.includes(s.id);
     panel(r, 220, 40, W - 230, 186, known ? C.hotpink : C.slate);
-    drawText(g, known ? s.name : 'Nieodkryty sekret', 230, 48, known ? C.hotpink : C.dgray, { scale: 2 });
+    drawText(g, s.name, 230, 48, known ? C.hotpink : C.dgray, { scale: 2 });
+    if (!known) drawText(g, 'jeszcze nieodkryty', W - 18, 52, C.dgray, { align: 'right' });
     let y = 76;
     drawText(g, 'Zagadka:', 230, y, C.lavender); y += 12;
     for (const l of wrapText(s.riddle, W - 250)) { drawText(g, l, 230, y, C.lgray); y += 11; }
-    y += 8;
-    if (known) {
-      drawText(g, 'Efekt:', 230, y, C.lavender); y += 12;
-      for (const l of wrapText(`${s.desc} ${s.while ? 'Działa tylko, dopóki warunek trwa.' : 'Działa do końca runu.'}`, W - 250)) { drawText(g, l, 230, y, C.white); y += 11; }
-    } else drawText(g, 'Spełnij warunek w trakcie runu, żeby go odkryć.', 230, y, C.dgray);
+    y += 6;
+    drawText(g, 'Jak odkryć:', 230, y, C.lavender); y += 12;
+    for (const l of wrapText(s.hint, W - 250)) { drawText(g, l, 230, y, C.yellow); y += 11; }
+    y += 6;
+    drawText(g, 'Efekt:', 230, y, C.lavender); y += 12;
+    for (const l of wrapText(`${s.desc} ${s.while ? 'Działa tylko, dopóki warunek trwa.' : 'Działa do końca runu.'}`, W - 250)) { drawText(g, l, 230, y, known ? C.white : C.lgray); y += 11; }
     drawText(g, `Odkryte ${SECRETS.filter((x) => found.includes(x.id)).length}/${SECRETS.length}`, 10, 232, C.lavender);
   }
 
@@ -291,6 +382,12 @@ export class CollectionScreen implements Screen {
       this.renderSecrets();
       return;
     }
+    if (this.tab === 'arsenal') {
+      drawText(g, 'Arsenał', W / 2, 10, C.cyan, { align: 'center', scale: 2, outline: C.black });
+      drawText(g, '[Esc] wróć', 12, 12, C.lgray);
+      this.renderArsenal();
+      return;
+    }
     if (this.tab === 'uniques') {
       drawText(g, 'Kolekcja unikatów', W / 2, 10, UNIQUE_COLOR, { align: 'center', scale: 2, outline: C.black });
       drawText(g, '[Esc] wróć', 12, 12, C.lgray);
@@ -307,7 +404,7 @@ export class CollectionScreen implements Screen {
       const known = col.seen.includes(c.id), banned = col.banned.includes(c.id);
       slot(r, x, y, TILE, known ? rarityColor(c.rarity, this.step) : C.slate);
       if (known) drawSprite(g, c.icon!, x + TILE / 2, y + TILE / 2);
-      else drawText(g, '?', x + TILE / 2, y + 4, C.dgray, { align: 'center' });
+      else r.withAlpha(0.3, () => drawSprite(g, c.icon!, x + TILE / 2, y + TILE / 2));
       if (banned) {
         r.withAlpha(0.55, () => r.rect(x + 2, y + 2, TILE - 4, TILE - 4, C.black));
         r.line(x + 4, y + 4, x + TILE - 5, y + TILE - 5, C.red, 2);
@@ -322,10 +419,9 @@ export class CollectionScreen implements Screen {
     if (known) {
       drawCard(r, c, CARD_X, CARD_Y, false, this.step, 0);
     } else {
-      panel(r, CARD_X, CARD_Y, 136, 166, C.slate);
-      drawText(g, '???', CARD_X + 68, CARD_Y + 60, C.dgray, { align: 'center', scale: 2 });
-      wrapText('Nieodkryta. Pojawi się tu, gdy zobaczysz ją w ofercie kart.', 116).forEach((l, i) =>
-        drawText(g, l, CARD_X + 68, CARD_Y + 96 + i * 11, C.dgray, { align: 'center' }));
+      // Nieodkryta: opis widać, karta wyblakła (odkryje się w ofercie kart).
+      r.withAlpha(0.5, () => drawCard(r, c, CARD_X, CARD_Y, false, this.step, 0));
+      drawText(g, 'Jeszcze nie widziana', CARD_X + 68, CARD_Y - 10, C.dgray, { align: 'center' });
     }
     const info = [
       known ? `Wybrana ${col.picks[c.id] ?? 0} razy` : '',
@@ -335,7 +431,7 @@ export class CollectionScreen implements Screen {
     ].filter(Boolean);
     info.forEach((l, i) => drawText(g, l, GRID_X, 213 + i * 10, banned && i === info.length - 1 ? C.salmon : C.lgray));
     button(r, CARD_X + 18, 214, 100, 16, banned ? 'Odbanuj [B]' : 'Zbanuj [B]', { active: banned, accent: C.red, col: known ? undefined : C.dgray });
-    drawText(g, 'Zbanowane karty nie wypadają w ofertach. Banować można tylko odkryte.', W / 2, 244, C.dgray, { align: 'center' });
+    drawText(g, 'Zbanowane karty nie wypadają w ofertach. Banować można tylko odkryte (widziane w ofercie).', W / 2, 244, C.dgray, { align: 'center' });
     if (this.noteT > 0) drawText(g, this.note, W / 2, H - 14, C.salmon, { align: 'center', outline: C.black });
   }
 }

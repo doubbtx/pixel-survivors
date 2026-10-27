@@ -475,8 +475,9 @@ function rollSuper(rarity: number): NonNullable<Item['super']> {
 
 /** Losuje rzadkość: wyższe stopnie są częstsze na głębszych poziomach, z elit, bossów i sklepu oraz z Fortuną. */
 export function rollRarity(depth: number, source: LootSource, luck: number): number {
-  const boost = (1 + 0.15 * (depth - 1)) * (1 + luck) * (source === 'boss' ? 3 : source === 'elite' ? 1.6 : source === 'shop' ? BAL.shopItemBoost : 1);
-  const weights = RARITIES.map((r, i) => (source === 'boss' && i < 2 ? 0 : r.weight * Math.pow(boost, i)));
+  const L = BAL.loot;
+  const boost = (1 + L.depth * (depth - 1)) * (1 + L.luck * luck) * (source === 'boss' ? L.boss : source === 'elite' ? L.elite : source === 'shop' ? BAL.shopItemBoost : 1);
+  const weights = RARITIES.map((r, i) => (source === 'boss' && i < 1 ? 0 : r.weight * Math.pow(boost, i)));
   return rng.weighted(weights.map((w, i) => [i, w] as const));
 }
 
