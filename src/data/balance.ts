@@ -137,6 +137,14 @@ export const BAL = {
     mushrooms: 4, confused: 5,
     mimicChance: 0.25, keyChance: 0.1, kingHp: 2, vaultWaves: 2, vaultUnique: 0.5, wallChance: 0.12,
   },
+  /**
+   * Wydarzenia poziomu (systems/levelevents.ts): co `every` s szansa `chance` na wydarzenie trwające `duration` s.
+   * Złota godzina: mnożnik szansy monet. Burza: piorun co stormEvery s, zapowiedź stormWarn s, promień, obrażenia kart,
+   * utrata HP gracza (ułamek maks. HP).
+   */
+  levelEvents: { every: 150, chance: 0.7, duration: 30, goldRain: 9, stormEvery: 0.7, stormWarn: 0.8, stormR: 26, stormDmg: 30, stormHurt: 0.08 },
+  /** Kombo: zabójstwa bez oberwania; co `announce` napis, złoto × (1 + kombo × per), najwyżej +maxBonus. */
+  combo: { announce: 50, per: 0.002, maxBonus: 1 },
   /** Pakty ryzyka (data/pacts.ts): esencja × (1 + essencePer × poziom Paktu). */
   pacts: { essencePer: 0.08 },
   /**

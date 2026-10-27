@@ -226,6 +226,7 @@ export function applyOption(run: Run, o: Option): void {
       a.level = 1;
       run.weapons = run.weapons.filter((w) => w !== b);
       run.showBanner(`Fuzja: ${a.def.name}!`);
+      run.freeze(0.3);
       break;
     }
     case 'passiveNew':

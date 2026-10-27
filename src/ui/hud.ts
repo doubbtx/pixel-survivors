@@ -16,6 +16,7 @@ import { bar, slot, plate } from './widgets';
 import { drawSynergyHud } from './synergies';
 import { resFrac, resMax } from '../systems/resource';
 import { taskStatus } from '../systems/tasks';
+import { LEVEL_EVENTS, comboGoldMul } from '../systems/levelevents';
 import { powerCd } from '../systems/powers';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { REWARD_LABEL } from '../data/tasks';
@@ -158,6 +159,9 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
     drawText(g, label, W / 2, 34, C.lgray, { align: 'center', ...OUT });
     bar(r, W / 2 - 60, 47, 120, 6, run.objectiveProgress(), RAMP.green);
   }
+  // Wydarzenie poziomu i kombo pod celem poziomu.
+  const ev = run.levelEvent, under = [ev ? `${LEVEL_EVENTS[ev.id].name} ${Math.ceil(ev.t)}s` : '', run.combo >= 10 ? `Kombo ${run.combo} (+${Math.round((comboGoldMul(run) - 1) * 100)}% zł)` : ''].filter(Boolean).join('    ');
+  if (under) drawText(g, under, W / 2, run.boss ? 59 : 56, ev ? LEVEL_EVENTS[ev.id].color : C.yellow, { align: 'center', ...OUT });
 
   // Zabójstwa i złoto (prawy górny róg).
   plate(r, W - 86, 8, 82, 30);

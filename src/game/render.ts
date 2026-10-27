@@ -477,6 +477,16 @@ export function renderWorld(run: Run, r: Renderer): void {
     if (vis(n.x, n.y)) drawLabel(g, n.text, X(n.x), Y(n.y) - 6, n.col, C.black);
   }
 
+  // Wydarzenia poziomu: zabarwione niebo i kręgi ostrzegawcze piorunów burzy.
+  if (run.levelEvent) {
+    const id = run.levelEvent.id;
+    r.withAlpha(id === 'storm' ? 0.22 : 0.1, () => r.rect(0, 0, W, H, id === 'blood' ? C.dred : id === 'gold' ? C.gold : C.navy));
+    for (const s of run.strikes) {
+      const sx = X(s.x), sy = Y(s.y);
+      r.circle(sx, sy, BAL.levelEvents.stormR * ZOOM, run.step % 8 < 4 ? C.white : C.cyan);
+      r.withAlpha(0.15, () => r.circle(sx, sy, BAL.levelEvents.stormR * ZOOM * (1 - s.t / BAL.levelEvents.stormWarn), C.cyan, true));
+    }
+  }
   if (fancy) g.drawImage(getVignette(), 0, 0);
 
   // Znaczniki poza ekranem na krawędzi w stronę celu: dobre skrzynie (Rzadki+ albo super-bonus) i cel zadania.

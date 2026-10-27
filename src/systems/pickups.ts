@@ -3,6 +3,7 @@ import { C } from '../core/palette';
 import { itemColor } from '../data/items';
 import type { Run } from '../game/run';
 import { springMimic } from './mapsecrets';
+import { comboGoldMul } from './levelevents';
 
 /** Bazowy zasięg przyciągania kryształów (px), mnożony przez statystykę `magnet`. */
 const MAGNET_BASE = 34;
@@ -55,7 +56,7 @@ export function updatePickups(run: Run, dt: number): void {
         sfx.play('levelup');
         break;
       case 'coin':
-        run.gold += it.value * run.stats.greed;
+        run.gold += it.value * run.stats.greed * comboGoldMul(run);
         run.burst(p.x, p.y - 4, C.gold, 1, 30);
         sfx.play('pickup');
         break;

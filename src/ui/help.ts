@@ -28,6 +28,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Karty: rzadsze, mocne ulepszenia. Co 5 poziomów, po elicie i po bossie.',
       'Przedmioty: skrzynie z elit i bossów. Kolor to jakość. Kowadło: Kuźnia do +15, przekuwanie i jakość (strona Moce).',
       'Trafia cię tylko mały środek postaci: przeciskaj się między pociskami.',
+      'Wydarzenia: Krwawy księżyc (więcej elit i łupu), Złota godzina, Burza (pioruny w zaznaczone kręgi). Kombo: zabójstwa bez oberwania dają więcej złota.',
     ],
   },
   {

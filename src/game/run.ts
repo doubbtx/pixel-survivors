@@ -49,6 +49,7 @@ import type { MatId, ScrollId } from '../data/forge';
 import { updateSecrets, activeSecrets } from '../systems/secrets';
 import { PACIFIST_KEY } from '../data/secrets';
 import { secretsOnKill } from '../systems/mapsecrets';
+import { updateLevelEvents, eventFlags, comboOnKill, comboOnHurt, type LevelEventId } from '../systems/levelevents';
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
@@ -216,6 +217,12 @@ export class Run {
   /** Księga sekretów (systems/secrets.ts): obudzone w runie i odkryte od ostatniej synchronizacji z kolekcją. */
   secrets = new Set<string>();
   secretsFound = new Set<string>();
+  /** Wydarzenia poziomu i kombo (systems/levelevents.ts): trwające wydarzenie, czas do losowania, pioruny burzy, kombo zabójstw. */
+  levelEvent: { id: LevelEventId; t: number } | null = null;
+  levelEventT: number = BAL.levelEvents.every * 0.6;
+  strikes: { x: number; y: number; t: number }[] = [];
+  stormT = 0;
+  combo = 0;
   /** Sekrety map (systems/mapsecrets.ts): czas do kolejnego, odurzenie (odwrócone sterowanie, s), tytuł sekretnego bossa w HUD,
    * bossowie pokonani bez trafienia (trofea). */
   secretT: number = BAL.secretsMap.every * 0.6;
@@ -434,6 +441,9 @@ export class Run {
     this.taskT = BAL.tasks.first;
     this.secretT = BAL.secretsMap.every * 0.6;
     this.confusedT = 0;
+    this.levelEvent = null;
+    this.levelEventT = BAL.levelEvents.every * 0.6;
+    this.strikes = [];
     this.bossTitle = null;
     this.terrain = [];
     this.terrainChunks.clear();
@@ -517,6 +527,7 @@ export class Run {
     updateEvents(this, dt);
     updateTasks(this, dt);
     updateSecrets(this);
+    updateLevelEvents(this, dt);
     updateAbilities(this, input, dt);
     updateResource(this, dt);
     updateWeapons(this, dt);
@@ -599,6 +610,7 @@ export class Run {
   private indexEffects(): void {
     this.flags = { ...this.meta.flags };
     for (const [k, v] of Object.entries(this.levelInfo?.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
+    for (const [k, v] of Object.entries(eventFlags(this))) this.flags[k] = (this.flags[k] ?? 0) + v;
     for (const p of PACTS) {
       const lvl = Math.min(p.max, this.pacts[p.id] ?? 0);
       for (const [k, v] of Object.entries(p.flags)) if (lvl) this.flags[k] = (this.flags[k] ?? 0) + v * lvl;
@@ -1161,6 +1173,7 @@ export class Run {
     resourceOnKill(this, e);
     taskOnKill(this, e);
     secretsOnKill(this, e);
+    comboOnKill(this);
     forgeKillDrops(this, e);
     this.emit('onKill', e);
     if (e.elite) {
@@ -1178,7 +1191,7 @@ export class Run {
       if (rng.chance(BAL.itemDropChance * (1 + this.flag('mapLoot')))) this.dropChest(e.x, e.y, 'drop');
       else if (rng.chance(BAL.meatChance)) this.spawnPickup(e.x, e.y, 'meat', 0);
       else if (rng.chance(BAL.magnetChance)) this.spawnPickup(e.x, e.y, 'magnet', 0);
-      else if (rng.chance(BAL.coinChance)) this.spawnPickup(e.x, e.y, 'coin', 1);
+      else if (rng.chance(BAL.coinChance * (1 + this.flag('goldRain') * BAL.levelEvents.goldRain))) this.spawnPickup(e.x, e.y, 'coin', 1);
     }
   }
 
@@ -1288,6 +1301,7 @@ export class Run {
     if (total >= this.stats.maxHp * BAL.juice.hurtBig) this.freeze(BAL.juice.hitstopHurt);
     resourceOnHurt(this, total);
     if (this.boss) this.cardState.bossHit = 1;
+    comboOnHurt(this);
     taskOnHurt(this);
     this.emit('onDamageTaken', total);
     // Odwet (węzeł Rozwoju Borguna): oberwanie wyzwala darmowy Wstrząs (najwyżej co `counterSlam` s).
