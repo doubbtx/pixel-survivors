@@ -1,3 +1,4 @@
+import type { Lang } from './i18n';
 import type { RunSnapshot, SlotMode } from '../game/run';
 import type { MetaState } from '../data/meta';
 
@@ -78,6 +79,8 @@ export interface Settings {
   bgDim: number;
   bulletOutline: boolean;
   playerMarker: boolean;
+  /** Język (core/i18n.ts); domyślnie angielski. */
+  lang: Lang;
 }
 
 /** Kolekcja kart (między runami): odkryte, liczba wyborów i bany (wykluczone z ofert); odkryte unikaty (nowe pole bez migracji). */
@@ -179,7 +182,7 @@ function defaults(): SaveData {
     settings: { volume: 0.5, music: 0.4, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
-      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true },
+      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en' },
     records: {},
     slots: { hardcore: null, endless: null, expedition: null },
     board: [],

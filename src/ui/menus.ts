@@ -14,6 +14,7 @@ import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
 import { Menu, panel, inside, slot, button, hovered, moreArrow, type MenuItem } from './widgets';
+import { setLang, type Lang } from '../core/i18n';
 import type { Action } from '../core/input';
 import { music, MENU_MOOD } from '../core/music';
 import { GameScreen, type GameOpts } from './game-screen';
@@ -595,88 +596,116 @@ const DIM_LABEL = ['brak', 'lekkie', 'mocne'];
 const ZOOM_LEVELS = [1, 1.25, 1.5];
 const ZOOM_LABEL = ['daleko', 'normalne', 'blisko'];
 
-/** Ustawienia: strona główna (dźwięk, trudność, sterowanie) i strona Obraz i widoczność. */
-export class SettingsScreen implements Screen {
-  private menu: Menu;
-  /** Podpowiedź pod menu dla zaznaczonej pozycji. */
-  private hints: (() => string)[];
+/** Kategorie ustawień (zakładki u góry ekranu). */
+const SET_TABS = ['Ogólne', 'Dźwięk', 'Obraz', 'Czytelność', 'Inne'];
+const SET_TAB_W = 76, SET_TAB_Y = 32, SET_LIST_Y = 58, SET_ROW = 15;
+const setTabX = (i: number) => W / 2 - (SET_TABS.length * (SET_TAB_W + 4) - 4) / 2 + i * (SET_TAB_W + 4);
 
-  constructor(private readonly app: App, private readonly back: Screen, private readonly page: 'main' | 'video' = 'main') {
-    const s = app.save.settings;
+/**
+ * Ustawienia: kategorie jako zakładki u góry (Tab / Q / E albo klik), pod nimi lista opcji: nazwa po lewej,
+ * wartość po prawej (strzałki lewo/prawo albo Enter zmieniają), na dole opis zaznaczonej opcji.
+ */
+export class SettingsScreen implements Screen {
+  private menu!: Menu;
+  /** Opis pod listą dla zaznaczonej pozycji. */
+  private hints: (() => string)[] = [];
+
+  constructor(private readonly app: App, private readonly back: Screen, private tab = 0) {
+    this.build();
+  }
+
+  /** Lista opcji bieżącej kategorii. */
+  private build(): void {
+    const app = this.app, s = app.save.settings;
     const step = (k: 'volume' | 'music', d: number) => () => { s[k] = Math.round(Math.max(0, Math.min(1, s[k] + d)) * 10) / 10; app.persist(); };
     const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx' | 'hints' | 'hitstop' | 'easy' | 'elemShapes' | 'scaleFill' | 'bulletOutline' | 'playerMarker') => () => {
       s[k] = !s[k];
       app.persist();
       if (k === 'scaleFill') app.r.setFill(s.scaleFill);
     };
-    const aim = (d: number) => () => {
-      const i = Math.max(0, AIM_MODES.indexOf(s.aim));
-      s.aim = AIM_MODES[(i + d + AIM_MODES.length) % AIM_MODES.length];
+    const cycle = <T,>(list: T[], get: () => T, set: (v: T) => void) => (d: number) => () => {
+      const i = Math.max(0, list.indexOf(get()));
+      set(list[(i + d + list.length) % list.length]);
       app.persist();
     };
-    const fx = (d: number) => () => {
-      const i = Math.max(0, FX_MODES.indexOf(s.playerFx));
-      s.playerFx = FX_MODES[(i + d + FX_MODES.length) % FX_MODES.length];
-      app.persist();
-    };
-    const dim = (d: number) => () => {
-      const i = Math.max(0, DIM_LEVELS.indexOf(s.bgDim));
-      s.bgDim = DIM_LEVELS[(i + d + DIM_LEVELS.length) % DIM_LEVELS.length];
-      app.persist();
-    };
-    const zoom = (d: number) => () => {
-      const i = Math.max(0, ZOOM_LEVELS.indexOf(s.zoom));
-      s.zoom = ZOOM_LEVELS[(i + d + ZOOM_LEVELS.length) % ZOOM_LEVELS.length];
-      app.r.setZoom(s.zoom);
-      app.persist();
-    };
+    const aim = cycle(AIM_MODES, () => s.aim, (v) => { s.aim = v; });
+    const fx = cycle(FX_MODES, () => s.playerFx, (v) => { s.playerFx = v; });
+    const dim = cycle(DIM_LEVELS, () => s.bgDim, (v) => { s.bgDim = v; });
+    const zoom = cycle(ZOOM_LEVELS, () => s.zoom, (v) => { s.zoom = v; app.r.setZoom(v); });
+    const lang = cycle<Lang>(['en', 'pl'], () => s.lang, (v) => { s.lang = v; setLang(v); });
     const yes = (v: boolean) => (v ? 'tak' : 'nie');
-    // Pozycja menu i jej podpowiedź w jednym miejscu.
-    const rows: [MenuItem, () => string][] = page === 'main' ? [
-      [{ label: () => `Głośność ${Math.round(s.volume * 100)}%`, left: step('volume', -0.1), right: step('volume', 0.1) }, () => 'Strzałki w lewo/prawo zmieniają wartość.'],
-      [{ label: () => `Muzyka ${Math.round(s.music * 100)}%`, left: step('music', -0.1), right: step('music', 0.1) }, () => 'Muzyka tworzona na bieżąco: w każdym biomie inna skala, rośnie razem z walką (bębny w tłumie, melodia przy bossie).'],
-      [{ label: () => `Trudność: ${s.easy ? 'łatwa' : 'normalna'}`, act: toggle('easy'), left: toggle('easy'), right: toggle('easy') }, () => `Łatwa: wrogowie zadają ${Math.round(BAL.easy.dmg * 100)}% mniej obrażeń i mają ${Math.round(BAL.easy.hp * 100)}% mniej HP. Bez odznak Paktu.`],
-      [{ label: () => `Celowanie: ${AIM_LABEL[s.aim] ?? AIM_LABEL.mixed}`, left: aim(-1), right: aim(1) }, () => AIM_HINT[s.aim] ?? AIM_HINT.mixed],
-      [{ label: () => 'Obraz i widoczność...', act: () => app.go(new SettingsScreen(app, this, 'video')) }, () => 'Wielkość obrazu, pełny ekran, czytelność pocisków i postaci, efekty.'],
-      [{ label: () => `Pauza po wyjściu z okna: ${yes(s.autoPause)}`, act: toggle('autoPause') }, () => 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.'],
-      [{ label: () => `Podpowiedzi: ${yes(s.hints)}`, act: toggle('hints') }, () => 'Krótkie wskazówki przy pierwszym spotkaniu z mechaniką (awans, skrzynie, elity, reakcje...).'],
-      [{ label: () => (app.save.seenHints.length ? 'Pokaż podpowiedzi od nowa' : 'Podpowiedzi: wszystkie przed tobą'), act: () => { app.save.seenHints = []; app.persist(); } }, () => 'Kolejna gra pokaże wszystkie podpowiedzi jeszcze raz.'],
-      [{ label: () => `Zatrzymanie klatki przy trafieniach: ${yes(s.hitstop)}`, act: toggle('hitstop') }, () => 'Gra na ułamek sekundy staje przy zabiciu elity, bossa i mocnym trafieniu.'],
-      [{ label: () => `Licznik FPS / debug: ${yes(s.debug)}`, act: toggle('debug') }, () => 'Licznik klatek i encji; włącza klawisze F4, F6, F7.'],
-      [{ label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } }, () => 'Wartości do sprawdzenia: HP przedmiotów i ulepszeń, skalowanie wrogów, miękkie limity.'],
-      [{ label: () => 'Wróć', act: () => app.go(back) }, () => ''],
-    ] : [
-      [{ label: () => `Obraz: ${s.scaleFill ? 'cały ekran' : 'ostre piksele'}`, act: toggle('scaleFill'), left: toggle('scaleFill'), right: toggle('scaleFill') }, () => 'Cały ekran: gra wypełnia okno (większy obraz). Ostre piksele: tylko całkowite powiększenie, z ramką.'],
-      [{ label: () => `Przybliżenie: ${ZOOM_LABEL[Math.max(0, ZOOM_LEVELS.indexOf(s.zoom))]}`, left: zoom(-1), right: zoom(1), act: zoom(1) }, () => 'Blisko: większe postacie i pociski, mniej widać wokół. Daleko: widok jak w starszych wersjach.'],
-      [{ label: () => `Pełny ekran: ${yes(!!document.fullscreenElement)}`, act: () => toggleFullscreen() }, () => 'Przełącza tryb pełnoekranowy przeglądarki. W grze: klawisz F.'],
-      [{ label: () => `Przyciemnienie tła: ${DIM_LABEL[Math.max(0, DIM_LEVELS.indexOf(s.bgDim))]}`, left: dim(-1), right: dim(1), act: dim(1) }, () => 'Ciemniejsze podłoże i dekoracje: postacie, wrogowie i pociski bardziej odcinają się od tła.'],
-      [{ label: () => `Wyraźne pociski wrogów: ${yes(s.bulletOutline)}`, act: toggle('bulletOutline') }, () => 'Pociski wrogów dostają ciemną obwódkę, lepiej odcinają się od tła i efektów.'],
-      [{ label: () => `Znacznik gracza: ${yes(s.playerMarker)}`, act: toggle('playerMarker') }, () => 'Pulsujący krąg pod twoją postacią, łatwo ją znaleźć w tłumie.'],
-      [{ label: () => `Kształty żywiołów: ${yes(s.elemShapes)}`, act: toggle('elemShapes') }, () => 'Dla daltonistów: każdy żywioł ma też własny kształt (ogień trójkąt, lód romb, błyskawica zygzak, trucizna kropla).'],
-      [{ label: () => `Efekty: ${s.lowFx ? 'oszczędne' : 'pełne'}`, act: toggle('lowFx') }, () => 'Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety (więcej FPS, telefon).'],
-      [{ label: () => `Ataki gracza: ${FX_LABEL[s.playerFx] ?? FX_LABEL.visible}`, left: fx(-1), right: fx(1) }, () => 'Twoje pociski, aury, strefy i błyski trafień: przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.'],
-      [{ label: () => `Wstrząsy ekranu: ${yes(s.shake)}`, act: toggle('shake') }, () => 'Drganie ekranu przy wybuchach i trafieniach.'],
-      [{ label: () => `Liczby obrażeń: ${yes(s.damageNumbers)}`, act: toggle('damageNumbers') }, () => 'Liczby nad trafionymi wrogami (obrażenia gracza zawsze widać).'],
-      [{ label: () => `Liczby leczenia: ${yes(s.healNumbers)}`, act: toggle('healNumbers') }, () => 'Zielone liczby nad postacią: ile HP odzyskałeś (co pół sekundy).'],
-      [{ label: () => `Minimapa: ${yes(s.minimap)}`, act: toggle('minimap') }, () => 'Mała mapa w prawym górnym rogu: wrogowie, elity, boss i skrzynie.'],
-      [{ label: () => 'Wróć', act: () => app.go(back) }, () => ''],
+    // Przełącznik: Enter i strzałki zmieniają wartość.
+    const sw = (label: string, value: () => string, flip: () => void, hint: string): [MenuItem, () => string] =>
+      [{ label: () => label, value, act: flip, left: flip, right: flip }, () => hint];
+    const opt = (label: string, value: () => string, ch: (d: number) => () => void, hint: () => string): [MenuItem, () => string] =>
+      [{ label: () => label, value, act: ch(1), left: ch(-1), right: ch(1) }, hint];
+    const rows: [MenuItem, () => string][][] = [
+      [
+        opt('Język', () => (s.lang === 'en' ? 'English' : 'Polski'), lang, () => 'Language / Język: English, Polski.'),
+        sw('Trudność', () => (s.easy ? 'łatwa' : 'normalna'), toggle('easy'), `Łatwa: wrogowie zadają ${Math.round(BAL.easy.dmg * 100)}% mniej obrażeń i mają ${Math.round(BAL.easy.hp * 100)}% mniej HP. Bez odznak Paktu.`),
+        opt('Celowanie', () => AIM_LABEL[s.aim] ?? AIM_LABEL.mixed, aim, () => AIM_HINT[s.aim] ?? AIM_HINT.mixed),
+        sw('Pauza po wyjściu z okna', () => yes(s.autoPause), toggle('autoPause'), 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.'),
+        sw('Podpowiedzi', () => yes(s.hints), toggle('hints'), 'Krótkie wskazówki przy pierwszym spotkaniu z mechaniką (awans, skrzynie, elity, reakcje...).'),
+        [{ label: () => (app.save.seenHints.length ? 'Pokaż podpowiedzi od nowa' : 'Podpowiedzi: wszystkie przed tobą'), act: () => { app.save.seenHints = []; app.persist(); } }, () => 'Kolejna gra pokaże wszystkie podpowiedzi jeszcze raz.'],
+      ],
+      [
+        opt('Głośność', () => `${Math.round(s.volume * 100)}%`, (d) => step('volume', d * 0.1), () => 'Strzałki w lewo/prawo zmieniają wartość.'),
+        opt('Muzyka', () => `${Math.round(s.music * 100)}%`, (d) => step('music', d * 0.1), () => 'Muzyka tworzona na bieżąco: w każdym biomie inna skala, rośnie razem z walką (bębny w tłumie, melodia przy bossie).'),
+      ],
+      [
+        sw('Obraz', () => (s.scaleFill ? 'cały ekran' : 'ostre piksele'), toggle('scaleFill'), 'Cały ekran: gra wypełnia okno (większy obraz). Ostre piksele: tylko całkowite powiększenie, z ramką.'),
+        opt('Przybliżenie', () => ZOOM_LABEL[Math.max(0, ZOOM_LEVELS.indexOf(s.zoom))], zoom, () => 'Blisko: większe postacie i pociski, mniej widać wokół. Daleko: widok jak w starszych wersjach.'),
+        sw('Pełny ekran', () => yes(!!document.fullscreenElement), () => toggleFullscreen(), 'Przełącza tryb pełnoekranowy przeglądarki. W grze: klawisz F.'),
+        sw('Efekty', () => (s.lowFx ? 'oszczędne' : 'pełne'), toggle('lowFx'), 'Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety (więcej FPS, telefon).'),
+        sw('Wstrząsy ekranu', () => yes(s.shake), toggle('shake'), 'Drganie ekranu przy wybuchach i trafieniach.'),
+        sw('Zatrzymanie klatki przy trafieniach', () => yes(s.hitstop), toggle('hitstop'), 'Gra na ułamek sekundy staje przy zabiciu elity, bossa i mocnym trafieniu.'),
+      ],
+      [
+        opt('Przyciemnienie tła', () => DIM_LABEL[Math.max(0, DIM_LEVELS.indexOf(s.bgDim))], dim, () => 'Ciemniejsze podłoże i dekoracje: postacie, wrogowie i pociski bardziej odcinają się od tła.'),
+        sw('Wyraźne pociski wrogów', () => yes(s.bulletOutline), toggle('bulletOutline'), 'Pociski wrogów dostają ciemną obwódkę, lepiej odcinają się od tła i efektów.'),
+        sw('Znacznik gracza', () => yes(s.playerMarker), toggle('playerMarker'), 'Pulsujący krąg pod twoją postacią, łatwo ją znaleźć w tłumie.'),
+        opt('Ataki gracza', () => FX_LABEL[s.playerFx] ?? FX_LABEL.visible, fx, () => 'Twoje pociski, aury, strefy i błyski trafień: przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.'),
+        sw('Kształty żywiołów', () => yes(s.elemShapes), toggle('elemShapes'), 'Dla daltonistów: każdy żywioł ma też własny kształt (ogień trójkąt, lód romb, błyskawica zygzak, trucizna kropla).'),
+        sw('Liczby obrażeń', () => yes(s.damageNumbers), toggle('damageNumbers'), 'Liczby nad trafionymi wrogami (obrażenia gracza zawsze widać).'),
+        sw('Liczby leczenia', () => yes(s.healNumbers), toggle('healNumbers'), 'Zielone liczby nad postacią: ile HP odzyskałeś (co pół sekundy).'),
+        sw('Minimapa', () => yes(s.minimap), toggle('minimap'), 'Mała mapa w prawym górnym rogu: wrogowie, elity, boss i skrzynie.'),
+      ],
+      [
+        sw('Licznik FPS / debug', () => yes(s.debug), toggle('debug'), 'Licznik klatek i encji; włącza klawisze F4, F6, F7.'),
+        [{ label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } }, () => 'Wartości do sprawdzenia: HP przedmiotów i ulepszeń, skalowanie wrogów, miękkie limity.'],
+      ],
     ];
-    this.menu = new Menu(rows.map(([it]) => it), W / 2, 38, 280, 14);
-    this.hints = rows.map(([, h]) => h);
+    const list = [...rows[this.tab], [{ label: () => 'Wróć', act: () => app.go(this.back) }, () => ''] as [MenuItem, () => string]];
+    this.menu = new Menu(list.map(([it]) => it), W / 2, SET_LIST_Y, 340, SET_ROW);
+    this.hints = list.map(([, h]) => h);
+  }
+
+  private setTab(i: number): void {
+    this.tab = (i + SET_TABS.length) % SET_TABS.length;
+    this.build();
+    sfx.play('select');
   }
 
   update(): void {
-    if (this.app.input.pressed('back')) { this.app.go(this.back); return; }
-    this.menu.update(this.app.input);
+    const inp = this.app.input;
+    if (inp.pressed('back')) { this.app.go(this.back); return; }
+    if (inp.pressed('inventory') || inp.pressed('e')) { this.setTab(this.tab + 1); return; }
+    if (inp.pressed('q')) { this.setTab(this.tab - 1); return; }
+    if (inp.pressed('click')) {
+      for (let i = 0; i < SET_TABS.length; i++) if (inside(inp.mouse.x, inp.mouse.y, setTabX(i), SET_TAB_Y, SET_TAB_W, 16)) { this.setTab(i); return; }
+    }
+    this.menu.update(inp);
   }
 
   render(): void {
-    const r = this.app.r;
+    const r = this.app.r, g = r.g;
     r.clear(C.black);
-    drawText(r.g, this.page === 'main' ? 'Ustawienia' : 'Obraz i widoczność', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    panel(r, W / 2 - 160, 32, 320, this.menu.items.length * 14 + 12, C.slate);
+    drawText(g, 'Ustawienia', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    SET_TABS.forEach((t, i) => button(r, setTabX(i), SET_TAB_Y, SET_TAB_W, 16, t, { active: i === this.tab, accent: C.gold }));
+    panel(r, W / 2 - 180, SET_LIST_Y - 6, 360, this.menu.items.length * SET_ROW + 10, C.slate);
     this.menu.render(r);
-    wrapText(this.hints[this.menu.sel](), 400).forEach((l, i) => drawText(r.g, l, W / 2, 246 + i * 11, C.lavender, { align: 'center' }));
+    drawText(g, 'Tab / Q / E: kategoria    Lewo/prawo: zmień', W / 2, H - 14, C.dgray, { align: 'center' });
+    wrapText(this.hints[this.menu.sel](), 420).forEach((l, i) => drawText(g, l, W / 2, 222 + i * 11, C.lavender, { align: 'center' }));
   }
 }
 

@@ -21,7 +21,7 @@ import { SRC_ELEMENT, ELEM, type Element } from '../data/elements';
 import type { MetaBonus } from '../data/meta';
 import { CARD_BY_ID, type CardSource, type HookName, type CardHooks, type Tag } from '../data/cards';
 import { SYNERGIES, VERSATILITY, tagPoints, tierOf, type SynergyTier } from '../data/synergies';
-import { equippedSupers, equippedUniques, implicitOf, forgeMul, salvageGold, salvageShards, slotKind, rollItem, rollUnique, BASE_BY_ID, type Item, type SlotId, type LootSource } from '../data/items';
+import { equippedSupers, equippedUniques, implicitOf, forgeMul, salvageGold, salvageShards, slotKind, rollItem, rollUnique, BASE_BY_ID, RARITIES, type Item, type SlotId, type LootSource } from '../data/items';
 import {
   SLOT, SLOT_COUNT, type Stats, type Player, type Enemy, type Projectile, type EnemyBullet, type Gem, type Pickup,
   type Particle, type DmgNum, type Zone, type Fx, type WeaponInst, type PassiveInst, type AbilityInst, type PickupKind,
@@ -1545,7 +1545,18 @@ export class Run {
 
   /** Łup ze źródła (jakość zależy od źródła, głębokości i Fortuny); z bossów i elit rzadko unikat (BAL.uniques). */
   rollLoot(source: LootSource): { source: LootSource; item: Item } {
-    const U = BAL.uniques, chance = source === 'boss' ? U.boss : source === 'elite' ? U.elite : 0;
+    const U = BAL.uniques, chance = source === 'boss' ? U.boss : source === 'elite' ? U.elite : 0, L = BAL.loot;
+    // Szczęśliwy traf: Legendarny przedmiot albo unikat z dowolnego łupu.
+    if (rng.chance(L.jackpot * (1 + this.flag('itemLuck')))) {
+      this.showBanner('Szczęśliwy traf!');
+      sfx.play('levelup');
+      if (rng.chance(L.jackpotUnique)) {
+        const item = rollUnique(this.depth);
+        this.uniquesFound.add(item.unique!);
+        return { source, item };
+      }
+      return { source, item: rollItem(this.depth, source, 0, undefined, RARITIES.length - 1) };
+    }
     if (chance > 0 && rng.chance(chance * (1 + this.flag('itemLuck')))) {
       const item = rollUnique(this.depth);
       this.uniquesFound.add(item.unique!);

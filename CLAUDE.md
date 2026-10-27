@@ -1,7 +1,7 @@
 # Pixel Survivors — kontekst projektu
 
 Przeglądarkowa gra bullet hell / survivors-like (w stylu Vampire Survivors) z bohaterami w stylu LoL Arena,
-kartami-augmentami i ekwipunkiem z jakościami. Wszystko po polsku.
+kartami-augmentami i ekwipunkiem z jakościami. Teksty w kodzie po polsku, gra domyślnie po angielsku (tłumaczenie w locie).
 
 ## Zasady pracy
 
@@ -10,6 +10,9 @@ kartami-augmentami i ekwipunkiem z jakościami. Wszystko po polsku.
 - Kolory tylko przez nazwy `C.*` z `core/palette.ts` (paleta ENDESGA 32), nigdy liczby indeksów.
 - Czcionka pikselowa nie ma znaku "—" (em-dash) ani egzotycznych symboli — w tekstach widocznych w grze używaj "-" / ",".
 - Wszystkie liczby balansu w `data/balance.ts` (`BAL`).
+- Język: napisy w kodzie piszemy po polsku, `core/font.ts` tłumaczy każdy rysowany tekst przez `tr` (`core/i18n.ts`).
+  Każdy nowy napis widoczny w grze musi mieć wpis w `core/i18n-en.ts` (wstawki jako `{}`, ta sama kolejność);
+  części składane z kawałków tłumaczą się osobno, więc wystarczy wpis dla każdego kawałka.
 - Styl grafiki: 16-bit, wszystko rysowane proceduralnie w kodzie (bez plików graficznych).
 - Po zmianach: `npx tsc --noEmit` musi przejść.
 
@@ -47,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.21.0)
+## Stan (wersja 0.22.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -258,6 +261,15 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   - Koniec Ekspedycji: pierwsza opcja `Rozwój: bohater` (MetaScreen z `heroId`, domyślnie `save.lastHero`).
   - Łup: `BAL.loot` (boss ×1.8, elita ×1.3, głębokość 0.1, szczęście ×0.5; boss wyklucza tylko Zwykłe), elita w Ekspedycji
     daje łup elity, unikat z bossa 8%.
+
+- Etap 0.22 (angielski, ustawienia, szczęśliwe runy):
+  - i18n: `core/i18n.ts` (`tr`, `setLang`, `Settings.lang`, domyślnie 'en') i słownik `core/i18n-en.ts` (ok. 2200 wpisów).
+    `drawText`, `textWidth`, `wrapText` i `drawLabel` tłumaczą; kolejność prób: dokładnie, wzorce `{}`, podział na kawałki
+    (`SEPS`), słowo po słowie; wygrywa kandydat z najmniejszą liczbą polskich resztek (`polish`).
+  - Ustawienia: zakładki kategorii (Ogólne, Dźwięk, Obraz, Czytelność, Inne; Tab / Q / E / klik), lista opcji
+    z wartością po prawej (`MenuItem.value`), Język w Ogólnych.
+  - Balans: `BAL.power` exp 0.8 / max 300 (silny build zostaje silny), szczęśliwy traf `BAL.loot.jackpot` (Legendarny
+    przedmiot albo unikat z dowolnego łupu, baner).
 
 ## Plan dalej
 

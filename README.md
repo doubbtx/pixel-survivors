@@ -306,6 +306,11 @@ src/
 - Po Ekspedycji od razu przejście do Rozwoju granego bohatera.
 - Dobre przedmioty rzadsze (szczególnie legendarne i unikaty).
 
+**English and lucky runs (0.22)**:
+- The game is now in English by default; Polish can be chosen in Settings → General → Language.
+- Settings redesigned: categories on top (General, Sound, Display, Readability, Other), options listed below with values on the right.
+- Lucky runs: any loot has a small chance to be a **Lucky find** (Legendary item or unique), and enemy HP follows very strong builds less closely.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

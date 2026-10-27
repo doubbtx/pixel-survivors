@@ -7,6 +7,7 @@ import { loadSave, writeSave } from './core/save';
 import type { App, Screen } from './ui/app';
 import { MainMenu, toggleFullscreen } from './ui/menus';
 import { pointer } from './ui/widgets';
+import { setLang } from './core/i18n';
 import { music } from './core/music';
 
 /**
@@ -21,6 +22,7 @@ sfx.setVolume(save.settings.volume);
 music.setVolume(save.settings.music);
 renderer.setFill(save.settings.scaleFill);
 renderer.setZoom(save.settings.zoom);
+setLang(save.settings.lang);
 
 // AudioContext wymaga gestu użytkownika.
 const unlock = () => sfx.unlock();

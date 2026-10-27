@@ -113,8 +113,8 @@ export const BAL = {
     emaSec: 15,
     baseHp: 15,
     ttk: (t: number) => 0.06 + 0.06 * Math.exp(-t / 240),
-    exp: 0.9,
-    max: 500,
+    exp: 0.8,
+    max: 300,
     dmgMax: 60,
     dmgExp: 0.45,
     levelHp: 0.01,
@@ -219,8 +219,10 @@ export const BAL = {
   /**
    * Jakość łupu (data/items.ts rollRarity): waga rzadkości i rośnie jak boost^i, boost = (1 + `depth` × (głębokość - 1))
    * × (1 + `luck` × szczęście) × źródło (`boss`, `elite`). Boss nie daje Zwykłych.
+   * Szczęśliwy traf: każdy łup (także zwykła skrzynia) z szansą `jackpot` × (1 + Fortuna) to Legendarny przedmiot,
+   * a z tego ułamek `jackpotUnique` to unikat — runy, w których los sprzyja, mają być wyraźnie mocniejsze.
    */
-  loot: { depth: 0.1, luck: 0.5, boss: 1.8, elite: 1.3 },
+  loot: { depth: 0.1, luck: 0.5, boss: 1.8, elite: 1.3, jackpot: 0.03, jackpotUnique: 0.35 },
   /** Odświeżenie przedmiotów: cena bazowa, podwaja się przy każdym użyciu w tym samym sklepie. */
   shopRefresh: 10,
   /** Ceny bazowe usług (× shopScale). */

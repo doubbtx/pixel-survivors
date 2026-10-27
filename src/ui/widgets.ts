@@ -115,6 +115,8 @@ export interface MenuItem {
   /** Dla suwaków/przełączników: zmiana wartości strzałkami. */
   left?: () => void;
   right?: () => void;
+  /** Wartość opcji: etykieta wtedy po lewej, wartość po prawej (lista ustawień). */
+  value?: () => string;
 }
 
 /**
@@ -176,8 +178,14 @@ export class Menu {
         r.withAlpha(0.5, () => r.rect(x + 3, y + 0.5, w - 6, 0.5, C.cyan));
         cursor(r, x + 6, y + Math.floor((h - 7) / 2));
       }
+      const ty = y + Math.floor((h - LINE_H) / 2) + 1;
+      if (it.value) {
+        drawText(r.g, it.label(), x + 16, ty, on ? C.yellow : C.lgray, { shadow: C.black });
+        drawText(r.g, it.left ? `< ${it.value()} >` : it.value(), x + w - 8, ty, on ? C.white : C.cyan, { align: 'right', shadow: C.black });
+        return;
+      }
       const label = it.left ? `< ${it.label()} >` : it.label();
-      drawText(r.g, label, this.cx, y + Math.floor((h - LINE_H) / 2) + 1, on ? C.yellow : C.lgray, { align: 'center', shadow: C.black });
+      drawText(r.g, label, this.cx, ty, on ? C.yellow : C.lgray, { align: 'center', shadow: C.black });
     });
   }
 }

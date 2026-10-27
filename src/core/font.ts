@@ -1,4 +1,5 @@
 import { PAL } from './palette';
+import { tr } from './i18n';
 
 /**
  * Proporcjonalna czcionka pikselowa w stylu 16-bit: wielkie i małe litery, cyfry, interpunkcja.
@@ -147,10 +148,16 @@ function glyphCanvas(ch: string, col: number): HTMLCanvasElement {
   return c;
 }
 
-export function textWidth(s: string, scale = 1): number {
+/** Szerokość napisu bez tłumaczenia (napis już w docelowym języku). */
+function rawWidth(s: string, scale = 1): number {
   let w = 0;
   for (const ch of s) w += glyphWidth(ch) + 1;
   return Math.max(0, w - 1) * scale;
+}
+
+/** Szerokość napisu po przetłumaczeniu (core/i18n.ts) — tak, jak go narysuje drawText. */
+export function textWidth(s: string, scale = 1): number {
+  return rawWidth(tr(s), scale);
 }
 
 export interface TextOpts {
@@ -167,8 +174,9 @@ export interface TextOpts {
 const OUTLINE_DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
 
 export function drawText(g: CanvasRenderingContext2D, s: string, x: number, y: number, col: number, o: TextOpts = {}): void {
+  s = tr(s);
   const scale = o.scale ?? 1;
-  const w = textWidth(s, scale);
+  const w = rawWidth(s, scale);
   let sx = Math.round(o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x);
   const sy = Math.round(y);
   for (const ch of s) {
@@ -195,6 +203,7 @@ const labels = new Map<string, HTMLCanvasElement>();
  * Dla często powtarzanych krótkich napisów (liczby obrażeń); pamięć podręczna czyszczona po 500 wpisach.
  */
 export function drawLabel(g: CanvasRenderingContext2D, s: string, x: number, y: number, col: number, outline: number): void {
+  s = tr(s);
   const key = `${s}|${col}|${outline}`;
   let c = labels.get(key);
   if (!c) {
@@ -208,14 +217,14 @@ export function drawLabel(g: CanvasRenderingContext2D, s: string, x: number, y: 
   g.drawImage(c, Math.round(x - c.width / 2), Math.round(y) - 1);
 }
 
-/** Łamie tekst na linie o szerokości max `maxW` pikseli (po słowach, z uwzględnieniem szerokości glifów). */
+/** Łamie tekst (najpierw tłumaczony w całości) na linie o szerokości max `maxW` pikseli, po słowach. */
 export function wrapText(s: string, maxW: number): string[] {
   const out: string[] = [];
-  for (const para of s.split('\n')) {
+  for (const para of tr(s).split('\n')) {
     let line = '';
     for (const word of para.split(' ')) {
       const cand = line ? `${line} ${word}` : word;
-      if (textWidth(cand) <= maxW || !line) line = cand;
+      if (rawWidth(cand) <= maxW || !line) line = cand;
       else { out.push(line); line = word; }
     }
     out.push(line);

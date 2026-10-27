@@ -162,8 +162,7 @@ export class HelpScreen implements Screen {
     const sc = fits ? 1 : 0.75, lh = fits ? 11 : 8.5, gap = fits ? 5 : 3;
     let y = 62;
     for (const line of lines) {
-      const cut = line.indexOf(':');
-      const wrapped = wrapText(line, (W - 44) / sc);
+      const wrapped = wrapText(line, (W - 44) / sc), cut = wrapped[0].indexOf(':');
       wrapped.forEach((l, k) => {
         // Wyróżnienie nazwy przed dwukropkiem w pierwszej linii akapitu.
         if (k === 0 && cut > 0 && cut < l.length) {

@@ -481,10 +481,11 @@ export function rollRarity(depth: number, source: LootSource, luck: number): num
   return rng.weighted(weights.map((w, i) => [i, w] as const));
 }
 
-export function rollItem(depth: number, source: LootSource, luck = 0, kind?: ItemKind): Item {
+/** Przedmiot z łupu; `forceRarity` = z góry ustalona rzadkość (szczęśliwy traf). */
+export function rollItem(depth: number, source: LootSource, luck = 0, kind?: ItemKind, forceRarity?: number): Item {
   const pool = kind ? BASES.filter((b) => b.kind === kind) : BASES;
   const base = rng.pick(pool);
-  const rarity = rollRarity(depth, source, luck);
+  const rarity = forceRarity ?? rollRarity(depth, source, luck);
   const R = RARITIES[rarity];
   const ilvl = depth + (source === 'boss' ? 1 : 0);
   const imp = IMPLICIT[base.kind];
