@@ -4,6 +4,7 @@ import { C } from '../core/palette';
 import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
+import { RARITIES } from '../data/items';
 import { generateOptions, applyOption, canBanish, optionScore, type Option } from '../systems/levelup';
 import type { Run } from '../game/run';
 import { panel, dim, inside } from './widgets';
@@ -20,15 +21,18 @@ const BTN_W = 120;
  * i na dole tagi synergii z postępem po wyborze (zielony = nowy próg). `recommended` = znaczek "Polecane".
  */
 function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, selected: boolean, warn: boolean, recommended: boolean): void {
-  panel(r, x, y, CARD_W, CARD_H, warn ? C.red : selected ? C.gold : recommended ? C.yellow : C.slate);
+  const q = o.quality ?? 0;
+  // Jakość ulepszenia broni: ramka w kolorze jakości, Epickie i Legendarne pulsują jaśniej.
+  const qCol = q >= 3 && Math.floor(performance.now() / 250) % 2 ? C.white : RARITIES[q].color;
+  panel(r, x, y, CARD_W, CARD_H, warn ? C.red : selected ? C.gold : q ? qCol : recommended ? C.yellow : C.slate);
   const cx = x + CARD_W / 2;
   const isNew = o.kind === 'weaponNew' || o.kind === 'passiveNew';
   const evolve = o.kind === 'evolve' || o.kind === 'abilityEvolve';
   const augment = o.kind === 'augment';
-  const tagCol = evolve ? C.yellow : isNew ? C.lime : augment ? C.cyan : C.lavender;
+  const tagCol = q ? RARITIES[q].color : evolve ? C.yellow : isNew ? C.lime : augment ? C.cyan : C.lavender;
   drawText(r.g, o.tag, cx, y + 7, tagCol, { align: 'center', shadow: C.black });
   if (recommended) drawText(r.g, 'Polecane', cx, y - 11, C.yellow, { align: 'center', outline: C.black });
-  const glow = evolve ? C.gold : isNew ? C.lime : augment ? C.cyan : C.blue;
+  const glow = q ? RARITIES[q].color : evolve ? C.gold : isNew ? C.lime : augment ? C.cyan : C.blue;
   r.withAlpha(0.2, () => r.circle(cx, y + 36, 20, glow, true));
   r.withAlpha(0.6, () => r.circle(cx, y + 36, 16, C.black, true));
   r.circle(cx, y + 36, 17, glow);
@@ -62,6 +66,8 @@ export class LevelUpView {
   options: Option[] = [];
   sel = 0;
   banishMode = false;
+  /** Chwila wylosowania oferty (animacja wjazdu kart). */
+  private born = 0;
 
   constructor(private readonly run: Run) {
     this.roll();
@@ -73,6 +79,7 @@ export class LevelUpView {
   }
 
   private roll(): void {
+    this.born = performance.now();
     this.options = generateOptions(this.run, this.count);
     this.sel = Math.min(this.sel, this.options.length - 1);
   }
@@ -161,9 +168,19 @@ export class LevelUpView {
     drawText(r.g, title, W / 2, 10, this.banishMode ? C.salmon : C.yellow, { align: 'center', scale: 2, outline: C.black });
     const scores = this.options.map((o) => optionScore(this.run, o));
     const best = scores.indexOf(Math.max(...scores));
+    const t = (performance.now() - this.born) / 1000;
     this.options.forEach((o, i) => {
-      drawOptionCard(r, this.run, o, this.cardX(i), CARD_Y, i === this.sel, this.banishMode && canBanish(o), !this.banishMode && i === best && this.options.length > 1);
-      drawText(r.g, String(i + 1), this.cardX(i) + 8, CARD_Y + CARD_H - 16, C.slate);
+      // Wjazd kart od dołu jedna po drugiej; zaznaczona lekko uniesiona; rzadkie (Epickie+, ewolucje) z błyskiem.
+      const k = Math.max(0, Math.min(1, (t - i * 0.07) / 0.22));
+      if (k <= 0) return;
+      const x = this.cardX(i), y = CARD_Y + Math.round((1 - (1 - (1 - k) ** 3)) * 30) - (i === this.sel ? 3 : 0);
+      r.withAlpha(k, () => {
+        drawOptionCard(r, this.run, o, x, y, i === this.sel, this.banishMode && canBanish(o), !this.banishMode && i === best && this.options.length > 1);
+        drawText(r.g, String(i + 1), x + 8, y + CARD_H - 16, C.slate);
+      });
+      const rare = (o.quality ?? 0) >= 3 || o.kind === 'evolve' || o.kind === 'abilityEvolve';
+      const flash = rare ? 0.7 - (t - i * 0.07 - 0.22) * 2.5 : 0;
+      if (flash > 0) r.withAlpha(Math.min(0.7, flash), () => r.rect(x + 2, y + 2, CARD_W - 4, CARD_H - 4, C.white));
     });
     for (const b of this.buttons()) {
       const on = b.label.includes('Wygnaj') && this.banishMode;

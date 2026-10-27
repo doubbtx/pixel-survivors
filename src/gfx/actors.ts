@@ -16,13 +16,13 @@ export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   slime: { seq: [0, 1, 2, 3], speed: 9 },
   goldslime: { seq: [0, 1, 2, 3], speed: 5 },
   bat: { seq: [0, 1, 0, 2], speed: 4 },
-  golem: { seq: [0, 1], speed: 14 },
+  golem: { seq: [0, 1, 2, 3], speed: 10 },
   eye: { seq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1], speed: 6 },
   wisp: { seq: [0, 1, 2, 1], speed: 5 },
-  spinner: { seq: [0, 1], speed: 5 },
-  cultist: { seq: [0, 0, 0, 1], speed: 10 },
-  sentinel: { seq: [0, 1], speed: 18 },
-  boss: { seq: [0, 1], speed: 16 },
+  spinner: { seq: [0, 1, 2, 3], speed: 4 },
+  cultist: { seq: [0, 2, 0, 3, 0, 2, 0, 1], speed: 9 },
+  sentinel: { seq: [0, 1, 2, 3], speed: 10 },
+  boss: { seq: [0, 1, 2, 3], speed: 12 },
 };
 
 /** Numer klatki dla czasu (kroki symulacji) z przesunięciem `seed`, żeby tłum nie ruszał się synchronicznie. */
@@ -132,18 +132,24 @@ function bat(f: number): Painter {
   return p.outline();
 }
 
+/** Golem: ciężki chód w 4 klatkach (nogi na zmianę, ramiona w przeciwfazie, tułów podskakuje), mech i świecący rdzeń. */
 function golem(f: number): Painter {
-  const p = new Painter(25, 24);
-  const [la, ra] = f === 0 ? [0, 1] : [1, 0];
-  p.sphere(5, 12 + la, 3, 4.2, RAMP.stone).sphere(20, 12 + ra, 3, 4.2, RAMP.stone);
-  p.rect(8, 17, 3, f === 0 ? 5 : 4, C.dgray).rect(14, 17, 3, f === 0 ? 4 : 5, C.dgray);
-  p.rect(8, f === 0 ? 21 : 20, 3, 1, C.slate).rect(14, f === 0 ? 20 : 21, 3, 1, C.slate);
-  p.sphere(12.5, 12, 6.5, 6, RAMP.stone);
-  p.sphere(12.5, 5.5, 4, 3.5, RAMP.stone);
-  p.px(11, 5, C.gold).px(14, 5, C.gold).px(11, 6, C.orange).px(14, 6, C.orange);
-  p.line(9, 10, 11, 13, C.slate).line(15, 9, 16, 12, C.slate);
-  p.px(12, 12, C.cyan).px(13, 12, f ? C.cyan : C.blue).px(12, 13, C.blue);
-  p.px(10, 2, C.green).px(11, 2, C.lime).px(9, 3, C.green).px(16, 8, C.green).px(17, 8, C.lime);
+  const p = new Painter(25, 25);
+  const bob = f % 2 === 1 ? -1 : 0;
+  const swing = [0, 1, 0, -1][f];
+  const [ll, rl] = [[5, 4], [5, 5], [4, 5], [5, 5]][f];
+  p.rect(8, 18, 3, ll, C.dgray).rect(14, 18, 3, rl, C.dgray);
+  p.rect(7, 17 + ll, 5, 1, C.slate).rect(13, 17 + rl, 5, 1, C.slate);
+  p.sphere(5, 13 + swing + bob, 3.2, 4.4, RAMP.stone).sphere(20, 13 - swing + bob, 3.2, 4.4, RAMP.stone);
+  p.rect(3, 16 + swing + bob, 4, 2, C.dgray).rect(18, 16 - swing + bob, 4, 2, C.dgray); // pięści
+  p.sphere(12.5, 12 + bob, 6.8, 6.2, RAMP.stone);
+  p.line(7, 15 + bob, 18, 15 + bob, C.slate);
+  p.sphere(12.5, 5.5 + bob, 4, 3.5, RAMP.stone);
+  p.px(11, 5 + bob, C.gold).px(14, 5 + bob, C.gold).px(11, 6 + bob, C.orange).px(14, 6 + bob, C.orange);
+  p.line(9, 10 + bob, 11, 13 + bob, C.slate).line(15, 9 + bob, 16, 12 + bob, C.slate).px(8, 13 + bob, C.lgray);
+  const core = f % 2 ? [C.cyan, C.white] : [C.blue, C.cyan];
+  p.px(12, 12 + bob, core[1]).px(13, 12 + bob, core[0]).px(12, 13 + bob, core[0]).px(13, 13 + bob, C.dblue);
+  p.px(10, 2 + bob, C.green).px(11, 2 + bob, C.lime).px(9, 3 + bob, C.green).px(16, 8 + bob, C.green).px(17, 8 + bob, C.lime).px(4, 10 + swing + bob, C.green);
   return p.outline();
 }
 
@@ -180,18 +186,20 @@ function wisp(f: number): Painter {
 
 function spinner(f: number): Painter {
   const p = new Painter(21, 21);
-  const rot = -Math.PI / 2 + f * (Math.PI / 10);
+  const rot = -Math.PI / 2 + f * (Math.PI / 20);
   p.poly(starPts(10.5, 10.5, 5, 9.5, 4, rot), C.plum).poly(starPts(10.5, 10.5, 5, 7, 3, rot), C.pink);
   p.sphere(10.5, 10.5, 3.6, 3.6, RAMP.purple);
   p.rect(10, 10, 2, 2, C.black).px(10, 9, C.white);
   return p.outline();
 }
 
-/** Kultysta: zakapturzona postać w niebieskiej szacie, świecące oczy i kula mocy w dłoniach (f=1: rozbłysk). */
+/** Kultysta: zakapturzona postać w niebieskiej szacie, świecące oczy i kula mocy (f=1: rozbłysk, f=2/3: szata faluje). */
 function cultist(f: number): Painter {
   const p = new Painter(16, 19);
-  p.polyShade([[8, 1], [13, 7], [14.5, 18], [1.5, 18], [3, 7]], RAMP.blue);
-  p.line(8, 6, 8, 17, C.navy).line(3, 17, 13, 17, C.dblue);
+  const sway = f === 2 ? -1 : f === 3 ? 1 : 0;
+  p.polyShade([[8, 1], [13, 7], [14.5 + sway, 18], [1.5 + sway, 18], [3, 7]], RAMP.blue);
+  p.line(8, 6, 8 + sway, 17, C.navy).line(3 + sway, 17, 13 + sway, 17, C.dblue);
+  p.px(4 + sway, 16, C.navy).px(11 + sway, 15, C.navy); // fałdy
   p.sphere(8, 6.5, 3.6, 3.2, [C.black, C.navy, C.navy, C.dblue]); // wnętrze kaptura
   p.px(6, 6, f ? C.white : C.cyan).px(10, 6, f ? C.white : C.cyan);
   const orb = f ? 2.6 : 2;
@@ -200,13 +208,17 @@ function cultist(f: number): Painter {
   return p.outline(C.navy);
 }
 
-/** Strażnik: unoszący się kryształ z okiem i pierścieniem run (f=1: uniesiony o piksel, jaśniejszy rdzeń). */
+/** Strażnik: unoszący się kryształ z okiem; runy krążą wokół (4 klatki), rdzeń pulsuje. */
 function sentinel(f: number): Painter {
   const p = new Painter(20, 24);
-  const o = f ? 0 : 1;
+  const o = f % 2 ? 0 : 1;
+  for (let k = 0; k < 3; k++) {
+    const a = (k / 3) * Math.PI * 2 + f * (Math.PI / 6);
+    p.px(10 + Math.cos(a) * 8.5, 10 + o + Math.sin(a) * 3.5, k === f % 3 ? C.white : C.cyan);
+  }
   p.polyShade([[10, 1 + o], [17, 9 + o], [10, 21 + o], [3, 9 + o]], [C.dblue, C.blue, C.cyan, C.white]);
   p.line(10, 2 + o, 10, 20 + o, C.blue).line(4, 9 + o, 16, 9 + o, C.dblue);
-  p.sphere(10, 10 + o, 2.8, 2.8, f ? [C.plum, C.pink, C.salmon, C.white] : RAMP.purple);
+  p.sphere(10, 10 + o, 2.8, 2.8, f % 2 ? [C.plum, C.pink, C.salmon, C.white] : RAMP.purple);
   p.rect(10, 10 + o, 1, 1, C.black);
   p.line(5, 23, 15, 23, C.slate).px(4, 22, C.cyan).px(16, 22, C.cyan); // runy pod kryształem
   return p.outline(C.navy);
@@ -214,27 +226,48 @@ function sentinel(f: number): Painter {
 
 export const ACTORS: Record<string, (f: number) => Painter> = { kestra, borgun, ignara, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel };
 
-/** Boss 36×36: szata w kolorach biomu, czaszka, korona, pulsujące kule mocy. */
+/**
+ * Boss 36×36: szata w kolorach biomu z wzorem run i pasem, naramienniki z kolcami, czaszka, korona,
+ * pulsujące kule mocy i iskry wokół (4 klatki: oddech, puls kul, krążące iskry, falujący dół szaty).
+ */
+/** Przesunięcie falowania dołu szaty bossa w klatce. */
+const x0 = (f: number) => (f >> 1) & 1;
+
 export function boss(b: Biome, f: number): Painter {
   const p = new Painter(37, 38);
   const robe = b.bossRobe;
-  const o = f ? 0 : 1; // klatka 0 o piksel niżej — "oddech"
+  const o = f % 2 ? 0 : 1; // klatki parzyste o piksel niżej — "oddech"
   for (let y = 16; y < 34; y++) {
-    const half = 6 + Math.floor((y - 16) * 0.62);
+    const half = 6 + Math.floor((y - 16) * 0.62) + (y > 30 && (x0(f) + y) % 2 ? 1 : 0);
     for (let x = 18 - half; x < 18 + half; x++) {
       const t = (x - (18 - half)) / (2 * half);
-      const fold = (x + Math.floor(y / 3)) % 7 === 0;
+      const fold = (x + Math.floor(y / 3) + f) % 7 === 0;
       p.px(x, y + (y < 24 ? o : 0), y === 16 ? robe[3] : fold ? robe[0] : t < 0.25 ? robe[2] : t < 0.62 ? robe[1] : robe[0]);
     }
   }
   p.rect(12, 33, 13, 1, robe[0]);
-  const orb = 3.6 + (f ? 0.8 : 0);
+  // Pas z klamrą i runy na szacie.
+  p.rect(11, 24, 15, 2, C.ddbrown).rect(17, 24, 3, 2, C.gold).px(18, 24, C.yellow);
+  for (const [x, y] of [[13, 28], [18, 30], [23, 28]] as const) p.px(x, y, f === 2 ? C.white : b.accent).px(x, y + 1, robe[0]);
+  // Naramienniki z kolcami.
+  for (const sx of [10, 26]) {
+    p.sphere(sx, 18 + o, 3.5, 2.5, RAMP.stone);
+    p.line(sx, 16 + o, sx + (sx < 18 ? -2 : 2), 13 + o, C.lgray).px(sx + (sx < 18 ? -2 : 2), 13 + o, C.white);
+  }
+  const orb = 3.6 + (f % 2 ? 0.8 : 0);
   p.sphere(5, 23 + o, orb, orb, RAMP.purple).px(4, 22 + o, C.white);
   p.sphere(31, 23 + o, orb, orb, RAMP.blue).px(30, 22 + o, C.white);
+  // Iskry krążące wokół kul.
+  for (const [cx, col] of [[5, C.pink], [31, C.cyan]] as const) {
+    const a = f * (Math.PI / 2);
+    p.px(cx + Math.cos(a) * 5.5, 23 + o + Math.sin(a) * 5.5, col);
+  }
   p.line(8, 21 + o, 12, 19 + o, robe[1]).line(28, 21 + o, 24, 19 + o, robe[1]); // rękawy
   p.sphere(18, 11 + o, 7, 7, RAMP.bone); // czaszka
+  p.line(13, 8 + o, 14, 10 + o, C.lgray).px(23, 13 + o, C.lgray); // pęknięcia
   p.rect(14, 10 + o, 3, 3, C.black).rect(20, 10 + o, 3, 3, C.black);
-  p.px(15, 11 + o, f ? C.red : C.hotpink).px(21, 11 + o, f ? C.red : C.hotpink);
+  const glow = f % 2 ? C.red : C.hotpink;
+  p.px(15, 11 + o, glow).px(21, 11 + o, glow);
   p.px(17, 14 + o, C.dgray).px(18, 14 + o, C.dgray);
   p.rect(14, 16 + o, 8, 2, C.cream);
   for (let x = 15; x < 22; x += 2) p.px(x, 16 + o, C.dgray).px(x, 17 + o, C.dgray);

@@ -65,8 +65,17 @@ export function renderWorld(run: Run, r: Renderer): void {
     }
   }
 
-  // Dekoracje terenu: co ~8. kafelek dostaje element z hasha współrzędnych (stabilny przy ruchu kamery).
+  // Druga warstwa podłoża: duże plamy (ciemniejsze i jaśniejsze) co kilkanaście kafelków.
   const biome = run.levelInfo.biome;
+  for (let ty = ty0 - 1; ty <= ty0 + Math.ceil(H / TILE); ty++) {
+    for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(W / TILE); tx++) {
+      const h = ((tx * 2654435761) ^ (ty * 40503)) >>> 0;
+      if (h % 13 !== 0) continue;
+      g.drawImage(getSprite(`patch${biome}@${(h >>> 9) % 6}`).img, tx * TILE - ox - 8, ty * TILE - oy);
+    }
+  }
+
+  // Dekoracje terenu: co ~8. kafelek dostaje element z hasha współrzędnych (stabilny przy ruchu kamery).
   for (let ty = ty0 - 1; ty <= ty0 + Math.ceil(H / TILE); ty++) {
     for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(W / TILE); tx++) {
       const h = ((tx * 92837111) ^ (ty * 689287499)) >>> 0;

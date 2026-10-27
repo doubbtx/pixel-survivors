@@ -10,6 +10,8 @@ import type { Stats } from '../entities/types';
 import { WEAPON_TAGS, STAT_TAG, SYNERGY_BY_TAG, tierOf } from '../data/synergies';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { AUGMENTS, weaponBase } from '../data/augments';
+import { rollQuality, rollWeaponBonus, addWeaponBonus, bonusLines, type WeaponBonus } from '../data/upgrades';
+import { RARITIES } from '../data/items';
 
 /** 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts); 'augment' = augment broni (data/augments.ts). */
 export type OptionKind = 'weaponNew' | 'weaponUp' | 'passiveNew' | 'passiveUp' | 'ability' | 'abilityEvolve' | 'evolve' | 'augment' | 'stat';
@@ -27,6 +29,9 @@ export interface Option {
   color: number;
   /** Tagi synergii, które ta opcja wzmacnia. */
   tags: Tag[];
+  /** Ulepszenie broni: jakość (0-4, data/upgrades.ts) i wylosowane bonusy. */
+  quality?: number;
+  bonus?: WeaponBonus;
 }
 
 /** Nowa pasywka daje punkt tagu swojej statystyki (kolejne poziomy już nie). */
@@ -65,7 +70,11 @@ function candidates(run: Run): Option[] {
       const into = WEAPON_BY_ID[ev.into];
       out.push({ kind: 'evolve', id: w.def.id, name: into.name, desc: into.desc, hint: `Zastępuje: ${w.def.name}`, icon: into.icon, tag: 'Ewolucja', color: into.color, tags: WEAPON_TAGS[into.kind] });
     } else if (w.level < maxLevel(w.def)) {
-      out.push({ kind: 'weaponUp', id: w.def.id, name: w.def.name, desc: describeLevel(w.def, w.level + 1), hint: evolveHint(run, w.def), icon: w.def.icon, tag: `Poziom ${w.level + 1}/${maxLevel(w.def)}`, color: w.def.color, tags: [] });
+      // Jakość ulepszenia: dodatkowe bonusy broni (Szczęście podnosi szansę na lepszą).
+      const q = rollQuality(run.stats.luck), bonus = rollWeaponBonus(w.def, q);
+      const extra = bonusLines(bonus);
+      const desc = describeLevel(w.def, w.level + 1) + (extra.length ? `. Bonus: ${extra.join(', ')}` : '');
+      out.push({ kind: 'weaponUp', id: w.def.id, name: w.def.name, desc, hint: evolveHint(run, w.def), icon: w.def.icon, tag: `${q ? RARITIES[q].name.pl : 'Poziom'} ${w.level + 1}/${maxLevel(w.def)}`, color: q ? RARITIES[q].color : w.def.color, tags: [], quality: q, bonus });
     }
   }
   // Augmenty: broń od BAL.augmentMinLevel (ewolucja zawsze), każdy augment raz.
@@ -123,6 +132,7 @@ export function reachesThreshold(run: Run, t: Tag): boolean {
  */
 export function optionScore(run: Run, o: Option): number {
   let s = { evolve: 100, abilityEvolve: 95, augment: 24, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, stat: 0 }[o.kind];
+  s += (o.quality ?? 0) * 6;
   if (o.tags.some((t) => reachesThreshold(run, t))) s += 40;
   if (o.hint.startsWith('Potrzebna do ewolucji') || o.hint.endsWith('(masz)')) s += 25;
   return s;
@@ -165,9 +175,12 @@ export function applyOption(run: Run, o: Option): void {
     case 'weaponNew':
       run.addWeapon(o.id);
       break;
-    case 'weaponUp':
-      run.weapons.find((w) => w.def.id === o.id)!.level++;
+    case 'weaponUp': {
+      const w = run.weapons.find((x) => x.def.id === o.id)!;
+      w.level++;
+      if (o.bonus) addWeaponBonus(w.bonus, o.bonus);
       break;
+    }
     case 'evolve': {
       const w = run.weapons.find((x) => x.def.id === o.id)!;
       const into = w.def.evolve!.into;

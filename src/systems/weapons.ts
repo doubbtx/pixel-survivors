@@ -16,15 +16,16 @@ export interface EffWeapon extends WeaponStats {
 export function effectiveStats(run: Run, w: WeaponInst): EffWeapon {
   const s = weaponStatsAt(w.def, w.level);
   const st = run.stats;
-  const cooldown = s.cooldown * BAL.attackSpeedMul(st.atkSpeed);
+  const b = w.bonus;
+  const cooldown = s.cooldown * BAL.attackSpeedMul(st.atkSpeed + (b.atk ?? 0));
   // Żarłoczne ostrza (augment): orbita rośnie z zabójstwami na tym poziomie.
   const grow = w.def.kind === 'orbit' ? 1 + (run.cardState['aug.orbit'] ?? 0) : 1;
   return {
-    damage: s.damage * st.might,
+    damage: s.damage * st.might * (1 + (b.dmg ?? 0)),
     cooldown,
-    amount: Math.max(0, s.amount + st.amount),
-    speed: s.speed * st.projSpeed,
-    area: s.area * st.area * grow,
+    amount: Math.max(0, s.amount + st.amount + (b.amount ?? 0)),
+    speed: s.speed * st.projSpeed * (1 + (b.proj ?? 0)),
+    area: s.area * st.area * grow * (1 + (b.area ?? 0)),
     duration: s.duration * st.duration,
     pierce: s.pierce,
     knock: s.knock,

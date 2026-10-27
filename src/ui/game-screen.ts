@@ -29,6 +29,7 @@ import { NODE_INFO, EX_BLESSINGS, advanceAct, currentMap, currentNode, isCombat,
 import { rng } from '../core/rng';
 import { ExpeditionMapView } from './expedition';
 import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
+import { bonusLines } from '../data/upgrades';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 
 type State = 'play' | 'levelup' | 'cards' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'pause' | 'cleared' | 'map' | 'end';
@@ -384,6 +385,8 @@ export class GameScreen implements Screen {
         if ((inp.pressed('pause') || (set.autoPause && inp.focusLost)) && run.outcome === 'none') { this.openPause(); return; }
         if (inp.pressed('inventory') && run.outcome === 'none') { this.openInventory('play'); return; }
         this.toastT = Math.max(0, this.toastT - dt);
+        // Zatrzymanie klatki po mocnym trafieniu / zabiciu elity: symulacja stoi przez chwilę.
+        if (run.hitstop > 0) { run.hitstop -= dt; break; }
         if (this.app.save.settings.debug) {
           if (inp.pressed('debugTime')) run.debugAdvance();
           if (inp.pressed('debugLevel')) run.addXp(run.xpNext - run.xp);
@@ -546,22 +549,27 @@ export class GameScreen implements Screen {
       // Augmenty broni: turkusowe kropki nad ikoną.
       const augs = run.augments.filter((id) => AUGMENT_BY_ID[id].weapon === weaponBase(w.def)).length;
       for (let k = 0; k < augs; k++) r.rect(x + k * 4, y - 3, 3, 2, C.cyan);
+      // Zebrane bonusy jakości ulepszeń (najwyżej 2 linie, reszta jako +N).
+      const lines = bonusLines(w.bonus, true);
+      lines.slice(0, 2).forEach((l, k) => drawText(g, l, x - 1, y + 26 + k * 9, C.lgray));
+      if (lines.length > 2) drawText(g, `+${lines.length - 2}`, x - 1, y + 44, C.dgray);
     });
     drawText(g, 'DPS', px + pw - 10, 92, C.dgray, { align: 'right' });
     run.passives.forEach((p, i) => {
-      const x = px + 10 + i * 19, y = 106;
+      const x = px + 10 + i * 19, y = 128;
       drawSprite(g, PASSIVE_BY_ID[p.id].icon, x + 7, y + 7);
       drawText(g, String(p.level), x + 16, y + 6, C.white, { align: 'right', outline: C.black });
     });
     // Założony ekwipunek (szczegóły: ekran Ekwipunek).
-    SLOTS.forEach((s, i) => drawItemSlot(r, run.equipment[s.id], px + 10 + i * 21, 126, 20, false));
-    drawText(g, '[I] ekwipunek', px + pw - 10, 131, C.dgray, { align: 'right' });
-    drawText(g, `Karty (${run.cards.reduce((n, c) => n + c.stacks, 0)})    losowania kart: ${run.cardRerolls}`, px + 10, 150, C.lavender);
-    run.cards.slice(0, 16).forEach((c, i) => {
+    SLOTS.forEach((s, i) => drawItemSlot(r, run.equipment[s.id], px + 10 + i * 21, 148, 20, false));
+    drawText(g, '[I] ekwipunek', px + pw - 10, 153, C.dgray, { align: 'right' });
+    drawText(g, `Karty (${run.cards.reduce((n, c) => n + c.stacks, 0)})    losowania kart: ${run.cardRerolls}`, px + 10, 172, C.lavender);
+    run.cards.slice(0, 14).forEach((c, i) => {
       const def = CARD_BY_ID[c.id];
-      const x = px + 10 + (i % 2) * 128, y = 163 + Math.floor(i / 2) * 11;
+      const x = px + 10 + (i % 2) * 128, y = 185 + Math.floor(i / 2) * 10;
       drawText(g, `${def.name}${c.stacks > 1 ? ' x' + c.stacks : ''}`, x, y, def.cursed ? C.hotpink : rarityColor(def.rarity, 0));
     });
+    if (run.cards.length > 14) drawText(g, `+${run.cards.length - 14} więcej`, px + pw - 10, 172, C.dgray, { align: 'right' });
   }
 
   private renderCleared(): void {

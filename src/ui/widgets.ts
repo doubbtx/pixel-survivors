@@ -108,7 +108,7 @@ export class Menu {
     for (let i = 0; i < n; i++) {
       const [x, y, w, h] = this.rect(i);
       if (!inside(m.x, m.y, x, y, w, h)) continue;
-      if (m.lastMove !== this.lastMouse) this.sel = i;
+      if (m.lastMove !== this.lastMouse && this.sel !== i) { this.sel = i; sfx.play('hover'); }
       if (input.pressed('click')) {
         this.sel = i;
         const item = this.items[i];

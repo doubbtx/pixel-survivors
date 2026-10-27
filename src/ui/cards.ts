@@ -70,6 +70,8 @@ export class CardPickView {
   cards: CardDef[];
   sel = 0;
   private step = 0;
+  /** Chwila otwarcia (animacja wjazdu kart). */
+  private readonly born = performance.now();
 
   constructor(private readonly run: Run, private readonly source: CardSource) {
     const offer = rollOffer(run, source);
@@ -131,10 +133,16 @@ export class CardPickView {
     dim(r);
     const col = rarityColor(this.rarity, this.step);
     drawText(r.g, `Karta ${RARITY[this.rarity].name.toLowerCase()} - ${SOURCE_LABEL[this.source]}`, W / 2, 10, col, { align: 'center', scale: 2, outline: C.black });
+    const t = (performance.now() - this.born) / 1000;
     this.cards.forEach((c, i) => {
-      const x = this.cardX(i);
-      const stacks = this.run.cards.find((k) => k.id === c.id)?.stacks ?? 0;
-      drawCard(r, c, x, CARD_Y, i === this.sel, this.step, stacks);
+      // Wjazd kart od dołu jedna po drugiej; pryzmatyczne z błyskiem.
+      const k = Math.max(0, Math.min(1, (t - i * 0.08) / 0.25));
+      if (k <= 0) return;
+      const x = this.cardX(i), y = CARD_Y + Math.round((1 - k) ** 3 * 30);
+      const stacks = this.run.cards.find((kk) => kk.id === c.id)?.stacks ?? 0;
+      r.withAlpha(k, () => drawCard(r, c, x, y, i === this.sel, this.step, stacks));
+      const flash = this.rarity === 'prism' ? 0.7 - (t - i * 0.08 - 0.25) * 2.5 : 0;
+      if (flash > 0) r.withAlpha(Math.min(0.7, flash), () => r.rect(x + 2, y + 2, CARD_W - 4, CARD_H - 4, C.white));
       // Karta, której nie ma jeszcze w kolekcji.
       if (!this.run.knownCards.has(c.id)) drawText(r.g, 'Nowa!', x + CARD_W - 8, CARD_Y - 4, C.lime, { align: 'right', outline: C.black });
       // Postęp synergii po wyborze (zielony = nowy próg).

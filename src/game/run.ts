@@ -13,6 +13,7 @@ import { PASSIVE_BY_ID } from '../data/passives';
 import { levelDef, type LevelDef } from '../data/levels';
 import { nodeLevel, EX_BLESSINGS, type ExpeditionState } from '../data/expedition';
 import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
+import type { WeaponBonus } from '../data/upgrades';
 import type { ShopState } from '../data/shop';
 import { SRC_ELEMENT, ELEM, type Element } from '../data/elements';
 import type { MetaBonus } from '../data/meta';
@@ -105,7 +106,8 @@ export interface RunSnapshot {
   kills: number;
   totalTime: number;
   hp: number;
-  weapons: [string, number][];
+  /** Broń: id, poziom i bonusy z jakości ulepszeń (od 0.10). */
+  weapons: [string, number, WeaponBonus?][];
   passives: [string, number][];
   abilities: Record<AbilitySlot, number>;
   cards: [string, number][];
@@ -236,6 +238,11 @@ export class Run {
   healGlow = 0;
   /** Czerwony błysk krawędzi ekranu po trafieniu (s). */
   hurtFx = 0;
+  /** Zatrzymanie klatki (s, ekran gry wstrzymuje symulację) i chwila, od której można zatrzymać ponownie. */
+  hitstop = 0;
+  private hitstopAt = 0;
+  /** Błysk paska XP po zebraniu kryształu (s). */
+  xpPulse = 0;
   rerolls: number = BAL.rerolls;
   skips: number = BAL.skips;
   banishes: number = BAL.banishes;
@@ -281,6 +288,9 @@ export class Run {
   /** Augmenty broni (id z data/augments.ts) i nadane przez nie żywioły (nazwa źródła → żywioł). */
   augments: string[] = [];
   augElem = new Map<string, Element>();
+  /** Bonusy jakości ulepszeń broni działające przy trafieniu: szansa na krytyk i siła żywiołu (nazwa źródła → wartość). */
+  srcCrit = new Map<string, number>();
+  srcElem = new Map<string, number>();
   /** Ekspedycja: mapa aktu i pozycja (null w innych trybach). */
   expedition: ExpeditionState | null = null;
   /** Endless: czas poziomu, w którym pojawi się następny boss. */
@@ -412,6 +422,7 @@ export class Run {
     this.time += dt;
     this.totalTime += dt;
     this.step++;
+    this.xpPulse = Math.max(0, this.xpPulse - dt);
     this.updatePower(dt);
     this.explosionsThisStep = 0;
     this.boomSpots.length = 0;
@@ -578,7 +589,11 @@ export class Run {
   /** Żywioły z augmentów dla nazw posiadanych broni (także po ewolucji). */
   private indexAugments(): void {
     this.augElem.clear();
+    this.srcCrit.clear();
+    this.srcElem.clear();
     for (const w of this.weapons) {
+      if (w.bonus.crit) this.srcCrit.set(w.def.name, w.bonus.crit);
+      if (w.bonus.elem) this.srcElem.set(w.def.name, w.bonus.elem);
       const base = weaponBase(w.def);
       for (const id of this.augments) {
         const a = AUGMENT_BY_ID[id];
@@ -637,6 +652,13 @@ export class Run {
     this.gold += g;
     this.onBuildChanged();
     return g;
+  }
+
+  /** Krótkie zatrzymanie klatki (z odstępem BAL.juice.hitstopGap, żeby gra nie przycinała się seriami). */
+  freeze(t: number): void {
+    if (this.totalTime < this.hitstopAt) return;
+    this.hitstop = Math.max(this.hitstop, t);
+    this.hitstopAt = this.totalTime + BAL.juice.hitstopGap;
   }
 
   /** Tekst unoszący się nad światem (np. "Egzekucja!"). */
@@ -764,7 +786,7 @@ export class Run {
 
   addWeapon(id: string): void {
     const slot = this.weapons.length;
-    this.weapons.push({ def: WEAPON_BY_ID[id], level: 1, timer: 0.3, slot, angle: 0, shots: 0 });
+    this.weapons.push({ def: WEAPON_BY_ID[id], level: 1, timer: 0.3, slot, angle: 0, shots: 0, bonus: {} });
   }
 
   addXp(v: number): void {
@@ -833,7 +855,7 @@ export class Run {
     if (e.dead || (e.boss && e.invuln > 0)) return;
     const st = this.stats;
     let mult = 1;
-    if (!o.dot && (o.forceCrit || rng.chance(Math.min(1, st.crit)))) {
+    if (!o.dot && (o.forceCrit || rng.chance(Math.min(1, st.crit + (this.srcCrit.get(src) ?? 0))))) {
       mult = st.critMult;
       if (this.flag('overcrit') > 0 && st.crit > 1 && rng.chance(Math.min(1, st.crit - 1))) mult *= st.critMult;
     }
@@ -860,7 +882,8 @@ export class Run {
       e.ky += ((o.ky ?? 0) / l) * f;
     }
     if (o.stun) e.stunT = Math.max(e.stunT, e.boss ? o.stun * 0.2 : o.stun);
-    const n = this.damageNumbers ? this.dmgNums.obtain() : null;
+    // Czytelność w tłumie: przy wielu wrogach liczby tylko dla krytyków.
+    const n = this.damageNumbers && (crit || this.enemies.count < BAL.juice.numbersCritOnly) ? this.dmgNums.obtain() : null;
     if (n) {
       n.x = e.x + rng.range(-3, 3);
       n.y = e.y - e.radius - 2;
@@ -877,7 +900,7 @@ export class Run {
     // Trafienia procentowe i reakcji nie nakładają żywiołów (inaczej reakcje napędzałyby się same).
     if (!pct && REACTION_COL[src] === undefined) {
       const el = this.augElem.get(src) ?? SRC_ELEMENT[src];
-      if (el) this.applyElement(e, el, dmg);
+      if (el) this.applyElement(e, el, dmg * (1 + (this.srcElem.get(src) ?? 0)));
       // Karty i super-bonusy: szansa na żywioł przy trafieniu, krytyki porażają.
       for (const k of ELEMENT_LIST) if (!e.dead && this.flag(`elemChance.${k}`) > 0 && rng.chance(this.flag(`elemChance.${k}`))) this.applyElement(e, k, dmg);
       const any = this.flag('elemChance.any');
@@ -897,6 +920,7 @@ export class Run {
   /** Nakłada stan żywiołu po trafieniu (siła z `elemPower`); najpierw sprawdza reakcję z innym stanem na wrogu. */
   applyElement(e: Enemy, el: Element, dmg: number): void {
     if (e.dead || this.react(e, el, dmg)) return;
+    sfx.play(el === 'fire' ? 'burn' : el === 'ice' ? 'freeze' : el === 'lightning' ? 'shock' : 'poison');
     const ep = 1 + this.stats.elemPower;
     switch (el) {
       case 'fire':
@@ -931,6 +955,7 @@ export class Run {
     const label = (text: string, col: number) => {
       e.reactT = R.cd * Math.max(0, 1 - this.flag('reactCd'));
       this.popText(e.x, e.y - e.radius - 10, text, col);
+      sfx.play('react');
     };
     if (pair('fire', 'ice')) {
       label('Para!', C.lgray);
@@ -981,6 +1006,9 @@ export class Run {
     this.levelKills++;
     this.ultCharge += (e.boss ? 30 : e.elite ? 5 : 1) * (1 + this.flag('ultGain'));
     this.burst(e.x, e.y, e.def.color, e.boss ? 60 : e.elite ? 24 : 5, e.boss ? 90 : 50);
+    // Rozbłysk śmierci: białe iskry (elity i boss także złote) i zatrzymanie klatki przy mocnych wrogach.
+    this.burst(e.x, e.y, C.white, e.boss ? 20 : e.elite ? 10 : 2, 80);
+    if (e.boss || e.elite) { this.burst(e.x, e.y, C.gold, e.boss ? 30 : 12, 110); this.freeze(e.boss ? BAL.juice.hitstopBoss : BAL.juice.hitstopElite); }
     if (this.fx.count < BAL.fx.poofCap) {
       const f = this.addFx('poof', e.x, e.y, C.lgray, 0.32);
       if (f) f.r = e.boss ? 3 : e.elite ? 2 : 1;
@@ -1093,6 +1121,7 @@ export class Run {
     sfx.play('hurt');
     const n = this.dmgNums.obtain();
     if (n) { n.x = p.x; n.y = p.y - 8; n.life = 0.7; n.text = fmt(total); n.col = C.red; }
+    if (total >= this.stats.maxHp * BAL.juice.hurtBig) this.freeze(BAL.juice.hitstopHurt);
     this.emit('onDamageTaken', total);
     // Odwet (węzeł Rozwoju Borguna): oberwanie wyzwala darmowy Wstrząs (najwyżej co `counterSlam` s).
     const counter = this.flag('counterSlam');
@@ -1263,7 +1292,7 @@ export class Run {
     return {
       hero: this.hero.id, mode: this.mode, depth: nextDepth, inProgress,
       level: this.level, xp: this.xp, gold: this.gold, kills: this.kills, totalTime: this.totalTime, hp: this.player.hp,
-      weapons: this.weapons.map((w) => [w.def.id, w.level]),
+      weapons: this.weapons.map((w) => [w.def.id, w.level, { ...w.bonus }]),
       passives: this.passives.map((p) => [p.id, p.level]),
       abilities: { q: ab.q.level, e: ab.e.level, dash: ab.dash.level, ult: ab.ult.level },
       cards: this.cards.map((c) => [c.id, c.stacks]),
@@ -1293,7 +1322,12 @@ export class Run {
     run.kills = s.kills;
     run.totalTime = s.totalTime;
     // Wpisy, których nie ma już w danych gry (np. usunięta karta), są pomijane.
-    for (const [id, lvl] of s.weapons.filter(([id]) => WEAPON_BY_ID[id])) { run.addWeapon(id); run.weapons[run.weapons.length - 1].level = lvl; }
+    for (const [id, lvl, bonus] of s.weapons.filter(([id]) => WEAPON_BY_ID[id])) {
+      run.addWeapon(id);
+      const w = run.weapons[run.weapons.length - 1];
+      w.level = lvl;
+      w.bonus = { ...bonus };
+    }
     run.passives = s.passives.filter(([id]) => PASSIVE_BY_ID[id]).map(([id, level]) => ({ id, level }));
     for (const slot of ['q', 'e', 'dash', 'ult'] as AbilitySlot[]) run.abilities[slot].level = s.abilities[slot];
     for (const slot of s.abilityEvo ?? []) if (run.abilities[slot].def.evo) run.abilities[slot].def = evolveAbility(run.abilities[slot].def);

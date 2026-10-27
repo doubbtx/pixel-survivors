@@ -216,6 +216,13 @@ src/
 - **Drzewko per bohater**: 4 gałęzie tematyczne + wspólna Wyprawa. Kestra: Krytyki, Zasięg, Mobilność, Pułapki; Borgun: Wytrzymałość, Kontratak, Obszar, Tarcza; Ignara: Ogień, Echo, Bariera, Żywioły. Ostatni węzeł gałęzi to **klucz**, który zmienia umiejętność (np. Przewrót zostawia Sieć, Wstrząs uderza sam po otrzymaniu obrażeń, Kula ognia leci dwa razy, Pierścień ognia daje tarczę). Osobna esencja, Paragon i prestiż dla każdego bohatera; Q/E przełącza bohatera.
 - **Zapis v6**: dotychczasowa esencja, kupione węzły i prestiże wracają jako pula do rozdania (Rozwój → [B] Przydziel), razem z dawnym Paragonem. Trwająca Ekspedycja ze starą mapą zaczyna się od nowa.
 
+**Etap D: polish, grafika i jakość ulepszeń (0.10)**:
+- **Jakość ulepszeń broni** przy awansie: Zwykłe, Magiczne, Rzadkie, Epickie, Legendarne. Zwykłe daje sam poziom, każda wyższa jakość dokłada bonus (do 4): obrażenia, szybkość ataku, obszar, szybkość pocisków, szansa na krytyk, siła żywiołu, od Epickiego +1 pocisk. Wartości rosną z jakością (np. obrażenia +6% Magiczne, +25% Legendarne). Szczęście podnosi szansę. Karta ma ramkę i nazwę w kolorze jakości, Epickie i Legendarne błyskają. Bonusy sumują się na broni (zostają po ewolucji) i widać je w pauzie pod DPS. Liczby w `BAL.weaponQuality`.
+- **Soczystość**: zatrzymanie klatki przy zabiciu elity / bossa i mocnym trafieniu, rozbłysk śmierci, animacja zbierania XP (błysk paska) i łupu (pierścień i napis w kolorze jakości), karty awansu i kart wjeżdżają kolejno, rzadkie z błyskiem.
+- **Dźwięk**: osobne efekty żywiołów i reakcji, mocniejszy ryk bossa, kliknięcie przy najechaniu na menu.
+- **Grafika**: więcej klatek animacji wrogów (Golem chodzi i macha rękami, Kultysta faluje szatą, Strażnik ma krążące runy), boss w 4 klatkach z naramiennikami, pasem, runami i iskrami, druga warstwa podłoża (plamy terenu), migoczące legendarne przedmioty.
+- **Czytelność późnej gry**: przy ponad 350 wrogach liczby obrażeń tylko dla krytyków.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

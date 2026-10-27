@@ -3,6 +3,7 @@ import type { Poolable } from '../core/pool';
 import type { EnemyDef } from '../data/enemies';
 import type { WeaponDef } from '../data/weapons';
 import type { AbilityDef } from '../data/heroes';
+import type { WeaponBonus } from '../data/upgrades';
 
 /** Statystyki postaci — liczone od nowa z bohatera + pasywek (później: ekwipunek, karty, meta). */
 export interface Stats {
@@ -254,6 +255,8 @@ export interface WeaponInst {
   /** Stan zależny od wzorca (kąt orbity, licznik salw itp.). */
   angle: number;
   shots: number;
+  /** Bonusy z jakości ulepszeń przy awansie (data/upgrades.ts), zostają po ewolucji. */
+  bonus: WeaponBonus;
 }
 
 export interface PassiveInst {

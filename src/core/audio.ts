@@ -5,7 +5,8 @@
  */
 export type SfxName =
   | 'shoot' | 'hit' | 'kill' | 'pickup' | 'levelup' | 'hurt' | 'dash'
-  | 'ability' | 'explode' | 'boss' | 'select' | 'chest' | 'zap';
+  | 'ability' | 'explode' | 'boss' | 'select' | 'chest' | 'zap'
+  | 'burn' | 'freeze' | 'shock' | 'poison' | 'react' | 'hover';
 
 interface Tone {
   wave: OscillatorType | 'noise';
@@ -31,13 +32,28 @@ const TONES: Record<SfxName, Tone[]> = {
   dash: [{ wave: 'noise', f0: 600, f1: 3000, dur: 0.12, vol: 0.07, gap: 80 }],
   ability: [{ wave: 'square', f0: 300, f1: 900, dur: 0.12, vol: 0.08, gap: 60 }],
   explode: [{ wave: 'noise', f0: 900, f1: 100, dur: 0.3, vol: 0.12, gap: 70 }],
-  boss: [{ wave: 'sawtooth', f0: 90, f1: 40, dur: 0.8, vol: 0.15, gap: 500 }],
+  // Boss: niski ryk z warstwą szumu i drugim, opadającym tonem.
+  boss: [
+    { wave: 'noise', f0: 400, f1: 60, dur: 0.35, vol: 0.16, gap: 500 },
+    { wave: 'sawtooth', f0: 110, f1: 45, dur: 0.6, vol: 0.18, gap: 0 },
+    { wave: 'square', f0: 70, f1: 35, dur: 0.7, vol: 0.12, gap: 0 },
+  ],
   select: [{ wave: 'square', f0: 660, f1: 880, dur: 0.05, vol: 0.06, gap: 30 }],
   chest: [
     { wave: 'triangle', f0: 392, f1: 392, dur: 0.1, vol: 0.1, gap: 0 },
     { wave: 'triangle', f0: 587, f1: 784, dur: 0.25, vol: 0.1, gap: 0 },
   ],
   zap: [{ wave: 'sawtooth', f0: 1600, f1: 400, dur: 0.07, vol: 0.05, gap: 70 }],
+  // Żywioły (nałożenie stanu) i reakcje.
+  burn: [{ wave: 'noise', f0: 1800, f1: 500, dur: 0.08, vol: 0.04, gap: 140 }],
+  freeze: [{ wave: 'triangle', f0: 1700, f1: 2600, dur: 0.07, vol: 0.04, gap: 140 }],
+  shock: [{ wave: 'sawtooth', f0: 2400, f1: 900, dur: 0.04, vol: 0.035, gap: 140 }],
+  poison: [{ wave: 'square', f0: 240, f1: 170, dur: 0.07, vol: 0.035, gap: 160 }],
+  react: [
+    { wave: 'square', f0: 520, f1: 1040, dur: 0.06, vol: 0.07, gap: 110 },
+    { wave: 'noise', f0: 2500, f1: 400, dur: 0.12, vol: 0.07, gap: 0 },
+  ],
+  hover: [{ wave: 'triangle', f0: 880, f1: 990, dur: 0.025, vol: 0.03, gap: 40 }],
 };
 
 class Audio {

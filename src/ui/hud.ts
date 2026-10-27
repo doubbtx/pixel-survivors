@@ -79,6 +79,8 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
 
   // Pasek XP na całej szerokości.
   bar(r, 0, 0, W, 6, run.xp / run.xpNext, RAMP.blue, C.navy);
+  // Błysk paska po zebraniu kryształu.
+  if (run.xpPulse > 0) r.withAlpha(run.xpPulse * 3, () => r.rect(1, 1, Math.round((W - 2) * Math.min(1, run.xp / run.xpNext)), 4, C.white));
 
   // Portret bohatera + poziom postaci.
   slot(r, 4, 9, 32, C.gold);

@@ -27,6 +27,12 @@ export function drawItemSlot(r: Renderer, it: Item | null, x: number, y: number,
   if (it) {
     if (it.rarity >= 3) r.withAlpha(0.25 + 0.1 * Math.sin(performance.now() / 250), () => r.rect(x + 2, y + 2, s - 4, s - 4, rarityCol(it)));
     drawSprite(r.g, BASE_BY_ID[it.base].icon, x + s / 2, y + s / 2);
+    // Legendarny: migocząca iskra wędrująca po rogach gniazda.
+    if (it.rarity >= 4) {
+      const k = Math.floor(performance.now() / 180) % 4;
+      const [sx, sy] = [[x + 2, y + 2], [x + s - 4, y + 2], [x + s - 4, y + s - 4], [x + 2, y + s - 4]][k];
+      r.rect(sx, sy, 2, 2, C.white);
+    }
     if (it.super) {
       r.rect(x + s - 6, y + 2, 4, 4, C.black);
       r.rect(x + s - 5, y + 3, 2, 2, C.yellow);

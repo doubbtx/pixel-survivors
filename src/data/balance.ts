@@ -14,6 +14,24 @@ export const BAL = {
   skips: 2,
   banishes: 2,
   weaponSlots: 6,
+  /**
+   * Jakość ulepszeń broni przy awansie (data/upgrades.ts): wagi jakości 0-4 (Zwykłe..Legendarne), Szczęście mnoży wagę
+   * jakości q przez (1 + szczęście × luckMul × q); wartości bonusów dla jakości 0-4; +1 pocisk od jakości amountFrom.
+   */
+  weaponQuality: {
+    weights: [62, 24, 9, 4, 1],
+    luckMul: 0.6,
+    amountFrom: 3,
+    values: {
+      dmg: [0, 0.06, 0.1, 0.16, 0.25],
+      atk: [0, 0.05, 0.08, 0.12, 0.18],
+      area: [0, 0.06, 0.1, 0.15, 0.22],
+      proj: [0, 0.08, 0.12, 0.18, 0.25],
+      amount: [0, 0, 0, 1, 1],
+      crit: [0, 0.02, 0.03, 0.05, 0.08],
+      elem: [0, 0.08, 0.12, 0.2, 0.3],
+    },
+  },
   /** Poziom broni, od którego przy awansie pojawiają się jej augmenty (data/augments.ts). */
   augmentMinLevel: 3,
   passiveSlots: 6,
@@ -223,6 +241,11 @@ export const BAL = {
   prismChance: (depth: number, lvl: number) => Math.min(0.3, 0.03 + 0.03 * (depth - 1) + 0.002 * lvl),
   /** Maks. liczba eksplozji z efektów kart w jednym kroku (chroni przed reakcją łańcuchową). */
   explosionBudget: 12,
+  /**
+   * „Soczystość”: zatrzymanie klatki (s) po zabiciu elity / bossa i po mocnym trafieniu gracza (ułamek maks. HP),
+   * minimalny odstęp między zatrzymaniami; powyżej tylu wrogów liczby obrażeń tylko dla krytyków (czytelność późnej gry).
+   */
+  juice: { hitstopElite: 0.07, hitstopBoss: 0.3, hitstopHurt: 0.05, hurtBig: 0.15, hitstopGap: 0.4, numbersCritOnly: 350 },
   /** Limity efektów (wydajność przy masowych wybuchach): cząsteczki na krok, efekty wybuchów na krok i odległość scalania, obłoczki śmierci. */
   fx: { particlesPerStep: 160, sparksPerStep: 12, boomsPerStep: 6, boomMerge: 24, poofCap: 140 },
   bossBaseHp: 3200,

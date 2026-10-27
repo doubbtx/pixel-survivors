@@ -1,4 +1,6 @@
 import { sfx } from '../core/audio';
+import { C } from '../core/palette';
+import { RARITIES } from '../data/items';
 import type { Run } from '../game/run';
 
 /** Bazowy zasięg przyciągania kryształów (px), mnożony przez statystykę `magnet`. */
@@ -29,6 +31,8 @@ export function updatePickups(run: Run, dt: number): void {
     if (g.flying && fly(run, g, dt)) {
       run.addXp(g.value);
       sfx.play('pickup');
+      run.xpPulse = 0.15;
+      run.burst(p.x, p.y - 4, C.cyan, 1, 30);
       run.gems.release(g);
     }
   }
@@ -51,12 +55,20 @@ export function updatePickups(run: Run, dt: number): void {
         break;
       case 'coin':
         run.gold += it.value * run.stats.greed;
+        run.burst(p.x, p.y - 4, C.gold, 1, 30);
         sfx.play('pickup');
         break;
-      case 'chest':
+      case 'chest': {
+        // Łup: pierścień i napis w kolorze jakości przedmiotu.
         if (it.item) run.pendingLoot.push({ source: it.source, item: it.item });
+        const col = it.item ? RARITIES[it.item.rarity].color : C.gold;
+        const f = run.addFx('ring', p.x, p.y, col, 0.35);
+        if (f) f.r = 18;
+        run.burst(p.x, p.y, col, 12, 70);
+        run.popText(p.x, p.y - 16, 'Łup!', col);
         sfx.play('chest');
         break;
+      }
     }
     run.pickups.release(it);
   }
