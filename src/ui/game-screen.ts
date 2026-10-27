@@ -27,6 +27,7 @@ import { metaBonus, runEssence, heroMeta, heroTree, NO_META } from '../data/meta
 import { rollItem } from '../data/items';
 import { NODE_INFO, EX_BLESSINGS, advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth } from '../data/expedition';
 import { rng } from '../core/rng';
+import { music } from '../core/music';
 import { ExpeditionMapView } from './expedition';
 import { Hints } from './hints';
 import { HelpScreen } from './help';
@@ -499,6 +500,10 @@ export class GameScreen implements Screen {
       this.app.persist();
     }
     this.hints.update(dt);
+    // Muzyka: intensywność z liczby wrogów, lochu i wydarzenia; boss na pełno; poza walką ciszej.
+    const fight = this.state === 'play' && run.outcome === 'none';
+    const crowd = Math.min(1, run.enemies.count / BAL.musicCrowd) * 0.8 + (run.dungeon || run.levelEvent ? 0.2 : 0);
+    music.setMood({ intensity: fight ? crowd : 0.08, biome: run.levelInfo.biome, boss: fight && !!run.boss });
     if (this.delay > 0) { this.delay -= dt; return; }
 
     switch (this.state) {

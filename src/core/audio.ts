@@ -81,6 +81,15 @@ class Audio {
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
   }
 
+  /** Kontekst i bufor szumu dla muzyki (core/music.ts); null przed pierwszym gestem użytkownika. */
+  get context(): AudioContext | null {
+    return this.ctx;
+  }
+
+  get noiseBuffer(): AudioBuffer | null {
+    return this.noise;
+  }
+
   setVolume(v: number): void {
     this.vol = v;
     if (this.master) this.master.gain.value = v;

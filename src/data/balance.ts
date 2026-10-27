@@ -52,6 +52,8 @@ export const BAL = {
   voidPact: 5,
   /** Głowy bossów: rozgrzewka przed 1. bossem i przerwa między bossami (s), leczenie po bossie, awanse po bossie i na start, HP bossów (flaga bossHp). */
   rush: { warmup: 20, gap: 15, heal: 0.3, levels: 3, startLevels: 8, bossHp: -0.4 },
+  /** Muzyka (core/music.ts): tylu wrogów naraz daje pełną intensywność walki (bez bossa). */
+  musicCrowd: 140,
   /** Odstęp pomiaru DPS do wykresu na ekranie końca (s). */
   dpsEvery: 5,
   /** Bestiariusz (data/bestiary.ts): bonus obrażeń przeciw wrogowi po progach `master` i `legend` zabójstw. */

@@ -46,6 +46,8 @@ export type PlayerFx = 'visible' | 'dim' | 'hidden';
 /** Nowe ustawienia nie wymagają migracji: brakujące pola dostają wartości domyślne przy wczytaniu. */
 export interface Settings {
   volume: number;
+  /** Głośność muzyki proceduralnej (core/music.ts). */
+  music: number;
   shake: boolean;
   debug: boolean;
   aim: AimMode;
@@ -160,7 +162,7 @@ const MIGRATIONS: Record<number, Migration> = {
 function defaults(): SaveData {
   return {
     version: SAVE_VERSION,
-    settings: { volume: 0.5, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
+    settings: { volume: 0.5, music: 0.4, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
       playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false },

@@ -6,6 +6,7 @@ import { sfx } from './core/audio';
 import { loadSave, writeSave } from './core/save';
 import type { App, Screen } from './ui/app';
 import { MainMenu } from './ui/menus';
+import { music } from './core/music';
 
 /**
  * Punkt wejścia: tworzy renderer, wejście i zapis, a potem kręci pętlę ze stałym krokiem.
@@ -16,6 +17,7 @@ const renderer = new Renderer(canvas);
 const input = new Input(renderer, canvas);
 const save = loadSave();
 sfx.setVolume(save.settings.volume);
+music.setVolume(save.settings.music);
 
 // AudioContext wymaga gestu użytkownika.
 const unlock = () => sfx.unlock();
@@ -35,6 +37,7 @@ const app: App = {
   persist() {
     writeSave(save);
     sfx.setVolume(save.settings.volume);
+    music.setVolume(save.settings.music);
   },
 };
 screen = new MainMenu(app);
@@ -44,6 +47,7 @@ app.loop = startLoop(
     input.pollGamepads();
     fadeT = Math.max(0, fadeT - dt);
     screen.update(dt);
+    music.update(dt);
     input.endStep();
   },
   () => {

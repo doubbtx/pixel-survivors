@@ -15,6 +15,7 @@ import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
 import { Menu, panel, inside, slot } from './widgets';
 import type { Action } from '../core/input';
+import { music, MENU_MOOD } from '../core/music';
 import { GameScreen, type GameOpts } from './game-screen';
 import { CollectionScreen } from './collection';
 import { MetaScreen } from './meta';
@@ -81,6 +82,7 @@ export class MainMenu implements Screen {
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
     ], W / 2, 82, 220, 11);
+    music.setMood(MENU_MOOD);
     // Nowy gracz (bez żadnego runu i zapisu): kursor od razu na Treningu.
     if (isNewPlayer(app)) this.menu.sel = 3;
   }
@@ -483,6 +485,7 @@ export class SettingsScreen implements Screen {
   constructor(private readonly app: App, private readonly back: Screen) {
     const s = app.save.settings;
     const vol = (d: number) => () => { s.volume = Math.round(Math.max(0, Math.min(1, s.volume + d)) * 10) / 10; app.persist(); };
+    const mus = (d: number) => () => { s.music = Math.round(Math.max(0, Math.min(1, s.music + d)) * 10) / 10; app.persist(); };
     const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx' | 'hints' | 'hitstop' | 'easy' | 'elemShapes') => () => { s[k] = !s[k]; app.persist(); };
     const aim = (d: number) => () => {
       const i = Math.max(0, AIM_MODES.indexOf(s.aim));
@@ -497,6 +500,7 @@ export class SettingsScreen implements Screen {
     const yes = (v: boolean) => (v ? 'tak' : 'nie');
     this.menu = new Menu([
       { label: () => `Głośność ${Math.round(s.volume * 100)}%`, left: vol(-0.1), right: vol(0.1) },
+      { label: () => `Muzyka ${Math.round(s.music * 100)}%`, left: mus(-0.1), right: mus(0.1) },
       { label: () => `Trudność: ${s.easy ? 'łatwa' : 'normalna'}`, act: toggle('easy'), left: toggle('easy'), right: toggle('easy') },
       { label: () => `Celowanie: ${AIM_LABEL[s.aim] ?? AIM_LABEL.mixed}`, left: aim(-1), right: aim(1) },
       { label: () => `Kształty żywiołów: ${yes(s.elemShapes)}`, act: toggle('elemShapes') },
@@ -514,9 +518,10 @@ export class SettingsScreen implements Screen {
       { label: () => `Licznik FPS / debug: ${yes(s.debug)}`, act: toggle('debug') },
       { label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } },
       { label: () => 'Wróć', act: () => app.go(back) },
-    ], W / 2, 36, 280, 11);
+    ], W / 2, 34, 280, 11);
     this.hints = [
       () => 'Strzałki w lewo/prawo zmieniają wartość.',
+      () => 'Muzyka tworzona na bieżąco: w każdym biomie inna skala, rośnie razem z walką (bębny w tłumie, melodia przy bossie).',
       () => `Łatwa: wrogowie zadają ${Math.round(BAL.easy.dmg * 100)}% mniej obrażeń i mają ${Math.round(BAL.easy.hp * 100)}% mniej HP. Bez odznak Paktu.`,
       () => AIM_HINT[s.aim] ?? AIM_HINT.mixed,
       () => 'Dla daltonistów: każdy żywioł ma też własny kształt (ogień trójkąt, lód romb, błyskawica zygzak, trucizna kropla).',
