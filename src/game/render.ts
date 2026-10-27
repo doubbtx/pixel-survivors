@@ -103,6 +103,8 @@ export function renderWorld(run: Run, r: Renderer): void {
       drawSprite(g, `prop${biome}@${(h >>> 4) % PROP_KINDS}`, x, y);
     }
   }
+  // Przyciemnienie tła (Ustawienia): podłoże i dekoracje ciemniejsze, wszystko, co żyje, odcina się od nich.
+  if (run.bgDim > 0) r.withAlpha(run.bgDim, () => r.rect(0, 0, W, H, C.black));
 
   // Ataki gracza (ustawienie): przygaszone = półprzezroczyste i bez poświat, ukryte = pominięte (działają dalej).
   const atkOn = run.playerFx !== 'hidden', glow = run.playerFx === 'visible';
@@ -409,6 +411,12 @@ export function renderWorld(run: Run, r: Renderer): void {
     }
   }
 
+  // Znacznik gracza (Ustawienia): pulsujący krąg pod postacią.
+  if (run.playerMarker && run.outcome !== 'dead') {
+    const pr = 11 + Math.round(Math.sin(run.time * 5));
+    r.circle(px, py + 4, pr + 1, C.black);
+    r.circle(px, py + 4, pr, run.player.hurtCd > 0 ? C.red : C.yellow);
+  }
   // Gracz (miganie przy nietykalności).
   const blink = (p.hurtCd > 0 || p.iframes > 0) && run.step % 6 < 3;
   if (!blink && run.outcome !== 'dead') {
@@ -458,12 +466,15 @@ export function renderWorld(run: Run, r: Renderer): void {
   // Pociski wrogów: najpierw poświaty (jedna zmiana przezroczystości dla wszystkich), potem kule.
   // Przy bardzo dużej liczbie pocisków poświaty są pomijane (wydajność).
   if (fancy && run.bullets.count < 600) {
-    r.withAlpha(0.28, () => {
+    r.withAlpha(run.bulletOutline ? 0.45 : 0.28, () => {
       for (const b of run.bullets.items) if (vis(b.x, b.y)) r.circle(X(b.x), Y(b.y), b.radius * ZOOM + 4, BULLET_GLOW[b.sprite] ?? C.red, true);
     });
   }
+  // Wyraźne pociski (Ustawienia): ciemna obwódka pod każdym pociskiem.
   for (const b of run.bullets.items) {
-    if (vis(b.x, b.y)) drawSprite(g, b.sprite, X(b.x), Y(b.y));
+    if (!vis(b.x, b.y)) continue;
+    if (run.bulletOutline) r.circle(X(b.x), Y(b.y), b.radius * ZOOM + 3, C.black, true);
+    drawSprite(g, b.sprite, X(b.x), Y(b.y));
   }
 
   // Cząsteczki i efekty (trafienia, wybuchy, błyski) — też ataki gracza.

@@ -5,7 +5,7 @@ import { startLoop } from './core/loop';
 import { sfx } from './core/audio';
 import { loadSave, writeSave } from './core/save';
 import type { App, Screen } from './ui/app';
-import { MainMenu } from './ui/menus';
+import { MainMenu, toggleFullscreen } from './ui/menus';
 import { music } from './core/music';
 
 /**
@@ -18,6 +18,7 @@ const input = new Input(renderer, canvas);
 const save = loadSave();
 sfx.setVolume(save.settings.volume);
 music.setVolume(save.settings.music);
+renderer.setFill(save.settings.scaleFill);
 
 // AudioContext wymaga gestu użytkownika.
 const unlock = () => sfx.unlock();
@@ -46,6 +47,8 @@ app.loop = startLoop(
   (dt) => {
     input.pollGamepads();
     fadeT = Math.max(0, fadeT - dt);
+    // Pełny ekran: F na każdym ekranie.
+    if (input.pressed('fullscreen')) toggleFullscreen();
     screen.update(dt);
     music.update(dt);
     input.endStep();

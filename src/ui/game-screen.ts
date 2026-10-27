@@ -1,6 +1,6 @@
 import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText } from '../core/font';
+import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
 import { heroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
@@ -37,6 +37,8 @@ import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 import { PowerPickView } from './powers';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { heroSkins } from '../data/pacts';
+import { FEAT_BY_ID } from '../data/feats';
+import { featsOnWin } from '../systems/feats';
 import { BESTIARY_BY_ID, loreBonus, loreMuls } from '../data/bestiary';
 import type { DailyDef } from '../data/daily';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
@@ -208,6 +210,9 @@ export class GameScreen implements Screen {
       }
     }
     run.killsById = {};
+    // Wyczyny: liczniki w zapisie.
+    for (const id of run.featsNew) this.app.save.feats[id] = (this.app.save.feats[id] ?? 0) + 1;
+    run.featsNew = [];
     // Osiągnięcia: odblokowują karty w ofertach od razu, także w tym runie.
     const got = this.app.save.achievements;
     for (const a of ACHIEVEMENTS) {
@@ -288,6 +293,8 @@ export class GameScreen implements Screen {
       this.openPending();
       return;
     }
+    // Bez skazy: wygrany run (tryby treningowe) albo 3 poziomy Hardcore bez trafienia.
+    if (this.mode === 'training' || (this.mode === 'hardcore' && run.depth >= 3)) featsOnWin(run);
     this.updateRecords(true);
     if (this.mode === 'training') {
       // Wyzwanie dnia: najlepszy czas pokonania bossa.
@@ -494,6 +501,9 @@ export class GameScreen implements Screen {
     run.lowFx = set.lowFx;
     run.playerFx = set.playerFx;
     run.elemShapes = set.elemShapes;
+    run.bgDim = set.bgDim;
+    run.bulletOutline = set.bulletOutline;
+    run.playerMarker = set.playerMarker;
     if (run.easy !== set.easy) { run.easy = set.easy; run.onBuildChanged(); }
     if (inp.pressed('debug')) {
       set.debug = !set.debug;
@@ -733,6 +743,7 @@ export class GameScreen implements Screen {
       drawText(g, k, 94, 72 + i * 12, C.lgray);
       drawText(g, v, 386, 72 + i * 12, C.white, { align: 'right' });
     });
+    if (run.featsLevel.length) drawText(g, `Wyczyny: ${run.featsLevel.map((id) => FEAT_BY_ID[id].name).join(', ')}`, 94, 128, C.gold);
     drawText(g, `Dalej: ${next.name}`, 94, 140, C.white);
     drawText(g, `Cel: ${objectiveLabel(next.objective)}, potem ${next.bossName}`, 94, 152, C.lavender);
     drawText(g, `Postęp zapisany. Na start +${Math.round(BAL.levelClearHeal * 100)}% HP.`, 94, 166, C.dgray);
@@ -756,8 +767,11 @@ export class GameScreen implements Screen {
       : ex ? `Ekspedycja: akt ${ex.act}/${BAL.expedition.acts}, ukończone węzły ${ex.cleared}${won ? `, esencja x${BAL.expedition.winEssenceMul}` : ''}` : '';
     if (modeLine) drawText(g, modeLine, W / 2, 28, C.orange, { align: 'center', shadow: C.black });
     drawText(g, stats, W / 2, 39, C.white, { align: 'center', shadow: C.black });
-    const essence = this.mode === 'expedition' ? `+${fmt(this.essence)} esencji dla: ${run.hero.name}   (Rozwój w menu głównym)` : 'Bez esencji i Rozwoju: rekord uczciwy (esencja tylko w Ekspedycji)';
-    drawText(g, essence, W / 2, 50, C.cyan, { align: 'center', shadow: C.black });
+    // Poza Ekspedycją zamiast informacji o esencji: wyczyny runu (jeśli są).
+    const feats = [...new Set(run.featsRun)].map((id) => FEAT_BY_ID[id].name).join(', ');
+    const essence = this.mode === 'expedition' ? `+${fmt(this.essence)} esencji dla: ${run.hero.name}   (Rozwój w menu głównym)`
+      : feats ? `Wyczyny: ${feats}` : 'Bez esencji i Rozwoju: rekord uczciwy (esencja tylko w Ekspedycji)';
+    drawText(g, essence, W / 2, 50, feats && this.mode !== 'expedition' ? C.gold : C.cyan, { align: 'center', shadow: C.black });
     // Zakładki: obrażenia, wykres DPS, karta buildu (Tab / strzałki / klik).
     END_TABS.forEach((t, i) => {
       panel(r, 50 + i * 128, 62, 124, 14, i === this.endPage ? C.gold : C.slate);
@@ -835,10 +849,11 @@ export class GameScreen implements Screen {
       if (c.stacks > 1) drawText(g, String(c.stacks), cx + 13, cy + 9, C.white, { outline: C.black });
     });
     const extra = [
+      run.featsRun.length ? `Wyczyny: ${[...new Set(run.featsRun)].map((id) => FEAT_BY_ID[id].name).join(', ')}` : '',
       ...[...run.secrets].map((id) => SECRET_BY_ID[id]?.name).filter(Boolean),
       run.power ? `Moc: ${BOSS_POWER_BY_ID[run.power.id].name} ${run.power.level}` : '',
     ].filter(Boolean).join(', ');
-    if (extra) drawText(g, extra, 62, 186, C.hotpink);
+    wrapText(extra, 360).slice(0, 2).forEach((l, i) => drawText(g, l, 62, 183 + i * 9, C.hotpink));
   }
 }
 

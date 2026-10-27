@@ -11,6 +11,8 @@ import { HERO_BY_ID, evolveAbility, type HeroDef, type AbilitySlot } from '../da
 import { WEAPON_BY_ID } from '../data/weapons';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { levelDef, BIOME_CYCLE, VOID_BIOME, type LevelDef } from '../data/levels';
+import type { FeatId } from '../data/feats';
+import { resetLevelFeats, featsOnBoss, featsOnKill } from '../systems/feats';
 import { nodeLevel, EX_BLESSINGS, type ExpeditionState } from '../data/expedition';
 import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import type { WeaponBonus } from '../data/upgrades';
@@ -164,6 +166,10 @@ export interface RunSnapshot {
   /** Pakty ryzyka runu i pokonani bossowie (od 0.13). */
   pacts?: Record<string, number>;
   bossKills?: number;
+  /** Wyczyny: trafienia w runie, passa Nietykalnego, zdobyte wyczyny. */
+  runHits?: number;
+  hitlessLevels?: number;
+  feats?: FeatId[];
   /** Materiały i zwoje kuźni (od 0.14). */
   mats?: Partial<Record<MatId, number>>;
   scrolls?: Partial<Record<ScrollId, number>>;
@@ -296,6 +302,19 @@ export class Run {
   }
   /** Tryb Głowy bossów (sekret: kod Konami w menu): bossowie biomów po kolei, na końcu Serce Pustki. */
   rush = false;
+  /**
+   * Wyczyny (systems/feats.ts): liczniki poziomu (trafienia, uniki, Q/E, start, Rzeź i Mistrz kombo zdobyte, elity), czasy zabójstw do Rzezi,
+   * trafienia w całym runie, passa poziomów bez trafienia, wyczyny runu i nowe do przeniesienia do zapisu, wyczyny ostatniego bossa,
+   * czas ostatniego trafienia (karta Spokój).
+   */
+  feat = { hits: 0, dashes: 0, casts: 0, start: 0, massacre: false, combo: false, elites: 0 };
+  killTimes: number[] = [];
+  runHits = 0;
+  hitlessLevels = 0;
+  featsRun: FeatId[] = [];
+  featsNew: FeatId[] = [];
+  featsLevel: FeatId[] = [];
+  lastHurtAt = -999;
   /** Szybki run: BAL.quick.levels krótkich poziomów z bossami jeden po drugim w tym samym świecie. */
   quick = false;
   lore: Record<string, number> = {};
@@ -427,6 +446,10 @@ export class Run {
   /** Dostępność (Ustawienia): kształty żywiołów i tryb łatwy (słabsi wrogowie, flagi w indexEffects). */
   elemShapes = false;
   easy = false;
+  /** Widoczność (Ustawienia → Obraz i widoczność): przyciemnienie tła, obwódki pocisków wrogów, znacznik gracza. */
+  bgDim = 0;
+  bulletOutline = false;
+  playerMarker = false;
   /** Ukryte pociski gracza (ustawienie): nadal działają, tylko nie są rysowane. */
   playerFx: PlayerFx = 'visible';
 
@@ -478,6 +501,9 @@ export class Run {
     this.levelEventT = BAL.levelEvents.every * 0.6;
     this.strikes = [];
     this.bossTitle = null;
+    resetLevelFeats(this);
+    this.featsLevel = [];
+    delete this.cardState.halo;
     this.terrain = [];
     this.terrainChunks.clear();
     this.terrainSeed = rng.int(1, 1e9);
@@ -1063,7 +1089,9 @@ export class Run {
     if (e.brittle > 0 && !o.dot) { brittle = e.brittle; e.brittle = 0; }
     const big = e.boss || e.elite ? 1 + this.flag('bossDmg') : 1;
     const lore = this.lore[e.boss ? 'boss' : e.def.id] ?? 1;
-    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * resourceDamageMul(this, src) * (1 - e.dr));
+    // Spokój (karta z osiągnięcia): więcej obrażeń po dłuższym czasie bez trafienia.
+    const calm = this.flag('calm') > 0 && this.totalTime - this.lastHurtAt >= BAL.feats.calmAfter ? 1 + this.flag('calm') : 1;
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resourceDamageMul(this, src) * (1 - e.dr));
     e.hp -= dmg;
     e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dmg);
@@ -1237,6 +1265,7 @@ export class Run {
     taskOnKill(this, e);
     secretsOnKill(this, e);
     comboOnKill(this);
+    featsOnKill(this, e);
     forgeKillDrops(this, e);
     this.emit('onKill', e);
     if (e.elite) {
@@ -1260,6 +1289,7 @@ export class Run {
 
   /** Boss pokonany = poziom ukończony. */
   private onBossKilled(): void {
+    const bossAge = this.boss?.age ?? Infinity;
     this.boss = null;
     this.pendingLoot.push(this.rollLoot('boss'));
     this.pendingCards.push('boss');
@@ -1283,6 +1313,7 @@ export class Run {
       }
       return;
     }
+    this.featsLevel = featsOnBoss(this, bossAge);
     // Głowy bossów (następny boss po krótkiej przerwie, piąty to Serce Pustki, kilka awansów) i Szybki run (następny poziom):
     // świat zostaje, zmienia się biom i cel, leczenie.
     if (this.rush ? this.depth <= BIOME_CYCLE : this.quick && this.depth < BAL.quick.levels) {
@@ -1364,6 +1395,13 @@ export class Run {
       if (f) f.r = 14;
       return false;
     }
+    // Nimb (karta z osiągnięcia): pierwsze trafienie na poziomie blokowane.
+    if (this.flag('firstBlock') > 0 && !this.cardState.halo) {
+      this.cardState.halo = 1;
+      p.iframes = Math.max(p.iframes, 0.5);
+      this.popText(p.x, p.y - 10, 'Nimb!', C.yellow);
+      return false;
+    }
     let dmg = base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this);
     const total = dmg;
     const absorbed = Math.min(p.shield, dmg);
@@ -1371,6 +1409,8 @@ export class Run {
     dmg -= absorbed;
     p.hp -= dmg;
     p.hurtCd = BAL.hurtFlash;
+    // Krótka nietykalność po trafieniu: salwa nie zabiera kilku trafień naraz.
+    p.iframes = Math.max(p.iframes, BAL.hurtIframes);
     this.hurtFx = 0.25;
     p.flash = 6;
     this.addShake(1.5);
@@ -1382,6 +1422,9 @@ export class Run {
     if (this.boss) this.cardState.bossHit = 1;
     comboOnHurt(this);
     taskOnHurt(this);
+    this.feat.hits++;
+    this.runHits++;
+    this.lastHurtAt = this.totalTime;
     this.emit('onDamageTaken', total);
     // Odwet (węzeł Rozwoju Borguna): oberwanie wyzwala darmowy Wstrząs (najwyżej co `counterSlam` s).
     const counter = this.flag('counterSlam');
@@ -1582,6 +1625,7 @@ export class Run {
       power: this.power ? [this.power.id, this.power.level] : undefined,
       pacts: { ...this.pacts },
       bossKills: this.bossKills,
+      runHits: this.runHits, hitlessLevels: this.hitlessLevels, feats: [...this.featsRun],
       mats: { ...this.mats },
       scrolls: { ...this.scrolls },
       secrets: [...this.secrets],
@@ -1623,6 +1667,9 @@ export class Run {
     run.dpsMark = run.dmgTotal;
     run.scrolls = { ...run.scrolls, ...s.scrolls };
     run.bossKills = s.bossKills ?? 0;
+    run.runHits = s.runHits ?? 0;
+    run.hitlessLevels = s.hitlessLevels ?? 0;
+    run.featsRun = s.feats ?? [];
     // Przedmioty nieznanych typów (np. z nowszej wersji danych) są pomijane.
     const known = (it: Item | null | undefined): it is Item => !!it && !!BASE_BY_ID[it.base];
     for (const sl of Object.keys(run.equipment) as SlotId[]) {

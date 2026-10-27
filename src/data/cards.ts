@@ -48,6 +48,7 @@ import { spawnTurret } from '../systems/turrets';
  *  execHeal / execKeep / stepResetDash   Vesper: Egzekucja leczy za zabitych i zostawia część kombo, Cios z cienia odnawia unik
  *  guardHeal       Aurel: mocniejsze leczenie z trafień strażników (+ułamek)
  *  secretRate      częstsze sekrety map (+ułamek)
+ *  calm            +obrażenia po BAL.feats.calmAfter s bez trafienia; firstBlock: pierwsze trafienie na poziomie blokowane
  * Flagi paktów (data/pacts.ts, na cały run):
  *  bulletSpeed     szybsze pociski wrogów (+ułamek)
  *  eliteMods       dodatkowe cechy elit (liczba)
@@ -441,6 +442,9 @@ export const CARDS: CardDef[] = [
   { id: 'u_eternal', name: 'Wieczność', rarity: 'gold', tags: ['Życie'], unlock: 'eternal', desc: '+1 HP na sekundę, leczysz się za 1% zadanych obrażeń.', stats: { regen: 1, lifesteal: 0.01 } },
   { id: 'u_sun', name: 'Poranne słońce', rarity: 'silver', tags: ['Obszar'], unlock: 'daily', desc: '+15% obszaru.', stackable: true, stats: { area: 0.15 } },
   { id: 'u_pact', name: 'Krwawy kontrakt', rarity: 'prism', tags: ['Klątwa', 'Krytyk'], unlock: 'gambler', cursed: true, desc: '+35% obrażeń i +20% szybkości ataku, ale wrogowie mają +20% HP.', stats: { might: 0.35, atkSpeed: 0.2 }, flags: { enemyHp: 0.2 } },
+  { id: 'u_ward', name: 'Spokój', rarity: 'gold', tags: ['Krytyk', 'Tarcze'], unlock: 'flawless_level', desc: 'Po 10 s bez trafienia zadajesz +25% obrażeń.', flags: { calm: 0.25 } },
+  { id: 'u_halo', name: 'Nimb', rarity: 'prism', tags: ['Tarcze', 'Życie'], unlock: 'flawless_run', desc: 'Pierwsze trafienie na każdym poziomie jest zablokowane. +20 maks. HP.', flags: { firstBlock: 1 }, stats: { maxHp: 20 } },
+  { id: 'u_medal', name: 'Medal', rarity: 'gold', tags: ['Umiejętności'], unlock: 'feat_hunter', desc: '+1 karta do wyboru przy każdym awansie, +10% doświadczenia.', stats: { luck: 1, growth: 0.1 } },
   {
     id: 'h_k_inspire', name: 'Natchnienie', rarity: 'prism', tags: ['Umiejętności'], hero: 'kestra', desc: 'Przez 4 s po Deszczu strzał Q i E odnawiają się 3x szybciej.',
     hooks: {
@@ -483,6 +487,7 @@ const CARD_ICONS: Record<string, string> = {
   h_a_sanct: 'ab_a_sanct_evo', h_a_judge: 'ab_a_judge', h_a_shield: 'tag:Tarcze', h_a_saint: 'ab_a_guard_evo',
   u_trophy: 'ui_skull', u_butcher: 'ic_axe_evo', u_mentor: 'gem2', u_map: 'cd_gold', u_smith: 'it_plate', u_ghost: 'pi_wings',
   u_banner: 'syn_all', u_greed: 'coin', u_lore: 'pi_crit', u_eternal: 'pi_herb', u_sun: 'ic_light_evo', u_pact: 'cd_blood',
+  u_ward: 'tag:Tarcze', u_halo: 'ab_a_guard', u_medal: 'pi_clover',
 };
 for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;
 

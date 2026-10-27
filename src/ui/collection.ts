@@ -15,6 +15,7 @@ import { SECRETS } from '../data/secrets';
 import { BESTIARY, loreBonus } from '../data/bestiary';
 import { ENEMIES } from '../data/enemies';
 import { ACHIEVEMENTS } from '../data/achievements';
+import { FEATS } from '../data/feats';
 import { CARD_BY_ID } from '../data/cards';
 import { fmt } from '../util/format';
 
@@ -28,9 +29,9 @@ const U_COLS = 5, U_TILE = 28, U_STEP = 32, U_X = 24, U_Y = 56;
 const U_SAMPLES: Item[] = UNIQUES.map((u) => rollUnique(1, u.id));
 
 /** Zakładki w kolejności przełączania (Tab), nazwy i kolory nagłówków. */
-type Tab = 'cards' | 'uniques' | 'secrets' | 'bestiary' | 'achievements';
-const TABS: Tab[] = ['cards', 'uniques', 'secrets', 'bestiary', 'achievements'];
-const TAB_NAME: Record<Tab, string> = { cards: 'Karty', uniques: 'Unikaty', secrets: 'Sekrety', bestiary: 'Bestiariusz', achievements: 'Osiągnięcia' };
+type Tab = 'cards' | 'uniques' | 'secrets' | 'bestiary' | 'achievements' | 'feats';
+const TABS: Tab[] = ['cards', 'uniques', 'secrets', 'bestiary', 'achievements', 'feats'];
+const TAB_NAME: Record<Tab, string> = { cards: 'Karty', uniques: 'Unikaty', secrets: 'Sekrety', bestiary: 'Bestiariusz', achievements: 'Osiągnięcia', feats: 'Wyczyny' };
 
 /** Bestiariusz: siatka 6 kolumn. */
 const B_COLS = 6, B_TILE = 28, B_STEP = 32, B_X = 18, B_Y = 50;
@@ -96,6 +97,7 @@ export class CollectionScreen implements Screen {
     if (this.tab === 'secrets') { this.updateSecrets(); return; }
     if (this.tab === 'bestiary') { this.updateBestiary(); return; }
     if (this.tab === 'achievements') { this.updateAchievements(); return; }
+    if (this.tab === 'feats') { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, 8, 8, 70, 18)) this.app.go(this.back); return; }
     if (inp.pressed('left')) this.sel = (this.sel + n - 1) % n;
     if (inp.pressed('right')) this.sel = (this.sel + 1) % n;
     if (inp.pressed('up')) this.sel = (this.sel + n - COLS) % n;
@@ -161,7 +163,7 @@ export class CollectionScreen implements Screen {
     if (inp.pressed('down')) this.aSel = (this.aSel + 1) % n;
     const m = inp.mouse;
     ACHIEVEMENTS.forEach((_, i) => {
-      if (inside(m.x, m.y, 10, 40 + i * 15, 220, 14) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.aSel = i;
+      if (inside(m.x, m.y, 10, 36 + i * 13, 220, 12) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.aSel = i;
     });
     if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
@@ -199,16 +201,29 @@ export class CollectionScreen implements Screen {
   private renderAchievements(): void {
     const r = this.app.r, g = r.g, got = this.app.save.achievements;
     ACHIEVEMENTS.forEach((a, i) => {
-      const y = 40 + i * 15, ok = got.includes(a.id), on = i === this.aSel;
-      panel(r, 10, y, 220, 14, on ? C.lime : C.slate);
-      drawText(g, a.name, 18, y + 1, ok ? C.lime : C.lgray);
-      drawText(g, ok ? 'zdobyte' : '', 224, y + 1, C.lime, { align: 'right' });
+      const y = 36 + i * 13, ok = got.includes(a.id), on = i === this.aSel;
+      panel(r, 10, y, 220, 12, on ? C.lime : C.slate);
+      drawText(g, a.name, 18, y, ok ? C.lime : C.lgray);
+      drawText(g, ok ? 'zdobyte' : '', 224, y, C.lime, { align: 'right' });
     });
     const a = ACHIEVEMENTS[this.aSel], ok = got.includes(a.id);
-    drawText(g, a.desc, 240, 44, ok ? C.lime : C.white);
+    wrapText(a.desc, W - 250).forEach((l, i) => drawText(g, l, 240, 34 + i * 10, ok ? C.lime : C.white));
     drawText(g, ok ? 'Nagroda odblokowana: karta w ofertach' : 'Nagroda: nowa karta w ofertach', 240, 58, ok ? C.lime : C.lavender);
     drawCard(r, CARD_BY_ID[a.card], 290, 72, false, this.step, 0);
-    drawText(g, `Zdobyte ${ACHIEVEMENTS.filter((x) => got.includes(x.id)).length}/${ACHIEVEMENTS.length}`, 10, 226, C.lavender);
+    drawText(g, `Zdobyte ${ACHIEVEMENTS.filter((x) => got.includes(x.id)).length}/${ACHIEVEMENTS.length}`, 10, 36 + ACHIEVEMENTS.length * 13 + 2, C.lavender);
+  }
+
+  /** Zakładka Wyczyny: warunek, nagroda i ile razy zdobyty. */
+  private renderFeats(): void {
+    const r = this.app.r, g = r.g, got = this.app.save.feats;
+    FEATS.forEach((f, i) => {
+      const y = 32 + i * 20, n = got[f.id] ?? 0;
+      panel(r, 10, y, W - 20, 19, n ? C.gold : C.slate);
+      drawText(g, f.name, 16, y, n ? C.gold : C.lgray);
+      drawText(g, n ? `zdobyty ${n}x` : 'jeszcze nie', W - 16, y, n ? C.yellow : C.dgray, { align: 'right' });
+      drawText(g, f.desc, 112, y, C.white);
+      drawText(g, `Nagroda: ${f.reward}`, 112, y + 9, C.lavender);
+    });
   }
 
   /** Zakładka Sekrety: lista (odkryte z nazwą, nieodkryte jako ???) i szczegóły: zagadka, a po odkryciu efekt. */
@@ -262,10 +277,13 @@ export class CollectionScreen implements Screen {
     r.clear(C.black);
     panel(r, W - 116, 8, 108, 18, this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.slate);
     drawText(g, `[Tab] ${TAB_NAME[TABS[(TABS.indexOf(this.tab) + 1) % TABS.length]]}`, W - 62, 11, C.white, { align: 'center' });
-    if (this.tab === 'bestiary' || this.tab === 'achievements') {
-      drawText(g, this.tab === 'bestiary' ? 'Bestiariusz' : 'Osiągnięcia', W / 2, 10, this.tab === 'bestiary' ? C.lavender : C.lime, { align: 'center', scale: 2, outline: C.black });
+    if (this.tab === 'bestiary' || this.tab === 'achievements' || this.tab === 'feats') {
+      const head = { bestiary: ['Bestiariusz', C.lavender], achievements: ['Osiągnięcia', C.lime], feats: ['Wyczyny', C.gold] }[this.tab] as [string, number];
+      drawText(g, head[0], W / 2, 10, head[1], { align: 'center', scale: 2, outline: C.black });
       drawText(g, '[Esc] wróć', 12, 12, C.lgray);
-      if (this.tab === 'bestiary') this.renderBestiary(); else this.renderAchievements();
+      if (this.tab === 'bestiary') this.renderBestiary();
+      else if (this.tab === 'achievements') this.renderAchievements();
+      else this.renderFeats();
       return;
     }
     if (this.tab === 'secrets') {

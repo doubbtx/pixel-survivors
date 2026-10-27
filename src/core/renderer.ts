@@ -12,7 +12,8 @@ export const VIEW_W = W / ZOOM;
 export const VIEW_H = H / ZOOM;
 
 /**
- * Renderer: bufor niskiej rozdzielczości + prezentacja na ekranie ze skalą całkowitą.
+ * Renderer: bufor niskiej rozdzielczości + prezentacja na ekranie: wypełnienie okna (domyślnie; najpierw całkowite
+ * powiększenie bez wygładzania, potem dopasowanie z wygładzaniem, więc piksele są równe) albo sama skala całkowita.
  * Prymitywy pikselowe (prostokąty, okręgi z cache, linie Bresenhama) trzymają się palety;
  * półprzezroczystość ustawia się przez globalAlpha (cienie, poświaty).
  */
@@ -21,6 +22,10 @@ export class Renderer {
   readonly g: CanvasRenderingContext2D;
   private readonly ctx: CanvasRenderingContext2D;
   private scale = 1;
+  /** Wypełnianie okna i bufor pośredni o całkowitej skali (tylko w tym trybie). */
+  private fill = true;
+  private readonly mid: HTMLCanvasElement = document.createElement('canvas');
+  private readonly midCtx: CanvasRenderingContext2D;
   private circleCache = new Map<string, HTMLCanvasElement>();
 
   constructor(private readonly display: HTMLCanvasElement) {
@@ -30,13 +35,34 @@ export class Renderer {
     this.g = this.buf.getContext('2d')!;
     this.g.imageSmoothingEnabled = false;
     this.ctx = display.getContext('2d')!;
+    this.midCtx = this.mid.getContext('2d')!;
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
 
-  /** Dobiera największą całkowitą skalę mieszczącą się w oknie (min. 1; mniejsze ekrany skaluje CSS). */
+  setFill(on: boolean): void {
+    this.fill = on;
+    this.resize();
+  }
+
+  /**
+   * Wypełnienie: płótno o rozmiarze okna w pikselach urządzenia, bufor pośredni W×H × ceil(skala).
+   * Inaczej największa całkowita skala mieszcząca się w oknie (min. 1; mniejsze ekrany skaluje CSS).
+   */
   resize(): void {
-    const s = Math.floor(Math.min(window.innerWidth / W, window.innerHeight / H));
+    const fit = Math.min(window.innerWidth / W, window.innerHeight / H);
+    if (this.fill && fit >= 1) {
+      const dpr = window.devicePixelRatio || 1, cw = Math.floor(W * fit), ch = Math.floor(H * fit);
+      this.scale = Math.ceil(fit * dpr);
+      this.mid.width = W * this.scale;
+      this.mid.height = H * this.scale;
+      this.display.width = Math.round(cw * dpr);
+      this.display.height = Math.round(ch * dpr);
+      this.display.style.width = `${cw}px`;
+      this.display.style.height = `${ch}px`;
+      return;
+    }
+    const s = Math.floor(fit);
     this.scale = Math.max(1, s);
     this.display.width = W * this.scale;
     this.display.height = H * this.scale;
@@ -46,8 +72,16 @@ export class Renderer {
   }
 
   present(): void {
+    if (this.fill && this.mid.width === W * this.scale && this.display.width !== W * this.scale) {
+      this.midCtx.imageSmoothingEnabled = false;
+      this.midCtx.drawImage(this.buf, 0, 0, this.mid.width, this.mid.height);
+      this.ctx.imageSmoothingEnabled = true;
+      this.ctx.imageSmoothingQuality = 'high';
+      this.ctx.drawImage(this.mid, 0, 0, this.display.width, this.display.height);
+      return;
+    }
     this.ctx.imageSmoothingEnabled = false;
-    this.ctx.drawImage(this.buf, 0, 0, W * this.scale, H * this.scale);
+    this.ctx.drawImage(this.buf, 0, 0, this.display.width, this.display.height);
   }
 
   /** Przelicza współrzędne zdarzenia (px ekranu) na piksele logiczne bufora. */

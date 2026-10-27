@@ -68,6 +68,14 @@ export interface Settings {
   /** Dostępność: tryb łatwy (słabsi wrogowie, bez odznak Paktu) i kształty żywiołów dla daltonistów. */
   easy: boolean;
   elemShapes: boolean;
+  /**
+   * Obraz i widoczność: wypełnianie okna (inaczej tylko całkowite powiększenie), przyciemnienie tła (0..1),
+   * obwódki pocisków wrogów, znacznik pod graczem.
+   */
+  scaleFill: boolean;
+  bgDim: number;
+  bulletOutline: boolean;
+  playerMarker: boolean;
 }
 
 /** Kolekcja kart (między runami): odkryte, liczba wyborów i bany (wykluczone z ofert); odkryte unikaty (nowe pole bez migracji). */
@@ -106,6 +114,8 @@ export interface SaveData {
   /** Głowy bossów (sekretny tryb): najlepszy czas zdobycia wszystkich głów (0 = jeszcze nie). Skórki bohaterów (odznaki Paktu). */
   rushBest: number;
   skins: Record<string, string>;
+  /** Wyczyny (data/feats.ts): ile razy zdobyty każdy. */
+  feats: Record<string, number>;
 }
 
 type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
@@ -165,7 +175,7 @@ function defaults(): SaveData {
     settings: { volume: 0.5, music: 0.4, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
-      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false },
+      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, bgDim: 0.2, bulletOutline: true, playerMarker: true },
     records: {},
     slots: { hardcore: null, endless: null, expedition: null },
     board: [],
@@ -180,6 +190,7 @@ function defaults(): SaveData {
     daily: { date: '', best: 0, tries: 0 },
     rushBest: 0,
     skins: {},
+    feats: {},
   };
 }
 
@@ -218,6 +229,7 @@ export function loadSave(): SaveData {
     daily: { ...base.daily, ...d.daily },
     rushBest: d.rushBest ?? 0,
     skins: { ...d.skins },
+    feats: { ...d.feats },
   };
 }
 

@@ -371,6 +371,9 @@ export function castAbility(run: Run, slot: AbilitySlot, free = false): void {
   if (a.def.evolved) EVO_EXTRA[a.def.id]?.(run, a, P);
   if (a.def.kind !== 'dash') sfx.play('ability');
   if (free) return;
+  // Wyczyny Twardziel i Czysta broń.
+  if (slot === 'dash') run.feat.dashes++;
+  else if (slot === 'q' || slot === 'e') run.feat.casts++;
   resourceOnCast(run, slot);
   // Węzły Rozwoju (data/meta.ts, flagi): powtórzenie umiejętności, Przewrót skraca Q / zostawia Sieć, tarcza z Pierścienia.
   for (let i = 0; i < run.flag(`echo.${slot}`); i++) run.schedule(0.4 * (i + 1), () => castAbility(run, slot, true));

@@ -13,7 +13,7 @@ import { endSlotRun } from '../game/campaign';
 import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { Menu, panel, inside, slot } from './widgets';
+import { Menu, panel, inside, slot, type MenuItem } from './widgets';
 import type { Action } from '../core/input';
 import { music, MENU_MOOD } from '../core/music';
 import { GameScreen, type GameOpts } from './game-screen';
@@ -477,16 +477,24 @@ const AIM_HINT: Record<AimMode, string> = {
   manual: 'Celujesz tylko myszą lub prawą gałką, bez nich w kierunku ruchu.',
 };
 
+/** Przyciemnienie tła: kolejne poziomy (Ustawienia → Obraz i widoczność). */
+const DIM_LEVELS = [0, 0.2, 0.35];
+const DIM_LABEL = ['brak', 'lekkie', 'mocne'];
+
+/** Ustawienia: strona główna (dźwięk, trudność, sterowanie) i strona Obraz i widoczność. */
 export class SettingsScreen implements Screen {
   private menu: Menu;
   /** Podpowiedź pod menu dla zaznaczonej pozycji. */
   private hints: (() => string)[];
 
-  constructor(private readonly app: App, private readonly back: Screen) {
+  constructor(private readonly app: App, private readonly back: Screen, private readonly page: 'main' | 'video' = 'main') {
     const s = app.save.settings;
-    const vol = (d: number) => () => { s.volume = Math.round(Math.max(0, Math.min(1, s.volume + d)) * 10) / 10; app.persist(); };
-    const mus = (d: number) => () => { s.music = Math.round(Math.max(0, Math.min(1, s.music + d)) * 10) / 10; app.persist(); };
-    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx' | 'hints' | 'hitstop' | 'easy' | 'elemShapes') => () => { s[k] = !s[k]; app.persist(); };
+    const step = (k: 'volume' | 'music', d: number) => () => { s[k] = Math.round(Math.max(0, Math.min(1, s[k] + d)) * 10) / 10; app.persist(); };
+    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx' | 'hints' | 'hitstop' | 'easy' | 'elemShapes' | 'scaleFill' | 'bulletOutline' | 'playerMarker') => () => {
+      s[k] = !s[k];
+      app.persist();
+      if (k === 'scaleFill') app.r.setFill(s.scaleFill);
+    };
     const aim = (d: number) => () => {
       const i = Math.max(0, AIM_MODES.indexOf(s.aim));
       s.aim = AIM_MODES[(i + d + AIM_MODES.length) % AIM_MODES.length];
@@ -497,49 +505,43 @@ export class SettingsScreen implements Screen {
       s.playerFx = FX_MODES[(i + d + FX_MODES.length) % FX_MODES.length];
       app.persist();
     };
+    const dim = (d: number) => () => {
+      const i = Math.max(0, DIM_LEVELS.indexOf(s.bgDim));
+      s.bgDim = DIM_LEVELS[(i + d + DIM_LEVELS.length) % DIM_LEVELS.length];
+      app.persist();
+    };
     const yes = (v: boolean) => (v ? 'tak' : 'nie');
-    this.menu = new Menu([
-      { label: () => `Głośność ${Math.round(s.volume * 100)}%`, left: vol(-0.1), right: vol(0.1) },
-      { label: () => `Muzyka ${Math.round(s.music * 100)}%`, left: mus(-0.1), right: mus(0.1) },
-      { label: () => `Trudność: ${s.easy ? 'łatwa' : 'normalna'}`, act: toggle('easy'), left: toggle('easy'), right: toggle('easy') },
-      { label: () => `Celowanie: ${AIM_LABEL[s.aim] ?? AIM_LABEL.mixed}`, left: aim(-1), right: aim(1) },
-      { label: () => `Kształty żywiołów: ${yes(s.elemShapes)}`, act: toggle('elemShapes') },
-      { label: () => `Liczby obrażeń: ${yes(s.damageNumbers)}`, act: toggle('damageNumbers') },
-      { label: () => `Liczby leczenia: ${yes(s.healNumbers)}`, act: toggle('healNumbers') },
-      { label: () => `Minimapa: ${yes(s.minimap)}`, act: toggle('minimap') },
-      { label: () => `Wstrząsy ekranu: ${yes(s.shake)}`, act: toggle('shake') },
-      { label: () => `Efekty: ${s.lowFx ? 'oszczędne' : 'pełne'}`, act: toggle('lowFx') },
-      { label: () => `Ataki gracza: ${FX_LABEL[s.playerFx] ?? FX_LABEL.visible}`, left: fx(-1), right: fx(1) },
-      { label: () => `Pauza po wyjściu z okna: ${yes(s.autoPause)}`, act: toggle('autoPause') },
-      { label: () => `Podpowiedzi: ${yes(s.hints)}`, act: toggle('hints') },
-      { label: () => (app.save.seenHints.length ? 'Pokaż podpowiedzi od nowa' : 'Podpowiedzi: wszystkie przed tobą'), act: () => { app.save.seenHints = []; app.persist(); } },
-      { label: () => `Zatrzymanie klatki przy trafieniach: ${yes(s.hitstop)}`, act: toggle('hitstop') },
-      { label: () => `Pełny ekran: ${yes(!!document.fullscreenElement)}`, act: () => toggleFullscreen() },
-      { label: () => `Licznik FPS / debug: ${yes(s.debug)}`, act: toggle('debug') },
-      { label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } },
-      { label: () => 'Wróć', act: () => app.go(back) },
-    ], W / 2, 34, 280, 11);
-    this.hints = [
-      () => 'Strzałki w lewo/prawo zmieniają wartość.',
-      () => 'Muzyka tworzona na bieżąco: w każdym biomie inna skala, rośnie razem z walką (bębny w tłumie, melodia przy bossie).',
-      () => `Łatwa: wrogowie zadają ${Math.round(BAL.easy.dmg * 100)}% mniej obrażeń i mają ${Math.round(BAL.easy.hp * 100)}% mniej HP. Bez odznak Paktu.`,
-      () => AIM_HINT[s.aim] ?? AIM_HINT.mixed,
-      () => 'Dla daltonistów: każdy żywioł ma też własny kształt (ogień trójkąt, lód romb, błyskawica zygzak, trucizna kropla).',
-      () => 'Liczby nad trafionymi wrogami (obrażenia gracza zawsze widać).',
-      () => 'Zielone liczby nad postacią: ile HP odzyskałeś (co pół sekundy).',
-      () => 'Mała mapa w prawym górnym rogu: wrogowie, elity, boss i skrzynie.',
-      () => 'Drganie ekranu przy wybuchach i trafieniach.',
-      () => 'Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety (więcej FPS, telefon).',
-      () => 'Twoje pociski, aury, strefy i błyski trafień: przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.',
-      () => 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.',
-      () => 'Krótkie wskazówki przy pierwszym spotkaniu z mechaniką (awans, skrzynie, elity, reakcje...).',
-      () => 'Kolejna gra pokaże wszystkie podpowiedzi jeszcze raz.',
-      () => 'Gra na ułamek sekundy staje przy zabiciu elity, bossa i mocnym trafieniu.',
-      () => 'Przełącza tryb pełnoekranowy przeglądarki.',
-      () => 'Licznik klatek i encji; włącza klawisze F4, F6, F7.',
-      () => 'Wartości do sprawdzenia: HP przedmiotów i ulepszeń, skalowanie wrogów, miękkie limity.',
-      () => '',
+    // Pozycja menu i jej podpowiedź w jednym miejscu.
+    const rows: [MenuItem, () => string][] = page === 'main' ? [
+      [{ label: () => `Głośność ${Math.round(s.volume * 100)}%`, left: step('volume', -0.1), right: step('volume', 0.1) }, () => 'Strzałki w lewo/prawo zmieniają wartość.'],
+      [{ label: () => `Muzyka ${Math.round(s.music * 100)}%`, left: step('music', -0.1), right: step('music', 0.1) }, () => 'Muzyka tworzona na bieżąco: w każdym biomie inna skala, rośnie razem z walką (bębny w tłumie, melodia przy bossie).'],
+      [{ label: () => `Trudność: ${s.easy ? 'łatwa' : 'normalna'}`, act: toggle('easy'), left: toggle('easy'), right: toggle('easy') }, () => `Łatwa: wrogowie zadają ${Math.round(BAL.easy.dmg * 100)}% mniej obrażeń i mają ${Math.round(BAL.easy.hp * 100)}% mniej HP. Bez odznak Paktu.`],
+      [{ label: () => `Celowanie: ${AIM_LABEL[s.aim] ?? AIM_LABEL.mixed}`, left: aim(-1), right: aim(1) }, () => AIM_HINT[s.aim] ?? AIM_HINT.mixed],
+      [{ label: () => 'Obraz i widoczność...', act: () => app.go(new SettingsScreen(app, this, 'video')) }, () => 'Wielkość obrazu, pełny ekran, czytelność pocisków i postaci, efekty.'],
+      [{ label: () => `Pauza po wyjściu z okna: ${yes(s.autoPause)}`, act: toggle('autoPause') }, () => 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.'],
+      [{ label: () => `Podpowiedzi: ${yes(s.hints)}`, act: toggle('hints') }, () => 'Krótkie wskazówki przy pierwszym spotkaniu z mechaniką (awans, skrzynie, elity, reakcje...).'],
+      [{ label: () => (app.save.seenHints.length ? 'Pokaż podpowiedzi od nowa' : 'Podpowiedzi: wszystkie przed tobą'), act: () => { app.save.seenHints = []; app.persist(); } }, () => 'Kolejna gra pokaże wszystkie podpowiedzi jeszcze raz.'],
+      [{ label: () => `Zatrzymanie klatki przy trafieniach: ${yes(s.hitstop)}`, act: toggle('hitstop') }, () => 'Gra na ułamek sekundy staje przy zabiciu elity, bossa i mocnym trafieniu.'],
+      [{ label: () => `Licznik FPS / debug: ${yes(s.debug)}`, act: toggle('debug') }, () => 'Licznik klatek i encji; włącza klawisze F4, F6, F7.'],
+      [{ label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } }, () => 'Wartości do sprawdzenia: HP przedmiotów i ulepszeń, skalowanie wrogów, miękkie limity.'],
+      [{ label: () => 'Wróć', act: () => app.go(back) }, () => ''],
+    ] : [
+      [{ label: () => `Obraz: ${s.scaleFill ? 'cały ekran' : 'ostre piksele'}`, act: toggle('scaleFill'), left: toggle('scaleFill'), right: toggle('scaleFill') }, () => 'Cały ekran: gra wypełnia okno (większy obraz). Ostre piksele: tylko całkowite powiększenie, z ramką.'],
+      [{ label: () => `Pełny ekran: ${yes(!!document.fullscreenElement)}`, act: () => toggleFullscreen() }, () => 'Przełącza tryb pełnoekranowy przeglądarki. W grze: klawisz F.'],
+      [{ label: () => `Przyciemnienie tła: ${DIM_LABEL[Math.max(0, DIM_LEVELS.indexOf(s.bgDim))]}`, left: dim(-1), right: dim(1), act: dim(1) }, () => 'Ciemniejsze podłoże i dekoracje: postacie, wrogowie i pociski bardziej odcinają się od tła.'],
+      [{ label: () => `Wyraźne pociski wrogów: ${yes(s.bulletOutline)}`, act: toggle('bulletOutline') }, () => 'Pociski wrogów dostają ciemną obwódkę i mocniejszą poświatę.'],
+      [{ label: () => `Znacznik gracza: ${yes(s.playerMarker)}`, act: toggle('playerMarker') }, () => 'Pulsujący krąg pod twoją postacią, łatwo ją znaleźć w tłumie.'],
+      [{ label: () => `Kształty żywiołów: ${yes(s.elemShapes)}`, act: toggle('elemShapes') }, () => 'Dla daltonistów: każdy żywioł ma też własny kształt (ogień trójkąt, lód romb, błyskawica zygzak, trucizna kropla).'],
+      [{ label: () => `Efekty: ${s.lowFx ? 'oszczędne' : 'pełne'}`, act: toggle('lowFx') }, () => 'Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety (więcej FPS, telefon).'],
+      [{ label: () => `Ataki gracza: ${FX_LABEL[s.playerFx] ?? FX_LABEL.visible}`, left: fx(-1), right: fx(1) }, () => 'Twoje pociski, aury, strefy i błyski trafień: przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.'],
+      [{ label: () => `Wstrząsy ekranu: ${yes(s.shake)}`, act: toggle('shake') }, () => 'Drganie ekranu przy wybuchach i trafieniach.'],
+      [{ label: () => `Liczby obrażeń: ${yes(s.damageNumbers)}`, act: toggle('damageNumbers') }, () => 'Liczby nad trafionymi wrogami (obrażenia gracza zawsze widać).'],
+      [{ label: () => `Liczby leczenia: ${yes(s.healNumbers)}`, act: toggle('healNumbers') }, () => 'Zielone liczby nad postacią: ile HP odzyskałeś (co pół sekundy).'],
+      [{ label: () => `Minimapa: ${yes(s.minimap)}`, act: toggle('minimap') }, () => 'Mała mapa w prawym górnym rogu: wrogowie, elity, boss i skrzynie.'],
+      [{ label: () => 'Wróć', act: () => app.go(back) }, () => ''],
     ];
+    this.menu = new Menu(rows.map(([it]) => it), W / 2, 38, 280, 14);
+    this.hints = rows.map(([, h]) => h);
   }
 
   update(): void {
@@ -550,15 +552,15 @@ export class SettingsScreen implements Screen {
   render(): void {
     const r = this.app.r;
     r.clear(C.black);
-    drawText(r.g, 'Ustawienia', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    panel(r, W / 2 - 160, 32, 320, this.menu.items.length * 12 + 16, C.slate);
+    drawText(r.g, this.page === 'main' ? 'Ustawienia' : 'Obraz i widoczność', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    panel(r, W / 2 - 160, 32, 320, this.menu.items.length * 14 + 12, C.slate);
     this.menu.render(r);
     wrapText(this.hints[this.menu.sel](), 400).forEach((l, i) => drawText(r.g, l, W / 2, 246 + i * 11, C.lavender, { align: 'center' }));
   }
 }
 
-/** Pełny ekran przeglądarki (wywoływane z akcji menu, czyli tuż po geście gracza). */
-function toggleFullscreen(): void {
+/** Pełny ekran przeglądarki (wywoływane z akcji menu albo klawisza F, czyli tuż po geście gracza). */
+export function toggleFullscreen(): void {
   if (document.fullscreenElement) void document.exitFullscreen();
   else void document.documentElement.requestFullscreen().catch(() => undefined);
 }

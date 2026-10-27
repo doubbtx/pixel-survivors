@@ -54,6 +54,12 @@ export const BAL = {
   rush: { warmup: 20, gap: 15, heal: 0.3, levels: 3, startLevels: 8, bossHp: -0.4 },
   /** Muzyka (core/music.ts): tylu wrogów naraz daje pełną intensywność walki (bez bossa). */
   musicCrowd: 140,
+  /**
+   * Wyczyny (data/feats.ts): Spokój (s bez trafienia), minimalny czas poziomu dla wyczynów poziomowych, Spartanin (maks. poziom postaci),
+   * Mistrz kombo (zabójstwa), Łowca elit (elity na poziomie), szybki boss (s), próg HP „Na krawędzi”,
+   * Rzeź (zabójstwa w oknie s), passa Nietykalnego (+obrażenia), nagrody: odłamki, losowania kart, złoto (× głębokość).
+   */
+  feats: { calmAfter: 10, minTime: 60, spartanLevel: 10, combo: 300, elites: 5, speedBoss: 30, edgeHp: 0.15, massacreKills: 250, massacreWindow: 30, streakMight: 0.08, shards: 4, rerolls: 2, gold: 40 },
   /** Odstęp pomiaru DPS do wykresu na ekranie końca (s). */
   dpsEvery: 5,
   /** Bestiariusz (data/bestiary.ts): bonus obrażeń przeciw wrogowi po progach `master` i `legend` zabójstw. */
@@ -89,7 +95,7 @@ export const BAL = {
 
   // --- skalowanie wrogów (wykładniczo w czasie; łagodny start: obrażenia od 60% do pełnych w 1. minucie) ---
   enemyHpMul: (t: number) => Math.pow(1.38, t / 60),
-  enemyDmgMul: (t: number) => Math.pow(1.2, t / 60) * Math.min(1, 0.6 + t / 150),
+  enemyDmgMul: (t: number) => Math.pow(1.2, t / 60) * Math.min(1, 0.5 + t / 240),
   /** Docelowa liczba wrogów na mapie; spawner dąży do niej. */
   targetEnemies: (t: number) => Math.min(1000, 6 + 0.75 * t + 0.004 * t * t),
   /** Odstęp elit maleje w późnej grze (czas fal) do 35% wartości bazowej. */
@@ -385,6 +391,8 @@ export const BAL = {
   contactCooldown: 0.7,
   /** Czas mignięcia postaci po trafieniu (tylko efekt wizualny). */
   hurtFlash: 0.12,
+  /** Nietykalność po każdym trafieniu (s). */
+  hurtIframes: 0.35,
   /** Tarcza za zabójstwa (pasywka Borguna, karty): ułamek maks. HP za zabójstwo... */
   killShieldPerKill: 0.005,
   /** ...ale nie więcej niż tyle maks. HP na sekundę — szybkie zabijanie nie daje nieskończonej tarczy. */

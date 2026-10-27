@@ -28,6 +28,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'scholar', name: 'Badacz', desc: 'Poznaj każdego wroga w bestiariuszu.', card: 'u_lore', check: (_r, save) => BESTIARY.every((b) => (save.bestiary[b.id] ?? 0) >= b.know) },
   { id: 'eternal', name: 'Nieśmiertelny', desc: 'Przetrwaj 15 minut w trybie Endless.', card: 'u_eternal', check: (run) => run.mode === 'endless' && run.totalTime >= 900 },
   { id: 'daily', name: 'Codzienność', desc: 'Ukończ wyzwanie dnia.', card: 'u_sun', check: (run) => run.daily && run.bossKills >= 1 },
+  { id: 'flawless_level', name: 'Nietykalny', desc: 'Wyczyn Nietykalny: poziom z bossem bez trafienia.', card: 'u_ward', check: (run) => run.featsRun.includes('untouched') },
+  { id: 'flawless_run', name: 'Bez skazy', desc: 'Wyczyn Bez skazy: wygrany run bez jednego trafienia.', card: 'u_halo', check: (run) => run.featsRun.includes('flawless') },
+  { id: 'feat_hunter', name: 'Łowca wyczynów', desc: 'Zdobądź 6 różnych wyczynów (Kolekcja, Wyczyny).', card: 'u_medal', check: (_r, save) => Object.keys(save.feats).length >= 6 },
   { id: 'gambler', name: 'Ryzykant', desc: 'Pokonaj bossa z Paktem 5 lub wyżej.', card: 'u_pact', check: (run) => run.pactLevel >= 5 && run.bossKills >= 1 },
 ];
 

@@ -271,6 +271,11 @@ src/
 - Tryby i sekrety: **Szybki run** (3 krótkie poziomy, ok. 10 min), sekretne: tryb **Głowy bossów**, biom **Pustka**, ukryty węzeł i **akt 4** Ekspedycji. **Skórki** bohaterów za odznaki Paktu (X przy wyborze bohatera).
 - **Dostępność**: trudność łatwa, kształty żywiołów dla daltonistów. **Muzyka proceduralna**: skala zależy od biomu, warstwy (arpeggio, bębny, melodia) rosną z walką.
 
+**Grywalność i wyczyny (0.16)**:
+- Naprawiony błąd: dotyk wroga ranił w każdej klatce (teraz co 0,7 s na wroga), krótka nietykalność po trafieniu, łagodniejsze pierwsze 2 minuty.
+- **Wyczyny** z nagrodami: poziom bez trafienia (karta i passa +8% obrażeń), bez uniku, bez Q/E, z jedną bronią, szybki boss, boss przy niskim HP, boss na niskim poziomie postaci (unikat), Rzeź, Mistrz kombo, Łowca elit i **Bez skazy** (cały run bez trafienia). Lista w Kolekcji, 3 nowe osiągnięcia z kartami.
+- **Obraz**: gra wypełnia całe okno, F = pełny ekran, Ustawienia → Obraz i widoczność (przyciemnienie tła, wyraźne pociski wrogów, znacznik gracza).
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
