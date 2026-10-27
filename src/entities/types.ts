@@ -53,6 +53,9 @@ export interface Player {
   dashT: number;
   dvx: number;
   dvy: number;
+  /** Prędkość ruchu (na lodzie dochodzi do wejścia z bezwładnością). */
+  vx: number;
+  vy: number;
   moving: boolean;
   flash: number;
 }

@@ -76,6 +76,22 @@ export function renderWorld(run: Run, r: Renderer): void {
     }
   }
 
+  // Teren: kałuże bagna i lodu (pod wszystkim, co stoi na ziemi).
+  for (const t of run.terrain) {
+    if ((t.kind !== 'swamp' && t.kind !== 'ice') || !vis(t.x, t.y)) continue;
+    const tx = X(t.x), ty = Y(t.y), tr = t.r * ZOOM, ice = t.kind === 'ice';
+    r.withAlpha(ice ? 0.35 : 0.6, () => r.circle(tx, ty, tr, ice ? C.blue : C.dbrown, true));
+    r.withAlpha(ice ? 0.3 : 0.45, () => r.circle(tx - tr * 0.15, ty - tr * 0.15, tr * 0.6, ice ? C.cyan : C.green, true));
+    r.circle(tx, ty, tr, ice ? C.cyan : C.green);
+    r.circle(tx, ty, tr - 1, ice ? C.white : C.dgreen);
+    // Bąble bagna i odblaski lodu (stałe względem kałuży).
+    for (let k = 0; k < 4; k++) {
+      const a = k * 1.7 + t.v, d = tr * (0.3 + 0.15 * k);
+      if (ice) r.rect(tx + Math.cos(a) * d, ty + Math.sin(a) * d, 3, 1, C.white);
+      else if ((run.step + k * 13) % 50 < 25) r.rect(tx + Math.cos(a) * d, ty + Math.sin(a) * d, 2, 2, C.lime);
+    }
+  }
+
   // Dekoracje terenu: co ~8. kafelek dostaje element z hasha współrzędnych (stabilny przy ruchu kamery).
   for (let ty = ty0 - 1; ty <= ty0 + Math.ceil(H / TILE); ty++) {
     for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(W / TILE); tx++) {
@@ -186,6 +202,28 @@ export function renderWorld(run: Run, r: Renderer): void {
       r.rect(wx - 3, wy - 3, 7, 7, i % 3 ? C.dgray : C.slate);
       r.rect(wx - 3, wy - 3, 7, 1, C.lavender);
     }
+  }
+
+  // Arena bossa: zwężający się krąg kamiennych bloków, poza nim mrok.
+  if (run.arena) {
+    const a = run.arena, cx = X(a.x), cy = Y(a.y), R = a.r * ZOOM, n = Math.max(48, Math.round(a.r / 4));
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2, wx = cx + Math.cos(ang) * (R + 4), wy = cy + Math.sin(ang) * (R + 4);
+      if (wx < -10 || wy < -10 || wx > W + 10 || wy > H + 10) continue;
+      r.rect(wx - 4, wy - 4, 9, 9, C.black);
+      r.rect(wx - 3, wy - 3, 7, 7, i % 3 ? C.dred : C.plum);
+      r.rect(wx - 3, wy - 3, 7, 1, C.salmon);
+    }
+  }
+
+  // Teren: kolce, osłony (pęknięte poniżej połowy HP) i beczki (migają przed wybuchem).
+  for (const t of run.terrain) {
+    if (t.kind === 'swamp' || t.kind === 'ice' || !vis(t.x, t.y)) continue;
+    const tx = X(t.x), ty = Y(t.y);
+    if (t.kind === 'spikes') { drawSprite(g, `tspikes@${t.t <= BAL.terrain.spikeUp ? 1 : 0}`, tx, ty); continue; }
+    drawShadow(g, tx, ty + t.r * ZOOM * 0.8, t.r * 3);
+    if (t.kind === 'cover') drawSprite(g, `tcover@${t.v + (t.hp < BAL.terrain.coverHp / 2 ? 3 : 0)}`, tx, ty - 4);
+    else drawSprite(g, 'tbarrel', tx, ty - 4, { flash: t.t > 0 && run.step % 4 < 2 });
   }
 
   // Obiekty mapy: kapliczki (z paskiem aktywacji), miecz w kamieniu, portale.

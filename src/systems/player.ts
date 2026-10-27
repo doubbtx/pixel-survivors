@@ -13,11 +13,16 @@ export function updatePlayer(run: Run, input: Input, dt: number): void {
     run.burst(p.x, p.y, run.hero.color, 1, 10);
   } else {
     const mv = input.move();
-    const speed = run.stats.speed * BAL.speedMul(run.stats.speedBonus);
+    // Teren: bagno spowalnia, na lodzie prędkość dochodzi do wejścia z bezwładnością (poślizg).
+    const T = BAL.terrain;
+    const speed = run.stats.speed * BAL.speedMul(run.stats.speedBonus) * (run.ground === 'swamp' ? 1 - T.swampSlow : 1);
+    const k = run.ground === 'ice' ? Math.min(1, dt * T.iceGrip) : 1;
+    p.vx += (mv.x * speed - p.vx) * k;
+    p.vy += (mv.y * speed - p.vy) * k;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
     p.moving = mv.x !== 0 || mv.y !== 0;
     if (p.moving) {
-      p.x += mv.x * speed * dt;
-      p.y += mv.y * speed * dt;
       const l = Math.hypot(mv.x, mv.y);
       p.fx = mv.x / l;
       p.fy = mv.y / l;

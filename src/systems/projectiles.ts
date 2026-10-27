@@ -3,6 +3,7 @@ import { VIEW_W, VIEW_H } from '../core/renderer';
 import { BAL } from '../data/balance';
 import type { Run } from '../game/run';
 import { shardProjectile } from './weapons';
+import { terrainBlocker, hitTerrain } from './terrain';
 
 /** Pociski gracza: ruch, bumerangi, kolizje przez spatial hash, przebicia. */
 export function updateProjectiles(run: Run, dt: number): void {
@@ -43,6 +44,9 @@ export function updateProjectiles(run: Run, dt: number): void {
       }
     }
 
+    // Teren: osłony i beczki zatrzymują pociski gracza (bumerangi przelatują).
+    const tb = pr.kind === 'boomerang' ? null : terrainBlocker(run, pr.x, pr.y, pr.radius);
+    if (tb) { hitTerrain(run, tb); run.projectiles.release(pr); continue; }
     const cand = run.hash.query(pr.x, pr.y, pr.radius + 12, run.qa);
     for (let j = 0; j < cand.length; j++) {
       const e = cand[j];
@@ -96,6 +100,9 @@ export function updateEnemyBullets(run: Run, dt: number): void {
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.life -= dt;
+    // Teren: osłony i beczki zatrzymują pociski wrogów.
+    const tb = terrainBlocker(run, b.x, b.y, b.radius);
+    if (tb) { hitTerrain(run, tb); run.bullets.release(b); continue; }
     const dx = b.x - p.x, dy = b.y - p.y;
     const rr = b.radius + BAL.playerBulletR;
     if (dx * dx + dy * dy < rr * rr && p.iframes <= 0) {

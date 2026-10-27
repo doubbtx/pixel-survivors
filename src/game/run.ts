@@ -41,6 +41,7 @@ import { updateEvents, startDungeon, type MapObject, type Buff, type Dungeon } f
 import { updateResource, resourceOnHit, resourceOnHurt, resourceOnKill, resourceDamageMul, resourceCrit, resourceTakenMul } from '../systems/resource';
 import { updateTasks, taskOnHurt, taskOnKill, type Task } from '../systems/tasks';
 import { updatePower } from '../systems/powers';
+import { updateTerrain, terrainBlast, type TerrainObj, type Arena } from '../systems/terrain';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { PACTS, pactLevel } from '../data/pacts';
 
@@ -310,6 +311,12 @@ export class Run {
   shrineT = 0;
   portalT = 0;
   swordRolled = false;
+  /** Teren poziomu (systems/terrain.ts): obiekty, wygenerowane kawałki, ziarno, arena bossa i podłoże pod graczem. */
+  terrain: TerrainObj[] = [];
+  terrainChunks = new Set<string>();
+  terrainSeed = 0;
+  arena: Arena | null = null;
+  ground: 'none' | 'swamp' | 'ice' = 'none';
   /** Zadanie poziomu (systems/tasks.ts): trwające albo czekające kamieniem, czas do następnego i licznik wykonanych w runie. */
   task: Task | null = null;
   taskT: number = BAL.tasks.first;
@@ -366,7 +373,7 @@ export class Run {
 
   constructor(heroId: string, readonly mode: Mode, depth = 1, fresh = true) {
     this.hero = HERO_BY_ID[heroId];
-    this.player = { x: 0, y: 0, r: 4, hp: 1, shield: 0, hurtCd: 0, iframes: 0, fx: 1, fy: 0, dashT: 0, dvx: 0, dvy: 0, moving: false, flash: 0 };
+    this.player = { x: 0, y: 0, r: 4, hp: 1, shield: 0, hurtCd: 0, iframes: 0, fx: 1, fy: 0, dashT: 0, dvx: 0, dvy: 0, vx: 0, vy: 0, moving: false, flash: 0 };
     const ab = (slot: AbilitySlot): AbilityInst => ({ def: this.hero.abilities.find((a) => a.slot === slot)!, level: 1, cd: 0, activeT: 0 });
     this.abilities = { q: ab('q'), e: ab('e'), dash: ab('dash'), ult: ab('ult') };
     this.basicWeaponId = this.hero.weapon;
@@ -403,12 +410,16 @@ export class Run {
     this.swordRolled = false;
     this.task = null;
     this.taskT = BAL.tasks.first;
+    this.terrain = [];
+    this.terrainChunks.clear();
+    this.terrainSeed = rng.int(1, 1e9);
+    this.arena = null;
     this.goldSlimeT = BAL.events.goldSlimeGap * 0.5;
     delete this.cardState['aug.orbit'];
     for (const p of [this.enemies, this.projectiles, this.bullets, this.gems, this.pickups, this.particles, this.dmgNums, this.zones, this.fx, this.turrets, this.minions] as Pool<{ _i: number }>[]) p.clear();
     this.timers = [];
     const p = this.player;
-    p.x = 0; p.y = 0; p.dashT = 0; p.iframes = 1; p.hurtCd = 0;
+    p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; p.dashT = 0; p.iframes = 1; p.hurtCd = 0;
     for (const a of Object.values(this.abilities)) { a.cd = 0; a.activeT = 0; }
     // Dusze zostają między poziomami, pozostałe zasoby budują się od nowa.
     if (this.hero.resource.kind !== 'souls') this.res = 0;
@@ -476,6 +487,7 @@ export class Run {
     updateEnemies(this, dt);
     this.rebuildHash();
     updatePlayer(this, input, dt);
+    updateTerrain(this, dt);
     updateEvents(this, dt);
     updateTasks(this, dt);
     updateAbilities(this, input, dt);
@@ -769,6 +781,8 @@ export class Run {
    */
   explode(x: number, y: number, r: number, dmg: number | ((e: Enemy) => number), src: string, col: number, knock = 3): void {
     this.enemiesInCircle(x, y, r, (e) => this.damageEnemy(e, typeof dmg === 'number' ? dmg : dmg(e), src, { kx: e.x - x, ky: e.y - y, knock }));
+    // Teren: beczki w zasięgu wybuchają łańcuchowo, osłony pękają.
+    terrainBlast(this, x, y, r);
     const spots = this.boomSpots, near = BAL.fx.boomMerge * BAL.fx.boomMerge;
     if (spots.length >= BAL.fx.boomsPerStep * 2) return;
     for (let i = 0; i < spots.length; i += 2) if ((spots[i] - x) ** 2 + (spots[i + 1] - y) ** 2 < near) return;

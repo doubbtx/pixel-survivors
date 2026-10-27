@@ -4,7 +4,7 @@ import { BIOMES, type Biome } from '../data/levels';
 import { Painter } from './painter';
 import { ICON_FNS } from './icons';
 import { ACTORS, boss } from './actors';
-import { shrine, swordStone, portal, taskStone, totem } from './objects';
+import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes } from './objects';
 import { spark, poof, boom, arrowSprite, prop, patch, uiSkull } from './world';
 
 /**
@@ -226,6 +226,10 @@ function build(name: string): HTMLCanvasElement {
     return c;
   }
   if (base === 'taskstone') return taskStone().canvas();
+  // Teren: 'tcover@<wariant>' (wariant + 3 = pęknięta), 'tbarrel', 'tspikes@<0|1>'.
+  if (base === 'tcover') return cover(f % 3, f >= 3).canvas();
+  if (base === 'tbarrel') return barrel().canvas();
+  if (base === 'tspikes') return spikes(f === 1).canvas();
   if (base === 'totem') return totem().canvas();
   if (ICON_FNS[name]) {
     const p = new Painter(16, 16);

@@ -107,6 +107,23 @@ export const BAL = {
   itemScale: (ilvl: number) => Math.pow(1.3, ilvl - 1),
   /** Skalowanie HP/regeneracji z przedmiotów (nadąża za wzrostem obrażeń wrogów). */
   itemHpScale: (ilvl: number) => Math.pow(1.25, ilvl - 1),
+  /**
+   * Teren (systems/terrain.ts): kawałek świata `chunk` px, skład kawałka wg biomu [osłony, beczki, kolce, bagna, lody]
+   * (łąka, bagno, pustkowie, otchłań); wolne miejsce przy starcie poziomu i przy graczu. Osłona: promień, HP (trafienia),
+   * obrażenia od wybuchu. Beczka: promień, zasięg wybuchu, obrażenia kart. Kolce: promień, cykl i czas wysunięcia (s),
+   * obrażenia kart, utrata HP gracza (ułamek maks. HP na tick). Bagno: spowolnienie; lód: przyczepność (wyżej = mniej poślizgu).
+   * Arena bossa: promień startowy, końcowy i czas zwężania (s).
+   */
+  terrain: {
+    chunk: 320,
+    biomes: [[3, 1, 1, 0, 0], [1, 1, 1, 2, 0], [1, 3, 2, 0, 0], [2, 1, 0, 0, 2]] as const,
+    clearStart: 90, clearPlayer: 70,
+    coverR: 11, coverHp: 20, blastDmg: 6,
+    barrelR: 6, barrelBlast: 42, barrelDmg: 45,
+    spikesR: 12, spikeCycle: 2.2, spikeUp: 0.6, spikeDmg: 14, spikeHurt: 0.04,
+    poolR: [32, 48] as const, swampSlow: 0.4, iceGrip: 2.5,
+    arenaR: 260, arenaMin: 150, arenaTime: 45,
+  },
   /** Pakty ryzyka (data/pacts.ts): esencja × (1 + essencePer × poziom Paktu). */
   pacts: { essencePer: 0.08 },
   /** Moce bossów (systems/powers.ts): maks. poziom i przyrost obrażeń za poziom. */
