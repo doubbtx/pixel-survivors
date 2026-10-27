@@ -50,6 +50,7 @@ import { spawnTurret } from '../systems/turrets';
  *  eliteMods       dodatkowe cechy elit (liczba)
  *  bossHp          +HP bossów (ułamek)
  *  taskTime        krótszy czas na zadania (ułamek, maks. 0.5)
+ * Flagi sekretów (data/secrets.ts): focusKeep (Celność nie spada od trafień), furyHold (Furia nie opada).
  * Flagi unikatów (data/items.ts UNIQUES):
  *  facing          bronie kierunkowe strzelają w kierunku ruchu, obrażenia × (1 + wartość)
  *  healShield      leczenie zamienia się w tarczę (maks. ułamek HP)

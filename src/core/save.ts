@@ -71,6 +71,8 @@ export interface CardCollection {
   picks: Record<string, number>;
   banned: string[];
   uniques: string[];
+  /** Odkryte sekrety (Księga sekretów). */
+  secrets: string[];
 }
 
 export interface SaveData {
@@ -155,7 +157,7 @@ function defaults(): SaveData {
     slots: { hardcore: null, endless: null, expedition: null },
     board: [],
     notice: '',
-    collection: { seen: [], picks: {}, banned: [], uniques: [] },
+    collection: { seen: [], picks: {}, banned: [], uniques: [], secrets: [] },
     meta: { heroes: {}, unassigned: 0 },
     seenHints: [],
     lastHero: '',

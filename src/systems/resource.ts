@@ -65,6 +65,7 @@ export function resourceOnHit(run: Run, e: Enemy): void {
     if (d2 < F.range * F.range) return;
     run.resGap = F.gap;
     gain(run, 1);
+    run.cardState['sec.falcon'] = (run.cardState['sec.falcon'] ?? 0) + 1;
     if (run.res < resMax(run)) return;
     // Pełna celność: darmowa Salwa (w następnym kroku — trafienie może być w środku zapytania o wrogów).
     run.res = resMax(run) * F.keep;
@@ -82,7 +83,10 @@ export function resourceOnHit(run: Run, e: Enemy): void {
 /** Oberwanie: celność spada, furia rośnie (wg ułamka maks. HP). */
 export function resourceOnHurt(run: Run, dmg: number): void {
   const k = run.hero.resource.kind;
-  if (k === 'focus') run.res *= 1 - R.focus.hurtLoss;
+  if (k === 'focus') {
+    run.cardState['sec.falcon'] = 0;
+    if (run.flag('focusKeep') <= 0) run.res *= 1 - R.focus.hurtLoss;
+  }
   else if (k === 'fury') { run.resIdle = 0; gain(run, (R.fury.hurt * 100 * dmg) / run.stats.maxHp); }
 }
 
@@ -130,11 +134,16 @@ export function updateResource(run: Run, dt: number): void {
   run.resGap = Math.max(0, run.resGap - dt);
   run.resIdle += dt;
   const k = run.hero.resource.kind;
-  if (k === 'fury' && run.resIdle > R.fury.idle) run.res = Math.max(0, run.res - R.fury.decay * dt);
+  if (k === 'fury') {
+    if (run.resIdle > R.fury.idle && run.flag('furyHold') <= 0) run.res = Math.max(0, run.res - R.fury.decay * dt);
+    // Sekret Berserk: czas z pełną furią.
+    run.cardState['sec.berserk'] = run.res >= resMax(run) ? (run.cardState['sec.berserk'] ?? 0) + dt : 0;
+  }
   if (k !== 'heat') return;
   const H = R.heat, p = run.player;
   run.res = Math.max(0, run.res - H.decay * dt);
   if (run.res <= H.burnFrom) return;
+  run.cardState['sec.pyre'] = (run.cardState['sec.pyre'] ?? 0) + dt;
   if (run.step % 6 === 0) run.burst(p.x + rng.range(-3, 3), p.y - 4, rng.chance(0.5) ? C.orange : C.gold, 1, 30);
   if (run.flag('heat.safe') > 0) return;
   p.hp = Math.max(1, p.hp - run.stats.maxHp * H.burn * dt);

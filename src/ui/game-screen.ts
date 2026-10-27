@@ -160,6 +160,8 @@ export class GameScreen implements Screen {
     for (const id of log.picked) col.picks[id] = (col.picks[id] ?? 0) + 1;
     for (const id of this.run.uniquesFound) if (!col.uniques.includes(id)) col.uniques.push(id);
     this.run.uniquesFound.clear();
+    for (const id of this.run.secretsFound) if (!col.secrets.includes(id)) col.secrets.push(id);
+    this.run.secretsFound.clear();
   }
 
   private updateRecords(won: boolean): void {

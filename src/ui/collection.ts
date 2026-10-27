@@ -11,6 +11,7 @@ import { drawCard, rarityColor } from './cards';
 import { panel, slot, inside } from './widgets';
 import { UNIQUES, UNIQUE_COLOR, BASE_BY_ID, rollUnique, type Item } from '../data/items';
 import { drawItemCard } from './items';
+import { SECRETS } from '../data/secrets';
 
 const COLS = 12, TILE = 18, STEP = 19;
 const GRID_X = 12, GRID_Y = 50;
@@ -31,7 +32,8 @@ const ORDERED: CardDef[] = [...CARDS].sort((a, b) => RARITY_ORDER[a.rarity] - RA
  */
 export class CollectionScreen implements Screen {
   private sel = 0;
-  private tab: 'cards' | 'uniques' = 'cards';
+  private tab: 'cards' | 'uniques' | 'secrets' = 'cards';
+  private sSel = 0;
   private uSel = 0;
   private step = 0;
   private lastMouse = 0;
@@ -71,11 +73,12 @@ export class CollectionScreen implements Screen {
     const inp = this.app.input, n = ORDERED.length;
     if (inp.pressed('back')) { this.app.go(this.back); return; }
     if (inp.pressed('inventory') || (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, W - 96, 8, 88, 18))) {
-      this.tab = this.tab === 'cards' ? 'uniques' : 'cards';
+      this.tab = this.tab === 'cards' ? 'uniques' : this.tab === 'uniques' ? 'secrets' : 'cards';
       sfx.play('select');
       return;
     }
     if (this.tab === 'uniques') { this.updateUniques(); return; }
+    if (this.tab === 'secrets') { this.updateSecrets(); return; }
     if (inp.pressed('left')) this.sel = (this.sel + n - 1) % n;
     if (inp.pressed('right')) this.sel = (this.sel + 1) % n;
     if (inp.pressed('up')) this.sel = (this.sel + n - COLS) % n;
@@ -108,6 +111,41 @@ export class CollectionScreen implements Screen {
     this.lastMouse = m.lastMove;
   }
 
+  private updateSecrets(): void {
+    const inp = this.app.input, n = SECRETS.length;
+    if (inp.pressed('up')) this.sSel = (this.sSel + n - 1) % n;
+    if (inp.pressed('down')) this.sSel = (this.sSel + 1) % n;
+    const m = inp.mouse;
+    SECRETS.forEach((_, i) => {
+      if (inside(m.x, m.y, 10, 40 + i * 17, 200, 16) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.sSel = i;
+    });
+    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
+    this.lastMouse = m.lastMove;
+  }
+
+  /** Zakładka Sekrety: lista (odkryte z nazwą, nieodkryte jako ???) i szczegóły: zagadka, a po odkryciu efekt. */
+  private renderSecrets(): void {
+    const r = this.app.r, g = r.g, found = this.col.secrets;
+    SECRETS.forEach((s, i) => {
+      const y = 40 + i * 17, known = found.includes(s.id), on = i === this.sSel;
+      panel(r, 10, y, 200, 16, on ? C.hotpink : C.slate);
+      drawText(g, known ? s.name : '???', 18, y + 2, known ? C.white : C.dgray);
+      if (s.hero) drawText(g, HERO_BY_ID[s.hero].name, 204, y + 2, HERO_BY_ID[s.hero].color, { align: 'right' });
+    });
+    const s = SECRETS[this.sSel], known = found.includes(s.id);
+    panel(r, 220, 40, W - 230, 186, known ? C.hotpink : C.slate);
+    drawText(g, known ? s.name : 'Nieodkryty sekret', 230, 48, known ? C.hotpink : C.dgray, { scale: 2 });
+    let y = 76;
+    drawText(g, 'Zagadka:', 230, y, C.lavender); y += 12;
+    for (const l of wrapText(s.riddle, W - 250)) { drawText(g, l, 230, y, C.lgray); y += 11; }
+    y += 8;
+    if (known) {
+      drawText(g, 'Efekt:', 230, y, C.lavender); y += 12;
+      for (const l of wrapText(`${s.desc} ${s.while ? 'Działa tylko, dopóki warunek trwa.' : 'Działa do końca runu.'}`, W - 250)) { drawText(g, l, 230, y, C.white); y += 11; }
+    } else drawText(g, 'Spełnij warunek w trakcie runu, żeby go odkryć.', 230, y, C.dgray);
+    drawText(g, `Odkryte ${SECRETS.filter((x) => found.includes(x.id)).length}/${SECRETS.length}`, 10, 232, C.lavender);
+  }
+
   /** Zakładka Unikaty: siatka (odkryte z ikoną), karta przedmiotu odkrytego unikatu albo znak zapytania. */
   private renderUniques(): void {
     const r = this.app.r, g = r.g, found = this.col.uniques;
@@ -134,8 +172,14 @@ export class CollectionScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g, col = this.col;
     r.clear(C.black);
-    panel(r, W - 96, 8, 88, 18, this.tab === 'uniques' ? UNIQUE_COLOR : C.slate);
-    drawText(g, this.tab === 'cards' ? '[Tab] Unikaty' : '[Tab] Karty', W - 52, 11, C.white, { align: 'center' });
+    panel(r, W - 96, 8, 88, 18, this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.slate);
+    drawText(g, this.tab === 'cards' ? '[Tab] Unikaty' : this.tab === 'uniques' ? '[Tab] Sekrety' : '[Tab] Karty', W - 52, 11, C.white, { align: 'center' });
+    if (this.tab === 'secrets') {
+      drawText(g, 'Księga sekretów', W / 2, 10, C.hotpink, { align: 'center', scale: 2, outline: C.black });
+      drawText(g, '[Esc] wróć', 12, 12, C.lgray);
+      this.renderSecrets();
+      return;
+    }
     if (this.tab === 'uniques') {
       drawText(g, 'Kolekcja unikatów', W / 2, 10, UNIQUE_COLOR, { align: 'center', scale: 2, outline: C.black });
       drawText(g, '[Esc] wróć', 12, 12, C.lgray);

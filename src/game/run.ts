@@ -46,6 +46,8 @@ import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { PACTS, pactLevel } from '../data/pacts';
 import { equippedAwakenings, forgeKillDrops, forgeBossDrops, grantMat, emptyMats, emptyScrolls } from '../systems/forge';
 import type { MatId, ScrollId } from '../data/forge';
+import { updateSecrets, activeSecrets } from '../systems/secrets';
+import { PACIFIST_KEY } from '../data/secrets';
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
@@ -163,6 +165,8 @@ export interface RunSnapshot {
   /** Materiały i zwoje kuźni (od 0.14). */
   mats?: Partial<Record<MatId, number>>;
   scrolls?: Partial<Record<ScrollId, number>>;
+  /** Obudzone sekrety (od 0.15). */
+  secrets?: string[];
 }
 
 /**
@@ -208,6 +212,9 @@ export class Run {
   /** Z kolekcji (core/save.ts), ustawiane przez ekran gry: bany wykluczone z ofert i karty już odkryte. */
   cardBans = new Set<string>();
   knownCards = new Set<string>();
+  /** Księga sekretów (systems/secrets.ts): obudzone w runie i odkryte od ostatniej synchronizacji z kolekcją. */
+  secrets = new Set<string>();
+  secretsFound = new Set<string>();
   /** Unikaty wylosowane od ostatniej synchronizacji z kolekcją. */
   uniquesFound = new Set<string>();
   /** Karty zobaczone i wybrane od ostatniej synchronizacji z kolekcją. */
@@ -498,6 +505,7 @@ export class Run {
     updateTerrain(this, dt);
     updateEvents(this, dt);
     updateTasks(this, dt);
+    updateSecrets(this);
     updateAbilities(this, input, dt);
     updateResource(this, dt);
     updateWeapons(this, dt);
@@ -603,6 +611,10 @@ export class Run {
     for (const u of equippedUniques(this)) {
       for (const [k, v] of Object.entries(u.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
       addHooks(u.hooks, 1);
+    }
+    for (const s of activeSecrets(this)) {
+      for (const [k, v] of Object.entries(s.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
+      addHooks(s.hooks, 1);
     }
     // Przebudzenia z kuźni (+9): Czujność bierze najkrótszy odstęp, jak Tarcza bogów.
     for (const { def, v } of equippedAwakenings(this)) {
@@ -858,6 +870,7 @@ export class Run {
       for (const k in u.mul ?? {}) itemMul[k as keyof Stats] = (itemMul[k as keyof Stats] ?? 1) * u.mul![k as keyof Stats]!;
     }
     for (const { def, v } of equippedAwakenings(this)) if (def.stats) add(def.stats(v));
+    for (const sec of activeSecrets(this)) if (sec.stats) add(sec.stats);
     const ult = this.abilities.ult;
     if (ult.def.kind === 'titan' && ult.activeT > 0) {
       s.might += ult.def.p.might + ult.def.pl.might * (ult.level - 1);
@@ -1165,6 +1178,8 @@ export class Run {
     this.pendingPowers++;
     this.bossKills++;
     forgeBossDrops(this);
+    // Pacyfista (sekret): unikat z najbliższego bossa.
+    if (this.cardState[PACIFIST_KEY]) { delete this.cardState[PACIFIST_KEY]; this.pendingLoot.push({ source: 'boss', item: rollUnique(this.depth) }); }
     this.cardRerolls++;
     this.gold += 30 * this.stats.greed;
     // Endless: gra toczy się dalej — kolejna głębokość (silniejsi wrogowie, następny biom) i boss za BAL.endlessBossEvery.
@@ -1448,6 +1463,7 @@ export class Run {
       bossKills: this.bossKills,
       mats: { ...this.mats },
       scrolls: { ...this.scrolls },
+      secrets: [...this.secrets],
     };
   }
 
@@ -1479,6 +1495,7 @@ export class Run {
     run.cardState = { ...s.cardState };
     run.pacts = { ...s.pacts };
     run.mats = { ...run.mats, ...s.mats };
+    run.secrets = new Set(s.secrets ?? []);
     run.scrolls = { ...run.scrolls, ...s.scrolls };
     run.bossKills = s.bossKills ?? 0;
     // Przedmioty nieznanych typów (np. z nowszej wersji danych) są pomijane.
