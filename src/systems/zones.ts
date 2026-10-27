@@ -1,5 +1,6 @@
 import { sfx } from '../core/audio';
 import { C } from '../core/palette';
+import { BAL } from '../data/balance';
 import type { Zone } from '../entities/types';
 import type { Run } from '../game/run';
 import { shardProjectile } from './weapons';
@@ -66,6 +67,16 @@ export function updateZones(run: Run, dt: number): void {
             run.damageEnemy(e, z.damage, z.src);
             if (z.slow > 0) { e.slowT = 0.5; e.slowF = Math.max(e.slowF, z.slow); }
           });
+        }
+        if (z.t >= z.life) run.zones.release(z);
+        break;
+      case 'holy':
+        // Uświęcona ziemia: rani i spowalnia wrogów, leczy gracza (len = % maks. HP na sekundę) i przedłuża życie sług w kręgu.
+        if (tick) {
+          run.enemiesInCircle(z.x, z.y, z.r, (e) => { run.damageEnemy(e, z.damage, z.src); e.slowT = 0.5; e.slowF = Math.max(e.slowF, 0.3); });
+          const sec = z.tick / 60;
+          if ((p.x - z.x) ** 2 + (p.y - z.y) ** 2 < z.r * z.r) run.heal(run.stats.maxHp * (z.len / 100) * sec);
+          for (const m of run.minions.items) if ((m.x - z.x) ** 2 + (m.y - z.y) ** 2 < z.r * z.r) m.life += BAL.resource.faith.sanctLife * sec;
         }
         if (z.t >= z.life) run.zones.release(z);
         break;

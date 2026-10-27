@@ -188,6 +188,29 @@ export const WEAPONS: WeaponDef[] = [
     levels: [], evolved: true,
   },
 
+  {
+    id: 'knives', name: 'Noże do rzucania', desc: 'Szybkie noże lecące w najbliższych wrogów.', icon: 'ic_knives', kind: 'bolt', color: C.lavender, proj: 'knife', hero: 'vesper',
+    base: S({ damage: 9, cooldown: 0.5, speed: 250, duration: 0.9, pierce: 1, knock: 0.5 }),
+    levels: [{ damage: 3 }, { amount: 1 }, { cooldown: -0.06 }, { pierce: 1, damage: 3 }, { amount: 1 }, { cooldown: -0.06 }, { damage: 8, amount: 1 }],
+    evolve: { passive: 'fury', into: 'knives_evo' },
+  },
+  {
+    id: 'knives_evo', name: 'Wachlarz cieni', desc: 'Chmara noży przebijających wrogów.', icon: 'ic_knives_evo', kind: 'bolt', color: C.white, proj: 'knife', hero: 'vesper',
+    base: S({ damage: 22, cooldown: 0.28, amount: 4, speed: 300, duration: 1, pierce: 3, knock: 1 }),
+    levels: [], evolved: true,
+  },
+  {
+    id: 'light', name: 'Święte światło', desc: 'Promień światła skacze między wrogami.', icon: 'ic_light', kind: 'chain', color: C.yellow, hero: 'aurel',
+    base: S({ damage: 13, cooldown: 1.2, pierce: 2, knock: 0.5 }),
+    levels: [{ damage: 4 }, { pierce: 1 }, { cooldown: -0.15 }, { amount: 1 }, { damage: 6 }, { pierce: 2 }, { amount: 1, damage: 6 }],
+    evolve: { passive: 'herb', into: 'light_evo' },
+  },
+  {
+    id: 'light_evo', name: 'Promień niebios', desc: 'Słoneczne promienie oślepiają i palą wrogów.', icon: 'ic_light_evo', kind: 'chain', color: C.white, hero: 'aurel',
+    base: S({ damage: 32, cooldown: 0.7, amount: 3, area: 1.4, pierce: 6, knock: 1 }),
+    levels: [], evolved: true,
+  },
+
   // ---- hybrydy z fuzji (FUSIONS); ikona 'fu:<ikona A>:<ikona B>' składana w gfx/sprites.ts ----
   {
     id: 'f_firearrow', name: 'Płonące strzały', desc: 'Strzały wybuchające ogniem przy trafieniu.', icon: 'fu:ic_arrow_evo:ic_meteor', kind: 'bolt', color: C.orange, proj: 'arrow', hero: 'kestra',
@@ -222,6 +245,22 @@ export const WEAPONS: WeaponDef[] = [
     base: S({ damage: 95, cooldown: 0.9, amount: 4, area: 1.9, duration: 7, knock: 4 }), levels: [], evolved: true, fused: true,
   },
   {
+    id: 'f_bladering', name: 'Wir sztyletów', desc: 'Pierścień sztyletów tnie wszystko wokół ciebie.', icon: 'fu:ic_knives_evo:ic_orbit', kind: 'orbit', color: C.lavender, proj: 'knife', hero: 'vesper',
+    base: S({ damage: 34, cooldown: 0.2, amount: 9, speed: 5, area: 1.7, knock: 2 }), levels: [], evolved: true, fused: true,
+  },
+  {
+    id: 'f_shuriken', name: 'Gwiazdy cienia', desc: 'Wirujące noże lecą przed siebie i wracają.', icon: 'fu:ic_knives_evo:ic_boomerang', kind: 'boomerang', color: C.lavender, proj: 'boom', hero: 'vesper',
+    base: S({ damage: 44, cooldown: 0.6, amount: 5, speed: 280, duration: 0.7, pierce: 999, knock: 2 }), levels: [], evolved: true, fused: true,
+  },
+  {
+    id: 'f_halo', name: 'Aureola', desc: 'Złota aura pali i odpycha wrogów wokół ciebie.', icon: 'fu:ic_light_evo:ic_aura', kind: 'aura', color: C.yellow, hero: 'aurel',
+    base: S({ damage: 22, cooldown: 0.3, amount: 0, area: 2.4, knock: 2 }), levels: [], evolved: true, fused: true,
+  },
+  {
+    id: 'f_sunbeam', name: 'Promień słońca', desc: 'Wachlarz słonecznych promieni przeszywa wrogów.', icon: 'fu:ic_light_evo:ic_laser', kind: 'laser', color: C.yellow, hero: 'aurel',
+    base: S({ damage: 28, cooldown: 0.9, amount: 4, area: 2, duration: 0.9, knock: 0 }), levels: [], evolved: true, fused: true,
+  },
+  {
     id: 'f_thunderorb', name: 'Kula piorunów', desc: 'Gwiazdy rozszczepiające się przy trafieniu, porażają.', icon: 'fu:ic_bolt_evo:ic_chain', kind: 'bolt', color: C.yellow, proj: 'star',
     base: S({ damage: 36, cooldown: 0.45, amount: 5, speed: 230, area: 1.3, duration: 2, pierce: 3, knock: 1.5 }), levels: [], evolved: true, fused: true, hybrid: { split: true },
   },
@@ -250,6 +289,8 @@ export const FUSIONS: { a: string; b: string; into: string }[] = [
   { a: 'axe', b: 'aura', into: 'f_frostwhirl' }, { a: 'axe', b: 'boomerang', into: 'f_flyaxe' },
   { a: 'staff', b: 'chain', into: 'f_stormstaff' }, { a: 'staff', b: 'meteor', into: 'f_comet' },
   { a: 'souls', b: 'orbit', into: 'f_soulwhirl' }, { a: 'souls', b: 'mines', into: 'f_gravemines' },
+  { a: 'knives', b: 'orbit', into: 'f_bladering' }, { a: 'knives', b: 'boomerang', into: 'f_shuriken' },
+  { a: 'light', b: 'aura', into: 'f_halo' }, { a: 'light', b: 'laser', into: 'f_sunbeam' },
   { a: 'bolt', b: 'chain', into: 'f_thunderorb' }, { a: 'orbit', b: 'aura', into: 'f_frostring' },
   { a: 'meteor', b: 'mines', into: 'f_firefield' }, { a: 'laser', b: 'boomerang', into: 'f_mirror' },
 ];

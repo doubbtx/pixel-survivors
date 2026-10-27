@@ -48,7 +48,9 @@ function menuBackdrop(app: App, t: number): void {
   walk('borgun', lead - 26, false, 1);
   walk('ignara', lead - 50, false, 2);
   walk('morwen', lead - 74, false, 3);
-  PARADE.forEach((name, i) => walk(name, lead - 118 - i * 28, false, i + 4));
+  walk('vesper', lead - 98, false, 4);
+  walk('aurel', lead - 122, false, 5);
+  PARADE.forEach((name, i) => walk(name, lead - 166 - i * 28, false, i + 6));
 }
 
 export class MainMenu implements Screen {
@@ -240,7 +242,7 @@ function renderBoard(app: App, x: number, y: number, w: number, rows: number): v
   });
 }
 
-const LIST_X = 12, LIST_W = 140, ROW_H = 36, TOP = 38;
+const LIST_X = 12, LIST_W = 140, ROW_H = 32, TOP = 38;
 const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212;
 
 /** Wybór bohatera: lista po lewej (do 6 bohaterów), szczegóły zaznaczonego po prawej. */
@@ -294,12 +296,12 @@ export class HeroSelect implements Screen {
     HEROES.forEach((h, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel;
       panel(r, LIST_X, y, LIST_W, ROW_H - 4, on ? C.gold : C.slate);
-      drawSprite(g, `${h.sprite}@${on ? animFrame(h.sprite, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 16);
-      drawText(g, h.name, LIST_X + 34, y + 5, h.color, { shadow: C.black });
-      drawText(g, h.role, LIST_X + 34, y + 17, C.lavender);
+      drawSprite(g, `${h.sprite}@${on ? animFrame(h.sprite, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 14);
+      drawText(g, h.name, LIST_X + 34, y + 3, h.color, { shadow: C.black });
+      drawText(g, h.role, LIST_X + 34, y + 15, C.lavender);
       // Odznaka Paktu: najwyższy poziom Paktu z pokonanym bossem.
       const best = this.app.save.pacts.best[h.id] ?? 0, badge = pactBadge(best);
-      if (badge) drawText(g, `${badge.name} ${best}`, LIST_X + LIST_W - 6, y + 5, badge.color, { align: 'right' });
+      if (badge) drawText(g, `${badge.name} ${best}`, LIST_X + LIST_W - 6, y + 3, badge.color, { align: 'right' });
     });
     const pl = pactLevel(this.app.save.pacts.chosen);
     panel(r, LIST_X, this.pactY(), LIST_W, 18, pl ? C.salmon : C.slate);
@@ -362,13 +364,13 @@ export class RecordsScreen implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     drawText(g, 'Rekordy', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    renderBoard(this.app, 120, 34, 240, 10);
-    panel(r, 20, 200, 440, 56, C.slate);
+    renderBoard(this.app, 120, 30, 240, 8);
+    panel(r, 20, 168, 440, 98, C.slate);
     const cols = [30, 84, 136, 192, 240, 290, 340, 408];
-    ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Hardcore', 'Endless', 'Ekspedycja', 'Trening'].forEach((s, i) => drawText(g, s, cols[i], 208, C.lavender));
+    ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Hardcore', 'Endless', 'Ekspedycja', 'Trening'].forEach((s, i) => drawText(g, s, cols[i], 175, C.lavender));
     HEROES.forEach((h, i) => {
       const rec = heroRecord(this.app.save, h.id);
-      const y = 222 + i * 12;
+      const y = 189 + i * 12;
       [h.name, fmtTime(rec.bestTime), fmt(rec.bestKills), String(rec.bestLevel), `poz. ${rec.bestDepth}`, fmtTime(rec.bestEndless), `${rec.bestExpedition} (${rec.expeditionWins})`, `${rec.wins}/${rec.runs}`]
         .forEach((s, j) => drawText(g, s, cols[j], y, j === 0 ? h.color : C.white));
     });

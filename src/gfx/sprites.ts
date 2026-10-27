@@ -62,6 +62,13 @@ function blade(): Painter {
   return p.outline(C.slate);
 }
 
+/** Nóż do rzucania (Vesper): czteroramienna gwiazdka ostrzy. */
+function knife(): Painter {
+  const p = new Painter(9, 9);
+  p.poly(starPts(4.5, 4.5, 4, 4.4, 1.4, 0.4), C.lgray).poly(starPts(4.5, 4.5, 4, 2.6, 1, 0.4), C.white).px(4, 4, C.hotpink);
+  return p.outline(C.slate);
+}
+
 function boomerang(frame: number): Painter {
   const p = new Painter(13, 13);
   const shape: [number, number][] = [[1.5, 4], [6.5, 1.5], [11.5, 4], [10.5, 6], [6.5, 4], [2.5, 6.5]];
@@ -160,7 +167,7 @@ const BUILDERS: Record<string, () => Painter> = {
   soul: () => orb(7, [C.plum, C.pink, C.salmon, C.white], C.lime), // zielony obrys: odróżnia od różowych pocisków wrogów
   ember: () => orb(7, RAMP.fire, C.gold), // złoty obrys: odróżnia od pomarańczowych pocisków wrogów
   sun: () => orb(11, [C.orange, C.gold, C.yellow, C.white], C.rust),
-  star, blade,
+  star, blade, knife,
   boom0: () => boomerang(0), boom1: () => boomerang(1), boom2: () => boomerang(2), boom3: () => boomerang(3),
   mine0: () => mine(false), mine1: () => mine(true),
   eb_red: () => orb(9, RAMP.red, C.dred),

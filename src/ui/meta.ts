@@ -14,7 +14,7 @@ import { panel, inside } from './widgets';
 
 const COL_W = 90, COL_X = 6, COL_STEP = 94;
 const NODE_Y = 66, NODE_H = 28, NODE_STEP = 30;
-const TAB_Y = 24, TAB_W = 76;
+const TAB_Y = 24, TAB_W = 62;
 const BTN_Y = 240;
 
 /**

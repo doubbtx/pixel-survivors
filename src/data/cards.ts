@@ -396,6 +396,33 @@ export const CARDS: CardDef[] = [
   { id: 'h_b_fury', name: 'Krwawy szał', rarity: 'silver', tags: ['Tarcze'], hero: 'borgun', desc: 'Furia rośnie 40% szybciej i daje 30% silniejsze efekty.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
   { id: 'h_i_heat', name: 'Serce żaru', rarity: 'gold', tags: ['Ogień'], hero: 'ignara', desc: 'Przegrzanie cię nie rani, a Wydech żaru zadaje 2x obrażeń.', flags: { 'heat.safe': 1, 'heat.vent': 1 } },
   { id: 'h_m_souls', name: 'Zbieracz dusz', rarity: 'silver', tags: ['Przywołania'], hero: 'morwen', desc: '+15 maks. dusz, a każde zabójstwo daje o 30% więcej dusz.', stackable: true, flags: { 'res.max': 15, 'res.gain': 0.3 } },
+  // Vesper (zabójczyni) i Aurel (kapłan).
+  { id: 'h_v_step', name: 'Ostrze w plecy', rarity: 'silver', tags: ['Krytyk'], hero: 'vesper', desc: 'Cios z cienia: +15 obrażeń, +4 promienia.', stackable: true, flags: { 'v_step.damage': 15, 'v_step.radius': 4 } },
+  { id: 'h_v_streak', name: 'Rytm ostrzy', rarity: 'silver', tags: ['Krytyk'], hero: 'vesper', desc: 'Kombo rośnie 40% szybciej i daje 30% więcej obrażeń.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
+  {
+    id: 'h_v_smoke', name: 'Bomba dymna', rarity: 'silver', tags: ['Szybkość'], hero: 'vesper', desc: 'Zniknięcie ogłusza wrogów wokół miejsca startu na 0.8 s.',
+    hooks: {
+      onDash: (run) => {
+        const p = run.player;
+        run.enemiesInCircle(p.x, p.y, 34 * run.stats.area, (e) => { e.stunT = Math.max(e.stunT, e.boss ? 0.2 : 0.8); });
+        run.burst(p.x, p.y, C.lgray, 16, 40);
+      },
+    },
+  },
+  { id: 'h_v_exec', name: 'Kat', rarity: 'gold', tags: ['Umiejętności', 'Krytyk'], hero: 'vesper', desc: 'Egzekucja: +30 obrażeń, +8 promienia, zabija od razu wrogów do 5% HP więcej.', stackable: true, flags: { 'v_exec.damage': 30, 'v_exec.radius': 8, 'v_exec.exec': 0.05 } },
+  { id: 'h_v_dance', name: 'Wirujący taniec', rarity: 'gold', tags: ['Umiejętności', 'Szybkość'], hero: 'vesper', desc: 'Taniec ostrzy: +1.5 s, +15 obrażeń cięć.', stackable: true, flags: { 'v_dance.duration': 1.5, 'v_dance.damage': 15 } },
+  { id: 'h_v_blood', name: 'Krwawe żniwo', rarity: 'gold', tags: ['Życie', 'Krytyk'], hero: 'vesper', desc: 'Egzekucja leczy 4% HP za każdego zabitego wroga.', stackable: true, flags: { execHeal: 0.04 } },
+  { id: 'h_v_shadow', name: 'Mistrzyni cieni', rarity: 'prism', tags: ['Krytyk', 'Szybkość'], hero: 'vesper', desc: 'Łowczyni działa o 6 zabójstw wcześniej, a Cios z cienia odnawia też Zniknięcie.', flags: { 'passive.n': 6, stepResetDash: 1 } },
+  { id: 'h_a_guard', name: 'Wierni', rarity: 'silver', tags: ['Przywołania'], hero: 'aurel', desc: 'Strażnicy: +1 strażnik, +6 obrażeń.', stackable: true, flags: { 'a_guard.count': 1, 'a_guard.damage': 6 } },
+  { id: 'h_a_faith', name: 'Gorliwość', rarity: 'silver', tags: ['Życie'], hero: 'aurel', desc: 'Wiara rośnie 40% szybciej, a Łaska i Sąd są 30% silniejsze.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
+  {
+    id: 'h_a_step', name: 'Ślad światła', rarity: 'silver', tags: ['Życie', 'Szybkość'], hero: 'aurel', desc: 'Krok światła leczy 4% maks. HP.', stackable: true,
+    hooks: { onDash: (run, n) => run.heal(run.stats.maxHp * 0.04 * n) },
+  },
+  { id: 'h_a_sanct', name: 'Święty krąg', rarity: 'gold', tags: ['Życie', 'Obszar'], hero: 'aurel', desc: 'Uświęcona ziemia: +2 s, +12 promienia, leczy o 0.5% HP na sekundę więcej.', stackable: true, flags: { 'a_sanct.duration': 2, 'a_sanct.radius': 12, 'a_sanct.heal': 0.5 } },
+  { id: 'h_a_judge', name: 'Wyrok', rarity: 'gold', tags: ['Umiejętności'], hero: 'aurel', desc: 'Sąd: +4 cele, +30 obrażeń słupów.', stackable: true, flags: { 'a_judge.count': 4, 'a_judge.damage': 30 } },
+  { id: 'h_a_shield', name: 'Tarcza wiary', rarity: 'gold', tags: ['Tarcze', 'Przywołania'], hero: 'aurel', desc: 'Opiekun działa co 4 s zamiast co 6 s, a tarcza może urosnąć o 10% HP więcej.', flags: { 'passive.n': 2, 'passive.shieldCap': 0.1 } },
+  { id: 'h_a_saint', name: 'Święty patron', rarity: 'prism', tags: ['Przywołania', 'Życie'], hero: 'aurel', desc: 'Sługi zadają +50% obrażeń, a trafienia strażników leczą 2x mocniej.', flags: { minionDmg: 0.5, guardHeal: 1 } },
   {
     id: 'h_k_inspire', name: 'Natchnienie', rarity: 'prism', tags: ['Umiejętności'], hero: 'kestra', desc: 'Przez 4 s po Deszczu strzał Q i E odnawiają się 3x szybciej.',
     hooks: {
@@ -433,6 +460,9 @@ const CARD_ICONS: Record<string, string> = {
   h_m_call: 'ab_m_raise', h_m_army: 'ab_m_raise_evo', h_m_swamp: 'ab_m_curse', h_m_lich: 'ab_m_legion_evo',
   p_catalyst: 'cd_nova', p_overdrive: 'pi_fury', c_ritual: 'cd_blood', h_k_inspire: 'ab_k_rain_evo',
   h_k_focus: 'pi_crit', h_b_fury: 'pi_fury', h_i_heat: 'ab_i_ring_evo', h_m_souls: 'ab_m_legion',
+  h_v_step: 'ab_v_step', h_v_streak: 'ab_v_dance', h_v_smoke: 'ab_v_vanish', h_v_exec: 'ab_v_exec', h_v_dance: 'ab_v_dance_evo',
+  h_v_blood: 'ab_v_exec_evo', h_v_shadow: 'ab_v_step_evo', h_a_guard: 'ab_a_guard', h_a_faith: 'ab_a_sanct', h_a_step: 'ab_a_step',
+  h_a_sanct: 'ab_a_sanct_evo', h_a_judge: 'ab_a_judge', h_a_shield: 'tag:Tarcze', h_a_saint: 'ab_a_guard_evo',
 };
 for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;
 

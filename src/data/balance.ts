@@ -50,6 +50,14 @@ export const BAL = {
     fury: { max: 100, meleeR: 52, hit: 1.2, gap: 0.12, hurt: 4, might: 0.4, dr: 0.2, idle: 3, decay: 15 },
     heat: { max: 100, cast: 20, spell: 0.6, burnFrom: 75, burn: 0.03, decay: 3, ventMin: 40, ventR: 50, vent: 0.7 },
     souls: { max: 30, range: 150, auto: 10, ultDmg: 0.03, ultExtra: 10 },
+    /** Kombo (Vesper): +1 za trafienie co `gap` s; obrażenia do +might przy pełnym; Egzekucja +exec za punkt; Taniec ostrzy tnie co danceEvery kroków. */
+    streak: { max: 40, gap: 0.08, might: 0.5, exec: 0.04, danceEvery: 6 },
+    /**
+     * Wiara (Aurel): zabójstwa w `range` (+1, elita 3, boss 10), leczenie +heal za każdy 1% maks. HP. Pełna: Łaska (leczenie i tarcza
+     * jako ułamek HP, sługi +minionLife s) i zużycie `grace`. Sąd: +judgDmg obrażeń za punkt, +1 cel za judgExtra punktów, Sąd ostateczny zostawia `keep`.
+     * Strażnicy leczą `guardHeal` maks. HP trafieniem; Opiekun: tarcza shieldPer za sługę (do shieldCap); Uświęcona ziemia przedłuża sługi o sanctLife s na sekundę.
+     */
+    faith: { max: 100, range: 150, heal: 0.5, graceHeal: 0.15, graceShield: 0.1, minionLife: 3, grace: 60, judgDmg: 0.01, judgExtra: 10, keep: 0.3, guardHeal: 0.004, shieldPer: 0.03, shieldCap: 0.18, sanctLife: 0.5 },
   },
   /**
    * Zadania w trakcie poziomu (data/tasks.ts, systems/tasks.ts): pierwsze po `first` s, kolejne co `every` s; kamień czeka `acceptLife` s

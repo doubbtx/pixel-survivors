@@ -38,7 +38,7 @@ import { updateEffects } from '../systems/effects';
 import { updateTurrets } from '../systems/turrets';
 import { updateMinions, spawnMinion } from '../systems/minions';
 import { updateEvents, startDungeon, type MapObject, type Buff, type Dungeon } from '../systems/events';
-import { updateResource, resourceOnHit, resourceOnHurt, resourceOnKill, resourceDamageMul, resourceCrit, resourceTakenMul } from '../systems/resource';
+import { updateResource, resourceOnHit, resourceOnHurt, resourceOnKill, resourceOnHeal, resourceDamageMul, resourceCrit, resourceTakenMul } from '../systems/resource';
 import { updateTasks, taskOnHurt, taskOnKill, type Task } from '../systems/tasks';
 import { updatePower } from '../systems/powers';
 import { updateTerrain, terrainBlast, type TerrainObj, type Arena } from '../systems/terrain';
@@ -249,7 +249,7 @@ export class Run {
   readonly zones = new Pool<Zone>(newZone, 500);
   readonly fx = new Pool<Fx>(newFx, 400);
   readonly turrets = new Pool<Turret>(() => ({ _i: -1, x: 0, y: 0, life: 0, timer: 0 }), 24);
-  readonly minions = new Pool<Minion>(() => ({ _i: -1, x: 0, y: 0, life: 0, damage: 0, hitT: 0, big: false, burst: false, src: '' }), BAL.minions.cap);
+  readonly minions = new Pool<Minion>(() => ({ _i: -1, x: 0, y: 0, life: 0, damage: 0, hitT: 0, big: false, burst: false, holy: false, src: '' }), BAL.minions.cap);
   readonly hash = new SpatialHash<Enemy>(16, 8, 2048);
   /** Wspólne bufory zapytań (żeby nie alokować tablic co klatkę). */
   readonly qa: Enemy[] = [];
@@ -965,10 +965,14 @@ export class Run {
     this.healAcc += got;
     this.healed += got;
     if (got > 0) this.healGlow = 0.3;
-    if (v <= room) { p.hp += v; return; }
-    p.hp = this.stats.maxHp;
-    const cap = this.flag('overhealShield');
-    if (cap > 0) this.addShield(v - room, cap);
+    if (v <= room) p.hp += v;
+    else {
+      p.hp = this.stats.maxHp;
+      const cap = this.flag('overhealShield');
+      if (cap > 0) this.addShield(v - room, cap);
+    }
+    // Wiara (Aurel) rośnie z leczenia — na końcu, bo pełna wiara sama leczy (Łaska).
+    if (got > 0) resourceOnHeal(this, got);
   }
 
   /** Dodaje tarczę, nie przekraczając limitu `capFrac` × maks. HP (nie obcina tarczy z innych źródeł). Zwraca przyrost. */
@@ -1170,6 +1174,11 @@ export class Run {
     if (hp.kind === 'killSummon' && (this.cardState.killSummon = (this.cardState.killSummon ?? 0) + 1) >= Math.max(3, hp.value - this.flag('passive.n'))) {
       this.cardState.killSummon = 0;
       spawnMinion(this, e.x, e.y, this.cardDamage(BAL.minions.passiveDmg), BAL.minions.passiveLife, false, hp.name);
+    }
+    // Łowczyni (Vesper): elita albo co N-te zabójstwo odnawia Q.
+    if (hp.kind === 'killReset' && (e.elite || e.boss || (this.cardState.killReset = (this.cardState.killReset ?? 0) + 1) >= Math.max(3, hp.value - this.flag('passive.n')))) {
+      this.cardState.killReset = 0;
+      if (this.abilities.q.cd > 0) { this.abilities.q.cd = 0; this.popText(this.player.x, this.player.y - 14, 'Odnowione!', C.lavender); }
     }
     // Żniwo (augment Duszek): wróg zabity duszą może powstać jako sługa.
     if (this.aug('souls_raise') && (this.lastHitSrc === 'Duszki' || this.lastHitSrc === 'Rój dusz') && rng.chance(BAL.minions.harvestChance)) {

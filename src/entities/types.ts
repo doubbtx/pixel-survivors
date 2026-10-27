@@ -213,7 +213,7 @@ export interface DmgNum extends Poolable {
   col: number;
 }
 
-export type ZoneKind = 'meteor' | 'mine' | 'net' | 'rain' | 'beam' | 'fire' | 'curse';
+export type ZoneKind = 'meteor' | 'mine' | 'net' | 'rain' | 'beam' | 'fire' | 'curse' | 'holy';
 
 /** Strefa obrażeń w świecie: meteoryt, mina, sieć, deszcz strzał, promień lasera, ogień. */
 export interface Zone extends Poolable {
@@ -295,6 +295,8 @@ export interface Minion extends Poolable {
   big: boolean;
   /** Wybuch przy zniknięciu (Nieśmiertelny legion). */
   burst: boolean;
+  /** Świetlisty strażnik (Aurel): inny wygląd, trafienia leczą gracza. */
+  holy: boolean;
   /** Źródło obrażeń (nazwa umiejętności albo pasywki). */
   src: string;
 }

@@ -11,7 +11,7 @@ import { spawnMinion } from './minions';
 /**
  * Zasoby bohaterów (HeroDef.resource, liczby w BAL.resource): stan w `run.res`, zdarzenia wołane z Run i umiejętności.
  * Karty i węzły: res.gain (szybszy przyrost), res.power (silniejszy efekt), res.max (większa pojemność),
- * heat.safe (przegrzanie nie rani), heat.vent (mocniejszy Wydech żaru).
+ * heat.safe (przegrzanie nie rani), heat.vent (mocniejszy Wydech żaru), execKeep (Egzekucja zostawia część kombo).
  */
 const R = BAL.resource;
 /** Nazwa źródła obrażeń zrzutu żaru (Ignara). */
@@ -41,6 +41,7 @@ function isSpell(run: Run, src: string): boolean {
 export function resourceDamageMul(run: Run, src: string): number {
   const k = run.hero.resource.kind;
   if (k === 'fury') return 1 + R.fury.might * resFrac(run) * power(run);
+  if (k === 'streak') return 1 + R.streak.might * resFrac(run) * power(run);
   if (k === 'heat' && isSpell(run, src)) return 1 + R.heat.spell * resFrac(run) * power(run);
   return 1;
 }
@@ -55,10 +56,17 @@ export function resourceTakenMul(run: Run): number {
   return run.hero.resource.kind === 'fury' ? Math.max(0.3, 1 - R.fury.dr * resFrac(run) * power(run)) : 1;
 }
 
-/** Trafienie wroga (bez obrażeń od stanów i procentowych): celność z dystansu, furia z bliska. */
+/** Trafienie wroga (bez obrażeń od stanów i procentowych): celność z dystansu, furia z bliska, kombo z każdego. */
 export function resourceOnHit(run: Run, e: Enemy): void {
   const k = run.hero.resource.kind;
-  if ((k !== 'focus' && k !== 'fury') || run.resGap > 0) return;
+  if ((k !== 'focus' && k !== 'fury' && k !== 'streak') || run.resGap > 0) return;
+  if (k === 'streak') {
+    run.resGap = R.streak.gap;
+    const was = run.res;
+    gain(run, 1);
+    if (was < resMax(run) && run.res >= resMax(run)) run.popText(run.player.x, run.player.y - 14, 'Pełne kombo!', C.lavender);
+    return;
+  }
   const p = run.player, d2 = (e.x - p.x) ** 2 + (e.y - p.y) ** 2;
   if (k === 'focus') {
     const F = R.focus;
@@ -88,6 +96,46 @@ export function resourceOnHurt(run: Run, dmg: number): void {
     if (run.flag('focusKeep') <= 0) run.res *= 1 - R.focus.hurtLoss;
   }
   else if (k === 'fury') { run.resIdle = 0; gain(run, (R.fury.hurt * 100 * dmg) / run.stats.maxHp); }
+  else if (k === 'streak') run.res = 0;
+}
+
+/** Egzekucja zużywa całe kombo: mnożnik obrażeń. */
+export function spendStreak(run: Run): number {
+  if (run.hero.resource.kind !== 'streak') return 1;
+  const n = run.res;
+  run.res = n * Math.min(0.9, run.flag('execKeep'));
+  if (n >= 5) run.popText(run.player.x, run.player.y - 16, `Kombo x${Math.floor(n)}`, C.lavender);
+  return 1 + R.streak.exec * n * power(run);
+}
+
+/** Leczenie (faktycznie odzyskane HP) daje wiarę. */
+export function resourceOnHeal(run: Run, got: number): void {
+  if (run.hero.resource.kind !== 'faith') return;
+  faithGain(run, (R.faith.heal * 100 * got) / run.stats.maxHp);
+}
+
+/** Przyrost wiary; pełna zamienia się w Łaskę: leczenie, tarcza i dłuższe życie sług. */
+function faithGain(run: Run, v: number): void {
+  gain(run, v);
+  if (run.res < resMax(run)) return;
+  const F = R.faith, p = run.player;
+  run.res -= F.grace;
+  run.addShield(run.stats.maxHp * F.graceShield * power(run), 0.3);
+  for (const m of run.minions.items) m.life += F.minionLife;
+  run.heal(run.stats.maxHp * F.graceHeal * power(run));
+  const f = run.addFx('ring', p.x, p.y, C.yellow, 0.4);
+  if (f) f.r = 40;
+  run.burst(p.x, p.y, C.yellow, 20, 60);
+  run.popText(p.x, p.y - 16, 'Łaska!', C.yellow);
+  sfx.play('levelup');
+}
+
+/** Sąd zużywa wiarę (Sąd ostateczny zostawia część): mnożnik obrażeń i dodatkowe cele. */
+export function spendFaith(run: Run, evolved: boolean): { mul: number; extra: number } {
+  if (run.hero.resource.kind !== 'faith' || run.res < 1) return { mul: 1, extra: 0 };
+  const F = R.faith, n = run.res;
+  run.res = evolved ? n * F.keep : 0;
+  return { mul: 1 + F.judgDmg * n * power(run), extra: Math.floor(n / F.judgExtra) };
 }
 
 /** Użycie umiejętności (bez darmowych powtórzeń): Q/E rozgrzewają, unik zrzuca żar. */
@@ -109,10 +157,15 @@ function vent(run: Run): void {
   run.popText(p.x, p.y - 14, 'Wydech!', C.orange);
 }
 
-/** Zabójstwo: dusze z wrogów ginących w pobliżu; pełne zamieniają się w sługę. */
+/** Zabójstwo: dusze i wiara z wrogów ginących w pobliżu; pełne dusze zamieniają się w sługę. */
 export function resourceOnKill(run: Run, e: Enemy): void {
-  if (run.hero.resource.kind !== 'souls') return;
-  const S = R.souls, p = run.player;
+  const k = run.hero.resource.kind, p = run.player;
+  if (k === 'faith') {
+    if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 <= R.faith.range ** 2) faithGain(run, e.boss ? 10 : e.elite ? 3 : 1);
+    return;
+  }
+  if (k !== 'souls') return;
+  const S = R.souls;
   if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 > S.range * S.range) return;
   gain(run, e.boss ? 10 : e.elite ? 3 : 1);
   if (run.res < resMax(run)) return;

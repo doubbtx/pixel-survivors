@@ -65,7 +65,7 @@ function drawMinimap(r: Renderer, run: Run, x: number, y: number, w: number, h: 
 }
 
 /** Rampy pasków zasobów bohaterów. */
-const RES_RAMP = { focus: RAMP.green, fury: RAMP.red, heat: RAMP.fire, souls: RAMP.purple } as const;
+const RES_RAMP = { focus: RAMP.green, fury: RAMP.red, heat: RAMP.fire, souls: RAMP.purple, streak: RAMP.stone, faith: RAMP.gold } as const;
 
 /** Pasek zasobu bohatera pod HP: nazwa i wartość po prawej, miganie przy pełnym zasobie i przegrzaniu (żar). */
 function drawResource(r: Renderer, run: Run, x: number, y: number): void {

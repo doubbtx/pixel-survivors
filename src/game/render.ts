@@ -163,6 +163,13 @@ export function renderWorld(run: Run, r: Renderer): void {
           r.circle(zx, zy, zr, run.step % 30 < 15 ? C.lime : C.plum);
           for (let k = 0; k < 4; k++) r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7, 2, 2, k % 2 ? C.lime : C.pink);
           break;
+        case 'holy':
+          // Uświęcona ziemia: złoty krąg z unoszącymi się iskrami światła.
+          r.withAlpha(0.18, () => r.circle(zx, zy, zr, C.yellow, true));
+          r.circle(zx, zy, zr, run.step % 30 < 15 ? C.gold : C.yellow);
+          r.circle(zx, zy, zr * 0.6, C.cream);
+          for (let k = 0; k < 4; k++) r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7 - rng.range(0, 6), 1, 2, k % 2 ? C.white : C.yellow);
+          break;
         case 'fire':
           r.withAlpha(0.2, () => r.circle(zx, zy, zr, C.orange, true));
           for (let k = 0; k < 5; k++) {
@@ -354,7 +361,7 @@ export function renderWorld(run: Run, r: Renderer): void {
   // Sługi (duchy): półprzezroczyste, migają przed zniknięciem.
   for (const m of run.minions.items) {
     if (!vis(m.x, m.y) || (m.life < 1.5 && run.step % 8 >= 5)) continue;
-    const name = m.big ? 'wraithbig' : 'wraith';
+    const name = m.holy ? (m.big ? 'angelbig' : 'angel') : m.big ? 'wraithbig' : 'wraith';
     r.withAlpha(0.85, () => drawSprite(g, `${name}@${animFrame(name, run.step, m._i * 5)}`, X(m.x), Y(m.y) - 2, { flipX: m.x > p.x }));
   }
 

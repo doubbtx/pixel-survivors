@@ -14,6 +14,10 @@ export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   borgun: { seq: [0, 1, 2, 3], speed: 8 },
   ignara: { seq: [0, 1, 2, 3], speed: 7 },
   morwen: { seq: [0, 1, 2, 3], speed: 8 },
+  vesper: { seq: [0, 1, 2, 3], speed: 6 },
+  aurel: { seq: [0, 1, 2, 3], speed: 8 },
+  angel: { seq: [0, 1, 2, 3], speed: 6 },
+  angelbig: { seq: [0, 1, 2, 3], speed: 7 },
   wraith: { seq: [0, 1, 2, 3], speed: 6 },
   wraithbig: { seq: [0, 1, 2, 3], speed: 7 },
   slime: { seq: [0, 1, 2, 3], speed: 9 },
@@ -149,6 +153,64 @@ function wraithOf(f: number, big: boolean): Painter {
 }
 const wraith = (f: number) => wraithOf(f, false);
 const wraithbig = (f: number) => wraithOf(f, true);
+
+/** Vesper: zabójczyni w ciemnym kapturze z szalem, maska na twarzy, dwa sztylety. */
+function vesper(f: number): Painter {
+  const p = new Painter(20, 20);
+  const o = f % 2 === 1 ? -1 : 0;
+  const [lx, lh, rx, rh] = STRIDE[f];
+  const flow = [0, 1, 0, -1][f];
+  p.rect(7 + lx, 15, 2, lh, C.black).rect(10 + rx, 15, 2, rh, C.black);
+  p.poly([[5, 8 + o], [2 + flow, 11 + o], [1 + flow, 13 + o], [6, 11 + o]], C.dred); // powiewający szal
+  p.sphere(9.5, 12 + o, 4.2, 4, RAMP.night); // kurtka
+  p.rect(6, 13 + o, 8, 1, C.dbrown).px(8, 13 + o, C.lgray).px(11, 13 + o, C.lgray); // pas z nożami
+  p.sphere(9.5, 7 + o, 4.2, 4.2, RAMP.night); // kaptur
+  p.rect(8, 6 + o, 4, 2, C.tan).px(9, 6 + o, C.black).px(11, 6 + o, C.black); // oczy
+  p.rect(8, 8 + o, 4, 1, C.dred); // maska
+  p.line(3, 12 + o, 4, 9 + o, C.lgray).px(3, 13 + o, C.dbrown); // sztylet w lewej
+  p.line(15, 9 + o, 17, 6 + o, C.lgray).px(17, 5 + o, C.white).px(15, 10 + o, C.dbrown); // sztylet w prawej
+  p.px(14, 10 + o, C.tan);
+  return p.outline();
+}
+
+/** Aurel: kapłan w białej szacie ze złotą stułą i aureolą, kostur ze słońcem. */
+function aurel(f: number): Painter {
+  const p = new Painter(20, 22);
+  const o = f % 2 === 1 ? -1 : 0;
+  const [lx, lh, rx, rh] = STRIDE[f];
+  const glow = f % 2 === 0 ? C.yellow : C.white;
+  p.rect(7 + lx, 17, 2, lh, C.dbrown).rect(10 + rx, 17, 2, rh, C.dbrown);
+  p.poly([[5, 10 + o], [14, 10 + o], [15, 18], [4, 18]], C.lgray); // szata
+  p.sphere(9.5, 14 + o, 4.5, 4, RAMP.bone);
+  p.line(8, 10 + o, 7, 18, C.gold).line(11, 10 + o, 12, 18, C.gold); // stuła
+  p.rect(6, 13 + o, 8, 1, C.gold);
+  p.sphere(9.5, 8 + o, 3.6, 3.6, RAMP.skin); // głowa
+  p.rect(7, 5 + o, 6, 2, C.cream).px(6, 6 + o, C.cream).px(13, 6 + o, C.cream); // siwe włosy
+  p.px(8, 8 + o, C.black).px(11, 8 + o, C.black).rect(8, 10 + o, 4, 1, C.cream); // oczy i broda
+  p.rect(6, 1 + o, 8, 1, glow).px(5, 2 + o, C.gold).px(14, 2 + o, C.gold); // aureola
+  p.line(17, 5 + o, 17, 20 + o, C.brown).px(17, 10 + o, C.clay); // kostur
+  p.disc(17, 3 + o, 2, C.gold).px(17, 3 + o, glow).px(15, 3 + o, C.yellow).px(19, 3 + o, C.yellow).px(17, 0 + o, C.yellow);
+  p.px(15, 12 + o, C.tan).px(16, 12 + o, C.skin); // dłoń
+  return p.outline();
+}
+
+/** Świetlisty strażnik (Aurel): biała postać ze skrzydłami i aureolą; duży = Anielski zastęp, z mieczem. */
+function angelOf(f: number, big: boolean): Painter {
+  const s = big ? 1.5 : 1;
+  const w = Math.round(16 * s), h = Math.round(16 * s);
+  const p = new Painter(w, h);
+  const cx = w / 2, flap = [0, 1, 2, 1][f] * s;
+  p.poly([[cx - 2 * s, 6 * s], [cx - 7 * s, 3 * s - flap], [cx - 6 * s, 9 * s], [cx - 2 * s, 10 * s]], C.cream); // skrzydła
+  p.poly([[cx + 2 * s, 6 * s], [cx + 7 * s, 3 * s - flap], [cx + 6 * s, 9 * s], [cx + 2 * s, 10 * s]], C.cream);
+  p.poly([[cx - 3 * s, 8 * s], [cx + 3 * s, 8 * s], [cx + 2 * s, 15 * s], [cx - 2 * s, 15 * s]], C.white); // szata
+  p.sphere(cx, 5.5 * s, 2.8 * s, 2.8 * s, RAMP.bone);
+  p.px(cx - 1, 5.5 * s, C.blue).px(cx + 1, 5.5 * s, C.blue);
+  p.rect(cx - 2 * s, 1, 4 * s, 1, f % 2 ? C.yellow : C.gold); // aureola
+  if (big) p.line(w - 3, 4 * s, w - 3, h - 3, C.yellow).px(w - 3, 4 * s - 1, C.white); // miecz
+  return p.outline(C.gold);
+}
+const angel = (f: number) => angelOf(f, false);
+const angelbig = (f: number) => angelOf(f, true);
 
 /** Szlam w kolorach rampy (zielony zwykły, złoty — rzadki Złoty szlam). */
 function slimeOf(f: number, ramp: readonly number[], mouth: number): Painter {
@@ -345,7 +407,7 @@ function weaver(f: number): Painter {
 }
 
 export const ACTORS: Record<string, (f: number) => Painter> = {
-  kestra, borgun, ignara, morwen, wraith, wraithbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel, mimic, stag,
+  kestra, borgun, ignara, morwen, vesper, aurel, wraith, wraithbig, angel, angelbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel, mimic, stag,
   shieldbearer, summoner, kamikaze, blinker, weaver,
 };
 

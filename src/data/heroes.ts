@@ -8,7 +8,8 @@ import type { Tag } from './cards';
  * Ultimate (slot 'ult') nie ma czasu odnowienia — ładuje się zabójstwami (`charge`).
  */
 export type AbilitySlot = 'q' | 'e' | 'dash' | 'ult';
-export type AbilityKind = 'volley' | 'net' | 'dash' | 'rain' | 'charge' | 'slam' | 'titan' | 'fireball' | 'firering' | 'inferno' | 'summon' | 'curse' | 'legion';
+export type AbilityKind = 'volley' | 'net' | 'dash' | 'rain' | 'charge' | 'slam' | 'titan' | 'fireball' | 'firering' | 'inferno' | 'summon' | 'curse' | 'legion'
+  | 'shadowstep' | 'execute' | 'bladedance' | 'guardian' | 'sanctum' | 'judgment';
 
 export interface AbilityDef {
   id: string;
@@ -38,17 +39,20 @@ export interface AbilityDef {
 
 /**
  * nthVolley: co N-ta salwa broni podstawowej mocniejsza; killShield: tarcza za zabójstwa; echoCast: co N-te Q/E powtarza się za darmo;
- * killSummon: co N-te zabójstwo przywołuje ducha-sługę.
+ * killSummon: co N-te zabójstwo przywołuje ducha-sługę; killReset: co N-te zabójstwo (i każda elita) odnawia Q;
+ * guardShield: co N s tarcza za każdego sługę (systems/minions.ts).
  */
-export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast' | 'killSummon';
+export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast' | 'killSummon' | 'killReset' | 'guardShield';
 
 /**
  * Zasób bohatera (pasek pod HP, systems/resource.ts, liczby w BAL.resource):
  * focus — celność z trafień z dystansu (krytyki, przy pełnej darmowa Salwa), fury — furia z walki wręcz i obrywania
  * (obrażenia i redukcja, opada poza walką), heat — żar z czarów (mocniejsze czary, przegrzanie rani, unik zrzuca żar),
- * souls — dusze z zabitych w pobliżu (przy pełnych sługa, R zużywa wszystkie).
+ * souls — dusze z zabitych w pobliżu (przy pełnych sługa, R zużywa wszystkie),
+ * streak — kombo z każdego trafienia (więcej obrażeń, E zużywa całe na egzekucję, oberwanie zeruje),
+ * faith — wiara z zabójstw w pobliżu i leczenia (przy pełnej Łaska: leczenie, tarcza, dłuższe sługi; R zużywa całą).
  */
-export type ResourceKind = 'focus' | 'fury' | 'heat' | 'souls';
+export type ResourceKind = 'focus' | 'fury' | 'heat' | 'souls' | 'streak' | 'faith';
 
 export interface ResourceDef {
   kind: ResourceKind;
@@ -92,13 +96,14 @@ export function abilityCooldown(def: AbilityDef, level: number): number {
 /** Opisy przyrostów parametrów umiejętności na poziom (klucze z `pl`). */
 const ABILITY_DELTA: Record<string, (v: number, def: AbilityDef) => string> = {
   damage: (v) => `+${v} obrażeń`,
-  count: (v, d) => `+${v} ${d.kind === 'volley' ? 'strzała' : d.kind === 'summon' || d.kind === 'legion' ? 'sługa' : 'pocisk'}`,
+  count: (v, d) => `+${v} ${d.kind === 'volley' ? 'strzała' : d.kind === 'summon' || d.kind === 'legion' || d.kind === 'guardian' ? 'sługa' : d.kind === 'judgment' ? 'cel' : 'pocisk'}`,
   radius: (v) => `+${v} promienia`,
   duration: (v) => `działa o ${v} s dłużej`,
   dist: (v) => `+${v} zasięgu`,
   might: (v) => `+${Math.round(v * 100)}% obrażeń w trakcie`,
   stun: (v) => `ogłuszenie o ${v} s dłuższe`,
   blast: (v) => `+${v} promienia wybuchów`,
+  exec: (v) => `próg egzekucji +${Math.round(v * 100)}% HP`,
 };
 
 /** Co daje następny poziom umiejętności (dla ekranu awansu). */
@@ -238,6 +243,72 @@ export const HEROES: HeroDef[] = [
         cooldown: 0, cdPerLevel: 0, charge: 130, maxLevel: 5,
         p: { count: 5, damage: 40, duration: 12 }, pl: { count: 1, damage: 15 },
         evo: { tag: 'Umiejętności', name: 'Nieśmiertelny legion', desc: 'Więcej wojowników, a każdy na koniec wybucha (3x obrażeń).', icon: 'ab_m_legion_evo', bonus: { count: 2, damage: 15 } },
+      },
+    ],
+  },
+  {
+    id: 'vesper', name: 'Vesper', role: 'Zabójczyni', sprite: 'vesper', color: C.salmon,
+    base: { maxHp: 90, speed: 66, crit: 0.12 },
+    weapon: 'knives',
+    tags: ['Krytyk', 'Szybkość'],
+    passive: { name: 'Łowczyni', desc: 'Elita albo co 12. zabójstwo od razu odnawia Cios z cienia.', kind: 'killReset', value: 12 },
+    resource: { kind: 'streak', name: 'Kombo', color: C.lavender, desc: 'Trafienia podbijają kombo: więcej obrażeń. Egzekucja (E) zużywa całe na potężny cios. Oberwanie je zeruje.' },
+    abilities: [
+      {
+        id: 'v_step', name: 'Cios z cienia', icon: 'ab_v_step', desc: 'Przenosisz się za wroga przy celowniku i zadajesz krytyczny cios.', slot: 'q', kind: 'shadowstep', color: C.lavender,
+        cooldown: 5, cdPerLevel: -0.3, maxLevel: 5,
+        p: { damage: 40, radius: 20, range: 130 }, pl: { damage: 16, radius: 2 },
+        evo: { tag: 'Krytyk', name: 'Widmowy cios', desc: 'Po ciosie przeskakujesz do dwóch kolejnych wrogów.', icon: 'ab_v_step_evo', bonus: { damage: 30, radius: 6 } },
+      },
+      {
+        id: 'v_exec', name: 'Egzekucja', icon: 'ab_v_exec', desc: 'Cięcie przed sobą za całe kombo. Słabi wrogowie (bez bossów) giną od razu.', slot: 'e', kind: 'execute', color: C.salmon,
+        cooldown: 8, cdPerLevel: -0.4, maxLevel: 5,
+        p: { damage: 50, radius: 44, exec: 0.15 }, pl: { damage: 20, radius: 3, exec: 0.02 },
+        evo: { tag: 'Szybkość', name: 'Rzeź', desc: 'Cięcie dookoła ciebie, większe i mocniejsze.', icon: 'ab_v_exec_evo', bonus: { damage: 30, radius: 12, exec: 0.05 } },
+      },
+      {
+        id: 'v_vanish', name: 'Zniknięcie', icon: 'ab_v_vanish', desc: 'Rozpływasz się w dymie i przemykasz z nietykalnością.', slot: 'dash', kind: 'dash', color: C.lgray,
+        cooldown: 2.4, cdPerLevel: 0, maxLevel: 1,
+        p: { dist: 70, iframes: 0.4 }, pl: {},
+      },
+      {
+        id: 'v_dance', name: 'Taniec ostrzy', icon: 'ab_v_dance', desc: 'Przez kilka sekund cienie tną wrogów wokół, a ty jesteś nietykalna.', slot: 'ult', kind: 'bladedance', color: C.white,
+        cooldown: 0, cdPerLevel: 0, charge: 130, maxLevel: 5,
+        p: { duration: 3.5, damage: 30, radius: 110 }, pl: { duration: 0.4, damage: 12 },
+        evo: { tag: 'Umiejętności', name: 'Burza ostrzy', desc: 'Dłuższy taniec, a cienie tną dwa razy częściej.', icon: 'ab_v_dance_evo', bonus: { duration: 1.5, damage: 15 } },
+      },
+    ],
+  },
+  {
+    id: 'aurel', name: 'Aurel', role: 'Kapłan', sprite: 'aurel', color: C.yellow,
+    base: { maxHp: 120, speed: 54, regen: 0.4, duration: 1.05 },
+    weapon: 'light',
+    tags: ['Życie', 'Przywołania'],
+    passive: { name: 'Opiekun', desc: 'Co 6 s dostajesz tarczę 3% HP za każdego sługę (maks. 18% HP).', kind: 'guardShield', value: 6 },
+    resource: { kind: 'faith', name: 'Wiara', color: C.yellow, desc: 'Rośnie z zabójstw w pobliżu i z leczenia. Pełna daje Łaskę: leczenie, tarczę i dłuższe sługi. Sąd (R) zużywa całą.' },
+    abilities: [
+      {
+        id: 'a_guard', name: 'Strażnicy', icon: 'ab_a_guard', desc: 'Przywołujesz świetlistych strażników, którzy walczą i leczą cię trafieniami.', slot: 'q', kind: 'guardian', color: C.yellow,
+        cooldown: 10, cdPerLevel: -0.5, maxLevel: 5,
+        p: { count: 2, damage: 16, duration: 10 }, pl: { count: 1, damage: 6 },
+        evo: { tag: 'Przywołania', name: 'Anielski zastęp', desc: 'Strażnicy są wielcy, silniejsi i trwają dłużej.', icon: 'ab_a_guard_evo', bonus: { count: 1, damage: 16, duration: 4 } },
+      },
+      {
+        id: 'a_sanct', name: 'Uświęcona ziemia', icon: 'ab_a_sanct', desc: 'Krąg światła wokół ciebie: leczy cię, rani wrogów i przedłuża życie sług.', slot: 'e', kind: 'sanctum', color: C.gold,
+        cooldown: 12, cdPerLevel: -0.6, maxLevel: 5,
+        p: { damage: 8, radius: 44, duration: 4, heal: 1 }, pl: { damage: 4, radius: 4, duration: 0.5 },
+        evo: { tag: 'Życie', name: 'Sanktuarium', desc: 'Większy krąg, który na start daje tarczę 12% HP.', icon: 'ab_a_sanct_evo', bonus: { radius: 14, damage: 6, heal: 0.5 } },
+      },
+      {
+        id: 'a_step', name: 'Krok światła', icon: 'ab_a_step', desc: 'Przeskakujesz w błysku z nietykalnością.', slot: 'dash', kind: 'dash', color: C.blue,
+        cooldown: 3, cdPerLevel: 0, maxLevel: 1,
+        p: { dist: 58, iframes: 0.35 }, pl: {},
+      },
+      {
+        id: 'a_judge', name: 'Sąd', icon: 'ab_a_judge', desc: 'Słupy światła spadają na wielu wrogów. Wiara wzmacnia je i dokłada celów.', slot: 'ult', kind: 'judgment', color: C.white,
+        cooldown: 0, cdPerLevel: 0, charge: 130, maxLevel: 5,
+        p: { count: 8, damage: 70, radius: 160, blast: 20 }, pl: { count: 2, damage: 25 },
+        evo: { tag: 'Umiejętności', name: 'Sąd ostateczny', desc: 'Po chwili spada druga fala słupów, a wiara nie przepada w całości.', icon: 'ab_a_judge_evo', bonus: { count: 4, damage: 25 } },
       },
     ],
   },

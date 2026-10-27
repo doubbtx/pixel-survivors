@@ -41,6 +41,10 @@ export const AUGMENTS: AugmentDef[] = [
   { id: 'staff_seek', weapon: 'staff', name: 'Wędrujący płomień', desc: 'Po trafieniu kula leci do najbliższego innego wroga (2 razy).' },
   { id: 'souls_seek', weapon: 'souls', name: 'Wędrujące dusze', desc: 'Po trafieniu dusza leci do kolejnego wroga (2 razy).' },
   { id: 'souls_raise', weapon: 'souls', name: 'Żniwo', desc: 'Wróg zabity duszą ma 10% szans powstać jako duch-sługa.' },
+  { id: 'knives_seek', weapon: 'knives', name: 'Rykoszet ostrzy', desc: 'Po trafieniu nóż odbija się do kolejnego wroga (2 razy).' },
+  { id: 'knives_poison', weapon: 'knives', name: 'Zatrute ostrza', desc: 'Noże zatruwają wrogów.', elem: 'poison' },
+  { id: 'light_shock', weapon: 'light', name: 'Gniew niebios', desc: 'Światło poraża wrogów (więcej obrażeń ze wszystkich źródeł).', elem: 'lightning' },
+  { id: 'light_mend', weapon: 'light', name: 'Kojące światło', desc: 'Każdy trafiony wróg leczy cię o 0.1% maks. HP (do 1% na wyładowanie).' },
 ];
 
 export const AUGMENT_BY_ID: Record<string, AugmentDef> = Object.fromEntries(AUGMENTS.map((a) => [a.id, a]));

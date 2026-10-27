@@ -106,6 +106,18 @@ export const SECRETS: SecretDef[] = [
     check: (run) => (run.cardState['sec.pyre'] ?? 0) >= 10,
     flags: { 'heat.safe': 1, 'res.power': 0.3 },
   },
+  {
+    id: 'shadowqueen', name: 'Królowa cieni', riddle: 'Jeden cios, dwadzieścia trupów.', hero: 'vesper',
+    desc: 'Egzekucja zostawia połowę kombo, +10% szansy na krytyk.',
+    check: (run) => (run.cardState['sec.exec'] ?? 0) >= 20,
+    flags: { execKeep: 0.5 }, stats: { crit: 0.1 },
+  },
+  {
+    id: 'saint', name: 'Święty', riddle: 'Dwunastu strażników i ani jednej rany na duszy.', hero: 'aurel',
+    desc: 'Sługi żyją 30% dłużej, +1.5 HP na sekundę.',
+    check: (run) => run.minions.count >= 12 && run.player.hp >= run.stats.maxHp * 0.95,
+    flags: { minionLife: 0.3 }, stats: { regen: 1.5 },
+  },
 ];
 
 export const SECRET_BY_ID: Record<string, SecretDef> = Object.fromEntries(SECRETS.map((s) => [s.id, s]));

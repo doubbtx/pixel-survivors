@@ -77,7 +77,7 @@ function fireProjectile(run: Run, w: WeaponInst, s: EffWeapon, angle: number, fo
   if (boomerang) pr.t = -s.duration; // bumerang: t<0 = lot w przód
   // Augmenty pocisków (data/augments.ts).
   const base = weaponBase(w.def);
-  if ((base === 'bolt' && run.aug('bolt_seek')) || (base === 'staff' && run.aug('staff_seek')) || (base === 'souls' && run.aug('souls_seek'))) pr.retarget = 2;
+  if ((base === 'bolt' && run.aug('bolt_seek')) || (base === 'staff' && run.aug('staff_seek')) || (base === 'souls' && run.aug('souls_seek')) || (base === 'knives' && run.aug('knives_seek'))) pr.retarget = 2;
   if (base === 'bolt' && run.aug('bolt_split')) pr.split = 1;
   if (base === 'arrow' && run.aug('arrow_split')) pr.splitEnd = 1;
   if (base === 'boomerang' && run.aug('boom_return')) pr.retMul = 2;
@@ -186,6 +186,8 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       // Przeładowany łańcuch (augment): wybuch na ostatnim celu.
       if (burst && any) run.explode(fx, fy, 22 * s.area, s.damage * 0.6, w.def.name, w.def.color, 2);
     }
+    // Kojące światło (augment Świętego światła): leczenie za trafionych.
+    if (hit.length && weaponBase(w.def) === 'light' && run.aug('light_mend')) run.heal(run.stats.maxHp * Math.min(0.01, hit.length * 0.001));
     if (hit.length) sfx.play('zap');
     else w.timer = 0.2;
   },

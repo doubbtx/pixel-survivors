@@ -2,6 +2,7 @@ import { C, RAMP } from '../core/palette';
 import { Painter } from './painter';
 import { ITEM_ICONS } from './items';
 import { CARD_ICONS_GFX } from './card-icons';
+import { HERO_ICONS } from './hero-icons';
 
 /**
  * Ikony 16×16 (piktogramy) dla broni, pasywek, umiejętności i tagów kart.
@@ -60,6 +61,7 @@ function boltShape(p: Painter, ox: number, oy: number, col: number = C.yellow): 
 export const ICON_FNS: Record<string, IconFn> = {
   ...ITEM_ICONS,
   ...CARD_ICONS_GFX,
+  ...HERO_ICONS,
   // ===================== bronie =====================
   ic_bolt: (p) => { p.sphere(9.5, 6.5, 4, 4, RAMP.blue).px(8, 5, C.white).px(4, 11, C.blue).px(2, 13, C.cyan).px(6, 10, C.cyan); },
   ic_bolt_evo: (p) => {

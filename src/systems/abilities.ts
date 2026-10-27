@@ -4,10 +4,10 @@ import { C } from '../core/palette';
 import { rng } from '../core/rng';
 import { BAL } from '../data/balance';
 import { abilityParam, abilityCooldown, type AbilityKind, type AbilitySlot } from '../data/heroes';
-import { SLOT, type AbilityInst } from '../entities/types';
+import { SLOT, type AbilityInst, type Enemy } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnMinion } from './minions';
-import { resourceOnCast, spendSouls } from './resource';
+import { resourceOnCast, spendSouls, spendStreak, spendFaith } from './resource';
 
 const ORDER: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
 
@@ -29,6 +29,61 @@ function aimPoint(run: Run, range: number): [number, number] {
 }
 
 type Cast = (run: Run, a: AbilityInst, P: (k: string) => number) => void;
+
+/** Cios z cienia: doskok za plecy wroga (przez ruch, więc z kolizjami terenu) i krytyczne cięcie po dotarciu. */
+function stepStrike(run: Run, a: AbilityInst, P: (k: string) => number, t: Enemy | null, x: number, y: number): void {
+  const p = run.player, dur = 0.1;
+  let tx = x, ty = y;
+  if (t) {
+    const dx = t.x - p.x, dy = t.y - p.y, d = Math.hypot(dx, dy) || 1;
+    tx = t.x + (dx / d) * (t.radius + 6);
+    ty = t.y + (dy / d) * (t.radius + 6);
+  }
+  const f = run.addFx('line', p.x, p.y, C.lavender, 0.2);
+  if (f) { f.x2 = tx; f.y2 = ty; f.w = 2; }
+  run.burst(p.x, p.y, C.slate, 8, 40);
+  p.dashT = dur;
+  p.dvx = (tx - p.x) / dur;
+  p.dvy = (ty - p.y) / dur;
+  p.iframes = Math.max(p.iframes, 0.3);
+  run.schedule(dur, () => {
+    const r = P('radius') * run.stats.area;
+    run.enemiesInCircle(p.x, p.y, r, (e) => run.damageEnemy(e, P('damage') * run.stats.might, a.def.name, { forceCrit: true, kx: e.x - p.x, ky: e.y - p.y, knock: 3 }));
+    const ring = run.addFx('ring', p.x, p.y, C.lavender, 0.2);
+    if (ring) ring.r = r;
+    run.burst(p.x, p.y, C.white, 8, 60);
+    sfx.play('hit');
+  });
+}
+
+/** Taniec ostrzy: cień tnie losowego wroga w promieniu. */
+function danceStrike(run: Run, a: AbilityInst): void {
+  const P = (k: string) => abilityParam(a.def, a.level, k) + run.flag(`${a.def.id}.${k}`);
+  const p = run.player, R = P('radius') * run.stats.area;
+  const cand = run.hash.query(p.x, p.y, R, run.qa).filter((e) => !e.dead && (e.x - p.x) ** 2 + (e.y - p.y) ** 2 <= R * R);
+  if (!cand.length) return;
+  const e = rng.pick(cand), ang = rng.range(0, Math.PI * 2);
+  const f = run.addFx('line', e.x + Math.cos(ang) * 14, e.y + Math.sin(ang) * 14, C.white, 0.12);
+  if (f) { f.x2 = e.x - Math.cos(ang) * 14; f.y2 = e.y - Math.sin(ang) * 14; f.w = 2; }
+  run.damageEnemy(e, P('damage') * run.stats.might, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 2 });
+  run.burst(e.x, e.y, C.lavender, 4, 50);
+}
+
+/** Sąd: słupy światła na `n` najbliższych wrogach (kolejno, z małym odstępem). */
+function judgeWave(run: Run, a: AbilityInst, P: (k: string) => number, n: number, mul: number, delay: number): void {
+  const p = run.player, R = P('radius') * run.stats.area;
+  const cand = run.hash.query(p.x, p.y, R, run.qa).filter((e) => !e.dead && (e.x - p.x) ** 2 + (e.y - p.y) ** 2 <= R * R);
+  cand.sort((u, v) => (u.x - p.x) ** 2 + (u.y - p.y) ** 2 - ((v.x - p.x) ** 2 + (v.y - p.y) ** 2));
+  cand.slice(0, n).forEach((e, i) => {
+    const x = e.x, y = e.y;
+    run.schedule(delay + i * 0.04, () => {
+      const tx = e.dead ? x : e.x, ty = e.dead ? y : e.y;
+      const f = run.addFx('line', tx, ty - 150, C.yellow, 0.2);
+      if (f) { f.x2 = tx; f.y2 = ty; f.w = 4; }
+      run.explode(tx, ty, P('blast') * run.stats.area, P('damage') * mul * run.stats.might, a.def.name, C.yellow, 2);
+    });
+  });
+}
 
 /** Dodatkowe efekty umiejętności po ewolucji (po zwykłym użyciu), wg id umiejętności. */
 const EVO_EXTRA: Record<string, Cast> = {
@@ -65,6 +120,15 @@ const EVO_EXTRA: Record<string, Cast> = {
   },
   // Płomienna bariera: tarcza 15% HP.
   i_ring: (run) => { run.addShield(run.stats.maxHp * 0.15, 0.3); },
+  // Widmowy cios: dwa kolejne doskoki do najbliższych wrogów.
+  v_step: (run, a, P) => {
+    for (let i = 1; i <= 2; i++) run.schedule(0.22 * i, () => {
+      const t = run.nearestEnemy(run.player.x, run.player.y, 100);
+      if (t) stepStrike(run, a, P, t, t.x, t.y);
+    });
+  },
+  // Sanktuarium: tarcza na start.
+  a_sanct: (run) => { run.addShield(run.stats.maxHp * 0.12, 0.3); },
   // Przeklęta ziemia: wrogowie w bagnie zostają porażeni.
   m_curse: (run, _a, P) => {
     const [x, y] = aimPoint(run, P('range'));
@@ -202,6 +266,65 @@ const CASTS: Record<AbilityKind, Cast> = {
     run.addShake(5);
   },
 
+  shadowstep(run, a, P) {
+    const [x, y] = aimPoint(run, P('range'));
+    stepStrike(run, a, P, run.nearestEnemy(x, y, 60) ?? run.nearestEnemy(run.player.x, run.player.y, P('range')), x, y);
+    if (run.flag('stepResetDash') > 0) run.abilities.dash.cd = 0;
+  },
+
+  execute(run, a, P) {
+    const p = run.player;
+    // Kombo (zasób Vesper): całe zużyte na jeden cios.
+    const mul = spendStreak(run);
+    const [dx, dy] = aimDir(run);
+    const base = Math.atan2(dy, dx), arc = a.def.evolved ? Math.PI : 1.1;
+    const r = P('radius') * run.stats.area;
+    let kills = 0;
+    run.enemiesInCircle(p.x, p.y, r, (e) => {
+      let da = Math.atan2(e.y - p.y, e.x - p.x) - base;
+      da = Math.atan2(Math.sin(da), Math.cos(da));
+      if (Math.abs(da) > arc) return;
+      // Egzekucja: słabi wrogowie (bez bossów) giną od razu.
+      const weak = !e.boss && e.hp <= e.maxHp * P('exec');
+      run.damageEnemy(e, weak ? e.maxHp * 3 : P('damage') * mul * run.stats.might, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 4, forceCrit: weak });
+      if (e.dead) kills++;
+    });
+    run.cardState['sec.exec'] = Math.max(run.cardState['sec.exec'] ?? 0, kills);
+    if (kills) run.heal(run.stats.maxHp * run.flag('execHeal') * kills);
+    const f = run.addFx('arc', p.x, p.y, C.salmon, 0.2);
+    if (f) { f.r = r; f.a0 = base - arc; f.a1 = base + arc; }
+    run.addShake(mul > 2 ? 4 : 2);
+  },
+
+  bladedance(run, a, P) {
+    a.activeT = P('duration') * run.stats.duration;
+    run.player.iframes = Math.max(run.player.iframes, a.activeT);
+    run.showBanner(a.def.name + '!');
+    run.addShake(3);
+  },
+
+  guardian(run, a, P) {
+    const p = run.player;
+    for (let i = 0; i < Math.round(P('count')); i++) spawnMinion(run, p.x, p.y, P('damage') * run.stats.might, P('duration'), !!a.def.evolved, a.def.name, false, true);
+  },
+
+  sanctum(run, a, P) {
+    const p = run.player;
+    const z = run.addZone('holy', p.x, p.y, P('radius') * run.stats.area, P('damage') * run.stats.might, P('duration') * run.stats.duration, SLOT.e, a.def.name);
+    if (z) { z.tick = 30; z.len = P('heal'); }
+    run.burst(p.x, p.y, C.yellow, 14, 50);
+  },
+
+  judgment(run, a, P) {
+    // Wiara (zasób Aurela): mocniejsze słupy i więcej celów; Sąd ostateczny spuszcza drugą falę.
+    const faith = spendFaith(run, !!a.def.evolved);
+    const n = Math.round(P('count')) + faith.extra;
+    judgeWave(run, a, P, n, faith.mul, 0.15);
+    if (a.def.evolved) judgeWave(run, a, P, n, faith.mul, 0.9);
+    run.showBanner(a.def.name + '!');
+    run.addShake(5);
+  },
+
   inferno(run, a, P) {
     a.activeT = P('duration') * run.stats.duration;
     run.showBanner(a.def.name + '!');
@@ -296,6 +419,11 @@ export function updateAbilities(run: Run, input: Input, dt: number): void {
       if (a.def.kind === 'inferno' && run.step % 12 === 0) {
         infernoStrike(run, a);
         if (a.def.evolved) infernoStrike(run, a);
+      }
+      // Taniec ostrzy: cięcie co danceEvery kroków (Burza ostrzy: dwa).
+      if (a.def.kind === 'bladedance' && run.step % BAL.resource.streak.danceEvery === 0) {
+        danceStrike(run, a);
+        if (a.def.evolved) danceStrike(run, a);
       }
       if (a.activeT <= 0) run.recomputeStats();
     }
