@@ -33,8 +33,9 @@ import { HelpScreen } from './help';
 import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import { bonusLines } from '../data/upgrades';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
+import { PowerPickView } from './powers';
 
-type State = 'play' | 'levelup' | 'cards' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'pause' | 'cleared' | 'map' | 'end';
+type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'pause' | 'cleared' | 'map' | 'end';
 
 /** Krótka blokada wejścia po otwarciu nakładki — żeby wciśnięty akurat klawisz nie wybrał karty. */
 const OVERLAY_DELAY = 0.3;
@@ -50,6 +51,7 @@ export class GameScreen implements Screen {
   private state: State = 'play';
   private levelUp: LevelUpView | null = null;
   private cardPick: CardPickView | null = null;
+  private powerPick: PowerPickView | null = null;
   private loot: LootView | null = null;
   private inventory: InventoryView | null = null;
   private shop: ShopView | null = null;
@@ -373,7 +375,7 @@ export class GameScreen implements Screen {
     if (Object.values(run.synTiers).some((t) => (t ?? 0) > 0)) h.show('synergy');
   }
 
-  /** Otwiera nakładkę dla zaległych nagród: łup → awans → karta. */
+  /** Otwiera nakładkę dla zaległych nagród: łup → awans → karta → moc bossa. */
   private openPending(): boolean {
     const run = this.run;
     if (run.pendingLoot.length > 0) {
@@ -390,6 +392,11 @@ export class GameScreen implements Screen {
       this.cardPick = new CardPickView(run, run.pendingCards.shift()!);
       this.state = 'cards';
       this.hints.show('cards');
+    } else if (run.pendingPowers > 0) {
+      run.pendingPowers--;
+      this.powerPick = new PowerPickView(run);
+      this.state = 'power';
+      this.hints.show('power');
     } else {
       return false;
     }
@@ -452,6 +459,12 @@ export class GameScreen implements Screen {
         break;
       case 'cards':
         if (this.cardPick!.update(inp)) {
+          this.state = this.overlayReturn;
+          this.openPending();
+        }
+        break;
+      case 'power':
+        if (this.powerPick!.update(inp)) {
           this.state = this.overlayReturn;
           this.openPending();
         }
@@ -521,6 +534,9 @@ export class GameScreen implements Screen {
         break;
       case 'cards':
         this.cardPick!.render(r);
+        break;
+      case 'power':
+        this.powerPick!.render(r);
         break;
       case 'loot':
         this.loot!.render(r);

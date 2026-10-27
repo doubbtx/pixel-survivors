@@ -113,3 +113,28 @@ export const ELITE_MODS: Record<string, EliteMod> = {
   huge: { name: 'Olbrzymi', hpMul: 2 },
   volley: { name: 'Ostrzał', ring: true },
 };
+
+/**
+ * Moce bossów (systems/powers.ts): po pokonaniu bossa gracz wybiera 1 z 3 jego nazwanych ataków. Moc strzela sama co `cd` s
+ * (× odnowienie umiejętności) pociskami gracza w kształcie salwy bossa. Jedna moc naraz: wybór tej samej podnosi poziom
+ * (BAL.bossPowers), innej — zastępuje. `phase` = faza bossa, z której pochodzi atak.
+ */
+export interface BossPowerDef {
+  id: string;
+  name: string;
+  desc: string;
+  icon: string;
+  phase: number;
+  cd: number;
+}
+
+export const BOSS_POWERS: BossPowerDef[] = [
+  { id: 'shotgun', name: 'Śrut Otchłani', desc: 'Co 2.5 s 7 pocisków śrutu w najbliższego wroga.', icon: 'bp_shotgun', phase: 0, cd: 2.5 },
+  { id: 'gapring', name: 'Pierścień Otchłani', desc: 'Co 3.5 s pierścień 20 przebijających pocisków wokół ciebie.', icon: 'bp_ring', phase: 0, cd: 3.5 },
+  { id: 'flower', name: 'Kwiat zagłady', desc: 'Co 4 s dwa obrócone pierścienie płonących pocisków.', icon: 'bp_flower', phase: 1, cd: 4 },
+  { id: 'stream', name: 'Strumień', desc: 'Co 3 s seria 5 wachlarzy ostrzy w najbliższego wroga.', icon: 'bp_stream', phase: 1, cd: 3 },
+  { id: 'minefield', name: 'Pole minowe', desc: 'Co 5 s 6 min wokół ciebie, wybuchają przy wrogach.', icon: 'bp_mines', phase: 2, cd: 5 },
+  { id: 'brood', name: 'Wylęgarnia', desc: 'Co 8 s 3 duchy-sługi walczą za ciebie przez 8 s.', icon: 'bp_brood', phase: 2, cd: 8 },
+];
+
+export const BOSS_POWER_BY_ID: Record<string, BossPowerDef> = Object.fromEntries(BOSS_POWERS.map((p) => [p.id, p]));

@@ -389,6 +389,32 @@ export const ICON_FNS: Record<string, IconFn> = {
     sparkle(p, 13, 3);
   },
 
+  // ===================== moce bossów (data/enemies.ts BOSS_POWERS): oko otchłani + wzór salwy =====================
+  bp_shotgun: (p) => {
+    p.sphere(4, 8, 3.5, 3.5, RAMP.purple).px(3, 7, C.white);
+    for (const [x, y] of [[10, 3], [13, 5], [14, 8], [13, 11], [10, 13], [11, 8]]) p.disc(x, y, 1.2, C.salmon).px(x, y, C.white);
+  },
+  bp_ring: (p) => {
+    for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; if (i === 2 || i === 3) continue; p.disc(8 + Math.cos(a) * 6, 8 + Math.sin(a) * 6, 1.2, C.pink); }
+    p.sphere(8, 8, 3, 3, RAMP.purple).px(7, 7, C.white);
+  },
+  bp_flower: (p) => {
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; p.line(8, 8, 8 + Math.cos(a) * 4 + Math.cos(a + 1.4) * 3, 8 + Math.sin(a) * 4 + Math.sin(a + 1.4) * 3, C.orange); }
+    p.sphere(8, 8, 3, 3, RAMP.fire).px(7, 7, C.yellow);
+  },
+  bp_stream: (p) => {
+    p.sphere(3.5, 8, 3, 3, RAMP.purple).px(3, 7, C.white);
+    for (const y of [4, 8, 12]) p.line(8, y, 14, 8 + (y - 8) * 0.4, C.lgray).px(14, Math.round(8 + (y - 8) * 0.4), C.white);
+  },
+  bp_mines: (p) => {
+    for (const [x, y] of [[4, 4], [12, 4], [4, 12], [12, 12]]) p.sphere(x, y, 2.5, 2.5, RAMP.night).px(x, y, C.red);
+    p.sphere(8, 8, 2.5, 2.5, RAMP.purple).px(7, 7, C.white);
+  },
+  bp_brood: (p) => {
+    p.sphere(8, 6, 4.5, 4, RAMP.purple).rect(6, 5, 1, 2, C.white).rect(10, 5, 1, 2, C.white);
+    p.poly([[4, 8], [12, 8], [13, 15], [10.5, 12.5], [8, 15], [5.5, 12.5], [3, 15]], C.pink);
+  },
+
   // ===================== tagi kart =====================
   'tag:Ogień': (p) => flame(p, 8, 8, 1),
   'tag:Krytyk': (p) => {

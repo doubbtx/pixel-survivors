@@ -16,6 +16,8 @@ import { bar, slot, plate } from './widgets';
 import { drawSynergyHud } from './synergies';
 import { resFrac, resMax } from '../systems/resource';
 import { taskStatus } from '../systems/tasks';
+import { powerCd } from '../systems/powers';
+import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { REWARD_LABEL } from '../data/tasks';
 
 const KEY_LABEL: Record<AbilitySlot, string> = { q: 'Q', e: 'E', dash: 'Spc', ult: 'R' };
@@ -184,6 +186,15 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
     if (!pa) continue;
     drawSprite(g, PASSIVE_BY_ID[pa.id].icon, x + SLOT / 2, y + SLOT / 2);
     drawText(g, String(pa.level), x + SLOT - 2, y + SLOT - 11, C.white, { align: 'right', ...OUT });
+  }
+  // Moc bossa: gniazdo za bronią, odnowienie od góry, poziom kropkami.
+  if (run.power) {
+    const def = BOSS_POWER_BY_ID[run.power.id], x = 4 + BAL.weaponSlots * (SLOT + 2) + 4, y = H - 2 * SLOT - 6;
+    slot(r, x, y, SLOT, C.pink);
+    drawSprite(g, def.icon, x + SLOT / 2, y + SLOT / 2);
+    const h = Math.round((SLOT - 4) * Math.max(0, Math.min(1, run.powerT / powerCd(run, def))));
+    if (h > 0) r.withAlpha(0.6, () => r.rect(x + 2, y + 2, SLOT - 4, h, C.black));
+    for (let l = 0; l < run.power.level; l++) r.rect(x + 2 + l * 5, y - 4, 4, 2, C.pink);
   }
   // Nowy przedmiot w plecaku: przypomnienie nad gniazdami broni.
   if (run.bag.some((it) => it.fresh) && Math.floor(performance.now() / 500) % 2) {

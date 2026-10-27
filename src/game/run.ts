@@ -40,6 +40,8 @@ import { updateMinions, spawnMinion } from '../systems/minions';
 import { updateEvents, startDungeon, type MapObject, type Buff, type Dungeon } from '../systems/events';
 import { updateResource, resourceOnHit, resourceOnHurt, resourceOnKill, resourceDamageMul, resourceCrit, resourceTakenMul } from '../systems/resource';
 import { updateTasks, taskOnHurt, taskOnKill, type Task } from '../systems/tasks';
+import { updatePower } from '../systems/powers';
+import { BOSS_POWER_BY_ID } from '../data/enemies';
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
@@ -149,6 +151,8 @@ export interface RunSnapshot {
   augments?: string[];
   /** Zasób bohatera (od 0.13). */
   resource?: number;
+  /** Moc bossa: id i poziom (od 0.13). */
+  power?: [string, number];
 }
 
 /**
@@ -262,6 +266,10 @@ export class Run {
   banishes: number = BAL.banishes;
   banished = new Set<string>();
   pendingLevels = 0;
+  /** Moc bossa (systems/powers.ts): posiadana, czas do wystrzału, wybory do pokazania (po każdym bossie). */
+  power: { id: string; level: number } | null = null;
+  powerT = 0;
+  pendingPowers = 0;
   /** Skrzynie do otwarcia: przedmiot (wylosowany przy upadku) i źródło (tytuł ekranu łupu). */
   pendingLoot: { source: LootSource; item: Item }[] = [];
 
@@ -468,6 +476,7 @@ export class Run {
     updateWeapons(this, dt);
     updateTurrets(this, dt);
     updateMinions(this, dt);
+    updatePower(this, dt);
     this.emit('onTick', dt);
     updateProjectiles(this, dt);
     updateEnemyBullets(this, dt);
@@ -1100,6 +1109,7 @@ export class Run {
     this.boss = null;
     this.pendingLoot.push(this.rollLoot('boss'));
     this.pendingCards.push('boss');
+    this.pendingPowers++;
     this.cardRerolls++;
     this.gold += 30 * this.stats.greed;
     // Endless: gra toczy się dalej — kolejna głębokość (silniejsi wrogowie, następny biom) i boss za BAL.endlessBossEvery.
@@ -1378,6 +1388,7 @@ export class Run {
       dpsEma: this.dpsEma,
       augments: [...this.augments],
       resource: this.res,
+      power: this.power ? [this.power.id, this.power.level] : undefined,
     };
   }
 
@@ -1425,6 +1436,7 @@ export class Run {
     run.expedition = s.expedition ? structuredClone(s.expedition) : null;
     run.dpsEma = s.dpsEma ?? 0;
     run.augments = (s.augments ?? []).filter((id) => AUGMENT_BY_ID[id]);
+    if (s.power && BOSS_POWER_BY_ID[s.power[0]]) run.power = { id: s.power[0], level: s.power[1] };
     run.indexAugments();
     run.startLevel(s.depth);
     // Zasób: przerwany poziom wraca z zapisaną wartością, dusze zostają także między poziomami.
