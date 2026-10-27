@@ -26,10 +26,11 @@ export function eventFlags(run: Run): Record<string, number> {
 export function updateLevelEvents(run: Run, dt: number): void {
   const E = BAL.levelEvents;
   const ev = run.levelEvent;
+  updateStrikes(run, dt);
   if (ev) {
     ev.t -= dt;
     if (ev.id === 'storm') updateStorm(run, dt);
-    if (ev.t <= 0) { run.levelEvent = null; run.strikes = []; run.onBuildChanged(); }
+    if (ev.t <= 0) { run.levelEvent = null; run.strikes = run.strikes.filter((s) => s.foe); run.onBuildChanged(); }
     return;
   }
   if (run.dungeon || run.boss || (run.bossSpawned && run.mode !== 'endless')) return;
@@ -44,21 +45,35 @@ export function updateLevelEvents(run: Run, dt: number): void {
   run.onBuildChanged();
 }
 
-/** Burza: co `stormEvery` s piorun w losowym miejscu przy graczu (najpierw krąg ostrzegawczy). */
-function updateStorm(run: Run, dt: number): void {
+/** Uderzenia w zaznaczone kręgi: piorun burzy rani wrogów i gracza, deszcz żaru bossa tylko gracza. */
+function updateStrikes(run: Run, dt: number): void {
+  if (!run.strikes.length) return;
   const E = BAL.levelEvents, p = run.player;
   for (const s of run.strikes) {
     s.t -= dt;
     if (s.t > 0) continue;
-    run.enemiesInCircle(s.x, s.y, E.stormR, (e) => run.damageEnemy(e, run.cardDamage(E.stormDmg), 'Burza'));
-    if ((s.x - p.x) ** 2 + (s.y - p.y) ** 2 < E.stormR * E.stormR) run.hurtPlayer(run.stats.maxHp * E.stormHurt);
-    const f = run.addFx('line', s.x, s.y - 140, C.white, 0.15);
-    if (f) { f.x2 = s.x; f.y2 = s.y; f.w = 2; }
-    run.burst(s.x, s.y, C.cyan, 12, 70);
+    const hit = (s.x - p.x) ** 2 + (s.y - p.y) ** 2 < E.stormR * E.stormR;
+    if (s.foe) {
+      if (hit) run.hurtPlayer(s.foe);
+      run.boomFx(s.x, s.y, E.stormR);
+      run.burst(s.x, s.y, C.orange, 12, 70);
+      sfx.play('explode');
+    } else {
+      run.enemiesInCircle(s.x, s.y, E.stormR, (e) => run.damageEnemy(e, run.cardDamage(E.stormDmg), 'Burza'));
+      if (hit) run.hurtPlayer(run.stats.maxHp * E.stormHurt);
+      const f = run.addFx('line', s.x, s.y - 140, C.white, 0.15);
+      if (f) { f.x2 = s.x; f.y2 = s.y; f.w = 2; }
+      run.burst(s.x, s.y, C.cyan, 12, 70);
+      sfx.play('zap');
+    }
     run.addShake(1.5);
-    sfx.play('zap');
   }
   run.strikes = run.strikes.filter((s) => s.t > 0);
+}
+
+/** Burza: co `stormEvery` s piorun w losowym miejscu przy graczu (najpierw krąg ostrzegawczy). */
+function updateStorm(run: Run, dt: number): void {
+  const E = BAL.levelEvents, p = run.player;
   run.stormT -= dt;
   if (run.stormT > 0) return;
   run.stormT = E.stormEvery;

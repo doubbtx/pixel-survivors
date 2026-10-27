@@ -70,7 +70,7 @@ const PAGES: { title: string; lines: string[] }[] = [
     title: 'Moce',
     lines: [
       'Unikaty: rzadkie przedmioty z bossów i elit ze stałym efektem, który łamie zasady, zwykle za jakąś cenę. Kolekcja: Tab.',
-      'Moc bossa: po bossie wybierasz 1 z 3 jego ataków. Strzela sam, ta sama moc wybrana ponownie rośnie.',
+      'Moc bossa: każdy biom ma własnego bossa z innymi atakami. Po zwycięstwie wybierasz 1 z 3 jego ataków. Strzela sam, ta sama moc rośnie.',
       'Fuzja: dwie bronie na maks. poziomie (albo po ewolucji) łączą się w hybrydę i zwalniają slot.',
       'Pakty: przed runem (wybór bohatera, Tab) włączasz utrudnienia. Więcej esencji i odznaki za bossa.',
       'Teren: osłony blokują pociski (także twoje) i da się je zniszczyć. Beczki wybuchają, kolce ranią wszystkich.',

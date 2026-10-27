@@ -38,6 +38,7 @@ const EXTRA_SOURCES: Record<string, Element> = {
   'Bagno dusz': 'poison', 'Przeklęta ziemia': 'poison',
   'Kula ognia': 'fire', 'Słońce': 'fire', 'Pierścień ognia': 'fire', 'Płomienna bariera': 'fire', 'Inferno': 'fire', 'Kataklizm': 'fire',
   'Wydech żaru': 'fire', 'Ogniste kroki': 'fire',
+  'Toksyczna fala': 'poison', 'Deszcz żaru': 'fire', 'Wzrok Pustki': 'lightning',
 };
 
 /** Żywioł źródła obrażeń po nazwie (bronie zapisują obrażenia pod swoją nazwą). */

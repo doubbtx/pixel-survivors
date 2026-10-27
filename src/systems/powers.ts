@@ -1,4 +1,5 @@
 import { rng } from '../core/rng';
+import { C } from '../core/palette';
 import { sfx } from '../core/audio';
 import { BAL } from '../data/balance';
 import { BOSS_POWERS, BOSS_POWER_BY_ID, type BossPowerDef } from '../data/enemies';
@@ -69,6 +70,28 @@ const FIRE: Record<string, (run: Run, name: string) => boolean> = {
     FIRE.shotgun(run, name);
     return true;
   },
+  toxic(run, name) {
+    const p = run.player, base = rng.range(0, TAU);
+    for (let i = 0; i < 14; i++) run.spawnProjectile({ x: p.x, y: p.y, angle: base + (i * TAU) / 14, speed: 120, damage: dmg(run, 8), src: name, sprite: 'soul', pierce: 2, life: 1.3 });
+    return true;
+  },
+  meteorrain(run, name) {
+    const p = run.player, cand = run.hash.query(p.x, p.y, 200, run.qa).filter((e) => !e.dead);
+    if (!cand.length) return false;
+    for (let i = 0; i < 5; i++) {
+      const t = rng.pick(cand);
+      const x = t.x, y = t.y;
+      run.schedule(i * 0.12, () => run.explode(x, y, 26 * run.stats.area, dmg(run, 22), name, C.orange, 3));
+    }
+    return true;
+  },
+  gaze(run, name) {
+    const a = aimNearest(run), p = run.player;
+    if (a === null) return false;
+    const z = run.addZone('beam', p.x, p.y, 4 * run.stats.area, dmg(run, 5), 0.8, SLOT.card, name);
+    if (z) { z.angle = a; z.len = 190; z.tick = 6; }
+    return true;
+  },
   brood(run, name) {
     const p = run.player;
     for (let i = 0; i < 3; i++) spawnMinion(run, p.x, p.y, dmg(run, 7), 8, false, name);
@@ -95,12 +118,15 @@ export function powerCd(run: Run, def: BossPowerDef): number {
 /** Oferta 3 mocy po bossie: losowe różne, a posiadana (poniżej maks. poziomu) zawsze jako ulepszenie. */
 export function rollPowerOffer(run: Run): BossPowerDef[] {
   const own = run.power && run.power.level < BAL.bossPowers.maxLevel ? BOSS_POWER_BY_ID[run.power.id] : null;
-  const pool = BOSS_POWERS.filter((p) => p.id !== run.power?.id && !p.secret);
+  // Najpierw moce pokonanego bossa (styl = biom poziomu), resztę oferty dopełniają inne.
+  const style = run.levelInfo.biome % 4;
+  const free = BOSS_POWERS.filter((p) => p.id !== run.power?.id && !p.secret);
+  const mine = free.filter((p) => p.bosses.includes(style)), rest = free.filter((p) => !p.bosses.includes(style));
   const out: BossPowerDef[] = own ? [own] : [];
   // Zapomniany Król: jego moc zawsze na początku oferty po zwycięstwie w kurhanie.
   if (run.cardState.kingPower && run.power?.id !== 'crown') out.unshift(BOSS_POWER_BY_ID.crown);
   delete run.cardState.kingPower;
-  while (out.length < 3 && pool.length) out.push(pool.splice(rng.int(0, pool.length - 1), 1)[0]);
+  for (const pool of [mine, rest]) while (out.length < 3 && pool.length) out.push(pool.splice(rng.int(0, pool.length - 1), 1)[0]);
   return out;
 }
 

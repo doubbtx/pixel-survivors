@@ -451,6 +451,18 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.rect(3, 12, 10, 2, C.orange).px(8, 7, C.red).px(5, 11, C.cyan).px(11, 11, C.cyan);
     for (let i = 0; i < 6; i++) p.px(8 + Math.cos(i) * 7.5, 9 + Math.sin(i) * 6.5, C.pink);
   },
+  bp_toxic: (p) => {
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; p.disc(8 + Math.cos(a) * 6, 8 + Math.sin(a) * 6, 1.3, C.lime); }
+    p.sphere(8, 8, 3, 3, RAMP.green).px(7, 7, C.white);
+  },
+  bp_meteor: (p) => {
+    for (const [x, y] of [[4, 12], [11, 13], [8, 7]]) { p.line(x - 3, y - 6, x, y, C.orange); p.sphere(x, y, 2, 2, RAMP.fire); }
+    p.px(13, 2, C.yellow);
+  },
+  bp_gaze: (p) => {
+    p.sphere(4, 8, 3.5, 3.5, [C.navy, C.dblue, C.blue, C.cyan]).rect(3, 7, 2, 2, C.black).px(3, 7, C.white);
+    p.line(7, 8, 15, 6, C.yellow).line(7, 9, 15, 10, C.yellow).line(7, 8, 15, 8, C.white);
+  },
   bp_brood: (p) => {
     p.sphere(8, 6, 4.5, 4, RAMP.purple).rect(6, 5, 1, 2, C.white).rect(10, 5, 1, 2, C.white);
     p.poly([[4, 8], [12, 8], [13, 15], [10.5, 12.5], [8, 15], [5.5, 12.5], [3, 15]], C.pink);

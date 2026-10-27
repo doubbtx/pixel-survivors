@@ -58,16 +58,22 @@ const B_STREAM: Volley = { shape: 'fan', count: 3, speed: 125, spread: 0.12, spr
 const B_MINEFIELD: Volley = { shape: 'ring', count: 18, speed: 95, acc: -70, minV: 10, sprite: 'eb_orange' };
 const B_WAVE: Volley = { shape: 'fan', count: 5, speed: 70, spread: 0.3, wave: 0.6, sprite: 'eb_big' };
 
+/** Kolory spirali i pocisków ataków wg stylu bossa (biomu). */
+const SPIN_SPRITE = ['eb_pink', 'eb_cyan', 'eb_orange', 'eb_blue'];
+
 /**
  * Boss w trzech fazach (wg % HP), w stylu bossów z ROTMG: stała spirala + nazwane ataki z zapowiedzią
  * (boss miga przez ostatnie 0,5 s przed atakiem). Zmiana fazy: chwila nietykalności, czyszczenie pocisków.
- *  Faza 1: spirala 2-ramienna; na zmianę śrut w gracza i dwa pierścienie z luką.
- *  Faza 2: spirala 3-ramienna; kwiat skręcających pocisków albo strumień w gracza, szarża, szlamy.
- *  Faza 3: odwrotna spirala 4-ramienna; pole wiszących pocisków + pierścień z luką albo wężykowe wachlarze, nietoperze.
+ * Każdy biom ma własnego bossa (styl = biom poziomu) z innymi atakami (BOSS_STYLES) i mocami do kradzieży (data/enemies.ts):
+ *  0 Władca Otchłani — śrut, pierścienie z luką, kwiat, strumień, szarża, szlamy, pole minowe, wężyki, nietoperze;
+ *  1 Królowa Bagien — kwaśny deszcz, roje szlamów, sieci bagna pod graczem, skręcające kwiaty, toksyczne pole;
+ *  2 Żar Pustkowia — ogniste pierścienie, szarże, deszcz żaru (zaznaczone kręgi), podwójny śrut;
+ *  3 Oko Pustki — teleporty, długie strumienie, gęsta spirala, obrotowy wzrok pustki.
  */
 function updateBoss(run: Run, e: Enemy, dt: number, dx: number, dy: number, dist: number): void {
   const frac = e.hp / e.maxHp;
   const phase = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2;
+  const style = run.levelInfo.biome % BOSS_STYLES.length;
   if (phase !== e.phase) {
     e.phase = phase;
     e.invuln = 1.2;
@@ -98,39 +104,133 @@ function updateBoss(run: Run, e: Enemy, dt: number, dx: number, dy: number, dist
   if (e.shootT <= 0) {
     e.shootT = [0.26, 0.22, 0.18][phase];
     e.shootA += phase === 2 ? -0.21 : 0.19;
-    fireVolley(run, e.x, e.y, B_SPIN(2 + phase), e.shootA, dmg);
+    fireVolley(run, e.x, e.y, { ...B_SPIN(2 + phase), sprite: SPIN_SPRITE[style] }, e.shootA, dmg);
   }
   e.actT -= dt;
   if (e.actT > 0 && e.actT < 0.5 && run.step % 6 < 3) e.flash = 2; // zapowiedź ataku
   if (e.actT > 0) return;
-  const aim = () => Math.atan2(run.player.y - e.y, run.player.x - e.x);
   const alt = (e.phase + Math.floor(e.age / 3)) % 2; // na zmianę dwa ataki fazy
-  if (phase === 0) {
-    if (alt === 0) fireVolley(run, e.x, e.y, B_SHOTGUN, aim(), dmg);
-    else sequence(run, e, 2, 0.45, () => fireVolley(run, e.x, e.y, B_GAP, aim() + rng.range(-1.2, 1.2), dmg));
-    e.actT = 2.8;
-  } else if (phase === 1) {
-    if (alt === 0) sequence(run, e, 2, 0.45, (k) => fireVolley(run, e.x, e.y, B_FLOWER, k * 0.3, dmg));
-    else sequence(run, e, 5, 0.12, () => fireVolley(run, e.x, e.y, B_STREAM, aim(), dmg));
-    if (rng.chance(0.35)) {
-      e.dashT = 1.1;
-      e.dvx = (dx / dist) * 190;
-      e.dvy = (dy / dist) * 190;
-    } else if (rng.chance(0.3)) {
-      for (let i = 0; i < 6; i++) spawnEnemy(run, 'slime', e.x + Math.cos((i * TAU) / 6) * 20, e.y + Math.sin((i * TAU) / 6) * 20);
+  e.actT = BOSS_STYLES[style](run, e, phase, alt, dmg, dx, dy, dist);
+}
+
+type BossAttack = (run: Run, e: Enemy, phase: number, alt: number, dmg: number, dx: number, dy: number, dist: number) => number;
+
+const aimAt = (run: Run, e: Enemy) => Math.atan2(run.player.y - e.y, run.player.x - e.x);
+
+/** Szarża bossa: zapowiedź, potem pęd w stronę gracza. */
+function bossCharge(e: Enemy, dx: number, dy: number, dist: number, speed = 190): void {
+  e.dashT = 1.1;
+  e.dvx = (dx / dist) * speed;
+  e.dvy = (dy / dist) * speed;
+}
+
+/** Zaznaczone kręgi wokół gracza, w które po chwili uderza ogień bossa (systems/levelevents.ts updateStrikes). */
+function markStrikes(run: Run, n: number, dmg: number): void {
+  const p = run.player;
+  for (let i = 0; i < n; i++) {
+    const a = rng.range(0, TAU), d = i === 0 ? 0 : rng.range(30, 110);
+    run.strikes.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d, t: 0.9 + i * 0.12, foe: dmg });
+  }
+}
+
+/** Teleport bossa w losowe miejsce w pobliżu gracza. */
+function bossBlink(run: Run, e: Enemy): void {
+  const a = rng.range(0, TAU), r = rng.range(80, 120);
+  run.burst(e.x, e.y, C.pink, 16, 60);
+  e.x = run.player.x + Math.cos(a) * r;
+  e.y = run.player.y + Math.sin(a) * r;
+  run.burst(e.x, e.y, C.pink, 16, 60);
+}
+
+const BOSS_STYLES: BossAttack[] = [
+  // 0 — Władca Otchłani.
+  (run, e, phase, alt, dmg, dx, dy, dist) => {
+    const aim = () => aimAt(run, e);
+    if (phase === 0) {
+      if (alt === 0) fireVolley(run, e.x, e.y, B_SHOTGUN, aim(), dmg);
+      else sequence(run, e, 2, 0.45, () => fireVolley(run, e.x, e.y, B_GAP, aim() + rng.range(-1.2, 1.2), dmg));
+      return 2.8;
     }
-    e.actT = 3.2;
-  } else {
+    if (phase === 1) {
+      if (alt === 0) sequence(run, e, 2, 0.45, (k) => fireVolley(run, e.x, e.y, B_FLOWER, k * 0.3, dmg));
+      else sequence(run, e, 5, 0.12, () => fireVolley(run, e.x, e.y, B_STREAM, aim(), dmg));
+      if (rng.chance(0.35)) bossCharge(e, dx, dy, dist);
+      else if (rng.chance(0.3)) for (let i = 0; i < 6; i++) spawnEnemy(run, 'slime', e.x + Math.cos((i * TAU) / 6) * 20, e.y + Math.sin((i * TAU) / 6) * 20);
+      return 3.2;
+    }
     if (alt === 0) {
       fireVolley(run, e.x, e.y, B_MINEFIELD, rng.range(0, TAU), dmg);
       sequence(run, e, 2, 0.9, (k) => { if (k) fireVolley(run, e.x, e.y, B_GAP, aim(), dmg); });
-    } else {
-      sequence(run, e, 2, 0.4, () => fireVolley(run, e.x, e.y, B_WAVE, aim(), dmg));
-    }
+    } else sequence(run, e, 2, 0.4, () => fireVolley(run, e.x, e.y, B_WAVE, aim(), dmg));
     if (rng.chance(0.3)) for (let i = 0; i < 8; i++) spawnEnemy(run, 'bat', e.x + rng.range(-25, 25), e.y + rng.range(-25, 25));
-    e.actT = 2.6;
-  }
-}
+    return 2.6;
+  },
+  // 1 — Królowa Bagien: kwaśny deszcz, szlamy, sieci bagna, kwiaty.
+  (run, e, phase, alt, dmg) => {
+    const aim = () => aimAt(run, e);
+    const acid: Volley = { shape: 'fan', count: 5 + phase, speed: 70, spread: 0.22, acc: -20, minV: 30, sprite: 'eb_cyan' };
+    if (phase === 0) {
+      if (alt === 0) sequence(run, e, 3, 0.35, () => fireVolley(run, e.x, e.y, acid, aim() + rng.range(-0.3, 0.3), dmg));
+      else for (let i = 0; i < 8; i++) spawnEnemy(run, 'slime', e.x + Math.cos((i * TAU) / 8) * 26, e.y + Math.sin((i * TAU) / 8) * 26);
+      return 3;
+    }
+    if (phase === 1) {
+      if (alt === 0) sequence(run, e, 3, 0.4, (k) => fireVolley(run, e.x, e.y, { ...B_FLOWER, count: 12 }, k * 0.25, dmg));
+      else {
+        // Bagno: sieci pod graczem i wokół niego (spowalniają).
+        const p = run.player;
+        for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; run.webs.push({ x: p.x + Math.cos(a) * 34 * (i ? 1 : 0), y: p.y + Math.sin(a) * 34 * (i ? 1 : 0), r: 30, t: 4 }); }
+        fireVolley(run, e.x, e.y, acid, aim(), dmg);
+      }
+      return 3.2;
+    }
+    if (alt === 0) {
+      fireVolley(run, e.x, e.y, { ...B_MINEFIELD, sprite: 'eb_cyan', count: 24 }, rng.range(0, TAU), dmg);
+      sequence(run, e, 3, 0.5, () => fireVolley(run, e.x, e.y, acid, aim(), dmg));
+    } else {
+      sequence(run, e, 2, 0.4, () => fireVolley(run, e.x, e.y, { ...B_WAVE, sprite: 'eb_cyan' }, aim(), dmg));
+      for (let i = 0; i < 6; i++) spawnEnemy(run, 'slime', e.x + rng.range(-25, 25), e.y + rng.range(-25, 25));
+    }
+    return 2.6;
+  },
+  // 2 — Żar Pustkowia: ogniste pierścienie, szarże, deszcz żaru, podwójny śrut.
+  (run, e, phase, alt, dmg, dx, dy, dist) => {
+    const aim = () => aimAt(run, e);
+    const ring: Volley = { shape: 'gapRing', count: 26, gap: 4, speed: 70, sprite: 'eb_orange' };
+    if (phase === 0) {
+      if (alt === 0) sequence(run, e, 2, 0.5, () => fireVolley(run, e.x, e.y, ring, aim() + rng.range(-1, 1), dmg));
+      else { bossCharge(e, dx, dy, dist, 210); fireVolley(run, e.x, e.y, { ...B_SHOTGUN, sprite: 'eb_orange' }, aim(), dmg); }
+      return 2.8;
+    }
+    if (phase === 1) {
+      if (alt === 0) markStrikes(run, 6, dmg * 1.5);
+      else sequence(run, e, 2, 0.3, () => fireVolley(run, e.x, e.y, { ...B_SHOTGUN, count: 9, sprite: 'eb_orange' }, aim(), dmg));
+      return 3;
+    }
+    if (alt === 0) { markStrikes(run, 9, dmg * 1.5); fireVolley(run, e.x, e.y, ring, aim(), dmg); }
+    else { bossCharge(e, dx, dy, dist, 240); sequence(run, e, 2, 0.6, () => fireVolley(run, e.x, e.y, { ...B_MINEFIELD, count: 22 }, rng.range(0, TAU), dmg)); }
+    return 2.5;
+  },
+  // 3 — Oko Pustki: teleporty, długie strumienie, gęsta spirala, obrotowy wzrok.
+  (run, e, phase, alt, dmg) => {
+    const aim = () => aimAt(run, e);
+    if (phase === 0) {
+      if (alt === 0) { bossBlink(run, e); fireVolley(run, e.x, e.y, { ...B_GAP, sprite: 'eb_blue' }, aim(), dmg); }
+      else sequence(run, e, 8, 0.1, () => fireVolley(run, e.x, e.y, B_STREAM, aim(), dmg));
+      return 2.8;
+    }
+    if (phase === 1) {
+      if (alt === 0) sequence(run, e, 10, 0.08, (k) => fireVolley(run, e.x, e.y, { ...B_SPIN(4), sprite: 'eb_blue', speed: 70 }, k * 0.2, dmg));
+      else sequence(run, e, 2, 0.5, () => fireVolley(run, e.x, e.y, { ...B_GAP, count: 28, sprite: 'eb_blue' }, aim(), dmg));
+      return 3;
+    }
+    // Wzrok pustki: strumień obracający się wokół bossa.
+    const base = aim() - 1.2;
+    if (alt === 0) sequence(run, e, 14, 0.07, (k) => fireVolley(run, e.x, e.y, { ...B_STREAM, count: 2, spread: 0.08 }, base + k * 0.18, dmg));
+    else { bossBlink(run, e); sequence(run, e, 2, 0.4, () => fireVolley(run, e.x, e.y, { ...B_WAVE, sprite: 'eb_blue' }, aim(), dmg)); }
+    return 2.4;
+  },
+];
 
 /** Salwa zwykłego wroga wg ShootDef (kąt bazowy zależny od `aim`). */
 function shoot(run: Run, e: Enemy, sh: ShootDef, dmg: number): void {

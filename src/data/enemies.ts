@@ -139,16 +139,21 @@ export interface BossPowerDef {
   cd: number;
   /** Moc sekretnego bossa (Zapomniany Król z kurhanu) — tylko z jego oferty. */
   secret?: boolean;
+  /** Bossowie (styl = biom poziomu, systems/enemies.ts BOSS_STYLES), od których można ją ukraść w pierwszej kolejności. */
+  bosses: number[];
 }
 
 export const BOSS_POWERS: BossPowerDef[] = [
-  { id: 'shotgun', name: 'Śrut Otchłani', desc: 'Co 2.5 s 7 pocisków śrutu w najbliższego wroga.', icon: 'bp_shotgun', phase: 0, cd: 2.5 },
-  { id: 'gapring', name: 'Pierścień Otchłani', desc: 'Co 3.5 s pierścień 20 przebijających pocisków wokół ciebie.', icon: 'bp_ring', phase: 0, cd: 3.5 },
-  { id: 'flower', name: 'Kwiat zagłady', desc: 'Co 4 s dwa obrócone pierścienie płonących pocisków.', icon: 'bp_flower', phase: 1, cd: 4 },
-  { id: 'stream', name: 'Strumień', desc: 'Co 3 s seria 5 wachlarzy ostrzy w najbliższego wroga.', icon: 'bp_stream', phase: 1, cd: 3 },
-  { id: 'minefield', name: 'Pole minowe', desc: 'Co 5 s 6 min wokół ciebie, wybuchają przy wrogach.', icon: 'bp_mines', phase: 2, cd: 5 },
-  { id: 'crown', name: 'Gniew Króla', desc: 'Co 3 s pierścień 16 pocisków i śrut w najbliższego wroga.', icon: 'bp_crown', phase: 3, cd: 3, secret: true },
-  { id: 'brood', name: 'Wylęgarnia', desc: 'Co 8 s 3 duchy-sługi walczą za ciebie przez 8 s.', icon: 'bp_brood', phase: 2, cd: 8 },
+  { id: 'shotgun', name: 'Śrut Otchłani', desc: 'Co 2.5 s 7 pocisków śrutu w najbliższego wroga.', icon: 'bp_shotgun', phase: 0, cd: 2.5, bosses: [0, 2] },
+  { id: 'gapring', name: 'Pierścień Otchłani', desc: 'Co 3.5 s pierścień 20 przebijających pocisków wokół ciebie.', icon: 'bp_ring', phase: 0, cd: 3.5, bosses: [0, 3] },
+  { id: 'flower', name: 'Kwiat zagłady', desc: 'Co 4 s dwa obrócone pierścienie płonących pocisków.', icon: 'bp_flower', phase: 1, cd: 4, bosses: [0, 1] },
+  { id: 'stream', name: 'Strumień', desc: 'Co 3 s seria 5 wachlarzy ostrzy w najbliższego wroga.', icon: 'bp_stream', phase: 1, cd: 3, bosses: [0, 3] },
+  { id: 'minefield', name: 'Pole minowe', desc: 'Co 5 s 6 min wokół ciebie, wybuchają przy wrogach.', icon: 'bp_mines', phase: 2, cd: 5, bosses: [0, 2] },
+  { id: 'crown', name: 'Gniew Króla', desc: 'Co 3 s pierścień 16 pocisków i śrut w najbliższego wroga.', icon: 'bp_crown', phase: 3, cd: 3, secret: true, bosses: [] },
+  { id: 'brood', name: 'Wylęgarnia', desc: 'Co 8 s 3 duchy-sługi walczą za ciebie przez 8 s.', icon: 'bp_brood', phase: 2, cd: 8, bosses: [1] },
+  { id: 'toxic', name: 'Toksyczna fala', desc: 'Co 3.5 s pierścień 14 zatrutych dusz wokół ciebie.', icon: 'bp_toxic', phase: 0, cd: 3.5, bosses: [1] },
+  { id: 'meteorrain', name: 'Deszcz żaru', desc: 'Co 4 s ogień spada na 5 wrogów w pobliżu.', icon: 'bp_meteor', phase: 1, cd: 4, bosses: [2] },
+  { id: 'gaze', name: 'Wzrok Pustki', desc: 'Co 3 s porażający promień w najbliższego wroga.', icon: 'bp_gaze', phase: 2, cd: 3, bosses: [3] },
 ];
 
 export const BOSS_POWER_BY_ID: Record<string, BossPowerDef> = Object.fromEntries(BOSS_POWERS.map((p) => [p.id, p]));

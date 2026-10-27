@@ -223,7 +223,8 @@ export class Run {
   /** Wydarzenia poziomu i kombo (systems/levelevents.ts): trwające wydarzenie, czas do losowania, pioruny burzy, kombo zabójstw. */
   levelEvent: { id: LevelEventId; t: number } | null = null;
   levelEventT: number = BAL.levelEvents.every * 0.6;
-  strikes: { x: number; y: number; t: number }[] = [];
+  /** Uderzenia w zaznaczone kręgi: pioruny burzy (ranią wszystkich) i deszcz żaru bossa (`foe` = obrażenia tylko dla gracza). */
+  strikes: { x: number; y: number; t: number; foe?: number }[] = [];
   stormT = 0;
   combo = 0;
   /** Sekrety map (systems/mapsecrets.ts): czas do kolejnego, odurzenie (odwrócone sterowanie, s), tytuł sekretnego bossa w HUD,
