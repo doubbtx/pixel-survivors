@@ -43,21 +43,21 @@ Celowanie umiejętności (bronie zawsze namierzają same) wybierasz w **Ustawien
 
 ## Ustawienia
 
-Głośność, tryb celowania, liczby obrażeń nad wrogami, wstrząsy ekranu, zatrzymanie klatki, podpowiedzi (z resetem), auto-pauza po wyjściu z okna/karty, pełny ekran, licznik FPS/debug. Zapisują się w localStorage; nowe pola dostają wartości domyślne bez migracji zapisu (`Settings` w `core/save.ts`).
+Głośność efektów i muzyki, trudność (łatwa: słabsi wrogowie, bez odznak Paktu), kształty żywiołów dla daltonistów, tryb celowania, liczby obrażeń nad wrogami, wstrząsy ekranu, zatrzymanie klatki, podpowiedzi (z resetem), auto-pauza po wyjściu z okna/karty, pełny ekran, licznik FPS/debug. Zapisują się w localStorage; nowe pola dostają wartości domyślne bez migracji zapisu (`Settings` w `core/save.ts`).
 
 ## Struktura
 
 ```
 src/
   core/      pętla 60 Hz (stały krok), renderer 480×270 (świat ×1.5), input, pula obiektów, spatial hash,
-             czcionka pikselowa, paleta ENDESGA 32, dźwięk (Web Audio), zapis z migracjami
+             czcionka pikselowa, paleta ENDESGA 32, dźwięk i muzyka proceduralna (Web Audio), zapis z migracjami
   gfx/       malarz sprite'ów (cieniowanie, obrys), rejestr sprite'ów po nazwach, ikony (icons.ts, items.ts)
   data/      balance.ts (wszystkie wzory), bronie (z fuzjami), pasywki, wrogowie (z mocami bossów), fale, bohaterowie,
              poziomy kampanii (levels.ts), karty (cards.ts), przedmioty i unikaty (items.ts), sklep (shop.ts),
-             zadania (tasks.ts), pakty ryzyka (pacts.ts)
+             zadania (tasks.ts), pakty ryzyka (pacts.ts), Kuźnia (forge.ts), sekrety, osiągnięcia, bestiariusz, wyzwanie dnia
   entities/  typy encji
   systems/   gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans,
-             wieżyczki, zakupy w sklepie, zasób bohatera, zadania, moce bossów, teren
+             wieżyczki, zakupy w sklepie, zasób bohatera, zadania, moce bossów, teren, Kuźnia, sekrety (buildy i mapy), wydarzenia
   game/      Run (postać + świat poziomu, obrażenia, hooki kart, snapshot), kampania, render świata
   ui/        menu, sloty trybów, mapa Ekspedycji (expedition.ts), wybór bohatera, HUD, awans, wybór karty, łup i ekwipunek (items.ts), sklep (shop.ts), pauza,
              ukończenie poziomu, podsumowanie
@@ -82,7 +82,7 @@ src/
 - **Poziom kampanii**: generowany z numeru w `data/levels.ts` (biom, cel, przesunięcie fal, nazwa bossa); nowy biom = wpis w `BIOMES`.
 - **Balans**: tylko `data/balance.ts` — krzywa XP, skalowanie HP/obrażeń wrogów w czasie, gęstość fal, diminishing returns (pancerz, cdr, szybkość), limity wydajnościowe.
 
-## Stan: etapy 1-3 + przedmioty + etap 4 (sklep, synergie, kowadło, kolekcja kart, Ekspedycja, sloty zapisu) + etap 5 (meta-progresja, Endless) + etap 6 (telefon, optymalizacja, polish) + sekrety i mini-lochy + 0.13 (zasoby, zadania, unikaty, moce bossów, fuzje, pakty, teren) + 0.14 (Kuźnia runiczna)
+## Stan: etapy 1-3 + przedmioty + etap 4 (sklep, synergie, kowadło, kolekcja kart, Ekspedycja, sloty zapisu) + etap 5 (meta-progresja, Endless) + etap 6 (telefon, optymalizacja, polish) + sekrety i mini-lochy + 0.13 (zasoby, zadania, unikaty, moce bossów, fuzje, pakty, teren) + 0.14 (Kuźnia runiczna) + 0.15 (sekrety, Vesper i Aurel, osiągnięcia, tryby, muzyka)
 
 **Etap 1 (MVP)** — ruch, automatyczna broń, wrogowie, kryształy XP, awans z wyborem 3 kart (4 z Koniczyną), zasoby runu: losowanie (3), pominięcie (2), wygnanie (2), śmierć, ekran podsumowania, restart.
 
@@ -261,6 +261,16 @@ src/
 - **Progi**: +3 nowy bonus, +6 blask (bonus bazowy x1.2), +9 **Przebudzenie** zależne od typu (broń: co 10. trafienie podwójne, hełm: blok trafienia, zbroja: tarcza, rękawice: krytyki porażają, buty: ogniste kroki, pierścień: szybsze umiejętności, amulet: XP i złoto), +12 runa mocy (super-bonus albo +50% jego wartości), +15 **Boski** (wszystko x1.25, Przebudzenie x2).
 - Animacja młota z iskrami i wielki napis wyniku; poziom +N widać na gnieździe przedmiotu, pęknięty na czerwono. Odłamki zostają do przekuwania i jakości.
 
+**Sekrety, nowi bohaterowie i tryby (0.15)**:
+- **Warsztat Kuźni** (B w kowadle): przetapianie materiałów na wyższe (4 kamienie → ruda, ruda + kamień → serce smoka, serca → łza bogów, łzy → iskra pustki) z szansą, złotem i odłamkami. Na wysokie poziomy materiały trzeba wytopić samemu.
+- **Księga sekretów** (Kolekcja → Tab): 13 ukrytych buildów, np. Wieczna Zaraza (pełna trucizna), Feniks (same bronie ognia), Pryzmat (4 żywioły), Pacyfista, i sekrety każdego bohatera. Nieodkryty sekret pokazuje tylko zagadkę.
+- **Sekrety map**: fontanna życzeń, runy z malowidłem, grzyby, biały jeleń i ukryty gaj, mimiki, pęknięta ściana ze schodami do skarbca, kurhan Zapomnianego Króla (3 klucze z elit), dodatkowa moc za bossa bez trafienia.
+- **Wydarzenia poziomu** (Krwawy księżyc, Złota godzina, Burza) i **kombo** zabójstw (więcej złota). **Nowi wrogowie**: Tarczownik, Przywoływacz, Kamikaze, Skoczek, Pajęczarz. **Bossowie biomów** walczą inaczej i dają własne moce.
+- **Vesper, Zabójczyni** (zasób **Kombo**: każde trafienie podbija obrażenia, Egzekucja na E zużywa całe kombo, słabych wrogów zabija od razu) i **Aurel, Kapłan** (zasób **Wiara**: z zabójstw i leczenia, pełna daje Łaskę; Strażnicy leczą go trafieniami, Uświęcona ziemia leczy i przedłuża sługi, Sąd na R spuszcza słupy światła). Komplet: bronie z ewolucjami, augmenty, fuzje, karty, drzewka Rozwoju, sekrety.
+- **Osiągnięcia** (12) odblokowują nowe karty, **bestiariusz** (opis i bonus obrażeń po progach zabójstw), **Wyzwanie dnia** (ten sam bohater, pakty i ziarno dla wszystkich), koniec runu z **wykresem DPS** i **kartą buildu**.
+- Tryby i sekrety: **Szybki run** (3 krótkie poziomy, ok. 10 min), sekretne: tryb **Głowy bossów**, biom **Pustka**, ukryty węzeł i **akt 4** Ekspedycji. **Skórki** bohaterów za odznaki Paktu (X przy wyborze bohatera).
+- **Dostępność**: trudność łatwa, kształty żywiołów dla daltonistów. **Muzyka proceduralna**: skala zależy od biomu, warstwy (arpeggio, bębny, melodia) rosną z walką.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
@@ -271,20 +281,22 @@ src/
 6. Ewolucja: rozwiń broń do poziomu 8, weź pasywkę z jej opisu (np. Magiczny pocisk + Moc), a kolejny awans zaproponuje ewolucję.
 7. Przedmioty: włącz debug (F3) i wciśnij F7 kilka razy — każde to łup bossa. Załóż coś, potem I/Tab otwiera ekwipunek; najedź na przedmiot w plecaku, żeby zobaczyć porównanie. Pauza pokazuje założone przedmioty.
 8. Ekspedycja: menu → Ekspedycja → Nowa ekspedycja → bohater. Na mapie strzałki/mysz wybierają węzeł, Enter/klik wchodzi. W walce F3 + F4 szybko kończy cel. Esc na mapie → „Zapisz i wyjdź”, przeładuj stronę → Kontynuuj wraca na mapę (albo do przerwanej walki / otwartego sklepu).
-9. Zasoby: Trening dowolnym bohaterem — pasek pod HP (Kestra: strzelaj z dystansu; Borgun: walcz wręcz; Ignara: Q/E, potem Spacja przy żarze 40+; Morwen: zabijaj blisko, potem R).
+9. Zasoby: Trening dowolnym bohaterem — pasek pod HP (Kestra: strzelaj z dystansu; Borgun: walcz wręcz; Ignara: Q/E, potem Spacja przy żarze 40+; Morwen: zabijaj blisko, potem R; Vesper: trafiaj bez obrywania, potem E; Aurel: Q i E, zabijaj blisko, potem R).
 10. Zadania: po ok. 40 s pojawia się turkusowy kamień (znacznik na krawędzi ekranu) — dotknij go, panel po prawej pokazuje postęp i czas.
 11. Moce bossów i unikaty: F3 + F4 kilka razy → boss → po nagrodach ekran „Moc bossa”. F7 daje łup bossa (12% na unikat); odkryte unikaty: Kolekcja → Tab.
 12. Fuzje: F6 do maks. poziomu dwóch broni z receptury (np. Strzała + Meteor u Kestry) — awans zaproponuje „Fuzja”.
 13. Pakty: wybór bohatera → Tab, ustaw poziomy strzałkami; poziom Paktu widać w HUD. Teren: bagno w biomie 2, lód w biomie 4 (Hardcore: poziomy 2 i 4), arena zwęża się przy bossie.
 14. Kuźnia: Hardcore → po bossie Kowadło (albo węzeł kowadła w Ekspedycji, daje też materiały) → przedmiot → „Kuźnia”. Klawisze 1-4: zwoje i ryzyko, Enter: kuj.
-15. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
+15. 0.15: Kowadło → B (warsztat); Kolekcja → Tab (sekrety, bestiariusz, osiągnięcia); menu → Wyzwanie dnia / Szybki run; Ustawienia → Muzyka, Trudność, Kształty żywiołów.
+16. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
 
 ## Kolejne etapy
 
+0.15. Gotowe: warsztat Kuźni, sekrety, wydarzenia, nowi wrogowie, bossowie biomów, Vesper i Aurel, osiągnięcia, bestiariusz, wyzwanie dnia, sekretne tryby, dostępność, muzyka.
 0.14. Gotowe: Kuźnia runiczna (ulepszanie do +15 z szansą, materiały, zwoje, pęknięcia, progi).
 0.13. Gotowe: zasoby bohaterów, zadania, unikaty, moce bossów, fuzje broni, pakty ryzyka, teren.
 
 4. Gotowe: sklep między poziomami, zestawy tagów, kowadło, kolekcja i bany kart, Ekspedycja, sloty zapisu per tryb.
-7. Bohaterowie (docelowo 6 ról): Kestra, Borgun, Ignara, Morwen — zostały 2.
+7. Gotowe: 6 bohaterów (Kestra, Borgun, Ignara, Morwen, Vesper, Aurel).
 5. Gotowe: meta-progresja, Paragon, prestiż, Endless, formatowanie liczb (break_infinity.js tylko, gdyby wartości wyszły poza zakres double).
 6. Gotowe: optymalizacja (tryb oszczędnych efektów), polish, wirtualny joystick i przyciski na telefonie.

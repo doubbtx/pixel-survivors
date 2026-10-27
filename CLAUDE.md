@@ -16,22 +16,25 @@ kartami-augmentami i ekwipunkiem z jakościami. Wszystko po polsku.
 ## Technologia
 
 HTML5 Canvas 2D + TypeScript + Vite. Bufor 480×270 skalowany całkowitoliczbowo, świat rysowany z ZOOM 1.5.
-Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 7).
+Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 7; nowe pola bez migracji dostają wartości domyślne w `loadSave`).
 Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków).
 
 ## Struktura `src/`
 
 - `core/` — pętla, renderer (W/H/ZOOM, `rect`, `circle`, `withAlpha`), input (akcje abstrakcyjne: klawiatura, pad, mysz/dotyk),
-  font (`drawText`, `wrapText`, LINE_H 12, polskie znaki), paleta (`C`, `RAMP`), audio (Web Audio, `sfx.play`), rng, save.
+  font (`drawText`, `wrapText`, LINE_H 12, polskie znaki), paleta (`C`, `RAMP`), audio (Web Audio, `sfx.play`), `music.ts` (muzyka proceduralna,
+  `music.setMood`), rng (`rng.seed` dla wyzwania dnia), save.
 - `gfx/` — `painter.ts` (sphere, polyShade, block, ring, disc, outline), `sprites.ts` (rejestr po nazwie, `drawSprite`),
   `icons.ts` (ikony 16×16: `ic_<broń>`, `pi_<pasywka>`, `ab_<umiejętność>`, `tag:<Tag>`, `bp_<moc bossa>`; `fu:<A>:<B>` = ikona hybrydy złożona w sprites.ts), `items.ts` (`it_<przedmiot>`),
-  `actors.ts` (animowane postacie, `name@klatka`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów), `objects.ts` (kapliczki, portale, kamień zadania, totem, teren: `tcover@v`, `tbarrel`, `tspikes@0/1`).
+  `hero-icons.ts` (ikony Vesper i Aurela), `elemmark.ts` (kształty żywiołów dla daltonistów), `actors.ts` (animowane postacie, `name@klatka`, skórki `name~odznaka@klatka` przez `Painter.recolor`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów), `objects.ts` (kapliczki, portale, kamień zadania, totem, teren: `tcover@v`, `tbarrel`, `tspikes@0/1`).
 - `data/` — `balance.ts`, `weapons.ts` (z ewolucjami, hybrydy i `FUSIONS`), `passives.ts`, `enemies.ts` (Volley: kształt i ruch salw, `BOSS_POWERS`), `waves.ts`, `heroes.ts`,
-  `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `upgrades.ts` (jakość ulepszeń broni, `WeaponBonus`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (88 kart: stats/mul/flags/hooks; lista flag w komentarzu pliku),
-  `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, unikaty `UNIQUES`, rollItem, rollUnique, porównania), `tasks.ts` (zadania), `pacts.ts` (pakty ryzyka, odznaki), `forge.ts` (Kuźnia: materiały, zwoje, `FORGE_STEPS`, progi, `AWAKENINGS`).
+  `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `upgrades.ts` (jakość ulepszeń broni, `WeaponBonus`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (~115 kart: stats/mul/flags/hooks, `unlock` = karta z osiągnięcia; lista flag w komentarzu pliku),
+  `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, unikaty `UNIQUES`, rollItem, rollUnique, porównania), `tasks.ts` (zadania), `pacts.ts` (pakty ryzyka, odznaki i skórki), `forge.ts` (Kuźnia: materiały, zwoje, `FORGE_STEPS`, progi, `AWAKENINGS`, warsztat `CRAFTS`),
+  `secrets.ts` (Księga sekretów), `achievements.ts`, `bestiary.ts`, `daily.ts` (wyzwanie dnia z daty).
 - `entities/` — typy encji.
 - `systems/` — gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans (levelup), wieżyczki, sługi (`minions.ts`),
-  `resource.ts` (zasób bohatera), `tasks.ts` (zadania w trakcie poziomu), `powers.ts` (moce bossów), `terrain.ts` (teren i arena bossa), `forge.ts` (próby kucia, naprawa, dropy materiałów, przebudzenia),
+  `resource.ts` (zasób bohatera), `tasks.ts` (zadania w trakcie poziomu), `secrets.ts` (budzenie sekretów), `mapsecrets.ts` (sekrety map),
+  `levelevents.ts` (wydarzenia poziomu, kombo, pioruny i zaznaczone uderzenia), `powers.ts` (moce bossów), `terrain.ts` (teren i arena bossa), `forge.ts` (próby kucia, naprawa, dropy materiałów, przebudzenia),
   sklep (zakupy), kowadło (`anvil.ts`: koszt w złocie ulepszenia, przekuj, jakość, przenieś super-bonus).
 - `game/run.ts` — klasa `Run`: postać + świat poziomu, `damageEnemy` (jedyne miejsce utraty HP wroga), `killEnemy`,
   `hurtPlayer`, `recomputeStats` (bohater + pasywki + karty + ekwipunek), `indexEffects` (flagi i hooki z kart i super-bonusów),
@@ -39,9 +42,9 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `salvage`, `slotFor`), `toSnapshot`/`fromSnapshot`.
 - `game/` — też `render.ts` (świat), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy, tablica Hardcore).
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
-  `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (kolekcja i bany kart, zakładka Unikaty), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb).
+  `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.14.0)
+## Stan (wersja 0.15.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -174,12 +177,35 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   z elit), `forgeBossDrops` (serca, łzy od głębi 3, iskry od 5 / Paktu 10), rozkładanie (kamienie), zadania i lochy (ruda), Złoty szlam,
   miecz w kamieniu, węzeł kowadła Ekspedycji. Sklep: trzeci rząd (kamień, ruda, zwoje). Pomoc: strona Kuźnia.
 
+- Etap 0.15 (wszystkie pomysły z rozmowy):
+  1. Warsztat Kuźni (`CRAFTS`, `craft`/`craftChance` w systems/forge.ts, `B` w kowadle): przetapianie materiałów na wyższe
+     (ruda, serce, łza, iskra) z szansą, złotem i odłamkami; porażka zwraca część składników. Łzy i iskry z bossów są rzadkie.
+  2. Księga sekretów (`data/secrets.ts`, `systems/secrets.ts`, `run.secrets`, `save.collection.secrets`): 13 ukrytych buildów
+     (warunek `check`, efekt jak karta, `while` = tylko dopóki trwa), liczniki w `cardState['sec.*']`.
+  3. Sekrety map (`systems/mapsecrets.ts`, `BAL.secretsMap`): fontanna, runy z malowidłem, grzyby, biały jeleń i gaj, mimik,
+     pęknięta ściana → skarbiec (loch 'vault'), 3 klucze z elit → kurhan z Zapomnianym Królem (loch 'barrow', moc `crown`), bezbłędny boss.
+  4. Wydarzenia poziomu (Krwawy księżyc, Złota godzina, Burza; `BAL.levelEvents`) i kombo zabójstw ze złotem (`BAL.combo`).
+  5. Nowi wrogowie: Tarczownik (tarcza z przodu), Przywoływacz, Kamikaze, Skoczek, Pajęczarz (sieci `run.webs`).
+  6. Bossowie biomów: `BOSS_STYLES` w systems/enemies.ts (Władca Otchłani, Królowa Bagien, Żar Pustkowia, Oko Pustki),
+     moce `BossPowerDef.bosses` (najpierw moce pokonanego bossa).
+  7. Bohaterowie Vesper (Zabójczyni, zasób Kombo `streak`: trafienia, Egzekucja zużywa, pasywka `killReset`) i Aurel (Kapłan,
+     Wiara `faith`: zabójstwa i leczenie, Łaska, Sąd zużywa; strażnicy `Minion.holy`, strefa `holy`, pasywka `guardShield`),
+     bronie `knives`/`light` z ewolucjami, augmentami i fuzjami, karty, drzewka, sekrety Królowa cieni i Święty.
+  8. Osiągnięcia (`ACHIEVEMENTS` → karty `unlock`, `run.unlocked`), bestiariusz (`save.bestiary`, `run.killsById`, `run.lore`:
+     bonus obrażeń po progach), wyzwanie dnia (`dailyOf(date)`: bohater, pakty, ziarno; `save.daily`), ekran końca z zakładkami
+     (obrażenia, wykres DPS `run.dpsLog` co `BAL.dpsEvery`, karta buildu).
+  9. Sekrety trybów: kod Konami w menu → Głowy bossów (`run.rush`, `BAL.rush`, bossowie po kolei i Serce Pustki, `save.rushBest`),
+     sekretny biom Pustka (`VOID_BIOME`, `Run.levelFor`: po pełnym cyklu biomów z Paktem `BAL.voidPact`+, bez leczenia, podwójny łup),
+     ukryty węzeł „?” w Ekspedycji (Rozdarcie → `ex.voidKey`) i akt 4 w Pustce (`actBiome`), skórki za odznaki Paktu (`save.skins`, X).
+  10. Dostępność: tryb łatwy (`settings.easy`, `BAL.easy`, bez odznak Paktu), kształty żywiołów (`settings.elemShapes`),
+      Szybki run (`run.quick`, `BAL.quick`: 3 krótkie poziomy z bossami w jednym świecie).
+  11. Muzyka proceduralna (`core/music.ts`): skala biomu, warstwy bas/pad, arpeggio, perkusja, melodia wg intensywności walki
+      (`BAL.musicCrowd`, boss = pełna), osobna głośność `settings.music`.
+
 ## Plan dalej
 
-- Kolejni bohaterowie: zostały 2 role (np. zabójca, kapłan) — wszystko oryginalne, od razu z zasobem (`HeroDef.resource`, systems/resource.ts).
-- Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby, zadania (totem), moce bossów, hybrydy, teren (gęstość osłon).
-- Sekrety (uzgodnione pomysły): Księga sekretów z ukrytymi buildami (np. pełna trucizna), sekrety map (pęknięta ściana, fontanna, mimik, kurhan).
-- Pomysły: więcej unikatów i receptur fuzji, moce z bossów aktów Ekspedycji z własnymi atakami, odblokowania za odznaki Paktu.
+- Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Głowy bossów, Pustka.
+- Pomysły: więcej unikatów i receptur fuzji, kolejne sekrety i osiągnięcia, warianty muzyki dla bossów.
 
 ## Testowanie
 
