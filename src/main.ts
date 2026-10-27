@@ -19,6 +19,7 @@ const save = loadSave();
 sfx.setVolume(save.settings.volume);
 music.setVolume(save.settings.music);
 renderer.setFill(save.settings.scaleFill);
+renderer.setZoom(save.settings.zoom);
 
 // AudioContext wymaga gestu użytkownika.
 const unlock = () => sfx.unlock();

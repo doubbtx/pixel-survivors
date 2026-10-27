@@ -73,6 +73,8 @@ export interface Settings {
    * obwódki pocisków wrogów, znacznik pod graczem.
    */
   scaleFill: boolean;
+  /** Przybliżenie świata (1 daleko, 1.25 normalne, 1.5 blisko; Renderer.setZoom). */
+  zoom: number;
   bgDim: number;
   bulletOutline: boolean;
   playerMarker: boolean;
@@ -175,7 +177,7 @@ function defaults(): SaveData {
     settings: { volume: 0.5, music: 0.4, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
-      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, bgDim: 0.2, bulletOutline: true, playerMarker: true },
+      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true },
     records: {},
     slots: { hardcore: null, endless: null, expedition: null },
     board: [],

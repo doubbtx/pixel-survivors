@@ -4,61 +4,48 @@ import { C, PAL, type Ramp } from '../core/palette';
 import { drawText, LINE_H } from '../core/font';
 import { sfx } from '../core/audio';
 
-let checker: CanvasPattern | null = null;
-
-/** Wzór szachownicy (dithering 50%) w kolorze tła okien. */
-function checkerPattern(r: Renderer): CanvasPattern {
-  if (!checker) {
-    const c = document.createElement('canvas');
-    c.width = c.height = 2;
-    const g = c.getContext('2d')!;
-    g.fillStyle = PAL[C.black];
-    g.fillRect(0, 0, 1, 1);
-    g.fillRect(1, 1, 1, 1);
-    checker = r.g.createPattern(c, 'repeat');
-  }
-  return checker!;
-}
-
 /**
- * Okno w stylu 16-bit: czarny obrys z zaokrąglonymi rogami, ramka w kolorze akcentu z jasną
- * krawędzią górną, tło z przejściem granat → czerń (dithering), cień pod oknem.
+ * Okno: miękki cień, czarne zaokrąglone tło, ramka w kolorze akcentu z cienką jasną linią w środku,
+ * wnętrze z gradientem (granat → czerń) i małe romby w rogach. Linie ułamkowe — bufor ma więcej pikseli niż logika.
  */
 export function panel(r: Renderer, x: number, y: number, w: number, h: number, accent: number = C.lavender, fill: number = C.navy): void {
   x = Math.round(x); y = Math.round(y);
-  r.withAlpha(0.4, () => r.rect(x + 3, y + 3, w, h, C.black));
-  r.rect(x + 1, y, w - 2, h, C.black);
-  r.rect(x, y + 1, w, h - 2, C.black);
-  r.rect(x + 1, y + 1, w - 2, h - 2, accent);
-  r.rect(x + 2, y + 1, w - 4, 1, C.white);
-  r.rect(x + 2, y + 2, w - 4, h - 4, C.black);
-  r.rect(x + 3, y + 3, w - 6, h - 6, fill);
-  // Dolna część okna przechodzi w czerń (dithering) — klasyczny gradient okien z ery 16-bit.
-  const band = Math.floor((h - 6) * 0.2);
-  r.g.fillStyle = checkerPattern(r);
-  r.g.fillRect(x + 3, y + h - 3 - band, w - 6, band);
-  r.rect(x + 3, y + 3, w - 6, 1, C.slate);
+  r.withAlpha(0.45, () => r.roundRect(x + 2, y + 3, w, h, 5, C.black));
+  r.roundRect(x, y, w, h, 5, C.black);
+  r.roundRect(x + 1, y + 1, w - 2, h - 2, 4, fill, C.black);
+  r.roundFrame(x + 0.5, y + 0.5, w - 1, h - 1, 4.5, accent, 1);
+  r.withAlpha(0.35, () => r.roundFrame(x + 2, y + 2, w - 4, h - 4, 3, C.white, 0.5));
+  // Romby w rogach.
+  for (const [cx, cy] of [[x + 3, y + 3], [x + w - 3, y + 3], [x + 3, y + h - 3], [x + w - 3, y + h - 3]]) {
+    r.g.fillStyle = PAL[accent];
+    r.g.beginPath();
+    r.g.moveTo(cx, cy - 1.5); r.g.lineTo(cx + 1.5, cy); r.g.lineTo(cx, cy + 1.5); r.g.lineTo(cx - 1.5, cy);
+    r.g.fill();
+  }
 }
 
 export function inside(px: number, py: number, x: number, y: number, w: number, h: number): boolean {
   return px >= x && px < x + w && py >= y && py < y + h;
 }
 
-/** Przyciemnienie świata pod nakładkami (pauza, awans) + ciemniejszy pas na tytuł, żeby nie mieszał się z HUD. */
+/** Przyciemnienie świata pod nakładkami (pauza, awans) + ciemniejsza wstęga na tytuł ze złotymi liniami. */
 export function dim(r: Renderer): void {
-  r.withAlpha(0.6, () => r.rect(0, 0, W, H, C.black));
-  r.withAlpha(0.75, () => r.rect(0, 4, W, 30, C.black));
+  r.withAlpha(0.65, () => r.rect(0, 0, W, H, C.black));
+  r.withAlpha(0.8, () => r.rect(0, 4, W, 30, C.black));
+  r.withAlpha(0.6, () => { r.rect(0, 4, W, 0.5, C.gold); r.rect(0, 33.5, W, 0.5, C.gold); });
 }
 
-/** Pasek 16-bit: czarna ramka, wypełnienie z połyskiem u góry i cieniem u dołu. `ramp` od cienia do światła. */
+/** Pasek: zaokrąglona czarna oprawa, wypełnienie z gradientem rampy (światło u góry), połysk i podziałki co 10%. `ramp` od cienia do światła. */
 export function bar(r: Renderer, x: number, y: number, w: number, h: number, frac: number, ramp: Ramp, bg: number = C.ddbrown): void {
-  const f = Math.round((w - 2) * Math.max(0, Math.min(1, frac)));
-  r.rect(x, y, w, h, C.black);
-  r.rect(x + 1, y + 1, w - 2, h - 2, bg);
-  if (f <= 0) return;
-  r.rect(x + 1, y + 1, f, h - 2, ramp[2]);
-  r.rect(x + 1, y + 1, f, 1, ramp[3]);
-  if (h > 4) r.rect(x + 1, y + h - 2, f, 1, ramp[1]);
+  const rad = Math.min(3, h / 2);
+  const f = (w - 2) * Math.max(0, Math.min(1, frac));
+  r.roundRect(x, y, w, h, rad, C.black);
+  r.roundRect(x + 1, y + 1, w - 2, h - 2, rad - 0.5, bg, C.black);
+  if (f > 0) {
+    r.roundRect(x + 1, y + 1, Math.max(f, Math.min(2, w - 2)), h - 2, rad - 0.5, ramp[3], ramp[1]);
+    r.withAlpha(0.55, () => r.rect(x + 2, y + 1.5, Math.max(0, f - 2), 0.5, C.white));
+  }
+  if (w >= 60 && h >= 5) r.withAlpha(0.35, () => { for (let i = 1; i < 10; i++) r.rect(x + 1 + ((w - 2) * i) / 10, y + 1, 0.5, h - 2, C.black); });
 }
 
 /** Kursor-strzałka menu (lekko kołysze się w poziomie). */
@@ -126,9 +113,9 @@ export class Menu {
       const [x, y, w, h] = this.rect(i);
       const on = i === this.sel;
       if (on) {
-        r.withAlpha(0.85, () => r.rect(x, y, w, h, C.dblue));
-        r.rect(x, y, w, 1, C.blue);
-        r.rect(x, y + h - 1, w, 1, C.navy);
+        r.withAlpha(0.9, () => r.roundRect(x, y, w, h, 3, C.dblue, C.navy));
+        r.roundFrame(x, y, w, h, 3, C.blue, 0.5);
+        r.withAlpha(0.5, () => r.rect(x + 3, y + 0.5, w - 6, 0.5, C.cyan));
         cursor(r, x + 6, y + Math.floor((h - 7) / 2));
       }
       const label = it.left ? `< ${it.label()} >` : it.label();
@@ -137,19 +124,16 @@ export class Menu {
   }
 }
 
-/** Gniazdo na ikonę (HUD, pauza): ciemne wnętrze z fazą — jasna krawędź u góry, cień u dołu. */
+/** Gniazdo na ikonę (HUD, pauza): zaokrąglone, czarna oprawa, ramka w kolorze `border`, wnętrze z gradientem i połyskiem. */
 export function slot(r: Renderer, x: number, y: number, s: number, border: number = C.slate): void {
-  r.rect(x, y, s, s, C.black);
-  r.rect(x + 1, y + 1, s - 2, s - 2, border);
-  r.rect(x + 2, y + 2, s - 4, s - 4, C.navy);
-  r.rect(x + 2, y + 2, s - 4, 1, C.slate);
-  r.rect(x + 2, y + s - 3, s - 4, 1, C.black);
+  r.roundRect(x, y, s, s, 3, C.black);
+  r.roundRect(x + 1, y + 1, s - 2, s - 2, 2.5, C.slate, C.black);
+  r.roundFrame(x + 0.5, y + 0.5, s - 1, s - 1, 3, border, 1);
+  r.withAlpha(0.3, () => r.rect(x + 2.5, y + 1.75, s - 5, 0.5, C.white));
 }
 
-/** Półprzezroczysta płytka pod tekst HUD (czytelność na ruchliwym tle). */
+/** Półprzezroczysta zaokrąglona płytka pod tekst HUD (czytelność na ruchliwym tle). */
 export function plate(r: Renderer, x: number, y: number, w: number, h: number): void {
-  r.withAlpha(0.55, () => {
-    r.rect(x + 1, y, w - 2, h, C.black);
-    r.rect(x, y + 1, w, h - 2, C.black);
-  });
+  r.withAlpha(0.6, () => r.roundRect(x, y, w, h, 3, C.black));
+  r.withAlpha(0.25, () => r.roundFrame(x, y, w, h, 3, C.lavender, 0.5));
 }

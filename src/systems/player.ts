@@ -1,5 +1,5 @@
 import type { Input } from '../core/input';
-import { VIEW_W, VIEW_H, ZOOM } from '../core/renderer';
+import { VIEW_W, VIEW_H, VIEW_S, ZOOM } from '../core/renderer';
 import { BAL } from '../data/balance';
 import type { Run } from '../game/run';
 
@@ -42,8 +42,8 @@ export function updatePlayer(run: Run, input: Input, dt: number): void {
     run.aimX = p.x + input.padAim.x * 80;
     run.aimY = p.y + input.padAim.y * 80;
   } else if (manual && input.mouseAiming()) {
-    run.aimX = p.x - VIEW_W / 2 + input.mouse.x / ZOOM;
-    run.aimY = p.y - VIEW_H / 2 + input.mouse.y / ZOOM;
+    run.aimX = p.x - VIEW_W / 2 + input.mouse.x / (ZOOM * VIEW_S);
+    run.aimY = p.y - VIEW_H / 2 + input.mouse.y / (ZOOM * VIEW_S);
   } else {
     const e = run.aimMode !== 'manual' ? run.nearestEnemy(p.x, p.y, 160) : null;
     run.aimX = e ? e.x : p.x + p.fx * 60;

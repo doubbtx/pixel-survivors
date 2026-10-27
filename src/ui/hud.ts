@@ -68,14 +68,25 @@ function drawMinimap(r: Renderer, run: Run, x: number, y: number, w: number, h: 
 /** Rampy pasków zasobów bohaterów. */
 const RES_RAMP = { focus: RAMP.green, fury: RAMP.red, heat: RAMP.fire, souls: RAMP.purple, streak: RAMP.stone, faith: RAMP.gold } as const;
 
-/** Pasek zasobu bohatera pod HP: nazwa i wartość po prawej, miganie przy pełnym zasobie i przegrzaniu (żar). */
-function drawResource(r: Renderer, run: Run, x: number, y: number): void {
+/** Małe napisy HUD (3/4 rozmiaru: przy buforze ×4 nadal równe piksele). */
+const SMALL = { scale: 0.75, outline: C.black } as const;
+
+/** Pasek zasobu bohatera pod HP: nazwa i wartość na pasku, miganie przy pełnym zasobie i przegrzaniu (żar). */
+function drawResource(r: Renderer, run: Run, x: number, y: number, w: number): void {
   const res = run.hero.resource, fr = resFrac(run);
   const hot = res.kind === 'heat' && run.res > BAL.resource.heat.burnFrom;
-  bar(r, x, y, 126, 5, fr, RES_RAMP[res.kind], C.navy);
-  if (res.kind === 'heat') r.rect(x + Math.round((126 * BAL.resource.heat.burnFrom) / resMax(run)), y, 1, 5, C.yellow);
-  if ((hot || fr >= 0.95) && run.step % 16 < 8) r.withAlpha(0.5, () => r.rect(x + 1, y + 1, 124, 3, C.white));
-  drawText(r.g, `${res.name} ${Math.floor(run.res)}`, x + 130, y - 4, hot ? C.red : res.color, OUT);
+  bar(r, x, y, w, 8, fr, RES_RAMP[res.kind], C.navy);
+  if (res.kind === 'heat') r.rect(x + (w * BAL.resource.heat.burnFrom) / resMax(run), y, 1, 8, C.yellow);
+  if ((hot || fr >= 0.95) && run.step % 16 < 8) r.withAlpha(0.4, () => r.roundRect(x + 1, y + 1, w - 2, 6, 2, C.white));
+  drawText(r.g, `${res.name} ${Math.floor(run.res)}`, x + 4, y + 0.5, hot ? C.red : C.white, SMALL);
+}
+
+/** Pigułka: zaokrąglona płytka z krótkim napisem w kolorze `col` (wydarzenia, kombo). Zwraca szerokość. */
+function pill(r: Renderer, text: string, cx: number, y: number, col: number): void {
+  const w = textWidth(text) * 0.75 + 10;
+  r.withAlpha(0.7, () => r.roundRect(cx - w / 2, y, w, 9, 4.5, C.black));
+  r.roundFrame(cx - w / 2, y, w, 9, 4.5, col, 0.5);
+  drawText(r.g, text, cx, y + 0.5, col, { align: 'center', ...SMALL });
 }
 
 /** Panel zadania (prawa strona): nazwa, nagroda, postęp i pasek czasu (przed startem: czas do zniknięcia kamienia). */
@@ -115,54 +126,63 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   // Błysk paska po zebraniu kryształu.
   if (run.xpPulse > 0) r.withAlpha(run.xpPulse * 3, () => r.rect(1, 1, Math.round((W - 2) * Math.min(1, run.xp / run.xpNext)), 4, C.white));
 
-  // Portret bohatera + poziom postaci.
-  slot(r, 4, 9, 32, C.gold);
-  drawSprite(g, `${run.heroSprite}@0`, 20, 25);
-  plate(r, 4, 42, 32, 12);
-  drawText(g, `LV ${run.level}`, 20, 42, C.yellow, { align: 'center', ...OUT });
-  const synH = drawSynergyHud(r, run, 4, 58);
-
-  // HP + tarcza + poziom kampanii.
-  bar(r, 40, 11, 126, 11, p.hp / st.maxHp, RAMP.red);
-  // Leczenie: zielona poświata paska HP.
-  if (run.healGlow > 0) r.withAlpha(run.healGlow * 2, () => r.frame(39, 10, 128, 13, C.lime));
-  drawText(g, `${fmt(p.hp)} / ${fmt(st.maxHp)}`, 103, 10, C.white, { align: 'center', ...OUT });
-  if (p.shield > 0) bar(r, 40, 23, Math.max(6, Math.round(126 * Math.min(1, p.shield / st.maxHp))), 5, 1, RAMP.blue);
-  drawResource(r, run, 40, 29);
+  // Karta bohatera: portret z poziomem, HP (z tarczą), zasób, poziom kampanii i błogosławieństwa.
+  const cw = 174;
+  r.withAlpha(0.65, () => r.roundRect(3, 9, cw, 47, 5, C.black));
+  r.withAlpha(0.35, () => r.roundFrame(3, 9, cw, 47, 5, C.lavender, 0.5));
+  slot(r, 6, 12, 32, C.gold);
+  drawSprite(g, `${run.heroSprite}@0`, 22, 28);
+  r.roundRect(8, 39, 28, 9, 4.5, C.dbrown, C.ddbrown);
+  r.roundFrame(8, 39, 28, 9, 4.5, C.gold, 0.5);
+  drawText(g, `LV ${run.level}`, 22, 39.5, C.yellow, { align: 'center', ...SMALL });
+  const bx = 42, bw = cw - 44;
+  bar(r, bx, 12, bw, 11, p.hp / st.maxHp, RAMP.red);
+  // Leczenie: zielona poświata paska HP; tarcza: niebieski pasek na dole paska HP.
+  if (run.healGlow > 0) r.withAlpha(run.healGlow * 2, () => r.roundFrame(bx - 1, 11, bw + 2, 13, 4, C.lime, 1));
+  if (p.shield > 0) r.roundRect(bx + 1, 20, Math.max(3, (bw - 2) * Math.min(1, p.shield / st.maxHp)), 2, 1, C.cyan);
+  drawText(g, `${fmt(p.hp)} / ${fmt(st.maxHp)}`, bx + bw / 2, 13.5, C.white, { align: 'center', ...SMALL });
+  drawResource(r, run, bx, 26, bw);
   const hc = run.mode === 'hardcore';
   const ex = run.expedition;
   // Poziom (albo akt), dopiski Hardcore i Pakt jeden za drugim.
-  let lx = 41;
+  let lx = bx + 1;
   for (const [text, col] of [[ex ? `Akt ${ex.act}, głębia ${run.depth}` : `Poziom ${run.depth}`, hc ? C.orange : C.lgray], [hc ? 'Hardcore' : '', C.salmon], [run.pactLevel ? `Pakt ${run.pactLevel}` : '', C.red]] as const) {
     if (!text) continue;
-    drawText(g, text, lx, 36, col, OUT);
-    lx += textWidth(text) + 6;
+    drawText(g, text, lx, 37, col, SMALL);
+    lx += textWidth(text) * 0.75 + 5;
   }
   // Aktywne błogosławieństwa kapliczek z czasem.
-  if (run.buffs.length) drawText(g, run.buffs.map((b) => (Number.isFinite(b.t) ? `${b.name} ${Math.ceil(b.t)}s` : b.name)).join('  '), 41, 47, C.yellow, OUT);
+  if (run.buffs.length) drawText(g, run.buffs.map((b) => (Number.isFinite(b.t) ? `${b.name} ${Math.ceil(b.t)}s` : b.name)).join('  '), bx + 1, 46, C.yellow, SMALL);
+  const synH = drawSynergyHud(r, run, 4, 60);
 
   // Czas na płytce + cel poziomu albo pasek bossa.
-  plate(r, W / 2 - 36, 7, 72, 25);
-  drawText(g, fmtTime(run.time), W / 2, 8, C.white, { align: 'center', scale: 2, ...OUT });
+  r.withAlpha(0.65, () => r.roundRect(W / 2 - 36, 8, 72, 22, 5, C.black));
+  r.withAlpha(0.35, () => r.roundFrame(W / 2 - 36, 8, 72, 22, 5, C.lavender, 0.5));
+  drawText(g, fmtTime(run.time), W / 2, 11, C.white, { align: 'center', scale: 2, ...OUT });
+  let py = 49;
   if (run.boss) {
     const b = run.boss;
-    drawText(g, run.bossTitle ?? run.levelInfo.bossName, W / 2, 34, C.salmon, { align: 'center', ...OUT });
-    const bw = 220, bx = W / 2 - bw / 2;
-    bar(r, bx, 47, bw, 9, b.hp / b.maxHp, RAMP.purple);
-    r.rect(bx - 2, 46, 2, 11, C.gold);
-    r.rect(bx + bw, 46, 2, 11, C.gold);
-    drawSprite(g, 'ui_skull', bx - 9, 51);
+    drawText(g, run.bossTitle ?? run.levelInfo.bossName, W / 2, 32, C.salmon, { align: 'center', ...OUT });
+    const bw2 = 170, bx2 = W / 2 - bw2 / 2;
+    bar(r, bx2, 42, bw2, 9, b.hp / b.maxHp, RAMP.purple);
+    r.roundRect(bx2 - 3, 41, 3, 11, 1, C.gold);
+    r.roundRect(bx2 + bw2, 41, 3, 11, 1, C.gold);
+    drawSprite(g, 'ui_skull', bx2 - 10, 46);
+    py = 55;
   } else if (!run.bossSpawned) {
     const o = run.levelInfo.objective;
     const label = run.dungeon ? `Loch: fala ${run.dungeon.wave}/${BAL.events.dungeonWaves}${run.dungeon.cleared ? ', oczyszczony' : ''}`
       : run.mode === 'endless' ? `Endless: boss za ${fmtTime(Math.max(0, run.nextBossAt - run.time))}`
       : o.kind === 'survive' ? `Cel: przetrwaj ${fmtTime(o.time)}` : `Cel: zabójstwa ${fmt(run.levelKills)} / ${fmt(o.count)}`;
-    drawText(g, label, W / 2, 34, C.lgray, { align: 'center', ...OUT });
-    bar(r, W / 2 - 60, 47, 120, 6, run.objectiveProgress(), RAMP.green);
+    drawText(g, label, W / 2, 32, C.lgray, { align: 'center', ...SMALL });
+    bar(r, W / 2 - 60, 40, 120, 6, run.objectiveProgress(), RAMP.green);
   }
-  // Wydarzenie poziomu i kombo pod celem poziomu.
-  const ev = run.levelEvent, under = [ev ? `${LEVEL_EVENTS[ev.id].name} ${Math.ceil(ev.t)}s` : '', run.combo >= 10 ? `Kombo ${run.combo} (+${Math.round((comboGoldMul(run) - 1) * 100)}% zł)` : ''].filter(Boolean).join('    ');
-  if (under) drawText(g, under, W / 2, run.boss ? 59 : 56, ev ? LEVEL_EVENTS[ev.id].color : C.yellow, { align: 'center', ...OUT });
+  // Wydarzenie poziomu i kombo: pigułki pod celem poziomu.
+  const ev = run.levelEvent;
+  const pills: [string, number][] = [];
+  if (ev) pills.push([`${LEVEL_EVENTS[ev.id].name} ${Math.ceil(ev.t)}s`, LEVEL_EVENTS[ev.id].color]);
+  if (run.combo >= 10) pills.push([`Kombo ${run.combo}  +${Math.round((comboGoldMul(run) - 1) * 100)}% zł`, C.yellow]);
+  pills.forEach(([t, col], i) => pill(r, t, W / 2 + (i - (pills.length - 1) / 2) * 92, py, col));
 
   // Zabójstwa i złoto (prawy górny róg).
   plate(r, W - 86, 8, 82, 30);
@@ -173,10 +193,17 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   if (minimap) drawMinimap(r, run, W - 86, 41, 82, 56);
   if (run.task) drawTask(r, run, W - 114, minimap ? 100 : 41);
 
-  // Baner (zapowiedzi, fazy bossa, elity).
-  if (run.bannerT > 0 && run.step % 10 < 8) {
-    const big = run.banner.length <= 26;
-    drawText(g, run.banner, W / 2, 70, C.yellow, { align: 'center', scale: big ? 2 : 1, ...OUT });
+  // Baner (zapowiedzi, fazy bossa, elity): wstęga z cienkimi złotymi liniami, wsuwa się i znika.
+  if (run.bannerT > 0) {
+    const big = run.banner.length <= 26, sc = big ? 2 : 1;
+    const tw = textWidth(run.banner) * sc + 40, th = big ? 22 : 14, by = 68;
+    const a = Math.min(1, run.bannerT * 3, (2.5 - run.bannerT) * 6 + 0.2);
+    r.withAlpha(a, () => {
+      r.withAlpha(0.7, () => r.roundRect(W / 2 - tw / 2, by, tw, th, 4, C.black));
+      r.rect(W / 2 - tw / 2 + 6, by, tw - 12, 0.5, C.gold);
+      r.rect(W / 2 - tw / 2 + 6, by + th - 0.5, tw - 12, 0.5, C.gold);
+      drawText(g, run.banner, W / 2, by + (big ? 3 : 3), C.yellow, { align: 'center', scale: sc, ...OUT });
+    });
   }
 
   // Gniazda broni (górny rząd) i pasywek (dolny rząd); puste gniazda też widać.

@@ -1,19 +1,24 @@
 import { PAL } from './palette';
 
-/** Rozdzielczość ekranu (piksele logiczne). Cała gra rysuje do bufora W×H skalowanego całkowitoliczbowo. */
+/** Rozdzielczość logiczna ekranu: UI rysuje w pikselach W×H (bufor ma K razy więcej pikseli, patrz Renderer). */
 export const W = 480;
 export const H = 270;
 /**
- * Powiększenie świata: 1 jednostka świata = 1.5 piksela ekranu. Logika gry działa w jednostkach świata,
- * więc kamera widzi VIEW_W × VIEW_H jednostek, a sprite'y mają dwa razy więcej detali niż hitboksy.
+ * Powiększenie świata: 1 jednostka świata = 1.5 piksela logicznego przy przybliżeniu 1. Logika gry działa w jednostkach świata.
+ * Przybliżenie świata (Ustawienia: VIEW_S) dodatkowo powiększa świat; kamera widzi VIEW_W × VIEW_H jednostek,
+ * a świat rysuje się w obszarze VW × VH pikseli logicznych świata (renderer skaluje go do całego ekranu).
  */
 export const ZOOM = 1.5;
-export const VIEW_W = W / ZOOM;
-export const VIEW_H = H / ZOOM;
+export let VIEW_S = 1;
+export let VIEW_W = W / ZOOM;
+export let VIEW_H = H / ZOOM;
+export let VW = W;
+export let VH = H;
 
 /**
- * Renderer: bufor niskiej rozdzielczości + prezentacja na ekranie: wypełnienie okna (domyślnie; najpierw całkowite
- * powiększenie bez wygładzania, potem dopasowanie z wygładzaniem, więc piksele są równe) albo sama skala całkowita.
+ * Renderer: bufor W·K × H·K (K całkowite, dobrane do ekranu) — UI rysuje w pikselach logicznych przez transformację ×K,
+ * świat (beginWorld) przez ×K·s, gdzie K·s też jest całkowite, więc piksele sprite'ów są równe przy każdym przybliżeniu.
+ * Prezentacja: bufor dopasowany do okna (wypełnienie, z wygładzaniem) albo skala całkowita (ostre piksele, z ramką).
  * Prymitywy pikselowe (prostokąty, okręgi z cache, linie Bresenhama) trzymają się palety;
  * półprzezroczystość ustawia się przez globalAlpha (cienie, poświaty).
  */
@@ -21,21 +26,17 @@ export class Renderer {
   readonly buf: HTMLCanvasElement;
   readonly g: CanvasRenderingContext2D;
   private readonly ctx: CanvasRenderingContext2D;
-  private scale = 1;
-  /** Wypełnianie okna i bufor pośredni o całkowitej skali (tylko w tym trybie). */
+  /** Mnożnik bufora (piksele bufora na piksel logiczny). */
+  private k = 1;
   private fill = true;
-  private readonly mid: HTMLCanvasElement = document.createElement('canvas');
-  private readonly midCtx: CanvasRenderingContext2D;
+  /** Przybliżenie świata żądane w Ustawieniach (rzeczywiste: VIEW_S, zaokrąglone tak, żeby K·s było całkowite). */
+  private zoom = 1;
   private circleCache = new Map<string, HTMLCanvasElement>();
 
   constructor(private readonly display: HTMLCanvasElement) {
     this.buf = document.createElement('canvas');
-    this.buf.width = W;
-    this.buf.height = H;
     this.g = this.buf.getContext('2d')!;
-    this.g.imageSmoothingEnabled = false;
     this.ctx = display.getContext('2d')!;
-    this.midCtx = this.mid.getContext('2d')!;
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -45,42 +46,66 @@ export class Renderer {
     this.resize();
   }
 
+  /** Przybliżenie świata (1 = najdalej). */
+  setZoom(z: number): void {
+    this.zoom = z;
+    this.applyZoom();
+  }
+
+  private applyZoom(): void {
+    VIEW_S = Math.max(1, Math.round(this.k * this.zoom) / this.k);
+    VW = W / VIEW_S;
+    VH = H / VIEW_S;
+    VIEW_W = VW / ZOOM;
+    VIEW_H = VH / ZOOM;
+  }
+
   /**
-   * Wypełnienie: płótno o rozmiarze okna w pikselach urządzenia, bufor pośredni W×H × ceil(skala).
+   * Wypełnienie: płótno o rozmiarze okna w pikselach urządzenia, K = 4 (przybliżenia 1, 1.25 i 1.5 dają całkowite K·s).
    * Inaczej największa całkowita skala mieszcząca się w oknie (min. 1; mniejsze ekrany skaluje CSS).
    */
   resize(): void {
     const fit = Math.min(window.innerWidth / W, window.innerHeight / H);
+    const dpr = window.devicePixelRatio || 1;
     if (this.fill && fit >= 1) {
-      const dpr = window.devicePixelRatio || 1, cw = Math.floor(W * fit), ch = Math.floor(H * fit);
-      this.scale = Math.ceil(fit * dpr);
-      this.mid.width = W * this.scale;
-      this.mid.height = H * this.scale;
+      const cw = Math.floor(W * fit), ch = Math.floor(H * fit);
+      this.k = 4;
       this.display.width = Math.round(cw * dpr);
       this.display.height = Math.round(ch * dpr);
       this.display.style.width = `${cw}px`;
       this.display.style.height = `${ch}px`;
-      return;
+    } else {
+      const s = Math.max(1, Math.floor(fit));
+      this.k = Math.min(4, Math.max(2, s));
+      this.display.width = W * s;
+      this.display.height = H * s;
+      const css = fit >= 1 ? s : fit;
+      this.display.style.width = `${Math.floor(W * css)}px`;
+      this.display.style.height = `${Math.floor(H * css)}px`;
     }
-    const s = Math.floor(fit);
-    this.scale = Math.max(1, s);
-    this.display.width = W * this.scale;
-    this.display.height = H * this.scale;
-    const css = s >= 1 ? this.scale : Math.min(window.innerWidth / W, window.innerHeight / H);
-    this.display.style.width = `${Math.floor(W * css)}px`;
-    this.display.style.height = `${Math.floor(H * css)}px`;
+    // Zmiana rozmiaru płótna zeruje stan kontekstu.
+    this.buf.width = W * this.k;
+    this.buf.height = H * this.k;
+    this.g.imageSmoothingEnabled = false;
+    this.g.setTransform(this.k, 0, 0, this.k, 0, 0);
+    this.applyZoom();
+  }
+
+  /** Rysowanie świata: piksele logiczne świata (obszar VW × VH) powiększone o VIEW_S. */
+  beginWorld(): void {
+    const s = this.k * VIEW_S;
+    this.g.setTransform(s, 0, 0, s, 0, 0);
+  }
+
+  /** Powrót do pikseli logicznych UI. */
+  endWorld(): void {
+    this.g.setTransform(this.k, 0, 0, this.k, 0, 0);
   }
 
   present(): void {
-    if (this.fill && this.mid.width === W * this.scale && this.display.width !== W * this.scale) {
-      this.midCtx.imageSmoothingEnabled = false;
-      this.midCtx.drawImage(this.buf, 0, 0, this.mid.width, this.mid.height);
-      this.ctx.imageSmoothingEnabled = true;
-      this.ctx.imageSmoothingQuality = 'high';
-      this.ctx.drawImage(this.mid, 0, 0, this.display.width, this.display.height);
-      return;
-    }
-    this.ctx.imageSmoothingEnabled = false;
+    const same = this.display.width === this.buf.width && this.display.height === this.buf.height;
+    this.ctx.imageSmoothingEnabled = !same;
+    this.ctx.imageSmoothingQuality = 'high';
     this.ctx.drawImage(this.buf, 0, 0, this.display.width, this.display.height);
   }
 
@@ -98,6 +123,31 @@ export class Renderer {
   rect(x: number, y: number, w: number, h: number, col: number): void {
     this.g.fillStyle = PAL[col];
     this.g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+  }
+
+  /** Zaokrąglony prostokąt wypełniony kolorem albo pionowym gradientem (góra → dół) z palety. Interfejs (gładkie okna). */
+  roundRect(x: number, y: number, w: number, h: number, rad: number, col: number, bottom?: number): void {
+    const g = this.g;
+    if (bottom === undefined) g.fillStyle = PAL[col];
+    else {
+      const gr = g.createLinearGradient(0, y, 0, y + h);
+      gr.addColorStop(0, PAL[col]);
+      gr.addColorStop(1, PAL[bottom]);
+      g.fillStyle = gr;
+    }
+    g.beginPath();
+    g.roundRect(x, y, w, h, Math.min(rad, w / 2, h / 2));
+    g.fill();
+  }
+
+  /** Obrys zaokrąglonego prostokąta linią o grubości `lw` pikseli logicznych (może być ułamkowa: bufor ma K× więcej pikseli). */
+  roundFrame(x: number, y: number, w: number, h: number, rad: number, col: number, lw = 1): void {
+    const g = this.g;
+    g.strokeStyle = PAL[col];
+    g.lineWidth = lw;
+    g.beginPath();
+    g.roundRect(x + lw / 2, y + lw / 2, w - lw, h - lw, Math.max(0, Math.min(rad, w / 2, h / 2) - lw / 2));
+    g.stroke();
   }
 
   /** Ramka 1px. */

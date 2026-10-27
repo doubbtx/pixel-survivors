@@ -163,6 +163,9 @@ export interface TextOpts {
 }
 
 /** Rysuje tekst. `y` to górna krawędź linii (łącznie z miejscem na akcenty wersalików). */
+/** Kierunki obrysu napisu (8 sąsiadów). */
+const OUTLINE_DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
+
 export function drawText(g: CanvasRenderingContext2D, s: string, x: number, y: number, col: number, o: TextOpts = {}): void {
   const scale = o.scale ?? 1;
   const w = textWidth(s, scale);
@@ -174,7 +177,9 @@ export function drawText(g: CanvasRenderingContext2D, s: string, x: number, y: n
       const dw = gw * scale, dh = CELL_H * scale;
       if (o.outline !== undefined) {
         const oc = glyphCanvas(ch, o.outline);
-        for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) g.drawImage(oc, sx + dx, sy + dy, dw, dh);
+        // Obrys pół piksela logicznego (bufor ma więcej pikseli): cieńszy i czystszy niż pełny piksel.
+        const o2 = 0.5 * scale;
+        for (const [dx, dy] of OUTLINE_DIRS) g.drawImage(oc, sx + dx * o2, sy + dy * o2, dw, dh);
       }
       if (o.shadow !== undefined) g.drawImage(glyphCanvas(ch, o.shadow), sx + scale, sy + scale, dw, dh);
       g.drawImage(glyphCanvas(ch, col), sx, sy, dw, dh);

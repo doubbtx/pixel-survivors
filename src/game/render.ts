@@ -1,4 +1,4 @@
-import { W, H, ZOOM, type Renderer } from '../core/renderer';
+import { W, H, VW, VH, ZOOM, type Renderer } from '../core/renderer';
 import { C } from '../core/palette';
 import { drawLabel } from '../core/font';
 import { rng } from '../core/rng';
@@ -45,6 +45,13 @@ export function warmFx(): void {
 }
 
 export function renderWorld(run: Run, r: Renderer): void {
+  r.beginWorld();
+  drawWorld(run, r);
+  r.endWorld();
+}
+
+/** Świat w pikselach logicznych świata (VW × VH, renderer powiększa je o przybliżenie). */
+function drawWorld(run: Run, r: Renderer): void {
   const g = r.g;
   const shx = run.shake > 0 ? rng.range(-run.shake, run.shake) * ZOOM : 0;
   const shy = run.shake > 0 ? rng.range(-run.shake, run.shake) * ZOOM : 0;
@@ -53,15 +60,15 @@ export function renderWorld(run: Run, r: Renderer): void {
   const Y = (y: number) => Math.round(y * ZOOM) - oy;
   const vis = (x: number, y: number) => {
     const sx = X(x), sy = Y(y);
-    return sx > -MARGIN && sx < W + MARGIN && sy > -MARGIN && sy < H + MARGIN;
+    return sx > -MARGIN && sx < VW + MARGIN && sy > -MARGIN && sy < VH + MARGIN;
   };
   const p = run.player;
   const px = X(p.x), py = Y(p.y);
 
   // Podłoże z kafelków (wariant z hasha współrzędnych — stabilny przy ruchu kamery).
   const tx0 = Math.floor(ox / TILE), ty0 = Math.floor(oy / TILE);
-  for (let ty = ty0; ty <= ty0 + Math.ceil(H / TILE); ty++) {
-    for (let tx = tx0; tx <= tx0 + Math.ceil(W / TILE); tx++) {
+  for (let ty = ty0; ty <= ty0 + Math.ceil(VH / TILE); ty++) {
+    for (let tx = tx0; tx <= tx0 + Math.ceil(VW / TILE); tx++) {
       const h = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
       g.drawImage(getSprite(`tile${run.levelInfo.biome}_${h % TILE_VARIANTS}`).img, tx * TILE - ox, ty * TILE - oy);
     }
@@ -69,8 +76,8 @@ export function renderWorld(run: Run, r: Renderer): void {
 
   // Druga warstwa podłoża: duże plamy (ciemniejsze i jaśniejsze) co kilkanaście kafelków.
   const biome = run.levelInfo.biome;
-  for (let ty = ty0 - 1; ty <= ty0 + Math.ceil(H / TILE); ty++) {
-    for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(W / TILE); tx++) {
+  for (let ty = ty0 - 1; ty <= ty0 + Math.ceil(VH / TILE); ty++) {
+    for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(VW / TILE); tx++) {
       const h = ((tx * 2654435761) ^ (ty * 40503)) >>> 0;
       if (h % 13 !== 0) continue;
       g.drawImage(getSprite(`patch${biome}@${(h >>> 9) % 6}`).img, tx * TILE - ox - 8, ty * TILE - oy);
@@ -94,8 +101,8 @@ export function renderWorld(run: Run, r: Renderer): void {
   }
 
   // Dekoracje terenu: co ~8. kafelek dostaje element z hasha współrzędnych (stabilny przy ruchu kamery).
-  for (let ty = ty0 - 1; ty <= ty0 + Math.ceil(H / TILE); ty++) {
-    for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(W / TILE); tx++) {
+  for (let ty = ty0 - 1; ty <= ty0 + Math.ceil(VH / TILE); ty++) {
+    for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(VW / TILE); tx++) {
       const h = ((tx * 92837111) ^ (ty * 689287499)) >>> 0;
       if (h % 8 !== 0) continue;
       const x = tx * TILE - ox + 4 + ((h >>> 8) % 20), y = ty * TILE - oy + 4 + ((h >>> 13) % 20);
@@ -104,7 +111,7 @@ export function renderWorld(run: Run, r: Renderer): void {
     }
   }
   // Przyciemnienie tła (Ustawienia): podłoże i dekoracje ciemniejsze, wszystko, co żyje, odcina się od nich.
-  if (run.bgDim > 0) r.withAlpha(run.bgDim, () => r.rect(0, 0, W, H, C.black));
+  if (run.bgDim > 0) r.withAlpha(run.bgDim, () => r.rect(0, 0, VW, VH, C.black));
 
   // Ataki gracza (ustawienie): przygaszone = półprzezroczyste i bez poświat, ukryte = pominięte (działają dalej).
   const atkOn = run.playerFx !== 'hidden', glow = run.playerFx === 'visible';
@@ -202,12 +209,12 @@ export function renderWorld(run: Run, r: Renderer): void {
   // Loch: mrok i kamienne ściany areny.
   if (run.dungeon) {
     const d = run.dungeon, R = BAL.events.arenaR * ZOOM;
-    r.withAlpha(0.4, () => r.rect(0, 0, W, H, C.black));
+    r.withAlpha(0.4, () => r.rect(0, 0, VW, VH, C.black));
     const cx = X(d.cx), cy = Y(d.cy);
     r.withAlpha(0.25, () => r.circle(cx, cy, R, C.plum, true));
     for (let i = 0; i < 64; i++) {
       const a = (i / 64) * Math.PI * 2, wx = cx + Math.cos(a) * (R + 4), wy = cy + Math.sin(a) * (R + 4);
-      if (wx < -10 || wy < -10 || wx > W + 10 || wy > H + 10) continue;
+      if (wx < -10 || wy < -10 || wx > VW + 10 || wy > VH + 10) continue;
       r.rect(wx - 4, wy - 4, 9, 9, C.black);
       r.rect(wx - 3, wy - 3, 7, 7, i % 3 ? C.dgray : C.slate);
       r.rect(wx - 3, wy - 3, 7, 1, C.lavender);
@@ -230,7 +237,7 @@ export function renderWorld(run: Run, r: Renderer): void {
     const a = run.arena, cx = X(a.x), cy = Y(a.y), R = a.r * ZOOM, n = Math.max(48, Math.round(a.r / 4));
     for (let i = 0; i < n; i++) {
       const ang = (i / n) * Math.PI * 2, wx = cx + Math.cos(ang) * (R + 4), wy = cy + Math.sin(ang) * (R + 4);
-      if (wx < -10 || wy < -10 || wx > W + 10 || wy > H + 10) continue;
+      if (wx < -10 || wy < -10 || wx > VW + 10 || wy > VH + 10) continue;
       r.rect(wx - 4, wy - 4, 9, 9, C.black);
       r.rect(wx - 3, wy - 3, 7, 7, i % 3 ? C.dred : C.plum);
       r.rect(wx - 3, wy - 3, 7, 1, C.salmon);
@@ -466,14 +473,14 @@ export function renderWorld(run: Run, r: Renderer): void {
   // Pociski wrogów: najpierw poświaty (jedna zmiana przezroczystości dla wszystkich), potem kule.
   // Przy bardzo dużej liczbie pocisków poświaty są pomijane (wydajność).
   if (fancy && run.bullets.count < 600) {
-    r.withAlpha(run.bulletOutline ? 0.45 : 0.28, () => {
+    r.withAlpha(0.3, () => {
       for (const b of run.bullets.items) if (vis(b.x, b.y)) r.circle(X(b.x), Y(b.y), b.radius * ZOOM + 4, BULLET_GLOW[b.sprite] ?? C.red, true);
     });
   }
   // Wyraźne pociski (Ustawienia): ciemna obwódka pod każdym pociskiem.
   for (const b of run.bullets.items) {
     if (!vis(b.x, b.y)) continue;
-    if (run.bulletOutline) r.circle(X(b.x), Y(b.y), b.radius * ZOOM + 3, C.black, true);
+    if (run.bulletOutline) r.circle(X(b.x), Y(b.y), b.radius * ZOOM + 1.5, C.black, true);
     drawSprite(g, b.sprite, X(b.x), Y(b.y));
   }
 
@@ -523,19 +530,19 @@ export function renderWorld(run: Run, r: Renderer): void {
   // Wydarzenia poziomu: zabarwione niebo i kręgi ostrzegawcze piorunów burzy.
   if (run.levelEvent) {
     const id = run.levelEvent.id;
-    r.withAlpha(id === 'storm' ? 0.22 : 0.1, () => r.rect(0, 0, W, H, id === 'blood' ? C.dred : id === 'gold' ? C.gold : C.navy));
+    r.withAlpha(id === 'storm' ? 0.22 : 0.1, () => r.rect(0, 0, VW, VH, id === 'blood' ? C.dred : id === 'gold' ? C.gold : C.navy));
   }
   for (const s of run.strikes) {
     const sx = X(s.x), sy = Y(s.y), col = s.foe ? C.orange : C.cyan;
     r.circle(sx, sy, BAL.levelEvents.stormR * ZOOM, run.step % 8 < 4 ? C.white : col);
     r.withAlpha(0.15, () => r.circle(sx, sy, BAL.levelEvents.stormR * ZOOM * Math.max(0, 1 - s.t / BAL.levelEvents.stormWarn), col, true));
   }
-  if (fancy) g.drawImage(getVignette(), 0, 0);
+  if (fancy) g.drawImage(getVignette(), 0, 0, VW, VH);
 
   // Znaczniki poza ekranem na krawędzi w stronę celu: dobre skrzynie (Rzadki+ albo super-bonus) i cel zadania.
   const marker = (x: number, y: number, col: number) => {
     const dx = X(x) - px, dy = Y(y) - py;
-    const k = Math.min((W / 2 - 12) / Math.max(1, Math.abs(dx)), (H / 2 - 12) / Math.max(1, Math.abs(dy)));
+    const k = Math.min((VW / 2 - 12) / Math.max(1, Math.abs(dx)), (VH / 2 - 12) / Math.max(1, Math.abs(dy)));
     const mx = Math.round(px + dx * k), my = Math.round(py + dy * k);
     r.circle(mx, my, 5, C.black, true);
     r.circle(mx, my, 4, col, true);

@@ -480,6 +480,9 @@ const AIM_HINT: Record<AimMode, string> = {
 /** Przyciemnienie tła: kolejne poziomy (Ustawienia → Obraz i widoczność). */
 const DIM_LEVELS = [0, 0.2, 0.35];
 const DIM_LABEL = ['brak', 'lekkie', 'mocne'];
+/** Przybliżenie świata. */
+const ZOOM_LEVELS = [1, 1.25, 1.5];
+const ZOOM_LABEL = ['daleko', 'normalne', 'blisko'];
 
 /** Ustawienia: strona główna (dźwięk, trudność, sterowanie) i strona Obraz i widoczność. */
 export class SettingsScreen implements Screen {
@@ -510,6 +513,12 @@ export class SettingsScreen implements Screen {
       s.bgDim = DIM_LEVELS[(i + d + DIM_LEVELS.length) % DIM_LEVELS.length];
       app.persist();
     };
+    const zoom = (d: number) => () => {
+      const i = Math.max(0, ZOOM_LEVELS.indexOf(s.zoom));
+      s.zoom = ZOOM_LEVELS[(i + d + ZOOM_LEVELS.length) % ZOOM_LEVELS.length];
+      app.r.setZoom(s.zoom);
+      app.persist();
+    };
     const yes = (v: boolean) => (v ? 'tak' : 'nie');
     // Pozycja menu i jej podpowiedź w jednym miejscu.
     const rows: [MenuItem, () => string][] = page === 'main' ? [
@@ -527,9 +536,10 @@ export class SettingsScreen implements Screen {
       [{ label: () => 'Wróć', act: () => app.go(back) }, () => ''],
     ] : [
       [{ label: () => `Obraz: ${s.scaleFill ? 'cały ekran' : 'ostre piksele'}`, act: toggle('scaleFill'), left: toggle('scaleFill'), right: toggle('scaleFill') }, () => 'Cały ekran: gra wypełnia okno (większy obraz). Ostre piksele: tylko całkowite powiększenie, z ramką.'],
+      [{ label: () => `Przybliżenie: ${ZOOM_LABEL[Math.max(0, ZOOM_LEVELS.indexOf(s.zoom))]}`, left: zoom(-1), right: zoom(1), act: zoom(1) }, () => 'Blisko: większe postacie i pociski, mniej widać wokół. Daleko: widok jak w starszych wersjach.'],
       [{ label: () => `Pełny ekran: ${yes(!!document.fullscreenElement)}`, act: () => toggleFullscreen() }, () => 'Przełącza tryb pełnoekranowy przeglądarki. W grze: klawisz F.'],
       [{ label: () => `Przyciemnienie tła: ${DIM_LABEL[Math.max(0, DIM_LEVELS.indexOf(s.bgDim))]}`, left: dim(-1), right: dim(1), act: dim(1) }, () => 'Ciemniejsze podłoże i dekoracje: postacie, wrogowie i pociski bardziej odcinają się od tła.'],
-      [{ label: () => `Wyraźne pociski wrogów: ${yes(s.bulletOutline)}`, act: toggle('bulletOutline') }, () => 'Pociski wrogów dostają ciemną obwódkę i mocniejszą poświatę.'],
+      [{ label: () => `Wyraźne pociski wrogów: ${yes(s.bulletOutline)}`, act: toggle('bulletOutline') }, () => 'Pociski wrogów dostają ciemną obwódkę, lepiej odcinają się od tła i efektów.'],
       [{ label: () => `Znacznik gracza: ${yes(s.playerMarker)}`, act: toggle('playerMarker') }, () => 'Pulsujący krąg pod twoją postacią, łatwo ją znaleźć w tłumie.'],
       [{ label: () => `Kształty żywiołów: ${yes(s.elemShapes)}`, act: toggle('elemShapes') }, () => 'Dla daltonistów: każdy żywioł ma też własny kształt (ogień trójkąt, lód romb, błyskawica zygzak, trucizna kropla).'],
       [{ label: () => `Efekty: ${s.lowFx ? 'oszczędne' : 'pełne'}`, act: toggle('lowFx') }, () => 'Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety (więcej FPS, telefon).'],
