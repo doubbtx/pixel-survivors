@@ -45,6 +45,10 @@ export const BAL = {
    * souls: zabity wróg bliżej niż `range` daje 1; pełne: sługa za `auto` dusz; R zużywa wszystkie: +`ultDmg` obrażeń sług za duszę,
    *        +1 sługa za każde `ultExtra` dusz.
    */
+  /** Sekretny biom Pustka: minimalny poziom Paktu (data/levels.ts, Run.levelFor). */
+  voidPact: 5,
+  /** Głowy bossów: rozgrzewka przed 1. bossem i przerwa między bossami (s), leczenie po bossie, awanse po bossie i na start, HP bossów (flaga bossHp). */
+  rush: { warmup: 20, gap: 15, heal: 0.3, levels: 3, startLevels: 8, bossHp: -0.4 },
   /** Odstęp pomiaru DPS do wykresu na ekranie końca (s). */
   dpsEvery: 5,
   /** Bestiariusz (data/bestiary.ts): bonus obrażeń przeciw wrogowi po progach `master` i `legend` zabójstw. */
@@ -128,7 +132,7 @@ export const BAL = {
    */
   terrain: {
     chunk: 320,
-    biomes: [[3, 1, 1, 0, 0], [1, 1, 1, 2, 0], [1, 3, 2, 0, 0], [2, 1, 0, 0, 2]] as const,
+    biomes: [[3, 1, 1, 0, 0], [1, 1, 1, 2, 0], [1, 3, 2, 0, 0], [2, 1, 0, 0, 2], [1, 0, 3, 0, 2]] as const,
     clearStart: 90, clearPlayer: 70,
     coverR: 11, coverHp: 20, blastDmg: 6,
     barrelR: 6, barrelBlast: 42, barrelDmg: 45,
@@ -331,8 +335,10 @@ export const BAL = {
     anvilShards: 3,
     /** Fortuna skarbu (lepsza jakość przedmiotu). */
     treasureLuck: 2,
-    /** Mnożnik esencji za ukończoną ekspedycję. */
+    /** Mnożnik esencji za ukończoną ekspedycję (sekretny akt 4: × voidEssenceMul) i szansa na ukryty węzeł w akcie 2-3. */
     winEssenceMul: 2,
+    voidEssenceMul: 1.5,
+    secretChance: 0.5,
   },
 
   // --- karty (augmenty) ---

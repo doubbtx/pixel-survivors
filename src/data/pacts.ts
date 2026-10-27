@@ -40,12 +40,17 @@ export function pactDesc(p: PactDef, level: number): string {
 }
 
 /** Odznaki bohatera za najwyższy poziom Paktu z pokonanym bossem. */
-export const PACT_BADGES: { from: number; name: string; color: number }[] = [
-  { from: 5, name: 'Brąz', color: C.clay },
-  { from: 10, name: 'Srebro', color: C.lgray },
-  { from: 15, name: 'Złoto', color: C.gold },
-  { from: 20, name: 'Mistrz', color: C.hotpink },
+/** Odznaki Paktu; każda odblokowuje skórkę bohatera (`skin`: rampa od cienia do światła, gfx/painter.ts recolor). */
+export const PACT_BADGES: { id: string; from: number; name: string; color: number; skin: number[] }[] = [
+  { id: 'bronze', from: 5, name: 'Brąz', color: C.clay, skin: [C.ddbrown, C.dbrown, C.brown, C.clay] },
+  { id: 'silver', from: 10, name: 'Srebro', color: C.lgray, skin: [C.slate, C.dgray, C.lavender, C.lgray] },
+  { id: 'gold', from: 15, name: 'Złoto', color: C.gold, skin: [C.dbrown, C.orange, C.gold, C.yellow] },
+  { id: 'void', from: 20, name: 'Mistrz', color: C.hotpink, skin: [C.black, C.plum, C.hotpink, C.pink] },
 ];
+export const BADGE_BY_ID = Object.fromEntries(PACT_BADGES.map((b) => [b.id, b]));
+
+/** Skórki dostępne dla bohatera (odznaki zdobyte najwyższym Paktem z bossem). */
+export const heroSkins = (best: number) => PACT_BADGES.filter((b) => best >= b.from);
 
 export function pactBadge(best: number): { name: string; color: number } | null {
   return [...PACT_BADGES].reverse().find((b) => best >= b.from) ?? null;

@@ -7,7 +7,7 @@ import { drawSprite } from '../gfx/sprites';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { CARD_BY_ID } from '../data/cards';
 import { BAL } from '../data/balance';
-import { levelDef, objectiveLabel } from '../data/levels';
+import { levelDef, objectiveLabel, BIOME_CYCLE } from '../data/levels';
 import { Run, type Mode, type RunSnapshot, type SlotMode } from '../game/run';
 import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
@@ -35,6 +35,7 @@ import { bonusLines } from '../data/upgrades';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 import { PowerPickView } from './powers';
 import { ACHIEVEMENTS } from '../data/achievements';
+import { heroSkins } from '../data/pacts';
 import { BESTIARY_BY_ID, loreBonus, loreMuls } from '../data/bestiary';
 import type { DailyDef } from '../data/daily';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
@@ -88,7 +89,8 @@ export class GameScreen implements Screen {
   /** Zakładka ekranu końca: obrażenia, wykres DPS, karta buildu. */
   private endPage = 0;
 
-  constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot, daily?: DailyDef) {
+  constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot, opts: GameOpts = {}) {
+    const { daily, rush } = opts;
     // Wyzwanie dnia: to samo ziarno losowania dla wszystkich tego dnia.
     if (daily) rng.seed(daily.seed);
     this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode);
@@ -101,7 +103,16 @@ export class GameScreen implements Screen {
       app.save.daily.tries++;
       app.persist();
     }
+    // Głowy bossów: poziom od nowa z krótką rozgrzewką i kilka awansów na start.
+    if (rush) {
+      this.run.rush = true;
+      this.run.startLevel(1);
+      for (let i = 0; i < BAL.rush.startLevels; i++) this.run.addXp(this.run.xpNext - this.run.xp);
+    }
     this.run.unlocked = new Set(app.save.achievements);
+    // Skórka za odznakę Paktu (tylko jeśli nadal zdobyta).
+    const skin = app.save.skins[heroId] ?? '';
+    this.run.skin = heroSkins(app.save.pacts.best[heroId] ?? 0).some((b) => b.id === skin) ? skin : '';
     this.run.lore = loreMuls(app.save.bestiary);
     this.hints = new Hints(app.save, () => app.persist());
     this.run.cardBans = new Set(app.save.collection.banned);
@@ -134,8 +145,8 @@ export class GameScreen implements Screen {
       { label: () => `Kowadło (${this.run.shards} odł.)`, act: () => this.openAnvil('cleared') },
       { label: () => 'Zapisz i wyjdź do menu', act: () => app.go(new MainMenu(app)) },
     ], W / 2, 194, 240, 16);
-    this.endMenu = new Menu(daily ? [
-      { label: () => 'Spróbuj ponownie', act: () => app.go(new GameScreen(app, heroId, mode, undefined, daily)) },
+    this.endMenu = new Menu(daily || rush ? [
+      { label: () => 'Spróbuj ponownie', act: () => app.go(new GameScreen(app, heroId, mode, undefined, opts)) },
       { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
     ] : hc || mode === 'expedition' ? [
       { label: () => (hc ? 'Nowa kampania' : 'Nowa ekspedycja'), act: () => app.go(new HeroSelect(app, mode)) },
@@ -259,12 +270,13 @@ export class GameScreen implements Screen {
       const ex = run.expedition!, m = currentMap(ex)!;
       ex.cleared++;
       ex.bonus += mapReward(m);
+      if (m.kind === 'secret' && !ex.voidKey) { ex.voidKey = true; this.showToast('Klucz Pustki! Po ostatnim akcie otworzy się akt 4'); }
       if (ex.blessing && --ex.blessing.maps <= 0) ex.blessing = null;
       this.updateRecords(true);
       if (m.kind === 'boss') {
         if (!advanceAct(ex)) { this.onExpeditionWon(); return; }
         run.heal(run.stats.maxHp * BAL.levelClearHeal);
-        this.showToast(`Akt ${ex.act}! +${Math.round(BAL.levelClearHeal * 100)}% HP`);
+        this.showToast(`${ex.act > BAL.expedition.acts ? 'Sekretny akt 4: Pustka' : `Akt ${ex.act}`}! +${Math.round(BAL.levelClearHeal * 100)}% HP`);
       }
       this.openMap();
       // Bonus mapy po ukończeniu: skrzynia, karta albo leczenie (nakładki wracają na mapę).
@@ -279,6 +291,8 @@ export class GameScreen implements Screen {
       // Wyzwanie dnia: najlepszy czas pokonania bossa.
       const d = this.app.save.daily;
       if (run.daily && (d.best === 0 || run.time < d.best)) { d.best = run.time; this.showToast('Nowy rekord dnia!'); }
+      const s = this.app.save;
+      if (run.rush && (s.rushBest === 0 || run.time < s.rushBest)) s.rushBest = run.time;
       this.awardEssence();
       this.app.persist();
       this.state = 'end';
@@ -293,7 +307,8 @@ export class GameScreen implements Screen {
   /** Ostatni boss pokonany: wyprawa ukończona — rekord, więcej esencji, slot czyszczony. */
   private onExpeditionWon(): void {
     heroRecord(this.app.save, this.heroId).expeditionWins++;
-    this.awardEssence(BAL.expedition.winEssenceMul);
+    const X = BAL.expedition;
+    this.awardEssence(X.winEssenceMul * (this.run.expedition!.act > X.acts ? X.voidEssenceMul : 1));
     this.endSlot();
     this.app.persist();
     this.state = 'end';
@@ -721,12 +736,13 @@ export class GameScreen implements Screen {
     dim(r);
     const ex = run.expedition;
     // Ekspedycja: zwycięstwo tylko po ostatnim bossie (wcześniejsze zwycięstwa wracają na mapę).
-    const won = run.outcome === 'victory' && run.mode !== 'expedition' || (!!ex && run.outcome === 'victory' && ex.act === BAL.expedition.acts && currentNode(ex) === 'boss');
+    const won = run.outcome === 'victory' && run.mode !== 'expedition' || (!!ex && run.outcome === 'victory' && ex.act >= BAL.expedition.acts && currentNode(ex) === 'boss');
     const title = won ? (ex ? 'Ekspedycja ukończona!' : 'Zwycięstwo!') : run.outcome === 'dead' ? 'Zginąłeś' : 'Koniec runu';
     drawText(g, title, W / 2, 6, won ? C.yellow : C.salmon, { align: 'center', scale: 2, outline: C.black });
     const stats = `Czas ${fmtTime(run.totalTime)}    Zabójstwa ${fmt(run.kills)}    LV ${run.level}    Złoto ${fmt(run.gold)}    Leczenie ${fmt(run.healed)}${run.pactLevel ? `    Pakt ${run.pactLevel}` : ''}`;
     const modeLine = this.mode === 'hardcore' ? `Hardcore: przepadło wszystko. Dotarłeś do poziomu ${run.depth}.`
       : this.mode === 'endless' ? `Endless: przetrwałeś ${fmtTime(run.totalTime)}, głębia ${run.depth} (rekord ${fmtTime(heroRecord(this.app.save, this.heroId).bestEndless)})`
+      : run.rush ? `Głowy bossów: ${won ? `wszystkie w ${fmtTime(run.time)}` : `zdobyte głowy ${run.bossKills}/${BIOME_CYCLE + 1}`}, rekord ${this.app.save.rushBest ? fmtTime(this.app.save.rushBest) : 'brak'}`
       : run.daily ? `Wyzwanie dnia ${this.app.save.daily.date}: ${won ? `boss pokonany w ${fmtTime(run.time)}` : 'boss niepokonany'}, najlepszy czas ${this.app.save.daily.best ? fmtTime(this.app.save.daily.best) : 'brak'}`
       : ex ? `Ekspedycja: akt ${ex.act}/${BAL.expedition.acts}, ukończone węzły ${ex.cleared}${won ? `, esencja x${BAL.expedition.winEssenceMul}` : ''}` : '';
     if (modeLine) drawText(g, modeLine, W / 2, 28, C.orange, { align: 'center', shadow: C.black });
@@ -784,7 +800,7 @@ export class GameScreen implements Screen {
   /** Ekran końca: karta buildu (bohater, bronie, pasywki, przedmioty, karty, sekrety i moc bossa). */
   private renderBuild(): void {
     const r = this.app.r, g = r.g, run = this.run;
-    drawSprite(g, `${run.hero.sprite}@0`, 78, 104, { scale: 2 });
+    drawSprite(g, `${run.heroSprite}@0`, 78, 104, { scale: 2 });
     drawText(g, run.hero.name, 100, 84, run.hero.color, { scale: 2, shadow: C.black });
     drawText(g, `${run.hero.role}   LV ${run.level}${run.pactLevel ? `   Pakt ${run.pactLevel}` : ''}`, 100, 102, C.lavender);
     // Przedmioty (8 slotów) po prawej.
@@ -815,6 +831,12 @@ export class GameScreen implements Screen {
     ].filter(Boolean).join(', ');
     if (extra) drawText(g, extra, 62, 186, C.hotpink);
   }
+}
+
+/** Opcje nowego runu: wyzwanie dnia (bohater, pakty, ziarno) albo tryb Głowy bossów. */
+export interface GameOpts {
+  daily?: DailyDef;
+  rush?: boolean;
 }
 
 /** Zakładki ekranu końca runu. */

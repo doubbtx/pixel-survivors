@@ -116,7 +116,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
 
   // Portret bohatera + poziom postaci.
   slot(r, 4, 9, 32, C.gold);
-  drawSprite(g, `${run.hero.sprite}@0`, 20, 25);
+  drawSprite(g, `${run.heroSprite}@0`, 20, 25);
   plate(r, 4, 42, 32, 12);
   drawText(g, `LV ${run.level}`, 20, 42, C.yellow, { align: 'center', ...OUT });
   const synH = drawSynergyHud(r, run, 4, 58);

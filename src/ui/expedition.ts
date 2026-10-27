@@ -7,7 +7,7 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { BIOMES, objectiveLabel } from '../data/levels';
 import {
-  NODE_INFO, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
+  NODE_INFO, actBiome, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
   type MapNode,
 } from '../data/expedition';
 import type { Run } from '../game/run';
@@ -71,12 +71,13 @@ export class ExpeditionMapView {
     const g = r.g, run = this.run, ex = run.expedition!;
     const X = BAL.expedition;
     dim(r);
-    drawText(g, `Ekspedycja - akt ${ex.act}/${X.acts}`, W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    const secretAct = ex.act > X.acts;
+    drawText(g, secretAct ? 'Ekspedycja - akt 4: Pustka' : `Ekspedycja - akt ${ex.act}/${X.acts}`, W / 2, 6, secretAct ? C.hotpink : C.yellow, { align: 'center', scale: 2, outline: C.black });
     drawText(g, 'Enter/klik: idź   I: plecak', W - 8, 4, C.dgray, { align: 'right' });
     drawText(g, 'Esc: menu (zapis)', W - 8, 15, C.dgray, { align: 'right' });
     panel(r, MAP_X, MAP_Y, MAP_W, MAP_H, C.gold);
-    const biome = BIOMES[(ex.act - 1) % BIOMES.length];
-    drawText(g, biome.name, MAP_X + 8, MAP_Y + 5, C.lavender);
+    const biome = BIOMES[actBiome(ex.act)];
+    drawText(g, ex.voidKey && !secretAct ? `${biome.name}   Klucz Pustki` : biome.name, MAP_X + 8, MAP_Y + 5, ex.voidKey ? C.hotpink : C.lavender);
     const bless = ex.blessing ? EX_BLESSINGS.find((b) => b.id === ex.blessing!.id) : null;
     const info = [`mapy ${ex.cleared}`, `łup +${ex.bonus}%`, `złoto ${fmt(run.gold)}`, `HP ${fmt(run.player.hp)}/${fmt(run.stats.maxHp)}`];
     if (bless) info.unshift(`${bless.name} (${ex.blessing!.maps})`);
@@ -116,7 +117,7 @@ export class ExpeditionMapView {
       };
       if ((row <= cur && !visited) || row > cur + 1 || (row === cur + 1 && !reachable)) r.withAlpha(0.45, draw);
       else draw();
-      if (row === cur && visited) drawSprite(g, `${run.hero.sprite}@0`, x, y - 18);
+      if (row === cur && visited) drawSprite(g, `${run.heroSprite}@0`, x, y - 18);
     }));
     if (cur < 0) drawText(g, 'Start', MAP_X + 8, MAP_Y + MAP_H - 14, C.lavender);
 

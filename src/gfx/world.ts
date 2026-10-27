@@ -140,6 +140,15 @@ export function prop(biome: number, k: number): Painter {
       (q) => { q.rect(10, 13, 2, 5, C.lavender).sphere(11, 11, 5, 3, RAMP.purple).px(9, 10, C.white).px(13, 11, C.salmon); },
       (q) => { q.sphere(11, 13, 6, 4.5, RAMP.night).px(9, 11, C.dgray).px(13, 14, C.plum); },
     ],
+    // Pustka (sekretny biom): unoszące się odłamki, dziury w nicości, gwiazdy, pęknięte kolumny.
+    4: [
+      (q) => { q.polyShade([[11, 3], [15, 9], [11, 13], [7, 9]], [C.black, C.plum, C.hotpink, C.pink]).px(10, 6, C.white).rect(8, 17, 7, 1, C.plum); },
+      (q) => { q.sphere(11, 13, 7, 3.5, [C.black, C.black, C.black, C.plum]).px(7, 12, C.hotpink).px(15, 14, C.hotpink); },
+      (q) => { for (const [x, y] of [[5, 6], [15, 4], [11, 11], [6, 16], [17, 15]]) q.px(x, y, C.white).px(x - 1, y, C.lavender).px(x + 1, y, C.lavender); },
+      (q) => { q.block(8, 6, 6, 12, RAMP.night).rect(7, 17, 8, 2, C.slate).line(9, 6, 12, 10, C.black).px(10, 5, C.plum).px(12, 4, C.plum); },
+      (q) => { q.sphere(11, 10, 4, 4, RAMP.bone).sphere(11, 10, 2, 2, [C.black, C.plum, C.hotpink, C.hotpink]).px(11, 10, C.white).rect(9, 17, 5, 1, C.plum); },
+      (q) => { q.line(4, 16, 9, 12, C.hotpink).line(9, 12, 13, 15, C.hotpink).line(13, 15, 18, 10, C.hotpink).line(4, 17, 18, 11, C.black); },
+    ],
   };
   kinds[biome][k](p);
   return p.outline();

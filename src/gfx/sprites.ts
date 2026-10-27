@@ -1,6 +1,7 @@
 import { C, RAMP, PAL, type Ramp } from '../core/palette';
 import { Rng } from '../core/rng';
 import { BIOMES, type Biome } from '../data/levels';
+import { BADGE_BY_ID } from '../data/pacts';
 import { Painter } from './painter';
 import { ICON_FNS } from './icons';
 import { ACTORS, boss } from './actors';
@@ -210,6 +211,11 @@ function build(name: string): HTMLCanvasElement {
   const f = Number(fs ?? 0);
   if (base.startsWith('boss')) return boss(BIOMES[Number(base.slice(4))], f).canvas();
   if (ACTORS[base]) return ACTORS[base](f).canvas();
+  // Skórka bohatera: '<bohater>~<odznaka>@<klatka>' (data/pacts.ts PACT_BADGES).
+  if (base.includes('~')) {
+    const [actor, skin] = base.split('~');
+    return ACTORS[actor](f).recolor(BADGE_BY_ID[skin].skin).canvas();
+  }
   if (base === 'spark') return spark(f).canvas();
   if (base === 'poof') return poof(f).canvas();
   if (base === 'boom') return boom(f).canvas();

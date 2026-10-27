@@ -98,6 +98,9 @@ export interface SaveData {
   bestiary: Record<string, number>;
   /** Wyzwanie dnia: data, najlepszy czas pokonania bossa (0 = jeszcze nie) i liczba podejść. */
   daily: { date: string; best: number; tries: number };
+  /** Głowy bossów (sekretny tryb): najlepszy czas zdobycia wszystkich głów (0 = jeszcze nie). Skórki bohaterów (odznaki Paktu). */
+  rushBest: number;
+  skins: Record<string, string>;
 }
 
 type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
@@ -170,6 +173,8 @@ function defaults(): SaveData {
     achievements: [],
     bestiary: {},
     daily: { date: '', best: 0, tries: 0 },
+    rushBest: 0,
+    skins: {},
   };
 }
 
@@ -206,6 +211,8 @@ export function loadSave(): SaveData {
     achievements: d.achievements ?? [],
     bestiary: { ...d.bestiary },
     daily: { ...base.daily, ...d.daily },
+    rushBest: d.rushBest ?? 0,
+    skins: { ...d.skins },
   };
 }
 

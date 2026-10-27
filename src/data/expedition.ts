@@ -2,7 +2,7 @@ import { C } from '../core/palette';
 import { rng } from '../core/rng';
 import type { Stats } from '../entities/types';
 import { BAL } from './balance';
-import { BIOMES, type LevelDef } from './levels';
+import { BIOMES, BIOME_CYCLE, VOID_BIOME, type LevelDef } from './levels';
 
 /**
  * Ekspedycja: skończona wyprawa przez BAL.expedition.acts aktów. Każdy akt to mapa rzędów po kilka węzłów —
@@ -11,8 +11,11 @@ import { BIOMES, type LevelDef } from './levels';
  * Węzły z walką to „mapy” jak w Path of Exile: nazwa, rzadkość (Zwykła / Magiczna / Rzadka) i modyfikatory ryzyka
  * (silniejsi lub szybsi wrogowie, gęstsze salwy...) — każdy dokłada nagrodę (więcej łupu, lepsza jakość, więcej esencji).
  * Do tego bonus mapy (stała zaleta). Efekty działają przez flagi runu na czas poziomu (`LevelDef.flags`).
+ *
+ * Sekret: w aktach 2-3 czasem pojawia się węzeł „?” (Rozdarcie: walka w Pustce). Wygrana daje Klucz Pustki, który po
+ * ostatnim akcie otwiera sekretny akt 4 w biomie Pustka.
  */
-export type NodeKind = 'fight' | 'elite' | 'dungeon' | 'treasure' | 'shop' | 'anvil' | 'rest' | 'shrine' | 'boss';
+export type NodeKind = 'fight' | 'elite' | 'dungeon' | 'treasure' | 'shop' | 'anvil' | 'rest' | 'shrine' | 'boss' | 'secret';
 
 export interface NodeInfo {
   name: string;
@@ -31,10 +34,14 @@ export const NODE_INFO: Record<NodeKind, NodeInfo> = {
   rest: { name: 'Obóz', icon: 'ex_rest', color: C.lime, desc: 'Odpoczynek: leczenie i stały bonus do maks. HP.' },
   shrine: { name: 'Kapliczka', icon: 'ex_shrine', color: C.yellow, desc: 'Błogosławieństwo na kilka kolejnych map.' },
   boss: { name: 'Boss', icon: 'ex_boss', color: C.salmon, desc: 'Pełny poziom z bossem na końcu aktu.' },
+  secret: { name: '???', icon: 'ex_secret', color: C.hotpink, desc: 'Coś tu nie pasuje. Ścieżka, której nie było na mapie...' },
 };
 
 /** Węzły z walką (mapy); pozostałe działają od razu z mapy wyprawy. */
-export const isCombat = (k: NodeKind): boolean => k === 'fight' || k === 'elite' || k === 'dungeon' || k === 'boss';
+export const isCombat = (k: NodeKind): boolean => k === 'fight' || k === 'elite' || k === 'dungeon' || k === 'boss' || k === 'secret';
+
+/** Biom aktu: kolejne biomy kampanii, sekretny akt 4 w Pustce. */
+export const actBiome = (act: number): number => (act > BAL.expedition.acts ? VOID_BIOME : (act - 1) % BIOME_CYCLE);
 
 // ============================ modyfikatory i bonusy map ============================
 
@@ -90,6 +97,7 @@ const MAP_NAMES: string[][] = [
   ['Topielisko', 'Zgniłe mokradła', 'Chata wiedźmy', 'Zatopiona wieś', 'Trzęsawisko', 'Wyspa grzybów', 'Czarna grobla', 'Gnijący las'],
   ['Spalona osada', 'Popielne wydmy', 'Kuźnia olbrzymów', 'Szklane pole', 'Wąwóz żaru', 'Ołtarz słońca', 'Suche koryto', 'Dymiące szczeliny'],
   ['Brama pustki', 'Wiszące wyspy', 'Gwiezdny most', 'Krypta echa', 'Lustrzane jezioro', 'Tron cieni', 'Rozdarte niebo', 'Ostatnia iglica'],
+  ['Nicość', 'Pęknięty horyzont', 'Morze ciszy', 'Szczelina', 'Zapomniane echo', 'Czarne słońce', 'Próg', 'Bez imienia'],
 ];
 
 /** Błogosławieństwa kapliczek Ekspedycji: statystyki na kilka kolejnych map. */
@@ -123,12 +131,14 @@ export interface ExpeditionState {
   bonus: number;
   /** Błogosławieństwo kapliczki i liczba map, na które jeszcze działa. */
   blessing: { id: string; maps: number } | null;
+  /** Klucz Pustki (wygrane Rozdarcie): po ostatnim akcie otwiera sekretny akt 4. */
+  voidKey?: boolean;
 }
 
 /** Mapa z walką: nazwa z biomu, rzadkość (rośnie z aktem i rzędem), modyfikatory i bonus. */
 function rollMapNode(kind: NodeKind, act: number, row: number, used: Set<string>): MapNode {
   const X = BAL.expedition;
-  const names = MAP_NAMES[(act - 1) % MAP_NAMES.length].filter((n) => !used.has(n));
+  const names = MAP_NAMES[actBiome(act)].filter((n) => !used.has(n));
   const name = names.length ? rng.pick(names) : NODE_INFO[kind].name;
   used.add(name);
   const p = Math.min(1, (act - 1) * X.rarityPerAct + row * X.rarityPerRow);
@@ -156,6 +166,11 @@ export function rollActMap(act: number): (MapNode | null)[][] {
     }
     if (row === X.rows - 2 && !kinds.some((k) => k === 'rest' || k === 'shop')) kinds[mid] = rng.chance(0.5) ? 'rest' : 'shop';
     map.push(kinds.map((k) => (!k ? null : isCombat(k) ? rollMapNode(k, act, row, used) : { kind: k })));
+  }
+  // Ukryty węzeł „?” w aktach 2-3 (zamiast losowego węzła środkowego rzędu).
+  if (act >= 2 && act <= X.acts && rng.chance(X.secretChance)) {
+    const row = rng.int(1, X.rows - 3), lanes = map[row].map((n, l) => (n ? l : -1)).filter((l) => l >= 0);
+    map[row][rng.pick(lanes)] = { kind: 'secret', name: 'Rozdarcie', rarity: 2 };
   }
   const boss: (MapNode | null)[] = Array.from({ length: X.lanes }, () => null);
   boss[mid] = rollMapNode('boss', act, X.rows - 1, used);
@@ -189,9 +204,9 @@ export function currentMap(ex: ExpeditionState): MapNode | null {
 
 export const currentNode = (ex: ExpeditionState): NodeKind | null => currentMap(ex)?.kind ?? null;
 
-/** Ostatni węzeł aktu (boss) ukończony: następny akt z nową mapą. Zwraca false, gdy to był ostatni akt. */
+/** Ostatni węzeł aktu (boss) ukończony: następny akt z nową mapą. Zwraca false, gdy to był ostatni akt (akt 4 tylko z Kluczem Pustki). */
 export function advanceAct(ex: ExpeditionState): boolean {
-  if (ex.act >= BAL.expedition.acts) return false;
+  if (ex.act > BAL.expedition.acts || (ex.act === BAL.expedition.acts && !ex.voidKey)) return false;
   ex.act++;
   ex.map = rollActMap(ex.act);
   ex.path = [];
@@ -223,7 +238,8 @@ function mapFlags(m: MapNode): Record<string, number> {
 export function levelAt(act: number, row: number, m: MapNode): LevelDef {
   const X = BAL.expedition;
   const depth = depthAt(act, row);
-  const biome = (act - 1) % BIOMES.length;
+  // Rozdarcie: walka w Pustce, silniejsi wrogowie, częste elity i więcej łupu.
+  const biome = m.kind === 'secret' ? VOID_BIOME : actBiome(act);
   const b = BIOMES[biome];
   const boss = m.kind === 'boss';
   const short = boss ? 1 : X.fightScale;
@@ -238,9 +254,9 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
     waveOffset: Math.min(240, (depth - 1) * X.waveOffsetPerDepth),
     bossName: b.bossName,
     boss,
-    eliteMul: m.kind === 'elite' ? X.eliteEveryMul : 1,
+    eliteMul: m.kind === 'elite' || m.kind === 'secret' ? X.eliteEveryMul : 1,
     dungeon: m.kind === 'dungeon',
-    flags: mapFlags(m),
+    flags: m.kind === 'secret' ? { enemyHp: 0.5, enemyDmg: 0.3, mapLoot: 1, mapGold: 1 } : mapFlags(m),
   };
 }
 

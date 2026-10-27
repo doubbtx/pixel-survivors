@@ -385,6 +385,11 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.rect(5, 6, 6, 9, C.black).sphere(8, 6.5, 3, 2.5, [C.black, C.black, C.black, C.black]);
     p.px(7, 10, C.pink).px(8, 11, C.plum).px(9, 9, C.pink).rect(2, 14, 12, 1, C.dgray);
   },
+  ex_secret: (p) => {
+    // Rozdarcie: fioletowa szczelina z białym pytajnikiem.
+    p.sphere(8, 8, 6.5, 6.5, [C.black, C.plum, C.hotpink, C.pink]);
+    p.rect(6, 3, 4, 2, C.white).rect(9, 5, 2, 3, C.white).rect(7, 8, 2, 2, C.white).rect(7, 12, 2, 2, C.white);
+  },
   ex_shrine: (p) => {
     p.block(5, 7, 6, 8, RAMP.stone).rect(3, 13, 10, 2, C.dgray).rect(4, 6, 8, 1, C.lgray);
     p.sphere(8, 4, 2.5, 2.5, [C.orange, C.gold, C.yellow, C.white]);

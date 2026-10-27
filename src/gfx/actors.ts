@@ -41,7 +41,7 @@ export const ANIM: Record<string, { seq: number[]; speed: number }> = {
 
 /** Numer klatki dla czasu (kroki symulacji) z przesunięciem `seed`, żeby tłum nie ruszał się synchronicznie. */
 export function animFrame(base: string, step: number, seed: number): number {
-  const a = ANIM[base.startsWith('boss') ? 'boss' : base];
+  const a = ANIM[base.startsWith('boss') ? 'boss' : base.split('~')[0]];
   if (!a) return 0;
   return a.seq[Math.floor((step + seed) / a.speed) % a.seq.length];
 }

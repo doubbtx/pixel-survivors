@@ -7,6 +7,7 @@ import { ELEM } from '../data/elements';
 import type { Enemy } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnEnemy } from './spawner';
+import { VOID_BIOME } from '../data/levels';
 
 const TAU = Math.PI * 2;
 /** Wrogowie dalej niż to od gracza są przenoszeni przed niego (jak w Vampire Survivors). */
@@ -58,6 +59,9 @@ const B_STREAM: Volley = { shape: 'fan', count: 3, speed: 125, spread: 0.12, spr
 const B_MINEFIELD: Volley = { shape: 'ring', count: 18, speed: 95, acc: -70, minV: 10, sprite: 'eb_orange' };
 const B_WAVE: Volley = { shape: 'fan', count: 5, speed: 70, spread: 0.3, wave: 0.6, sprite: 'eb_big' };
 
+/** Style Serca Pustki w kolejnych fazach: Oko Pustki, Żar Pustkowia, Władca Otchłani. */
+const VOID_STYLES = [3, 2, 0];
+
 /** Kolory spirali i pocisków ataków wg stylu bossa (biomu). */
 const SPIN_SPRITE = ['eb_pink', 'eb_cyan', 'eb_orange', 'eb_blue'];
 
@@ -73,7 +77,8 @@ const SPIN_SPRITE = ['eb_pink', 'eb_cyan', 'eb_orange', 'eb_blue'];
 function updateBoss(run: Run, e: Enemy, dt: number, dx: number, dy: number, dist: number): void {
   const frac = e.hp / e.maxHp;
   const phase = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2;
-  const style = run.levelInfo.biome % BOSS_STYLES.length;
+  // Serce Pustki (sekretny biom): w każdej fazie walczy jak inny boss.
+  const style = run.levelInfo.biome === VOID_BIOME ? VOID_STYLES[phase] : run.levelInfo.biome % BOSS_STYLES.length;
   if (phase !== e.phase) {
     e.phase = phase;
     e.invuln = 1.2;

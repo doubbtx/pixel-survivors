@@ -10,7 +10,7 @@ import { BAL } from '../data/balance';
 import { HERO_BY_ID, evolveAbility, type HeroDef, type AbilitySlot } from '../data/heroes';
 import { WEAPON_BY_ID } from '../data/weapons';
 import { PASSIVE_BY_ID } from '../data/passives';
-import { levelDef, type LevelDef } from '../data/levels';
+import { levelDef, BIOME_CYCLE, VOID_BIOME, type LevelDef } from '../data/levels';
 import { nodeLevel, EX_BLESSINGS, type ExpeditionState } from '../data/expedition';
 import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import type { WeaponBonus } from '../data/upgrades';
@@ -289,6 +289,13 @@ export class Run {
    * zabójstwa per wróg do przeniesienia do bestiariusza, wyzwanie dnia.
    */
   unlocked = new Set<string>();
+  /** Skórka bohatera (id odznaki Paktu, '' = zwykły wygląd) i nazwa sprite'a postaci. */
+  skin = '';
+  get heroSprite(): string {
+    return this.skin ? `${this.hero.sprite}~${this.skin}` : this.hero.sprite;
+  }
+  /** Tryb Głowy bossów (sekret: kod Konami w menu): bossowie biomów po kolei, na końcu Serce Pustki. */
+  rush = false;
   lore: Record<string, number> = {};
   killsById: Record<string, number> = {};
   daily = false;
@@ -438,7 +445,9 @@ export class Run {
   /** Czyści świat i zaczyna poziom `depth`. Postać, karty i postęp zostają. */
   startLevel(depth: number): void {
     this.depth = depth;
-    this.levelInfo = this.expedition ? nodeLevel(this.expedition) : levelDef(depth);
+    this.levelInfo = this.levelFor(depth);
+    // Głowy bossów: krótka rozgrzewka przed pierwszym bossem.
+    if (this.rush) this.levelInfo = { ...this.levelInfo, objective: { kind: 'survive', time: BAL.rush.warmup } };
     this.shop = null;
     this.time = 0;
     this.levelKills = 0;
@@ -484,7 +493,17 @@ export class Run {
     this.recomputeStats();
     this.revivesLeft = this.flag('revive');
     this.showBanner(this.expedition ? this.levelInfo.name : `Poziom ${depth}: ${this.levelInfo.name}`);
+    if (this.levelInfo.biome === VOID_BIOME && !this.expedition) this.showBanner('Sekretny biom: Pustka! Bez leczenia, podwójny łup');
     if (this.levelInfo.dungeon) startDungeon(this);
+  }
+
+  /**
+   * Definicja poziomu: węzeł Ekspedycji albo poziom kampanii. Po pełnym cyklu biomów z Paktem BAL.voidPact+ pierwszy poziom
+   * nowego cyklu zamienia się w sekretny biom Pustka.
+   */
+  levelFor(depth: number): LevelDef {
+    if (this.expedition) return nodeLevel(this.expedition);
+    return levelDef(depth, this.pactLevel >= BAL.voidPact && depth > BIOME_CYCLE && (depth - 1) % BIOME_CYCLE === 0);
   }
 
   /** Postęp celu poziomu 0..1. Po jego osiągnięciu pojawia się boss. */
@@ -630,6 +649,8 @@ export class Run {
   private indexEffects(): void {
     this.flags = { ...this.meta.flags };
     for (const [k, v] of Object.entries(this.levelInfo?.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
+    // Głowy bossów: bossowie słabsi (krótsze walki jedna po drugiej).
+    if (this.rush) this.flags.bossHp = (this.flags.bossHp ?? 0) + BAL.rush.bossHp;
     for (const [k, v] of Object.entries(eventFlags(this))) this.flags[k] = (this.flags[k] ?? 0) + v;
     for (const p of PACTS) {
       const lvl = Math.min(p.max, this.pacts[p.id] ?? 0);
@@ -1253,13 +1274,27 @@ export class Run {
       }
       return;
     }
+    // Głowy bossów: następny boss po krótkiej przerwie (biomy po kolei, piąty to Serce Pustki), leczenie i kilka awansów.
+    if (this.rush && this.depth <= BIOME_CYCLE) {
+      this.collectAll();
+      this.heal(this.stats.maxHp * BAL.rush.heal);
+      for (let i = 0; i < BAL.rush.levels; i++) this.addXp(this.xpNext - this.xp);
+      this.depth++;
+      this.levelInfo = { ...levelDef(this.depth, this.depth > BIOME_CYCLE), objective: { kind: 'survive', time: this.time + BAL.rush.gap } };
+      this.bossSpawned = false;
+      this.onBuildChanged();
+      this.showBanner(`Głowa ${this.depth - 1}/${BIOME_CYCLE + 1}! Następny: ${this.levelInfo.bossName}`);
+      sfx.play('explode');
+      return;
+    }
     // Endless: gra toczy się dalej — kolejna głębokość (silniejsi wrogowie, następny biom) i boss za BAL.endlessBossEvery.
     if (this.mode === 'endless') {
       this.collectAll();
       this.bossSpawned = false;
       this.nextBossAt = this.time + BAL.endlessBossEvery;
       this.depth++;
-      this.levelInfo = levelDef(this.depth);
+      this.levelInfo = this.levelFor(this.depth);
+      this.onBuildChanged();
       this.showBanner(`Boss pokonany! Głębia ${this.depth}`);
       sfx.play('explode');
       return;

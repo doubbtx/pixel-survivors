@@ -6,6 +6,7 @@ import { BOSS_POWERS, BOSS_POWER_BY_ID, type BossPowerDef } from '../data/enemie
 import { SLOT } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnMinion } from './minions';
+import { BIOME_CYCLE, VOID_BIOME } from '../data/levels';
 
 const TAU = Math.PI * 2;
 
@@ -119,9 +120,11 @@ export function powerCd(run: Run, def: BossPowerDef): number {
 export function rollPowerOffer(run: Run): BossPowerDef[] {
   const own = run.power && run.power.level < BAL.bossPowers.maxLevel ? BOSS_POWER_BY_ID[run.power.id] : null;
   // Najpierw moce pokonanego bossa (styl = biom poziomu), resztę oferty dopełniają inne.
-  const style = run.levelInfo.biome % 4;
+  const style = run.levelInfo.biome % BIOME_CYCLE;
   const free = BOSS_POWERS.filter((p) => p.id !== run.power?.id && !p.secret);
-  const mine = free.filter((p) => p.bosses.includes(style)), rest = free.filter((p) => !p.bosses.includes(style));
+  // Serce Pustki: moce wszystkich bossów są „jego”.
+  const isMine = (p: BossPowerDef) => run.levelInfo.biome === VOID_BIOME || p.bosses.includes(style);
+  const mine = free.filter(isMine), rest = free.filter((p) => !isMine(p));
   const out: BossPowerDef[] = own ? [own] : [];
   // Zapomniany Król: jego moc zawsze na początku oferty po zwycięstwie w kurhanie.
   if (run.cardState.kingPower && run.power?.id !== 'crown') out.unshift(BOSS_POWER_BY_ID.crown);

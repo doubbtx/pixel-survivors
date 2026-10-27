@@ -26,7 +26,13 @@ export const BIOMES: Biome[] = [
   { name: 'Nocne bagno', ground: [C.black, C.teal, C.dgreen], tuft: [C.dgreen, C.green], stone: RAMP.night, accent: C.cyan, bossRobe: RAMP.green, bossName: 'Królowa Bagien' },
   { name: 'Spalone pustkowie', ground: [C.dbrown, C.brown, C.clay], tuft: [C.ddbrown, C.dbrown], stone: RAMP.wood, accent: C.orange, bossRobe: RAMP.red, bossName: 'Żar Pustkowia' },
   { name: 'Otchłań', ground: [C.black, C.navy, C.slate], tuft: [C.plum, C.pink], stone: RAMP.night, accent: C.pink, bossRobe: RAMP.blue, bossName: 'Oko Pustki' },
+  // Sekretny biom (VOID_BIOME): poza cyklem kampanii.
+  { name: 'Pustka', ground: [C.black, C.black, C.navy], tuft: [C.plum, C.hotpink], stone: RAMP.night, accent: C.white, bossRobe: [C.black, C.plum, C.hotpink, C.white], bossName: 'Serce Pustki' },
 ];
+
+/** Biomy kampanii powtarzają się co BIOME_CYCLE poziomów; Pustka (VOID_BIOME) jest sekretna. */
+export const BIOME_CYCLE = 4;
+export const VOID_BIOME = 4;
 
 export interface LevelDef {
   depth: number;
@@ -47,9 +53,13 @@ export interface LevelDef {
 
 const ROMAN = ['', '', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];
 
-export function levelDef(depth: number): LevelDef {
-  const biome = (depth - 1) % BIOMES.length;
-  const cycle = Math.floor((depth - 1) / BIOMES.length) + 1;
+/**
+ * Poziom kampanii. `isVoid`: sekretny biom Pustka zamiast zwykłego (Run.levelFor: po pełnym cyklu biomów z Paktem 5+,
+ * w trybie Głowy bossów jako ostatni boss) — bez leczenia, podwójny łup i złoto.
+ */
+export function levelDef(depth: number, isVoid = false): LevelDef {
+  const biome = isVoid ? VOID_BIOME : (depth - 1) % BIOME_CYCLE;
+  const cycle = Math.floor((depth - 1) / BIOME_CYCLE) + 1;
   const suffix = ROMAN[cycle] ?? ` ${cycle}`;
   const b = BIOMES[biome];
   // Nieparzyste poziomy: przetrwaj określony czas; parzyste: zabij określoną liczbę wrogów.
@@ -65,6 +75,7 @@ export function levelDef(depth: number): LevelDef {
     bossName: b.bossName + suffix,
     boss: true,
     eliteMul: 1,
+    flags: isVoid ? { noHeal: 1, mapLoot: 1, mapGold: 1 } : undefined,
   };
 }
 

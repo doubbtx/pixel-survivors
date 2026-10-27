@@ -14,13 +14,14 @@ import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
 import { Menu, panel, inside, slot } from './widgets';
+import type { Action } from '../core/input';
 import { GameScreen } from './game-screen';
 import { CollectionScreen } from './collection';
 import { MetaScreen } from './meta';
 import { BalanceScreen } from './balance';
 import { HelpScreen } from './help';
 import { heroMeta, paragonLevel } from '../data/meta';
-import { pactLevel, pactBadge, pactDesc, PACT_BY_ID } from '../data/pacts';
+import { pactLevel, pactBadge, pactDesc, heroSkins, BADGE_BY_ID, PACT_BY_ID } from '../data/pacts';
 import { dailyOf, todayKey } from '../data/daily';
 import { PactScreen } from './pacts';
 
@@ -54,9 +55,17 @@ function menuBackdrop(app: App, t: number): void {
   PARADE.forEach((name, i) => walk(name, lead - 166 - i * 28, false, i + 6));
 }
 
+/**
+ * Kod Konami (góra, góra, dół, dół, lewo, prawo, lewo, prawo, B, A): na klawiaturze B to banish, a A to lewo (stąd drugi wariant),
+ * na padzie B to E, a A to confirm. Otwiera sekretny tryb Głowy bossów.
+ */
+const KONAMI = ['UUDDLRLRBA', 'UUDDLRLRBL'];
+const KONAMI_KEYS: [Action, string][] = [['up', 'U'], ['down', 'D'], ['left', 'L'], ['right', 'R'], ['banish', 'B'], ['e', 'B'], ['confirm', 'A']];
+
 export class MainMenu implements Screen {
   private t = 0;
   private menu: Menu;
+  private konami = '';
 
   constructor(private readonly app: App) {
     this.menu = new Menu([
@@ -77,6 +86,7 @@ export class MainMenu implements Screen {
 
   update(dt: number): void {
     this.t += dt;
+    if (this.checkKonami()) return;
     const before = this.menu.sel;
     this.menu.update(this.app.input);
     // Komunikat (np. o przerwanym runie) znika po pierwszej interakcji.
@@ -84,6 +94,19 @@ export class MainMenu implements Screen {
       this.app.save.notice = '';
       this.app.persist();
     }
+  }
+
+  /** Bufor ostatnich wciśnięć; po pełnym kodzie wybór bohatera do trybu Głowy bossów. */
+  private checkKonami(): boolean {
+    const inp = this.app.input;
+    const hit = KONAMI_KEYS.find(([a]) => inp.pressed(a));
+    if (!hit) return false;
+    this.konami = (this.konami + hit[1]).slice(-KONAMI[0].length);
+    if (!KONAMI.includes(this.konami)) return false;
+    this.konami = '';
+    sfx.play('boss');
+    this.app.go(new HeroSelect(this.app, 'training', true));
+    return true;
   }
 
   render(): void {
@@ -135,7 +158,7 @@ export class DailyScreen implements Screen {
     if (inp.pressed('back')) { this.app.go(new MainMenu(this.app)); return; }
     if (inp.pressed('confirm') || inp.pressed('click')) {
       sfx.play('levelup');
-      this.app.go(new GameScreen(this.app, this.def.hero, 'training', undefined, this.def));
+      this.app.go(new GameScreen(this.app, this.def.hero, 'training', undefined, { daily: this.def }));
     }
   }
 
@@ -289,7 +312,7 @@ const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212;
 export class HeroSelect implements Screen {
   private sel = 0;
 
-  constructor(private readonly app: App, private readonly mode: Mode) {
+  constructor(private readonly app: App, private readonly mode: Mode, private readonly rush = false) {
     // Kursor na ostatnio wybranym bohaterze.
     this.sel = Math.max(0, HEROES.findIndex((h) => h.id === app.save.lastHero));
   }
@@ -298,7 +321,7 @@ export class HeroSelect implements Screen {
     sfx.play('levelup');
     this.app.save.lastHero = HEROES[this.sel].id;
     this.app.persist();
-    this.app.go(new GameScreen(this.app, HEROES[this.sel].id, this.mode));
+    this.app.go(new GameScreen(this.app, HEROES[this.sel].id, this.mode, undefined, { rush: this.rush }));
   }
 
   update(): void {
@@ -309,6 +332,7 @@ export class HeroSelect implements Screen {
     if (inp.pressed('confirm')) this.start();
     if (inp.pressed('back')) this.app.go(this.mode === 'training' ? new MainMenu(this.app) : new SlotScreen(this.app, this.mode));
     if (inp.pressed('inventory')) { this.app.go(new PactScreen(this.app, this)); return; }
+    if (inp.pressed('skip')) this.cycleSkin();
     if (inp.pressed('click')) {
       const { x, y } = inp.mouse;
       if (inside(x, y, LIST_X, this.pactY(), LIST_W, 18)) { this.app.go(new PactScreen(this.app, this)); return; }
@@ -321,6 +345,22 @@ export class HeroSelect implements Screen {
     }
   }
 
+  /** Skórka zaznaczonego bohatera: zwykła, potem kolejne zdobyte odznaki Paktu (X). */
+  private cycleSkin(): void {
+    const h = HEROES[this.sel], skins = this.app.save.skins;
+    const ids = ['', ...heroSkins(this.app.save.pacts.best[h.id] ?? 0).map((b) => b.id)];
+    if (ids.length < 2) { sfx.play('hurt'); return; }
+    skins[h.id] = ids[(ids.indexOf(skins[h.id] ?? '') + 1) % ids.length];
+    this.app.persist();
+    sfx.play('select');
+  }
+
+  /** Sprite bohatera ze skórką (jeśli wybrana i zdobyta). */
+  private spriteOf(id: string): string {
+    const h = HERO_BY_ID[id], skin = this.app.save.skins[id] ?? '';
+    return skin && heroSkins(this.app.save.pacts.best[id] ?? 0).some((b) => b.id === skin) ? `${h.sprite}~${skin}` : h.sprite;
+  }
+
   /** Przycisk paktów pod listą bohaterów. */
   private pactY(): number {
     return TOP + HEROES.length * ROW_H + 2;
@@ -330,13 +370,14 @@ export class HeroSelect implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     const m = this.mode;
-    const title = `${m === 'training' ? 'Trening' : SLOT_TITLE[m].split(' ').pop()}: wybierz bohatera`;
-    drawText(g, title, W / 2, 10, m === 'training' ? C.yellow : SLOT_COLOR[m], { align: 'center', scale: 2, outline: C.black });
+    const title = `${this.rush ? 'Głowy bossów' : m === 'training' ? 'Trening' : SLOT_TITLE[m].split(' ').pop()}: wybierz bohatera`;
+    drawText(g, title, W / 2, 10, this.rush ? C.hotpink : m === 'training' ? C.yellow : SLOT_COLOR[m], { align: 'center', scale: 2, outline: C.black });
     // Lista bohaterów.
     HEROES.forEach((h, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel;
       panel(r, LIST_X, y, LIST_W, ROW_H - 4, on ? C.gold : C.slate);
-      drawSprite(g, `${h.sprite}@${on ? animFrame(h.sprite, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 14);
+      const spr = this.spriteOf(h.id);
+      drawSprite(g, `${spr}@${on ? animFrame(spr, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 14);
       drawText(g, h.name, LIST_X + 34, y + 3, h.color, { shadow: C.black });
       drawText(g, h.role, LIST_X + 34, y + 15, C.lavender);
       // Odznaka Paktu: najwyższy poziom Paktu z pokonanym bossem.
@@ -351,8 +392,12 @@ export class HeroSelect implements Screen {
     panel(r, x, y, DET_W, DET_H, C.gold);
     r.withAlpha(0.5, () => r.circle(x + 32, y + 34, 22, C.black, true));
     drawShadow(g, x + 32, y + 56, 30);
-    drawSprite(g, `${h.sprite}@${animFrame(h.sprite, Math.floor(performance.now() / 16), 0)}`, x + 32, y + 34, { scale: 2 });
+    const spr = this.spriteOf(h.id);
+    drawSprite(g, `${spr}@${animFrame(spr, Math.floor(performance.now() / 16), 0)}`, x + 32, y + 34, { scale: 2 });
     drawText(g, h.name, x + 64, y + 12, h.color, { scale: 2, shadow: C.black });
+    // Skórki za odznaki Paktu.
+    const owned = heroSkins(this.app.save.pacts.best[h.id] ?? 0), cur = this.app.save.skins[h.id] ?? '';
+    if (owned.length) drawText(g, `Skórka: ${cur && BADGE_BY_ID[cur] ? BADGE_BY_ID[cur].name : 'zwykła'} [X]`, x + DET_W - 10, y + 8, cur ? BADGE_BY_ID[cur]?.color ?? C.lgray : C.lgray, { align: 'right' });
     drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 38, C.lavender);
     const wpn = WEAPON_BY_ID[h.weapon];
     drawSprite(g, wpn.icon, x + 19, y + 71);

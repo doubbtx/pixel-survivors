@@ -407,8 +407,8 @@ export function renderWorld(run: Run, r: Renderer): void {
   const blink = (p.hurtCd > 0 || p.iframes > 0) && run.step % 6 < 3;
   if (!blink && run.outcome !== 'dead') {
     const scale = ult.def.kind === 'titan' && ult.activeT > 0 ? 2 : 1;
-    const frame = p.moving || p.dashT > 0 ? animFrame(run.hero.sprite, run.step, 0) : 0;
-    drawSprite(g, `${run.hero.sprite}@${frame}`, px, py, { flash: p.flash > 0, scale, flipX: p.fx < 0 });
+    const frame = p.moving || p.dashT > 0 ? animFrame(run.heroSprite, run.step, 0) : 0;
+    drawSprite(g, `${run.heroSprite}@${frame}`, px, py, { flash: p.flash > 0, scale, flipX: p.fx < 0 });
   }
   if (p.shield > 0) {
     r.withAlpha(0.25, () => r.circle(px, py, 12, C.cyan, true));

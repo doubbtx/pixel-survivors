@@ -7,6 +7,13 @@ const LIGHT = (() => {
   return v.map((x) => x / l);
 })();
 
+/** Jasność kolorów palety (0..1) i kolory pomijane przy przemalowaniu (czerń, biel, skóra). */
+const LUMA = PAL.map((hex) => {
+  const v = parseInt(hex.slice(1), 16);
+  return Math.min(0.999, (0.3 * (v >> 16) + 0.59 * ((v >> 8) & 255) + 0.11 * (v & 255)) / 255 * 1.25);
+});
+const KEEP = new Set<number>([C.black, C.white, C.skin, C.tan, C.peach]);
+
 /**
  * "Malarz" sprite'ów 16-bit: rysuje indeksami palety na małej siatce, z cieniowaniem rampami
  * (światło z lewej-góry) i automatycznym obrysem. Grafika powstaje w kodzie, ale cały kod
@@ -132,6 +139,19 @@ export class Painter {
       }
     }
     for (const i of add) this.d[i] = c;
+    return this;
+  }
+
+  /**
+   * Przemalowanie (skórki bohaterów): każdy kolor poza czernią, bielą i odcieniami skóry zamienia się na kolor rampy
+   * o podobnej jasności.
+   */
+  recolor(ramp: readonly number[]): this {
+    for (let i = 0; i < this.d.length; i++) {
+      const c = this.d[i];
+      if (c < 0 || KEEP.has(c)) continue;
+      this.d[i] = ramp[Math.min(ramp.length - 1, Math.floor(LUMA[c] * ramp.length))];
+    }
     return this;
   }
 
