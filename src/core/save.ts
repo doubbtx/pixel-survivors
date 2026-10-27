@@ -7,7 +7,7 @@ import type { MetaState } from '../data/meta';
  * która przekształca dane do wersji o 1 wyższej. Ładowanie aplikuje migracje po kolei.
  */
 const KEY = 'pixel-survivors-save';
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export interface HeroRecord {
   bestTime: number;
@@ -85,6 +85,12 @@ export interface SaveData {
 }
 
 type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
+
+/** Koszty pierwszego poziomu węzłów dawnego wspólnego drzewka (zapis v5) — do zwrotu esencji w migracji 5 → 6. */
+const V5_NODE_COST: Record<string, number> = {
+  m_might: 20, m_crit: 25, m_fury: 30, m_slaughter: 35, m_amount: 400, m_hp: 20, m_armor: 25, m_regen: 30, m_leech: 35, m_ward: 45,
+  m_gold: 15, m_xp: 20, m_greed: 25, m_shards: 30, m_luck: 35, m_reroll: 30, m_skip: 25, m_banish: 30, m_cards: 40, m_legacy: 50,
+};
 const MIGRATIONS: Record<number, Migration> = {
   // 1 → 2: slot Hardcore (etap 3) i najdalszy poziom w rekordach bohatera.
   1: (old) => {
@@ -112,6 +118,19 @@ const MIGRATIONS: Record<number, Migration> = {
     const { hardcore: _, ...rest } = old;
     return { ...rest, version: 5, records, slots: { hardcore: hc.run ?? null, endless: null, expedition: null }, board: hc.board ?? [] };
   },
+  // 5 → 6: Rozwój per bohater (tylko Ekspedycja). Dawna esencja, koszt kupionych węzłów i prestiże wracają jako pula do rozdania.
+  // Trwający run Ekspedycji ze starą mapą zaczyna się od nowej mapy aktu (węzły map mają teraz modyfikatory).
+  5: (old) => {
+    const m = (old.meta ?? {}) as { essence?: number; total?: number; nodes?: Record<string, number>; prestige?: number };
+    let refund = m.essence ?? 0;
+    for (const [id, lvl] of Object.entries(m.nodes ?? {})) {
+      for (let l = 0; l < lvl; l++) refund += Math.round((V5_NODE_COST[id] ?? 0) * Math.pow(1.6, l));
+    }
+    refund += (m.prestige ?? 0) * 1500;
+    const slots = (old.slots ?? {}) as Record<string, unknown>;
+    const notice = refund > 0 ? 'Rozwój: każdy bohater ma własne drzewko. Twoja esencja czeka do rozdania.' : old.notice;
+    return { ...old, version: 6, meta: { heroes: {}, unassigned: refund, legacy: m.total ?? 0 }, slots: { ...slots, expedition: null }, notice };
+  },
 };
 
 function defaults(): SaveData {
@@ -126,7 +145,7 @@ function defaults(): SaveData {
     board: [],
     notice: '',
     collection: { seen: [], picks: {}, banned: [] },
-    meta: { essence: 0, total: 0, nodes: {}, prestige: 0 },
+    meta: { heroes: {}, unassigned: 0 },
   };
 }
 

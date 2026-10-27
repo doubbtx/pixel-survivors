@@ -11,7 +11,7 @@ import { HERO_BY_ID, evolveAbility, type HeroDef, type AbilitySlot } from '../da
 import { WEAPON_BY_ID } from '../data/weapons';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { levelDef, type LevelDef } from '../data/levels';
-import { nodeLevel, type ExpeditionState } from '../data/expedition';
+import { nodeLevel, EX_BLESSINGS, type ExpeditionState } from '../data/expedition';
 import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import type { ShopState } from '../data/shop';
 import { SRC_ELEMENT, ELEM, type Element } from '../data/elements';
@@ -26,7 +26,7 @@ import {
 } from '../entities/types';
 import { fmt } from '../util/format';
 import { updatePlayer } from '../systems/player';
-import { updateAbilities } from '../systems/abilities';
+import { updateAbilities, castAbility } from '../systems/abilities';
 import { updateWeapons } from '../systems/weapons';
 import { updateSpawner } from '../systems/spawner';
 import { updateEnemies } from '../systems/enemies';
@@ -35,7 +35,7 @@ import { updateZones } from '../systems/zones';
 import { updatePickups } from '../systems/pickups';
 import { updateEffects } from '../systems/effects';
 import { updateTurrets } from '../systems/turrets';
-import { updateEvents, type MapObject, type Buff, type Dungeon } from '../systems/events';
+import { updateEvents, startDungeon, type MapObject, type Buff, type Dungeon } from '../systems/events';
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
@@ -363,9 +363,14 @@ export class Run {
     const p = this.player;
     p.x = 0; p.y = 0; p.dashT = 0; p.iframes = 1; p.hurtCd = 0;
     for (const a of Object.values(this.abilities)) { a.cd = 0; a.activeT = 0; }
+    // Błogosławieństwo kapliczki Ekspedycji na kolejne mapy (trwa cały poziom).
+    const bless = this.expedition?.blessing ? EX_BLESSINGS.find((b) => b.id === this.expedition!.blessing!.id) : null;
+    if (bless) this.buffs.push({ name: bless.name, stats: bless.stats, t: Infinity });
+    this.indexEffects();
     this.recomputeStats();
     this.revivesLeft = this.flag('revive');
     this.showBanner(this.expedition ? this.levelInfo.name : `Poziom ${depth}: ${this.levelInfo.name}`);
+    if (this.levelInfo.dungeon) startDungeon(this);
   }
 
   /** Postęp celu poziomu 0..1. Po jego osiągnięciu pojawia się boss. */
@@ -500,6 +505,7 @@ export class Run {
    */
   private indexEffects(): void {
     this.flags = { ...this.meta.flags };
+    for (const [k, v] of Object.entries(this.levelInfo?.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
     for (const k of Object.keys(this.hooks) as HookName[]) this.hooks[k] = [];
     const addHooks = (hooks: CardHooks | undefined, n: number) => {
       for (const [k, fn] of Object.entries(hooks ?? {})) (this.hooks[k as HookName] as { fn: unknown; stacks: number }[]).push({ fn, stacks: n });
@@ -564,7 +570,6 @@ export class Run {
     return this.meta.essenceMul;
   }
 
-  /** Po każdej zmianie buildu (broń, pasywka, karta, przedmiot): flagi, hooki, synergie i statystyki. */
   /** Czy run ma augment broni o danym id. */
   aug(id: string): boolean {
     return this.augments.includes(id);
@@ -582,6 +587,7 @@ export class Run {
     }
   }
 
+  /** Po każdej zmianie buildu (broń, pasywka, karta, przedmiot): augmenty, flagi, hooki, synergie i statystyki. */
   onBuildChanged(): void {
     this.indexAugments();
     this.indexEffects();
@@ -745,6 +751,9 @@ export class Run {
     for (const k in itemMul) s[k as keyof Stats] *= itemMul[k as keyof Stats]!;
     for (const k in this.meta.mul) s[k as keyof Stats] *= this.meta.mul[k as keyof Stats]!;
     for (const t of this.synEffects) for (const k in t.mul ?? {}) s[k as keyof Stats] *= t.mul![k as keyof Stats]!;
+    // Bonusy mapy Ekspedycji: złoto i doświadczenie.
+    s.greed *= 1 + this.flag('mapGold');
+    s.growth *= 1 + this.flag('mapXp');
     for (const k in BAL.softCaps) s[k as keyof Stats] = BAL.softCap(s[k as keyof Stats], BAL.softCaps[k as keyof Stats]!);
     s.maxHp = Math.max(1, s.maxHp);
     const oldMax = this.stats.maxHp;
@@ -781,6 +790,7 @@ export class Run {
   /** Leczenie z uwzględnieniem kart: blokada leczenia, nadmiar → tarcza. */
   heal(v: number): void {
     if (this.flag('noHeal') > 0 || v <= 0) return;
+    v *= 1 - Math.min(0.9, this.flag('healCut'));
     const p = this.player;
     const room = this.stats.maxHp - p.hp;
     // Widok leczenia: liczymy tylko faktycznie odzyskane HP (zielone liczby co pół sekundy, suma w podsumowaniu).
@@ -991,7 +1001,7 @@ export class Run {
       this.dropChest(e.x, e.y, 'elite');
       this.showBanner('Złoty szlam złapany!');
     } else {
-      if (rng.chance(BAL.itemDropChance)) this.dropChest(e.x, e.y, 'drop');
+      if (rng.chance(BAL.itemDropChance * (1 + this.flag('mapLoot')))) this.dropChest(e.x, e.y, 'drop');
       else if (rng.chance(BAL.meatChance)) this.spawnPickup(e.x, e.y, 'meat', 0);
       else if (rng.chance(BAL.magnetChance)) this.spawnPickup(e.x, e.y, 'magnet', 0);
       else if (rng.chance(BAL.coinChance)) this.spawnPickup(e.x, e.y, 'coin', 1);
@@ -1084,6 +1094,12 @@ export class Run {
     const n = this.dmgNums.obtain();
     if (n) { n.x = p.x; n.y = p.y - 8; n.life = 0.7; n.text = fmt(total); n.col = C.red; }
     this.emit('onDamageTaken', total);
+    // Odwet (węzeł Rozwoju Borguna): oberwanie wyzwala darmowy Wstrząs (najwyżej co `counterSlam` s).
+    const counter = this.flag('counterSlam');
+    if (counter > 0 && this.totalTime >= (this.cardState.counterSlam ?? 0)) {
+      this.cardState.counterSlam = this.totalTime + counter;
+      castAbility(this, 'e', true);
+    }
     if (p.hp <= 0) {
       if (this.revivesLeft > 0) {
         this.revivesLeft--;

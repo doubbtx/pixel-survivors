@@ -23,9 +23,10 @@ import { ShopView } from './shop';
 import { SynergyView } from './synergies';
 import { AnvilView } from './anvil';
 import { rollShop } from '../data/shop';
-import { metaBonus, runEssence } from '../data/meta';
+import { metaBonus, runEssence, heroMeta, heroTree, NO_META } from '../data/meta';
 import { rollItem } from '../data/items';
-import { NODE_INFO, advanceAct, currentNode, isCombat, newExpedition, nodeDepth } from '../data/expedition';
+import { NODE_INFO, EX_BLESSINGS, advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth } from '../data/expedition';
+import { rng } from '../core/rng';
 import { ExpeditionMapView } from './expedition';
 import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
@@ -75,7 +76,8 @@ export class GameScreen implements Screen {
     this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode);
     this.run.cardBans = new Set(app.save.collection.banned);
     this.run.knownCards = new Set(app.save.collection.seen);
-    this.run.applyMeta(metaBonus(app.save.meta), !snapshot);
+    // Rozwój działa tylko w Ekspedycji (Hardcore i Endless bez meta-bonusów).
+    this.run.applyMeta(mode === 'expedition' ? metaBonus(heroMeta(app.save.meta, heroId), heroTree(heroId)) : NO_META, !snapshot);
     warmFx();
     const hc = mode === 'hardcore';
     const slotted = mode !== 'training';
@@ -159,12 +161,16 @@ export class GameScreen implements Screen {
     else { rec.runs++; if (won) rec.wins++; }
   }
 
-  /** Esencja za zakończony run (meta-progresja) — dodawana do zapisu, pokazywana na ekranie końca. */
+  /** Esencja za zakończoną Ekspedycję (Rozwój bohatera) — dodawana do zapisu, pokazywana na ekranie końca. Inne tryby jej nie dają. */
   private awardEssence(mul = 1): void {
-    const meta = this.app.save.meta;
-    this.essence = runEssence(this.run, this.run.essenceMul * mul);
-    meta.essence += this.essence;
-    meta.total += this.essence;
+    if (this.mode !== 'expedition') return;
+    const h = heroMeta(this.app.save.meta, this.heroId);
+    const ex = this.run.expedition;
+    // Modyfikatory ukończonych map podnoszą esencję (BAL.expedition.rewardEssence na punkt nagrody).
+    const mapMul = 1 + (ex?.bonus ?? 0) * BAL.expedition.rewardEssence / 100;
+    this.essence = runEssence(this.run, ex?.cleared ?? 0, this.run.essenceMul * mul * mapMul);
+    h.essence += this.essence;
+    h.total += this.essence;
   }
 
   /** Śmierć albo poddanie: slot trybu czyszczony (Hardcore: wpis do tablicy). Esencja zostaje. */
@@ -188,15 +194,22 @@ export class GameScreen implements Screen {
   private onLevelCleared(): void {
     const run = this.run;
     if (this.mode === 'expedition') {
-      const ex = run.expedition!;
+      const ex = run.expedition!, m = currentMap(ex)!;
       ex.cleared++;
+      ex.bonus += mapReward(m);
+      if (ex.blessing && --ex.blessing.maps <= 0) ex.blessing = null;
       this.updateRecords(true);
-      if (currentNode(ex) === 'boss') {
+      if (m.kind === 'boss') {
         if (!advanceAct(ex)) { this.onExpeditionWon(); return; }
         run.heal(run.stats.maxHp * BAL.levelClearHeal);
         this.showToast(`Akt ${ex.act}! +${Math.round(BAL.levelClearHeal * 100)}% HP`);
       }
       this.openMap();
+      // Bonus mapy po ukończeniu: skrzynia, karta albo leczenie (nakładki wracają na mapę).
+      if (m.bonus === 'chest') run.pendingLoot.push(run.rollLoot('boss'));
+      if (m.bonus === 'card') run.pendingCards.push('elite');
+      if (m.bonus === 'heal') run.heal(run.stats.maxHp * 0.4);
+      this.openPending();
       return;
     }
     this.updateRecords(true);
@@ -273,6 +286,13 @@ export class GameScreen implements Screen {
         this.showToast(`${NODE_INFO.rest.name}: +${Math.round(X.restHeal * 100)}% HP, +${X.restMaxHp} maks. HP`);
         this.saveSlot(false);
         break;
+      case 'shrine': {
+        const b = rng.pick(EX_BLESSINGS);
+        ex.blessing = { id: b.id, maps: X.blessingMaps };
+        this.showToast(`Kapliczka: ${b.name} (${b.desc}) na ${X.blessingMaps} mapy`);
+        this.saveSlot(false);
+        break;
+      }
     }
   }
 
@@ -479,7 +499,7 @@ export class GameScreen implements Screen {
         break;
       case 'map':
         this.map!.render(r);
-        if (this.toastT > 0) drawText(r.g, this.toast, W / 2, 28, C.lime, { align: 'center', outline: C.black });
+        if (this.toastT > 0) drawText(r.g, this.toast, W / 2, H - 14, C.lime, { align: 'center', outline: C.black });
         break;
       case 'pause':
         this.renderPause();
@@ -582,7 +602,8 @@ export class GameScreen implements Screen {
       : ex ? `Ekspedycja: akt ${ex.act}/${BAL.expedition.acts}, ukończone węzły ${ex.cleared}${won ? `, esencja x${BAL.expedition.winEssenceMul}` : ''}` : '';
     if (modeLine) drawText(g, modeLine, W / 2, 28, C.orange, { align: 'center', shadow: C.black });
     drawText(g, stats, W / 2, 39, C.white, { align: 'center', shadow: C.black });
-    drawText(g, `+${fmt(this.essence)} esencji   (Rozwój w menu głównym)`, W / 2, 50, C.cyan, { align: 'center', shadow: C.black });
+    const essence = this.mode === 'expedition' ? `+${fmt(this.essence)} esencji dla: ${run.hero.name}   (Rozwój w menu głównym)` : 'Bez esencji i Rozwoju: rekord uczciwy (esencja tylko w Ekspedycji)';
+    drawText(g, essence, W / 2, 50, C.cyan, { align: 'center', shadow: C.black });
     panel(r, 50, 62, 380, 140);
     drawText(g, 'Źródło obrażeń', 62, 70, C.lavender);
     drawText(g, 'Suma', 340, 70, C.lavender, { align: 'right' });

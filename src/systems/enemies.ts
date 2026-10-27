@@ -18,7 +18,7 @@ const RELOCATE_DIST = 330;
  */
 export function fireVolley(run: Run, x: number, y: number, v: Volley, base: number, damage: number): void {
   // W późnej grze salwy są gęstsze (BAL.patternDensity); pierścień z luką zachowuje lukę.
-  const n = Math.round(v.count * BAL.patternDensity(run.waveTime()));
+  const n = Math.round(v.count * (BAL.patternDensity(run.waveTime()) + run.flag('bulletDensity')));
   const gap = v.shape === 'gapRing' ? v.gap ?? 3 : 0;
   for (let i = 0; i < n; i++) {
     // Pierścień z luką: pomijamy pociski najbliżej kąta bazowego (po obu stronach).

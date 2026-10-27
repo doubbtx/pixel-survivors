@@ -40,6 +40,9 @@ export interface LevelDef {
   boss: boolean;
   /** Mnożnik odstępu między elitami (mniej = częściej). */
   eliteMul: number;
+  /** Ekspedycja: poziom to loch (arena z falami) i flagi mapy na czas poziomu (modyfikatory, bonus, nagroda). */
+  dungeon?: boolean;
+  flags?: Record<string, number>;
 }
 
 const ROMAN = ['', '', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];

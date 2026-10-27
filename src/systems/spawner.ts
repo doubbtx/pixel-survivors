@@ -26,7 +26,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   e.x = x; e.y = y; e.kx = 0; e.ky = 0;
   e.maxHp = e.hp = def.hp * hpMul;
   e.speed = def.speed * rng.range(0.9, 1.1) * (1 + run.flag('enemySpeed'));
-  e.damage = def.damage * BAL.enemyDmgMul(run.time) * BAL.depthDmgMul(run.depth) * Math.pow(run.powerMul, P.dmgExp) * (1 + P.levelDmg * lvl);
+  e.damage = def.damage * BAL.enemyDmgMul(run.time) * BAL.depthDmgMul(run.depth) * Math.pow(run.powerMul, P.dmgExp) * (1 + P.levelDmg * lvl) * (1 + run.flag('enemyDmg'));
   e.radius = def.radius;
   e.xp = def.xp;
   e.flash = 0; e.slowT = 0; e.slowF = 0; e.stunT = 0;
@@ -113,7 +113,7 @@ export function updateSpawner(run: Run, dt: number): void {
   run.goldSlimeT -= dt;
   run.eliteT -= dt;
   if (run.eliteT <= 0) {
-    run.eliteT = BAL.eliteEvery * run.levelInfo.eliteMul * BAL.eliteGap(waveT);
+    run.eliteT = BAL.eliteEvery * run.levelInfo.eliteMul * BAL.eliteGap(waveT) / (1 + run.flag('eliteRate'));
     const mods = Object.keys(ELITE_MODS);
     const picked = [rng.pick(mods)];
     if (waveT > 150) {
@@ -126,7 +126,7 @@ export function updateSpawner(run: Run, dt: number): void {
     if (e) run.showBanner(`Elita: ${picked.map((k) => ELITE_MODS[k].name).join(', ')}`);
   }
 
-  const target = BAL.targetEnemies(waveT) * (run.bossSpawned ? 0.35 : 1);
+  const target = BAL.targetEnemies(waveT) * (run.bossSpawned ? 0.35 : 1) * (1 + run.flag('enemyCount'));
   const deficit = target - run.enemies.count;
   if (deficit <= 0) return;
   run.spawnAcc += Math.min(BAL.spawnRateCap(waveT), deficit * 2) * dt;
@@ -135,7 +135,7 @@ export function updateSpawner(run: Run, dt: number): void {
     run.spawnAcc -= 1;
     const [x, y] = ringPos(run, rng.range(0, Math.PI * 2), SPAWN_R + rng.range(0, 30));
     // Złoty szlam: rzadki, uciekający wróg pełen złota.
-    if (run.goldSlimeT <= 0 && rng.chance(BAL.events.goldSlimeChance) && !run.enemies.items.some((e) => !e.dead && e.def.id === 'goldslime')) {
+    if (run.goldSlimeT <= 0 && rng.chance(BAL.events.goldSlimeChance * (1 + run.flag('goldSlimeRate'))) && !run.enemies.items.some((e) => !e.dead && e.def.id === 'goldslime')) {
       run.goldSlimeT = BAL.events.goldSlimeGap;
       spawnEnemy(run, 'goldslime', x, y);
       run.showBanner('Złoty szlam! Złap go!');

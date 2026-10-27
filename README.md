@@ -209,6 +209,13 @@ src/
 - **25 nowych kart** (razem 78): żywiołowe (Krzesiwo, Szron, Jad, Ładunek, Pryzmat żywiołów, Reaktor, Burza żywiołów, Zaraza, Katalizator), późna gra (Weteran, Pogromca olbrzymów, Ścinacz, Przeładowanie, Mądrość), przeklęte (Kruche kości, Nawiedzenie, Krwawy rytuał) i augmenty bohaterów zmieniające umiejętności (Kestra: Sidła, Ogień zaporowy, Natchnienie; Borgun: Lądowanie, Tarcza szarży, Kontratak; Ignara: Ognisty skok, Wir płomieni).
 - **Żywioły na przedmiotach**: super-bonusy Płomienne krytyki, Mroźny oddech, Przewodnik, Burzowe serce, Zaraza.
 
+**Etap C: Ekspedycja jak mapy z PoE i Rozwój per bohater (0.9)**:
+- **Ekspedycja**: 3 akty, każdy to mapa 6 rzędów × 4 kolumny i boss. Węzły z walką to **mapy** z nazwą i rzadkością: Zwykła (bez modyfikatorów), Magiczna (1-2), Rzadka (3-4). Modyfikatory to ryzyko (Opancerzeni, Okrutni, Zwinni, Nawałnica, Hordy elit, Kruchość, Susza, Tłum), a każdy daje nagrodę: więcej łupu, lepszą jakość i więcej esencji. Do tego **bonus mapy** (Święta ziemia, Żyła złota, Mądrość przodków, Ukryty skarb, Wróżba, Źródło).
+- Nowe węzły: **Loch** (arena z 3 falami i strażnikiem, dwie skrzynie) i **Kapliczka** (błogosławieństwo na 3 kolejne mapy).
+- **Rozwój tylko w Ekspedycji**: Hardcore i Endless są bez meta-bonusów (uczciwe rekordy), esencję daje tylko Ekspedycja.
+- **Drzewko per bohater**: 4 gałęzie tematyczne + wspólna Wyprawa. Kestra: Krytyki, Zasięg, Mobilność, Pułapki; Borgun: Wytrzymałość, Kontratak, Obszar, Tarcza; Ignara: Ogień, Echo, Bariera, Żywioły. Ostatni węzeł gałęzi to **klucz**, który zmienia umiejętność (np. Przewrót zostawia Sieć, Wstrząs uderza sam po otrzymaniu obrażeń, Kula ognia leci dwa razy, Pierścień ognia daje tarczę). Osobna esencja, Paragon i prestiż dla każdego bohatera; Q/E przełącza bohatera.
+- **Zapis v6**: dotychczasowa esencja, kupione węzły i prestiże wracają jako pula do rozdania (Rozwój → [B] Przydziel), razem z dawnym Paragonem. Trwająca Ekspedycja ze starą mapą zaczyna się od nowa.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

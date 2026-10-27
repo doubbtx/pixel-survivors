@@ -36,6 +36,16 @@ import { spawnTurret } from '../systems/turrets';
  *  bossDmg         +obrażenia przeciw elitom i bossom
  *  cull            wrogowie (nie bossowie) poniżej tego ułamka HP giną od trafienia
  *  enemySpeed      +szybkość wrogów
+ *  echo.q / echo.e     liczba darmowych powtórzeń umiejętności po użyciu
+ *  dashResetQ      unik skraca odnowienie Q o ten ułamek
+ *  dashNet         unik zostawia sieć (spowalnia i rani)
+ *  ringShield      Pierścień ognia daje tarczę (ułamek maks. HP)
+ *  counterSlam     oberwanie wyzwala darmowe E (wartość = odstęp w s)
+ * Flagi map Ekspedycji (data/expedition.ts, na czas poziomu):
+ *  enemyDmg / enemyCount / eliteRate / bulletDensity   silniejsi, liczniejsi wrogowie, częstsze elity, gęstsze salwy
+ *  healCut         leczenie słabsze o ułamek
+ *  mapLoot / mapGold / mapXp   więcej przedmiotów, złota, doświadczenia
+ *  shrineRate / goldSlimeRate  częstsze kapliczki i Złote szlamy
  *  cd.q / cd.e / cd.dash        skrócenie odnowienia danej umiejętności
  *  passive.n / passive.extra / passive.shieldCap   modyfikacje pasywki bohatera
  *  <idUmiejętności>.<parametr>  dodatek do parametru umiejętności (np. k_volley.count)

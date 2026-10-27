@@ -18,6 +18,7 @@ import { GameScreen } from './game-screen';
 import { CollectionScreen } from './collection';
 import { MetaScreen } from './meta';
 import { BalanceScreen } from './balance';
+import { heroMeta, paragonLevel } from '../data/meta';
 
 const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
 
@@ -56,7 +57,7 @@ export class MainMenu implements Screen {
       { label: () => 'Ekspedycja (3 akty)', act: () => app.go(new SlotScreen(app, 'expedition')) },
       { label: () => 'Endless (bez końca)', act: () => app.go(new SlotScreen(app, 'endless')) },
       { label: () => 'Trening (jeden poziom)', act: () => app.go(new HeroSelect(app, 'training')) },
-      { label: () => `Rozwój (${fmt(app.save.meta.essence)} esencji)`, act: () => app.go(new MetaScreen(app, this)) },
+      { label: () => (app.save.meta.unassigned > 0 ? `Rozwój (${fmt(app.save.meta.unassigned)} do rozdania)` : 'Rozwój bohaterów'), act: () => app.go(new MetaScreen(app, this)) },
       { label: () => 'Kolekcja kart', act: () => app.go(new CollectionScreen(app, this)) },
       { label: () => 'Rekordy', act: () => app.go(new RecordsScreen(app)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
@@ -100,7 +101,7 @@ const SLOT_COLOR: Record<SlotMode, number> = { hardcore: C.salmon, expedition: C
 const SLOT_NEW: Record<SlotMode, string> = { hardcore: 'Nowa kampania', expedition: 'Nowa ekspedycja', endless: 'Nowy run' };
 const SLOT_RULES: Record<SlotMode, string> = {
   hardcore: 'Poziomy po kolei: cel, potem boss. Po zwycięstwie zachowujesz wszystko i idziesz dalej. Śmierć lub poddanie kasuje cały postęp. Wyjście z gry zapisuje run.',
-  expedition: `Wyprawa przez ${BAL.expedition.acts} akty. Na mapie wybierasz drogę: krótkie walki, elity, skarby, sklepy, kowadła i obozy. Na końcu aktu boss. Śmierć kasuje wyprawę, ukończenie daje x${BAL.expedition.winEssenceMul} esencji.`,
+  expedition: `Wyprawa przez ${BAL.expedition.acts} akty. Wybierasz drogę przez mapy z modyfikatorami (ryzyko za więcej łupu), lochy, kapliczki, sklepy, kowadła i obozy. Na końcu aktu boss. Tylko tu działa Rozwój i zdobywasz esencję.`,
   endless: 'Jeden poziom bez końca: boss co kilka minut, potem silniejsi wrogowie i następny biom. Wyjście z gry zapisuje run, śmierć go kończy.',
 };
 
@@ -282,9 +283,15 @@ export class HeroSelect implements Screen {
     });
     const rec = heroRecord(this.app.save, h.id);
     const best = m === 'hardcore' ? `Najdalej: poziom ${rec.bestDepth}`
-      : m === 'expedition' ? `Najwięcej węzłów: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}`
+      : m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}`
       : m === 'endless' ? `Rekord: ${fmtTime(rec.bestEndless)}` : `Rekord: ${fmtTime(rec.bestTime)}   wygrane: ${rec.wins}`;
     drawText(g, best, x + 12, y + DET_H - 20, C.dgray);
+    if (m === 'expedition') {
+      const hm = heroMeta(this.app.save.meta, h.id);
+      drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 32, C.cyan);
+    } else {
+      drawText(g, 'Bez Rozwoju (meta-bonusy tylko w Ekspedycji)', x + 12, y + DET_H - 32, C.dgray);
+    }
     drawText(g, 'Strzałki: wybór    Enter: start    Esc: wstecz', W / 2, H - 16, C.lavender, { align: 'center' });
   }
 }

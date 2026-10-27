@@ -98,7 +98,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   drawText(g, ex ? `Akt ${ex.act}, głębia ${run.depth}` : `Poziom ${run.depth}`, 41, 30, hc ? C.orange : C.lgray, OUT);
   if (hc) drawText(g, 'Hardcore', 89, 30, C.salmon, OUT);
   // Aktywne błogosławieństwa kapliczek z czasem.
-  if (run.buffs.length) drawText(g, run.buffs.map((b) => `${b.name} ${Math.ceil(b.t)}s`).join('  '), 41, 42, C.yellow, OUT);
+  if (run.buffs.length) drawText(g, run.buffs.map((b) => (Number.isFinite(b.t) ? `${b.name} ${Math.ceil(b.t)}s` : b.name)).join('  '), 41, 42, C.yellow, OUT);
 
   // Czas na płytce + cel poziomu albo pasek bossa.
   plate(r, W / 2 - 36, 7, 72, 25);

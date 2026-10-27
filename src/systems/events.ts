@@ -73,6 +73,11 @@ function place(run: Run, kind: MapObjectKind, minR: number, maxR: number, life: 
   return o;
 }
 
+/** Loch jako cały poziom (węzeł Ekspedycji): arena od razu, po oczyszczeniu poziom jest ukończony (bez portalu powrotnego). */
+export function startDungeon(run: Run): void {
+  enterDungeon(run);
+}
+
 /** Wejście do lochu: świat zwykłej mapy odkładamy (kryształy i łupy zebrane), gracz trafia na arenę. */
 function enterDungeon(run: Run): void {
   const p = run.player;
@@ -156,6 +161,7 @@ export function updateEvents(run: Run, dt: number): void {
         run.dropChest(d.cx - 14, d.cy, 'elite');
         run.dropChest(d.cx + 14, d.cy, 'boss');
         for (let i = 0; i < 20; i++) run.spawnPickup(d.cx + rng.range(-30, 30), d.cy + rng.range(-30, 30), 'coin', 1);
+        if (run.levelInfo.dungeon) { run.clearObjective(); return; }
         run.mapObjects.push({ kind: 'exit', x: d.cx, y: d.cy - 40, blessing: 0, charge: 0, life: Infinity });
         run.showBanner('Loch oczyszczony! Skarb i portal powrotny');
         sfx.play('levelup');
@@ -164,7 +170,7 @@ export function updateEvents(run: Run, dt: number): void {
   } else if (!run.bossSpawned || run.mode === 'endless') {
     run.shrineT -= dt;
     if (run.shrineT <= 0) {
-      run.shrineT = E.shrineEvery;
+      run.shrineT = E.shrineEvery / (1 + run.flag('shrineRate'));
       if (run.mapObjects.filter((o) => o.kind === 'shrine').length < E.shrineMax) place(run, 'shrine', 120, 220, E.shrineLife);
     }
     if (!run.swordRolled && run.time >= E.swordAt) {

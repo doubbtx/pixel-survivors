@@ -1,14 +1,18 @@
 import { C } from '../core/palette';
 import { rng } from '../core/rng';
+import type { Stats } from '../entities/types';
 import { BAL } from './balance';
 import { BIOMES, type LevelDef } from './levels';
 
 /**
- * Ekspedycja: skończona wyprawa przez BAL.expedition.acts aktów. Każdy akt to mapa rzędów po kilka węzłów
- * (ścieżki jak w grach "roguelike deckbuilder") — z węzła w kolumnie `lane` można przejść do kolumn lane-1..lane+1
- * w następnym rzędzie. Ostatni rząd aktu to jeden węzeł bossa. Walki są krótsze niż w Hardcore i bez bossa.
+ * Ekspedycja: skończona wyprawa przez BAL.expedition.acts aktów. Każdy akt to mapa rzędów po kilka węzłów —
+ * z węzła w kolumnie `lane` można przejść do kolumn lane-1..lane+1 w następnym rzędzie. Ostatni rząd aktu to boss.
+ *
+ * Węzły z walką to „mapy” jak w Path of Exile: nazwa, rzadkość (Zwykła / Magiczna / Rzadka) i modyfikatory ryzyka
+ * (silniejsi lub szybsi wrogowie, gęstsze salwy...) — każdy dokłada nagrodę (więcej łupu, lepsza jakość, więcej esencji).
+ * Do tego bonus mapy (stała zaleta). Efekty działają przez flagi runu na czas poziomu (`LevelDef.flags`).
  */
-export type NodeKind = 'fight' | 'elite' | 'treasure' | 'shop' | 'anvil' | 'rest' | 'boss';
+export type NodeKind = 'fight' | 'elite' | 'dungeon' | 'treasure' | 'shop' | 'anvil' | 'rest' | 'shrine' | 'boss';
 
 export interface NodeInfo {
   name: string;
@@ -18,75 +22,178 @@ export interface NodeInfo {
 }
 
 export const NODE_INFO: Record<NodeKind, NodeInfo> = {
-  fight: { name: 'Walka', icon: 'ex_fight', color: C.lgray, desc: 'Krótka walka bez bossa. Nagroda: złoto i karta.' },
-  elite: { name: 'Elita', icon: 'ex_elite', color: C.orange, desc: 'Walka z częstymi elitami. Nagroda: przedmiot jak od bossa i karta jak za elitę.' },
+  fight: { name: 'Mapa', icon: 'ex_fight', color: C.lgray, desc: 'Krótka walka bez bossa. Nagroda: złoto i karta.' },
+  elite: { name: 'Mapa elit', icon: 'ex_elite', color: C.orange, desc: 'Walka z częstymi elitami. Nagroda: przedmiot jak od bossa i karta jak za elitę.' },
+  dungeon: { name: 'Loch', icon: 'ex_dungeon', color: C.pink, desc: 'Arena z falami wrogów i strażnikiem. Nagroda: dwie skrzynie i złoto.' },
   treasure: { name: 'Skarb', icon: 'ex_chest', color: C.yellow, desc: 'Skrzynia z przedmiotem wysokiej jakości, bez walki.' },
   shop: { name: 'Sklep', icon: 'ex_shop', color: C.gold, desc: 'Sklep z przedmiotami, usługami i eliksirami.' },
   anvil: { name: 'Kowadło', icon: 'ex_anvil', color: C.cyan, desc: 'Ulepszanie i przekuwanie przedmiotów, plus darmowe odłamki.' },
   rest: { name: 'Obóz', icon: 'ex_rest', color: C.lime, desc: 'Odpoczynek: leczenie i stały bonus do maks. HP.' },
+  shrine: { name: 'Kapliczka', icon: 'ex_shrine', color: C.yellow, desc: 'Błogosławieństwo na kilka kolejnych map.' },
   boss: { name: 'Boss', icon: 'ex_boss', color: C.salmon, desc: 'Pełny poziom z bossem na końcu aktu.' },
 };
 
-/** Węzły z walką (poziom na mapie świata); pozostałe działają od razu z mapy. */
-export const isCombat = (k: NodeKind): boolean => k === 'fight' || k === 'elite' || k === 'boss';
+/** Węzły z walką (mapy); pozostałe działają od razu z mapy wyprawy. */
+export const isCombat = (k: NodeKind): boolean => k === 'fight' || k === 'elite' || k === 'dungeon' || k === 'boss';
+
+// ============================ modyfikatory i bonusy map ============================
+
+/** Modyfikator ryzyka: flagi runu (lista w data/cards.ts) i nagroda w punktach ilości łupu (%). */
+export interface MapMod {
+  id: string;
+  name: string;
+  desc: string;
+  flags: Record<string, number>;
+  reward: number;
+}
+
+export const MAP_MODS: MapMod[] = [
+  { id: 'hp', name: 'Opancerzeni', desc: 'Wrogowie mają +40% HP', flags: { enemyHp: 0.4 }, reward: 15 },
+  { id: 'dmg', name: 'Okrutni', desc: 'Wrogowie zadają +30% obrażeń', flags: { enemyDmg: 0.3 }, reward: 18 },
+  { id: 'fast', name: 'Zwinni', desc: 'Wrogowie są 20% szybsi', flags: { enemySpeed: 0.2 }, reward: 14 },
+  { id: 'bullets', name: 'Nawałnica', desc: 'Salwy wrogów mają +30% pocisków', flags: { bulletDensity: 0.3 }, reward: 20 },
+  { id: 'elites', name: 'Hordy elit', desc: 'Elity pojawiają się 2x częściej', flags: { eliteRate: 1 }, reward: 20 },
+  { id: 'frail', name: 'Kruchość', desc: 'Otrzymujesz +20% obrażeń', flags: { dmgTaken: -0.2 }, reward: 16 },
+  { id: 'drought', name: 'Susza', desc: 'Leczenie słabsze o 50%', flags: { healCut: 0.5 }, reward: 16 },
+  { id: 'crowd', name: 'Tłum', desc: '+30% wrogów naraz', flags: { enemyCount: 0.3 }, reward: 14 },
+];
+export const MAP_MOD_BY_ID: Record<string, MapMod> = Object.fromEntries(MAP_MODS.map((m) => [m.id, m]));
+
+/** Bonus mapy (zaleta): flagi runu albo nagroda po ukończeniu (obsługa w ui/game-screen.ts). */
+export interface MapBonus {
+  id: string;
+  name: string;
+  desc: string;
+  flags?: Record<string, number>;
+}
+
+export const MAP_BONUSES: MapBonus[] = [
+  { id: 'shrines', name: 'Święta ziemia', desc: 'Kapliczki pojawiają się 2x częściej', flags: { shrineRate: 1 } },
+  { id: 'gold', name: 'Żyła złota', desc: 'Złote szlamy częściej, +50% złota', flags: { goldSlimeRate: 3, mapGold: 0.5 } },
+  { id: 'xp', name: 'Mądrość przodków', desc: '+40% doświadczenia', flags: { mapXp: 0.4 } },
+  { id: 'chest', name: 'Ukryty skarb', desc: 'Po ukończeniu dodatkowa skrzynia jak od bossa' },
+  { id: 'card', name: 'Wróżba', desc: 'Po ukończeniu dodatkowy wybór karty' },
+  { id: 'heal', name: 'Źródło', desc: 'Po ukończeniu leczenie 40% HP' },
+];
+export const MAP_BONUS_BY_ID: Record<string, MapBonus> = Object.fromEntries(MAP_BONUSES.map((b) => [b.id, b]));
+
+/** Rzadkość mapy: liczba modyfikatorów (min-max) i kolor. */
+export const MAP_RARITY = [
+  { name: 'Zwykła', color: C.lgray, mods: [0, 0] },
+  { name: 'Magiczna', color: C.blue, mods: [1, 2] },
+  { name: 'Rzadka', color: C.yellow, mods: [3, 4] },
+] as const;
+
+/** Nazwy map w biomach aktów (kolejność jak BIOMES). */
+const MAP_NAMES: string[][] = [
+  ['Zarośnięty szlak', 'Stare kurhany', 'Mglisty gaj', 'Ruiny młyna', 'Polana wisielców', 'Kamienny krąg', 'Opuszczony sad', 'Wilcze doły'],
+  ['Topielisko', 'Zgniłe mokradła', 'Chata wiedźmy', 'Zatopiona wieś', 'Trzęsawisko', 'Wyspa grzybów', 'Czarna grobla', 'Gnijący las'],
+  ['Spalona osada', 'Popielne wydmy', 'Kuźnia olbrzymów', 'Szklane pole', 'Wąwóz żaru', 'Ołtarz słońca', 'Suche koryto', 'Dymiące szczeliny'],
+  ['Brama pustki', 'Wiszące wyspy', 'Gwiezdny most', 'Krypta echa', 'Lustrzane jezioro', 'Tron cieni', 'Rozdarte niebo', 'Ostatnia iglica'],
+];
+
+/** Błogosławieństwa kapliczek Ekspedycji: statystyki na kilka kolejnych map. */
+export const EX_BLESSINGS: { id: string; name: string; desc: string; stats: Partial<Stats> }[] = [
+  { id: 'might', name: 'Siła', desc: '+25% obrażeń', stats: { might: 0.25 } },
+  { id: 'haste', name: 'Zręczność', desc: '+25% szybkości ataku', stats: { atkSpeed: 0.25 } },
+  { id: 'wisdom', name: 'Mądrość', desc: '+40% doświadczenia', stats: { growth: 0.4 } },
+  { id: 'vigor', name: 'Żywotność', desc: '+25 maks. HP i +1 HP/s', stats: { maxHp: 25, regen: 1 } },
+  { id: 'luck', name: 'Fortuna', desc: '+30% złota i +1 karta przy awansie', stats: { greed: 0.3, luck: 1 } },
+];
+
+/** Węzeł mapy wyprawy. Mapy z walką mają nazwę, rzadkość, modyfikatory i bonus. */
+export interface MapNode {
+  kind: NodeKind;
+  name?: string;
+  rarity?: number;
+  mods?: string[];
+  bonus?: string;
+}
 
 export interface ExpeditionState {
   /** Akt 1..BAL.expedition.acts. */
   act: number;
   /** Mapa bieżącego aktu: rzędy węzłów (null = brak węzła w tej kolumnie). Ostatni rząd: tylko boss. */
-  map: (NodeKind | null)[][];
+  map: (MapNode | null)[][];
   /** Kolumny wybranych węzłów w kolejnych rzędach bieżącego aktu (ostatnia = bieżący węzeł). */
   path: number[];
   /** Ukończone węzły w całej ekspedycji (rekord, esencja). */
   cleared: number;
+  /** Suma nagród modyfikatorów ukończonych map (punkty %, mnoży esencję). */
+  bonus: number;
+  /** Błogosławieństwo kapliczki i liczba map, na które jeszcze działa. */
+  blessing: { id: string; maps: number } | null;
+}
+
+/** Mapa z walką: nazwa z biomu, rzadkość (rośnie z aktem i rzędem), modyfikatory i bonus. */
+function rollMapNode(kind: NodeKind, act: number, row: number, used: Set<string>): MapNode {
+  const X = BAL.expedition;
+  const names = MAP_NAMES[(act - 1) % MAP_NAMES.length].filter((n) => !used.has(n));
+  const name = names.length ? rng.pick(names) : NODE_INFO[kind].name;
+  used.add(name);
+  const p = Math.min(1, (act - 1) * X.rarityPerAct + row * X.rarityPerRow);
+  const rarity = kind === 'boss' ? 0 : rng.chance(p * 0.5) ? 2 : rng.chance(0.25 + p) ? 1 : 0;
+  const [lo, hi] = MAP_RARITY[rarity].mods;
+  const pool = MAP_MODS.map((m) => m.id);
+  const mods: string[] = [];
+  for (let n = rng.int(lo, hi); n > 0 && pool.length; n--) mods.push(pool.splice(Math.floor(rng.next() * pool.length), 1)[0]);
+  const bonus = kind === 'boss' || rng.chance(X.noBonusChance) ? undefined : rng.pick(MAP_BONUSES).id;
+  return { kind, name, rarity, mods, bonus };
 }
 
 /** Losuje mapę aktu: pierwszy rząd to walki, w środku mieszanka, ostatni rząd przed bossem gwarantuje obóz lub sklep. */
-export function rollActMap(): (NodeKind | null)[][] {
+export function rollActMap(act: number): (MapNode | null)[][] {
   const X = BAL.expedition;
-  const map: (NodeKind | null)[][] = [];
+  const used = new Set<string>();
+  const map: (MapNode | null)[][] = [];
+  const mid = Math.floor((X.lanes - 1) / 2);
   for (let row = 0; row < X.rows - 1; row++) {
-    const cells: (NodeKind | null)[] = [];
+    const kinds: (NodeKind | null)[] = [];
     for (let lane = 0; lane < X.lanes; lane++) {
-      // Środkowa kolumna zawsze istnieje (spójność ścieżek), boczne czasem znikają.
-      if (lane !== 1 && rng.chance(X.emptyChance)) { cells.push(null); continue; }
-      cells.push(row === 0 ? 'fight' : rng.weighted(X.weights));
+      // Środkowe kolumny zawsze istnieją (spójność ścieżek), skrajne czasem znikają.
+      if ((lane === 0 || lane === X.lanes - 1) && rng.chance(X.emptyChance)) { kinds.push(null); continue; }
+      kinds.push(row === 0 ? 'fight' : rng.weighted(X.weights));
     }
-    if (row === X.rows - 2 && !cells.some((k) => k === 'rest' || k === 'shop')) cells[1] = rng.chance(0.5) ? 'rest' : 'shop';
-    map.push(cells);
+    if (row === X.rows - 2 && !kinds.some((k) => k === 'rest' || k === 'shop')) kinds[mid] = rng.chance(0.5) ? 'rest' : 'shop';
+    map.push(kinds.map((k) => (!k ? null : isCombat(k) ? rollMapNode(k, act, row, used) : { kind: k })));
   }
-  map.push([null, 'boss', null]);
+  const boss: (MapNode | null)[] = Array.from({ length: X.lanes }, () => null);
+  boss[mid] = rollMapNode('boss', act, X.rows - 1, used);
+  map.push(boss);
   return map;
 }
 
 export function newExpedition(): ExpeditionState {
-  return { act: 1, map: rollActMap(), path: [], cleared: 0 };
+  return { act: 1, map: rollActMap(1), path: [], cleared: 0, bonus: 0, blessing: null };
 }
 
 /** Bieżący rząd (-1 = w tym akcie nie wybrano jeszcze węzła). */
 export const exRow = (ex: ExpeditionState): number => ex.path.length - 1;
 
-/** Czy z kolumny `from` (rząd wyżej) można przejść do `to`. */
-export const linked = (from: number, to: number): boolean => Math.abs(from - to) <= 1;
+/** Czy z kolumny `from` (rząd wyżej) można przejść do `to`; boss jest osiągalny z każdej kolumny. */
+export const linked = (from: number, to: number, toBoss = false): boolean => toBoss || Math.abs(from - to) <= 1;
 
 /** Kolumny następnego rzędu dostępne z bieżącego węzła. */
 export function nextLanes(ex: ExpeditionState): number[] {
   const row = ex.map[ex.path.length];
   if (!row) return [];
   const at = ex.path[ex.path.length - 1];
-  return row.map((k, lane) => (k && (at === undefined || linked(at, lane)) ? lane : -1)).filter((l) => l >= 0);
+  const boss = ex.path.length === ex.map.length - 1;
+  return row.map((k, lane) => (k && (at === undefined || linked(at, lane, boss)) ? lane : -1)).filter((l) => l >= 0);
 }
 
-export function currentNode(ex: ExpeditionState): NodeKind | null {
+export function currentMap(ex: ExpeditionState): MapNode | null {
   const row = exRow(ex);
   return row < 0 ? null : ex.map[row][ex.path[row]];
 }
+
+export const currentNode = (ex: ExpeditionState): NodeKind | null => currentMap(ex)?.kind ?? null;
 
 /** Ostatni węzeł aktu (boss) ukończony: następny akt z nową mapą. Zwraca false, gdy to był ostatni akt. */
 export function advanceAct(ex: ExpeditionState): boolean {
   if (ex.act >= BAL.expedition.acts) return false;
   ex.act++;
-  ex.map = rollActMap();
+  ex.map = rollActMap(ex.act);
   ex.path = [];
   return true;
 }
@@ -98,27 +205,43 @@ export function depthAt(act: number, row: number): number {
 
 export const nodeDepth = (ex: ExpeditionState): number => depthAt(ex.act, exRow(ex));
 
-/** Poziom dla węzła z walką: biom aktu, krótszy cel bez bossa (walka, elita) albo pełny poziom z bossem. */
-export function levelAt(act: number, row: number, kind: NodeKind): LevelDef {
+/** Suma nagród modyfikatorów mapy (punkty %). */
+export const mapReward = (m: MapNode): number => (m.mods ?? []).reduce((s, id) => s + (MAP_MOD_BY_ID[id]?.reward ?? 0), 0);
+
+/** Flagi mapy na czas poziomu: modyfikatory, bonus, nagroda (ilość i jakość łupu). */
+function mapFlags(m: MapNode): Record<string, number> {
+  const f: Record<string, number> = {};
+  const add = (o: Record<string, number> | undefined) => { for (const [k, v] of Object.entries(o ?? {})) f[k] = (f[k] ?? 0) + v; };
+  for (const id of m.mods ?? []) add(MAP_MOD_BY_ID[id]?.flags);
+  add(m.bonus ? MAP_BONUS_BY_ID[m.bonus]?.flags : undefined);
+  const r = mapReward(m) / 100;
+  if (r > 0) add({ mapLoot: r, itemLuck: r * BAL.expedition.rewardLuck });
+  return f;
+}
+
+/** Poziom dla węzła z walką: biom aktu, krótszy cel bez bossa (mapa, elita), loch albo pełny poziom z bossem. */
+export function levelAt(act: number, row: number, m: MapNode): LevelDef {
   const X = BAL.expedition;
   const depth = depthAt(act, row);
   const biome = (act - 1) % BIOMES.length;
   const b = BIOMES[biome];
-  const boss = kind === 'boss';
+  const boss = m.kind === 'boss';
   const short = boss ? 1 : X.fightScale;
   const objective = (row + act) % 2 === 0
     ? { kind: 'survive' as const, time: Math.round(X.objTime(act) * short / 10) * 10 }
     : { kind: 'kills' as const, count: Math.round(X.objKills(act) * short / 10) * 10 };
   return {
     depth,
-    name: `${b.name}, akt ${act}`,
+    name: m.name ?? `${b.name}, akt ${act}`,
     biome,
     objective,
     waveOffset: Math.min(240, (depth - 1) * X.waveOffsetPerDepth),
     bossName: b.bossName,
     boss,
-    eliteMul: kind === 'elite' ? X.eliteEveryMul : 1,
+    eliteMul: m.kind === 'elite' ? X.eliteEveryMul : 1,
+    dungeon: m.kind === 'dungeon',
+    flags: mapFlags(m),
   };
 }
 
-export const nodeLevel = (ex: ExpeditionState): LevelDef => levelAt(ex.act, exRow(ex), currentNode(ex) ?? 'fight');
+export const nodeLevel = (ex: ExpeditionState): LevelDef => levelAt(ex.act, exRow(ex), currentMap(ex) ?? { kind: 'fight' });

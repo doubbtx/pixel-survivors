@@ -339,6 +339,17 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.line(3, 14, 13, 11, C.brown).line(3, 11, 13, 14, C.dbrown);
     flame(p, 8, 8, 0.8);
   },
+  ex_dungeon: (p) => {
+    // Kamienny łuk wejścia z ciemnym wnętrzem i fioletową poświatą.
+    p.block(2, 4, 12, 11, RAMP.stone).sphere(8, 5, 6, 3.5, RAMP.stone);
+    p.rect(5, 6, 6, 9, C.black).sphere(8, 6.5, 3, 2.5, [C.black, C.black, C.black, C.black]);
+    p.px(7, 10, C.pink).px(8, 11, C.plum).px(9, 9, C.pink).rect(2, 14, 12, 1, C.dgray);
+  },
+  ex_shrine: (p) => {
+    p.block(5, 7, 6, 8, RAMP.stone).rect(3, 13, 10, 2, C.dgray).rect(4, 6, 8, 1, C.lgray);
+    p.sphere(8, 4, 2.5, 2.5, [C.orange, C.gold, C.yellow, C.white]);
+    sparkle(p, 13, 3);
+  },
 
   // ===================== tagi kart =====================
   'tag:Ogień': (p) => flame(p, 8, 8, 1),

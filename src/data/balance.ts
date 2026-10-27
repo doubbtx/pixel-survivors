@@ -118,6 +118,8 @@ export const BAL = {
     essenceSecDiv: 20,
     essenceKillDiv: 60,
     essencePerLevel: 1.5,
+    /** Esencja za każdą ukończoną mapę Ekspedycji. */
+    essencePerMap: 8,
     /** Paragon: poziom = sqrt(cała esencja / dzielnik); każdy poziom daje tyle obrażeń i maks. HP. */
     paragonDiv: 40,
     paragonPct: 0.01,
@@ -170,12 +172,22 @@ export const BAL = {
   expedition: {
     acts: 3,
     /** Rzędy mapy aktu (ostatni = boss) i kolumny. */
-    rows: 6,
-    lanes: 3,
+    rows: 7,
+    lanes: 4,
     /** Szansa, że boczna kolumna rzędu jest pusta. */
     emptyChance: 0.3,
     /** Wagi typów węzłów w środkowych rzędach. */
-    weights: [['fight', 40], ['elite', 16], ['treasure', 9], ['shop', 12], ['anvil', 9], ['rest', 12]] as const,
+    weights: [['fight', 40], ['elite', 14], ['dungeon', 7], ['treasure', 7], ['shop', 10], ['anvil', 8], ['rest', 9], ['shrine', 8]] as const,
+    /** Rzadkość map rośnie z aktem i rzędem (szansa Magicznej / Rzadkiej). */
+    rarityPerAct: 0.25,
+    rarityPerRow: 0.06,
+    /** Szansa, że mapa nie ma bonusu. */
+    noBonusChance: 0.35,
+    /** Nagroda modyfikatorów: punkt ilości łupu (%) daje tyle szczęścia przedmiotów (× ułamek) i esencji (× ułamek). */
+    rewardLuck: 1,
+    rewardEssence: 0.5,
+    /** Błogosławieństwo kapliczki działa na tyle kolejnych map z walką. */
+    blessingMaps: 3,
     /** Cel pełnego poziomu aktu (boss): czas przetrwania (s) albo liczba zabójstw. */
     objTime: (act: number) => 150 + 30 * act,
     objKills: (act: number) => 300 + 250 * act,

@@ -16,7 +16,7 @@ kartami-augmentami i ekwipunkiem z jakościami. Wszystko po polsku.
 ## Technologia
 
 HTML5 Canvas 2D + TypeScript + Vite. Bufor 480×270 skalowany całkowitoliczbowo, świat rysowany z ZOOM 1.5.
-Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 5).
+Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 6).
 Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków).
 
 ## Struktura `src/`
@@ -27,7 +27,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `icons.ts` (ikony 16×16: `ic_<broń>`, `pi_<pasywka>`, `ab_<umiejętność>`, `tag:<Tag>`), `items.ts` (`it_<przedmiot>`),
   `actors.ts` (animowane postacie, `name@klatka`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów).
 - `data/` — `balance.ts`, `weapons.ts` (z ewolucjami), `passives.ts`, `enemies.ts` (Volley: kształt i ruch salw), `waves.ts`, `heroes.ts`,
-  `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (węzły, mapa aktu, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewko rozwoju, Paragon, prestiż, esencja), `cards.ts` (78 kart: stats/mul/flags/hooks; lista flag w komentarzu pliku),
+  `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (78 kart: stats/mul/flags/hooks; lista flag w komentarzu pliku),
   `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, rollItem, porównania).
 - `entities/` — typy encji.
 - `systems/` — gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans (levelup), wieżyczki,
@@ -40,7 +40,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView), `expedition.ts` (ExpeditionMapView), `collection.ts` (kolekcja i bany kart), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `game-screen.ts` (stany: play/levelup/cards/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb).
 
-## Stan (wersja 0.8.0)
+## Stan (wersja 0.9.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -110,11 +110,17 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `run.augElem`; pola pocisku `retarget/split/splitEnd/retMul/blast`, `shardProjectile`), 25 nowych kart (flagi `elemChance.*`,
   `critShock`, `reactPower`, `reactCd`, `shockBonus`, `bossDmg`, `cull`, `enemySpeed`; augmenty bohaterów `h_k_*`, `h_b_*`, `h_i_*`),
   5 żywiołowych super-bonusów (ignite, frostbite, conductor, thunder, plague).
+- Etap C (0.9): Rozwój tylko w Ekspedycji (`NO_META` w innych trybach, esencja tylko z Ekspedycji), drzewko per bohater
+  (`HERO_TREES`: 4 gałęzie tematyczne z kluczem + wspólna Wyprawa; `save.meta.heroes[id]`, `heroMeta`; klucze przez flagi
+  `echo.q/e`, `dashResetQ`, `dashNet`, `ringShield`, `counterSlam`, `aegis`, `revive`...), ekran Rozwój z zakładkami (Q/E),
+  zapis v6 (zwrot dawnej esencji i węzłów do `meta.unassigned`, Paragon przez `meta.legacy`, przydział klawiszem B).
+  Ekspedycja: mapy 7 rzędów × 4 kolumny, węzły z walką = mapy (nazwa, rzadkość, 0-4 modyfikatory ryzyka z nagrodą,
+  bonus), `LevelDef.flags` dokładane w `indexEffects`, nowe węzły Loch (`LevelDef.dungeon`, `startDungeon`) i Kapliczka
+  (`ex.blessing` na `BAL.expedition.blessingMaps` map), esencja × nagroda map (`ex.bonus`).
 
 ## Plan dalej
 
-- Uzgodniona kolejność: etap C (Ekspedycja jak mapy z PoE: więcej map z modyfikatorami/bonusami, kapliczki i lochy jako węzły; Rozwój tylko w Ekspedycji,
-  drzewko per bohater, migracja zapisu do v6), etap D (grafika, „soczystość”, UI, dźwięk, jakość ulepszeń broni przy awansie).
+- Uzgodniona kolejność: etap D (grafika, „soczystość”, UI, dźwięk, jakość ulepszeń broni przy awansie).
 - Kolejni bohaterowie: zostały 3 role (np. przywoływacz, zabójca, kapłan) — wszystko oryginalne.
 - Balans Ekspedycji po testach (długość walk, nagrody węzłów).
 

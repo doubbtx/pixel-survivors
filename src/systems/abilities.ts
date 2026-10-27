@@ -220,6 +220,17 @@ export function castAbility(run: Run, slot: AbilitySlot, free = false): void {
   if (a.def.evolved) EVO_EXTRA[a.def.id]?.(run, a, P);
   if (a.def.kind !== 'dash') sfx.play('ability');
   if (free) return;
+  // Węzły Rozwoju (data/meta.ts, flagi): powtórzenie umiejętności, Przewrót skraca Q / zostawia Sieć, tarcza z Pierścienia.
+  for (let i = 0; i < run.flag(`echo.${slot}`); i++) run.schedule(0.4 * (i + 1), () => castAbility(run, slot, true));
+  if (slot === 'dash') {
+    const reset = run.flag('dashResetQ');
+    if (reset > 0) run.abilities.q.cd *= 1 - Math.min(1, reset);
+    if (run.flag('dashNet') > 0) {
+      const z = run.addZone('net', run.player.x, run.player.y, 26 * run.stats.area, 8 * run.stats.might, 2.5 * run.stats.duration, SLOT.e, 'Sidła');
+      if (z) { z.slow = 0.6; z.tick = 30; }
+    }
+  }
+  if (a.def.kind === 'firering' && run.flag('ringShield') > 0) run.addShield(run.stats.maxHp * run.flag('ringShield'), 0.3);
   // Echo mocy (pasywka): co N-te Q/E powtarza się za darmo.
   const hp = run.hero.passive;
   if (hp.kind === 'echoCast' && (slot === 'q' || slot === 'e')) {

@@ -2,15 +2,13 @@ import type { Stats } from '../entities/types';
 import { BAL } from './balance';
 
 /**
- * Meta-progresja (między runami): esencja zdobywana na końcu każdego runu (także po śmierci)
- * kupuje poziomy węzłów drzewka rozwoju. Do tego Paragon (poziom konta z całej zdobytej esencji,
- * bez limitu) i prestiż (reset drzewka za stały bonus).
+ * Meta-progresja (tylko Ekspedycja): każdy bohater ma własne drzewko, esencję, Paragon i prestiż.
+ * Esencję zdobywa bohater, który kończy Ekspedycję (także po śmierci). Hardcore i Endless są „czyste” — bez meta-bonusów.
  *
- * Nowy węzeł = wpis w META_NODES (gałąź, kolejność w gałęzi = wymagania: węzeł wymaga poprzedniego
- * w tej samej gałęzi na poziomie 1+). Efekt: dodatek do statystyki, mnożnik, flaga albo zasób na start runu.
+ * Drzewko bohatera: 4 gałęzie tematyczne + wspólna gałąź Wyprawa (zasoby na start, mnożnik esencji).
+ * Kolejność w gałęzi = wymagania (węzeł wymaga poprzedniego na poziomie 1+). Ostatni węzeł gałęzi tematycznej
+ * to „klucz” (1 poziom), który zmienia działanie umiejętności — przez flagi silnika (lista w data/cards.ts).
  */
-export type MetaBranch = 'Siła' | 'Przetrwanie' | 'Fortuna' | 'Taktyka';
-export const BRANCHES: MetaBranch[] = ['Siła', 'Przetrwanie', 'Fortuna', 'Taktyka'];
 
 /** Zasoby dodawane na start nowego runu. */
 export type StartRes = 'gold' | 'shards' | 'rerolls' | 'skips' | 'banishes' | 'cardRerolls';
@@ -24,7 +22,7 @@ export type MetaEffect =
 
 export interface MetaNode {
   id: string;
-  branch: MetaBranch;
+  branch: string;
   name: string;
   /** Opis z {v} = łączna wartość na danym poziomie. */
   desc: string;
@@ -34,46 +32,122 @@ export interface MetaNode {
   cost: number;
   effect: MetaEffect;
   pct: boolean;
+  /** Węzeł-klucz: zmienia działanie umiejętności. */
+  key?: boolean;
 }
 
-const N = (id: string, branch: MetaBranch, name: string, icon: string, max: number, cost: number, effect: MetaEffect, desc: string, pct: boolean): MetaNode =>
+const N = (id: string, branch: string, name: string, icon: string, max: number, cost: number, effect: MetaEffect, desc: string, pct: boolean): MetaNode =>
   ({ id, branch, name, icon, max, cost, effect, desc, pct });
+const stat = (s: keyof Stats, per: number): MetaEffect => ({ kind: 'stat', stat: s, per });
+const flag = (f: string, per: number): MetaEffect => ({ kind: 'flag', flag: f, per });
+/** Klucz gałęzi: 1 poziom, efekt opisany słownie. */
+const KEY = (id: string, branch: string, name: string, icon: string, cost: number, effect: MetaEffect, desc: string): MetaNode =>
+  ({ id, branch, name, icon, max: 1, cost, effect, desc, pct: false, key: true });
 
-export const META_NODES: MetaNode[] = [
-  N('m_might', 'Siła', 'Ostrze', 'pi_might', 5, 20, { kind: 'stat', stat: 'might', per: 0.04 }, '+{v} obrażeń', true),
-  N('m_crit', 'Siła', 'Precyzja', 'pi_crit', 5, 25, { kind: 'stat', stat: 'crit', per: 0.02 }, '+{v} szansy na krytyk', true),
-  N('m_fury', 'Siła', 'Furia', 'pi_fury', 5, 30, { kind: 'stat', stat: 'atkSpeed', per: 0.04 }, '+{v} szybkości ataku', true),
-  N('m_slaughter', 'Siła', 'Rzeź', 'ic_axe_evo', 5, 35, { kind: 'stat', stat: 'critMult', per: 0.1 }, '+{v} obrażeń krytycznych', true),
-  N('m_amount', 'Siła', 'Mnogość', 'pi_dup', 1, 400, { kind: 'stat', stat: 'amount', per: 1 }, '+{v} pocisk dla każdej broni', false),
-
-  N('m_hp', 'Przetrwanie', 'Witalność', 'pi_heart', 5, 20, { kind: 'mul', stat: 'maxHp', per: 0.05 }, '+{v} maks. HP', true),
-  N('m_armor', 'Przetrwanie', 'Skóra', 'pi_armor', 5, 25, { kind: 'stat', stat: 'armor', per: 1 }, '+{v} pancerza', false),
-  N('m_regen', 'Przetrwanie', 'Odnowa', 'pi_herb', 5, 30, { kind: 'stat', stat: 'regen', per: 0.2 }, '+{v} HP na sekundę', false),
-  N('m_leech', 'Przetrwanie', 'Wampir', 'pi_fang', 5, 35, { kind: 'stat', stat: 'lifesteal', per: 0.005 }, '+{v} leczenia z obrażeń', true),
-  N('m_ward', 'Przetrwanie', 'Ochrona', 'tag:Tarcze', 5, 45, { kind: 'flag', flag: 'dmgTaken', per: 0.03 }, '-{v} otrzymywanych obrażeń', true),
-
-  N('m_gold', 'Fortuna', 'Sakiewka', 'coin', 5, 15, { kind: 'start', res: 'gold', per: 25 }, '+{v} złota na start runu', false),
-  N('m_xp', 'Fortuna', 'Mądrość', 'gem0', 5, 20, { kind: 'stat', stat: 'growth', per: 0.05 }, '+{v} doświadczenia', true),
-  N('m_greed', 'Fortuna', 'Chciwość', 'cd_gold', 5, 25, { kind: 'stat', stat: 'greed', per: 0.1 }, '+{v} złota', true),
-  N('m_shards', 'Fortuna', 'Kowal', 'sh_shard', 5, 30, { kind: 'start', res: 'shards', per: 3 }, '+{v} odłamków na start runu', false),
-  N('m_luck', 'Fortuna', 'Szczęście', 'pi_clover', 5, 35, { kind: 'flag', flag: 'itemLuck', per: 0.1 }, '+{v} szansy na lepsze przedmioty', true),
-
-  N('m_reroll', 'Taktyka', 'Plan B', 'sh_dice', 3, 30, { kind: 'start', res: 'rerolls', per: 1 }, '+{v} losowania przy awansie', false),
-  N('m_skip', 'Taktyka', 'Wybredność', 'ab_k_roll', 3, 25, { kind: 'start', res: 'skips', per: 1 }, '+{v} pominięcia przy awansie', false),
-  N('m_banish', 'Taktyka', 'Wygnaniec', 'sh_scroll', 3, 30, { kind: 'start', res: 'banishes', per: 1 }, '+{v} wygnania przy awansie', false),
-  N('m_cards', 'Taktyka', 'Talia', 'sh_card', 3, 40, { kind: 'start', res: 'cardRerolls', per: 1 }, '+{v} losowania karty', false),
-  N('m_legacy', 'Taktyka', 'Dziedzictwo', 'syn_all', 5, 50, { kind: 'essence', per: 0.1 }, '+{v} esencji z runów', true),
+/** Gałąź wspólna dla wszystkich bohaterów (poziomy liczone osobno dla każdego). */
+const EXPEDITION: MetaNode[] = [
+  N('w_gold', 'Wyprawa', 'Sakiewka', 'coin', 5, 15, { kind: 'start', res: 'gold', per: 25 }, '+{v} złota na start', false),
+  N('w_shards', 'Wyprawa', 'Kowal', 'sh_shard', 5, 25, { kind: 'start', res: 'shards', per: 3 }, '+{v} odłamków na start', false),
+  N('w_reroll', 'Wyprawa', 'Plan B', 'sh_dice', 3, 30, { kind: 'start', res: 'rerolls', per: 1 }, '+{v} losowania przy awansie', false),
+  N('w_cards', 'Wyprawa', 'Talia', 'sh_card', 3, 40, { kind: 'start', res: 'cardRerolls', per: 1 }, '+{v} losowania karty', false),
+  N('w_legacy', 'Wyprawa', 'Dziedzictwo', 'syn_all', 5, 50, { kind: 'essence', per: 0.1 }, '+{v} esencji z wypraw', true),
 ];
 
-export const META_BY_ID: Record<string, MetaNode> = Object.fromEntries(META_NODES.map((n) => [n.id, n]));
+export const HERO_TREES: Record<string, MetaNode[]> = {
+  kestra: [
+    N('k_crit', 'Krytyki', 'Precyzja', 'pi_crit', 5, 20, stat('crit', 0.02), '+{v} szansy na krytyk', true),
+    N('k_critmult', 'Krytyki', 'Rzeź', 'ic_axe_evo', 5, 25, stat('critMult', 0.1), '+{v} obrażeń krytycznych', true),
+    N('k_extra', 'Krytyki', 'Sokół', 'ic_arrow_evo', 3, 40, flag('passive.extra', 1), '+{v} strzały Sokolego oka', false),
+    N('k_giant', 'Krytyki', 'Łowca', 'ui_skull', 5, 35, flag('bossDmg', 0.06), '+{v} obrażeń przeciw elitom i bossom', true),
+    KEY('k_hawk', 'Krytyki', 'Jastrząb', 'pi_crit', 300, flag('passive.n', 1), 'Sokole oko co 3. strzał zamiast co 4.'),
+    N('k_area', 'Zasięg', 'Rozmach', 'pi_lens', 5, 20, stat('area', 0.04), '+{v} obszaru', true),
+    N('k_proj', 'Zasięg', 'Cięciwa', 'ic_arrow', 5, 25, stat('projSpeed', 0.08), '+{v} szybkości pocisków', true),
+    N('k_volley', 'Zasięg', 'Wachlarz', 'ab_k_volley', 5, 30, flag('k_volley.count', 1), '+{v} strzał Salwy', false),
+    N('k_rain', 'Zasięg', 'Chmura', 'ab_k_rain', 5, 35, flag('k_rain.radius', 6), '+{v} promienia Deszczu strzał', false),
+    KEY('k_pierce', 'Zasięg', 'Przeszycie', 'ab_k_volley_evo', 300, flag('k_volley.pierce', 20), 'Strzały Salwy przebijają wszystkich wrogów.'),
+    N('k_move', 'Mobilność', 'Lekki krok', 'pi_wings', 5, 20, stat('speedBonus', 0.04), '+{v} szybkości ruchu', true),
+    N('k_rollcd', 'Mobilność', 'Refleks', 'ab_k_roll', 5, 25, flag('cd.dash', 0.08), 'Przewrót odnawia się {v} szybciej', true),
+    N('k_rolldist', 'Mobilność', 'Skok', 'ab_k_roll', 5, 25, flag('k_roll.dist', 8), '+{v} zasięgu Przewrotu', false),
+    N('k_evade', 'Mobilność', 'Unik', 'tag:Szybkość', 5, 35, flag('dmgTaken', 0.02), '-{v} otrzymywanych obrażeń', true),
+    KEY('k_reset', 'Mobilność', 'Kontra', 'cd_echo', 300, flag('dashResetQ', 0.5), 'Przewrót skraca odnowienie Salwy o połowę.'),
+    N('k_netdmg', 'Pułapki', 'Kolce', 'ab_k_net', 5, 20, flag('k_net.damage', 3), '+{v} obrażeń Sieci co tick', false),
+    N('k_netrad', 'Pułapki', 'Szeroka sieć', 'ab_k_net', 5, 25, flag('k_net.radius', 4), '+{v} promienia Sieci', false),
+    N('k_netdur', 'Pułapki', 'Mocne liny', 'pi_hourglass', 5, 25, flag('k_net.duration', 0.4), 'Sieć trwa o {v} s dłużej', false),
+    N('k_netcd', 'Pułapki', 'Zastawianie', 'pi_clock', 5, 30, flag('cd.e', 0.06), 'Sieć odnawia się {v} szybciej', true),
+    KEY('k_dashnet', 'Pułapki', 'Sidła', 'ab_k_net_evo', 300, flag('dashNet', 1), 'Przewrót zostawia w miejscu startu Sieć.'),
+    ...EXPEDITION,
+  ],
+  borgun: [
+    N('b_hp', 'Wytrzymałość', 'Witalność', 'pi_heart', 5, 20, { kind: 'mul', stat: 'maxHp', per: 0.05 }, '+{v} maks. HP', true),
+    N('b_armor', 'Wytrzymałość', 'Skóra', 'pi_armor', 5, 25, stat('armor', 1), '+{v} pancerza', false),
+    N('b_regen', 'Wytrzymałość', 'Odnowa', 'pi_herb', 5, 30, stat('regen', 0.2), '+{v} HP na sekundę', false),
+    N('b_ward', 'Wytrzymałość', 'Ochrona', 'tag:Tarcze', 5, 40, flag('dmgTaken', 0.03), '-{v} otrzymywanych obrażeń', true),
+    KEY('b_undying', 'Wytrzymałość', 'Niezłomny', 'cd_phoenix', 350, flag('revive', 1), 'Raz na poziom odradzasz się po śmierci.'),
+    N('b_chdmg', 'Kontratak', 'Taran', 'ab_b_charge', 5, 20, flag('b_charge.damage', 10), '+{v} obrażeń Szarży', false),
+    N('b_chcd', 'Kontratak', 'Rozpęd', 'pi_clock', 5, 25, flag('cd.q', 0.06), 'Szarża odnawia się {v} szybciej', true),
+    N('b_stun', 'Kontratak', 'Ogłuszenie', 'ab_b_charge_evo', 5, 30, flag('b_charge.stun', 0.15), 'Szarża ogłusza o {v} s dłużej', false),
+    N('b_leech', 'Kontratak', 'Wampir', 'pi_fang', 5, 35, stat('lifesteal', 0.005), '+{v} leczenia z obrażeń', true),
+    KEY('b_counter', 'Kontratak', 'Odwet', 'ab_b_slam', 300, flag('counterSlam', 3), 'Gdy oberwiesz, Wstrząs uderza sam (najwyżej co 3 s).'),
+    N('b_area', 'Obszar', 'Zamach', 'pi_lens', 5, 20, stat('area', 0.04), '+{v} obszaru', true),
+    N('b_slamdmg', 'Obszar', 'Ciężka ręka', 'ab_b_slam', 5, 25, flag('b_slam.damage', 8), '+{v} obrażeń Wstrząsu', false),
+    N('b_slamrad', 'Obszar', 'Pęknięcia', 'ab_b_slam', 5, 25, flag('b_slam.radius', 4), '+{v} promienia Wstrząsu', false),
+    N('b_titan', 'Obszar', 'Gniew', 'ab_b_titan', 5, 35, flag('b_titan.radius', 6), '+{v} promienia aury Gniewu tytana', false),
+    KEY('b_double', 'Obszar', 'Wstrząsy', 'ab_b_slam_evo', 300, flag('echo.e', 1), 'Wstrząs uderza drugi raz po chwili.'),
+    N('b_cap', 'Tarcza', 'Żelazo', 'it_plate', 5, 20, flag('passive.shieldCap', 0.03), 'Tarcza Żelaznej woli do +{v} HP więcej', true),
+    N('b_overheal', 'Tarcza', 'Nadmiar', 'tag:Tarcze', 5, 25, flag('overhealShield', 0.06), 'Nadmiar leczenia w tarczę (maks. {v} HP)', true),
+    N('b_ult', 'Tarcza', 'Furia', 'ab_b_titan', 5, 30, flag('ultGain', 0.06), 'Ultimate ładuje się {v} szybciej', true),
+    N('b_bulwark', 'Tarcza', 'Mur', 'pi_armor', 5, 35, stat('armor', 1), '+{v} pancerza', false),
+    KEY('b_bastion', 'Tarcza', 'Bastion', 'cd_frost', 300, flag('aegis', 15), 'Co 15 s pierwsze trafienie w ciebie jest blokowane.'),
+    ...EXPEDITION,
+  ],
+  ignara: [
+    N('i_elem', 'Ogień', 'Żar', 'tag:Ogień', 5, 20, stat('elemPower', 0.05), '+{v} siły żywiołów', true),
+    N('i_fbdmg', 'Ogień', 'Płomień', 'ab_i_fireball', 5, 25, flag('i_fireball.damage', 8), '+{v} obrażeń Kuli ognia', false),
+    N('i_fbrad', 'Ogień', 'Pożoga', 'ab_i_fireball', 5, 25, flag('i_fireball.radius', 3), '+{v} promienia Kuli ognia', false),
+    N('i_inferno', 'Ogień', 'Ulewa ognia', 'ab_i_inferno', 5, 35, flag('i_inferno.duration', 0.5), 'Inferno trwa o {v} s dłużej', false),
+    KEY('i_twin', 'Ogień', 'Bliźniacze kule', 'ab_i_fireball_evo', 300, flag('echo.q', 1), 'Kula ognia leci drugi raz po chwili.'),
+    N('i_cdr', 'Echo', 'Skupienie', 'pi_clock', 5, 20, stat('cdr', 0.03), 'Umiejętności odnawiają się {v} szybciej', true),
+    N('i_cdq', 'Echo', 'Szybka kula', 'ab_i_fireball', 5, 25, flag('cd.q', 0.05), 'Kula ognia odnawia się {v} szybciej', true),
+    N('i_cde', 'Echo', 'Szybki krąg', 'ab_i_ring', 5, 25, flag('cd.e', 0.05), 'Pierścień ognia odnawia się {v} szybciej', true),
+    N('i_ult', 'Echo', 'Natchnienie', 'ab_i_inferno', 5, 35, flag('ultGain', 0.06), 'Ultimate ładuje się {v} szybciej', true),
+    KEY('i_echo', 'Echo', 'Podwójne echo', 'cd_echo', 300, flag('passive.n', 1), 'Echo mocy co 2. użycie zamiast co 3.'),
+    N('i_hp', 'Bariera', 'Witalność', 'pi_heart', 5, 20, { kind: 'mul', stat: 'maxHp', per: 0.05 }, '+{v} maks. HP', true),
+    N('i_armor', 'Bariera', 'Osłona', 'pi_armor', 5, 25, stat('armor', 1), '+{v} pancerza', false),
+    N('i_ringdur', 'Bariera', 'Krąg', 'ab_i_ring', 5, 25, flag('i_ring.duration', 0.4), 'Pierścień ognia trwa o {v} s dłużej', false),
+    N('i_blink', 'Bariera', 'Błysk', 'ab_i_blink', 5, 30, flag('cd.dash', 0.08), 'Mignięcie odnawia się {v} szybciej', true),
+    KEY('i_ringshield', 'Bariera', 'Płomienna tarcza', 'ab_i_ring_evo', 300, flag('ringShield', 0.15), 'Pierścień ognia daje tarczę 15% HP.'),
+    N('i_react', 'Żywioły', 'Reakcja', 'cd_explode', 5, 20, flag('reactPower', 0.08), 'Reakcje żywiołów silniejsze o {v}', true),
+    N('i_burn', 'Żywioły', 'Iskry', 'tag:Ogień', 5, 25, flag('elemChance.fire', 0.02), '{v} szansy na podpalenie przy trafieniu', true),
+    N('i_shock', 'Żywioły', 'Wyładowanie', 'ic_chain', 5, 30, flag('shockBonus', 0.03), 'Porażeni wrogowie dostają +{v} obrażeń', true),
+    N('i_tox', 'Żywioły', 'Opary', 'ic_orbit', 5, 30, flag('elemChance.poison', 0.02), '{v} szansy na zatrucie przy trafieniu', true),
+    KEY('i_catalyst', 'Żywioły', 'Katalizator', 'cd_nova', 300, flag('reactCd', 0.5), 'Reakcje odnawiają się na wrogu 2x szybciej.'),
+    ...EXPEDITION,
+  ],
+};
 
-/** Stan meta-progresji w zapisie (core/save.ts). */
-export interface MetaState {
+export const heroTree = (heroId: string): MetaNode[] => HERO_TREES[heroId] ?? EXPEDITION;
+/** Gałęzie drzewka bohatera w kolejności. */
+export const treeBranches = (heroId: string): string[] => [...new Set(heroTree(heroId).map((n) => n.branch))];
+
+/** Rozwój jednego bohatera. */
+export interface HeroMeta {
   essence: number;
-  /** Cała esencja zdobyta od początku (Paragon; prestiż jej nie zeruje). */
+  /** Cała esencja zdobyta przez bohatera (Paragon; prestiż jej nie zeruje). */
   total: number;
   nodes: Record<string, number>;
   prestige: number;
+}
+
+/** Stan meta-progresji w zapisie (core/save.ts): rozwój per bohater i pula esencji do rozdania (z migracji v6). */
+export interface MetaState {
+  heroes: Record<string, HeroMeta>;
+  unassigned: number;
+  /** Cała esencja dawnego wspólnego drzewka (Paragon) — przechodzi do bohatera razem z pulą. */
+  legacy?: number;
+}
+
+export function heroMeta(m: MetaState, heroId: string): HeroMeta {
+  return (m.heroes[heroId] ??= { essence: 0, total: 0, nodes: {}, prestige: 0 });
 }
 
 export function nodeCost(n: MetaNode, level: number): number {
@@ -81,13 +155,14 @@ export function nodeCost(n: MetaNode, level: number): number {
 }
 
 /** Węzeł wymaga poprzedniego w swojej gałęzi na poziomie 1+. */
-export function nodeUnlocked(m: MetaState, n: MetaNode): boolean {
-  const branch = META_NODES.filter((x) => x.branch === n.branch);
+export function nodeUnlocked(h: HeroMeta, tree: MetaNode[], n: MetaNode): boolean {
+  const branch = tree.filter((x) => x.branch === n.branch);
   const i = branch.indexOf(n);
-  return i === 0 || (m.nodes[branch[i - 1].id] ?? 0) > 0;
+  return i === 0 || (h.nodes[branch[i - 1].id] ?? 0) > 0;
 }
 
 export function nodeLine(n: MetaNode, level: number): string {
+  if (n.key) return n.desc;
   const v = n.effect.per * Math.max(1, level);
   return n.desc.replace('{v}', n.pct ? `${Math.round(v * 1000) / 10}%` : String(Math.round(v * 10) / 10));
 }
@@ -97,10 +172,10 @@ export function paragonLevel(total: number): number {
   return Math.floor(Math.sqrt(total / BAL.meta.paragonDiv));
 }
 
-/** Esencja wydana w drzewku (warunek prestiżu). */
-export function spentEssence(m: MetaState): number {
+/** Esencja wydana w drzewku bohatera (warunek prestiżu). */
+export function spentEssence(h: HeroMeta, tree: MetaNode[]): number {
   let s = 0;
-  for (const n of META_NODES) for (let l = 0; l < (m.nodes[n.id] ?? 0); l++) s += nodeCost(n, l);
+  for (const n of tree) for (let l = 0; l < (h.nodes[n.id] ?? 0); l++) s += nodeCost(n, l);
   return s;
 }
 
@@ -113,10 +188,13 @@ export interface MetaBonus {
   essenceMul: number;
 }
 
-export function metaBonus(m: MetaState): MetaBonus {
-  const b: MetaBonus = { stats: {}, mul: {}, flags: {}, start: {}, essenceMul: 1 + BAL.meta.prestigeEssence * m.prestige };
-  for (const n of META_NODES) {
-    const lvl = m.nodes[n.id] ?? 0;
+/** Bez meta-bonusów (Hardcore, Endless, Trening). */
+export const NO_META: MetaBonus = { stats: {}, mul: {}, flags: {}, start: {}, essenceMul: 1 };
+
+export function metaBonus(h: HeroMeta, tree: MetaNode[]): MetaBonus {
+  const b: MetaBonus = { stats: {}, mul: {}, flags: {}, start: {}, essenceMul: 1 + BAL.meta.prestigeEssence * h.prestige };
+  for (const n of tree) {
+    const lvl = h.nodes[n.id] ?? 0;
     if (!lvl) continue;
     const v = n.effect.per * lvl, e = n.effect;
     if (e.kind === 'stat') b.stats[e.stat] = (b.stats[e.stat] ?? 0) + v;
@@ -126,14 +204,14 @@ export function metaBonus(m: MetaState): MetaBonus {
     else b.essenceMul += v;
   }
   // Paragon i prestiż: procent obrażeń i maks. HP.
-  const pct = BAL.meta.paragonPct * paragonLevel(m.total) + BAL.meta.prestigePct * m.prestige;
+  const pct = BAL.meta.paragonPct * paragonLevel(h.total) + BAL.meta.prestigePct * h.prestige;
   b.stats.might = (b.stats.might ?? 0) + pct;
   b.mul.maxHp = (b.mul.maxHp ?? 1) * (1 + pct);
   return b;
 }
 
-/** Esencja za run: głębokość, czas, zabójstwa, poziom postaci (× mnożnik z drzewka i prestiżu). */
-export function runEssence(r: { depth: number; totalTime: number; kills: number; level: number }, mul: number): number {
+/** Esencja za Ekspedycję: głębokość, czas, zabójstwa, poziom postaci, ukończone mapy (× mnożnik z drzewka i prestiżu). */
+export function runEssence(r: { depth: number; totalTime: number; kills: number; level: number }, cleared: number, mul: number): number {
   const M = BAL.meta;
-  return Math.round((r.depth * M.essencePerDepth + r.totalTime / M.essenceSecDiv + r.kills / M.essenceKillDiv + r.level * M.essencePerLevel) * mul);
+  return Math.round((r.depth * M.essencePerDepth + r.totalTime / M.essenceSecDiv + r.kills / M.essenceKillDiv + r.level * M.essencePerLevel + cleared * M.essencePerMap) * mul);
 }
