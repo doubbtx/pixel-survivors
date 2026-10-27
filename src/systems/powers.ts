@@ -63,6 +63,12 @@ const FIRE: Record<string, (run: Run, name: string) => boolean> = {
     }
     return true;
   },
+  crown(run, name) {
+    const p = run.player, base = rng.range(0, TAU);
+    for (let i = 0; i < 16; i++) run.spawnProjectile({ x: p.x, y: p.y, angle: base + (i * TAU) / 16, speed: 160, damage: dmg(run, 10), src: name, sprite: 'sun', pierce: 2, life: 1.2 });
+    FIRE.shotgun(run, name);
+    return true;
+  },
   brood(run, name) {
     const p = run.player;
     for (let i = 0; i < 3; i++) spawnMinion(run, p.x, p.y, dmg(run, 7), 8, false, name);
@@ -89,8 +95,11 @@ export function powerCd(run: Run, def: BossPowerDef): number {
 /** Oferta 3 mocy po bossie: losowe różne, a posiadana (poniżej maks. poziomu) zawsze jako ulepszenie. */
 export function rollPowerOffer(run: Run): BossPowerDef[] {
   const own = run.power && run.power.level < BAL.bossPowers.maxLevel ? BOSS_POWER_BY_ID[run.power.id] : null;
-  const pool = BOSS_POWERS.filter((p) => p.id !== run.power?.id);
+  const pool = BOSS_POWERS.filter((p) => p.id !== run.power?.id && !p.secret);
   const out: BossPowerDef[] = own ? [own] : [];
+  // Zapomniany Król: jego moc zawsze na początku oferty po zwycięstwie w kurhanie.
+  if (run.cardState.kingPower && run.power?.id !== 'crown') out.unshift(BOSS_POWER_BY_ID.crown);
+  delete run.cardState.kingPower;
   while (out.length < 3 && pool.length) out.push(pool.splice(rng.int(0, pool.length - 1), 1)[0]);
   return out;
 }

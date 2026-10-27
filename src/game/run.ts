@@ -48,6 +48,7 @@ import { equippedAwakenings, forgeKillDrops, forgeBossDrops, grantMat, emptyMats
 import type { MatId, ScrollId } from '../data/forge';
 import { updateSecrets, activeSecrets } from '../systems/secrets';
 import { PACIFIST_KEY } from '../data/secrets';
+import { secretsOnKill } from '../systems/mapsecrets';
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
@@ -215,6 +216,12 @@ export class Run {
   /** Księga sekretów (systems/secrets.ts): obudzone w runie i odkryte od ostatniej synchronizacji z kolekcją. */
   secrets = new Set<string>();
   secretsFound = new Set<string>();
+  /** Sekrety map (systems/mapsecrets.ts): czas do kolejnego, odurzenie (odwrócone sterowanie, s), tytuł sekretnego bossa w HUD,
+   * bossowie pokonani bez trafienia (trofea). */
+  secretT: number = BAL.secretsMap.every * 0.6;
+  confusedT = 0;
+  bossTitle: string | null = null;
+  noHitBosses = 0;
   /** Unikaty wylosowane od ostatniej synchronizacji z kolekcją. */
   uniquesFound = new Set<string>();
   /** Karty zobaczone i wybrane od ostatniej synchronizacji z kolekcją. */
@@ -225,7 +232,7 @@ export class Run {
   readonly projectiles = new Pool<Projectile>(newProjectile, BAL.projectileCap);
   readonly bullets = new Pool<EnemyBullet>(newBullet, BAL.enemyBulletCap);
   readonly gems = new Pool<Gem>(() => ({ _i: -1, x: 0, y: 0, value: 0, flying: false, v: 0 }));
-  readonly pickups = new Pool<Pickup>(() => ({ _i: -1, x: 0, y: 0, kind: 'coin', value: 0, flying: false, v: 0, item: null, source: 'drop' }), 300);
+  readonly pickups = new Pool<Pickup>(() => ({ _i: -1, x: 0, y: 0, kind: 'coin', value: 0, flying: false, v: 0, item: null, source: 'drop', mimic: false }), 300);
   readonly particles = new Pool<Particle>(() => ({ _i: -1, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, col: 7, size: 1 }), BAL.particleCap);
   readonly dmgNums = new Pool<DmgNum>(() => ({ _i: -1, x: 0, y: 0, life: 0, text: '', col: 7 }), BAL.dmgNumberCap);
   readonly zones = new Pool<Zone>(newZone, 500);
@@ -425,6 +432,9 @@ export class Run {
     this.swordRolled = false;
     this.task = null;
     this.taskT = BAL.tasks.first;
+    this.secretT = BAL.secretsMap.every * 0.6;
+    this.confusedT = 0;
+    this.bossTitle = null;
     this.terrain = [];
     this.terrainChunks.clear();
     this.terrainSeed = rng.int(1, 1e9);
@@ -488,6 +498,7 @@ export class Run {
     this.totalTime += dt;
     this.step++;
     this.xpPulse = Math.max(0, this.xpPulse - dt);
+    this.confusedT = Math.max(0, this.confusedT - dt);
     this.updatePower(dt);
     this.explosionsThisStep = 0;
     this.boomSpots.length = 0;
@@ -1149,6 +1160,7 @@ export class Run {
     }
     resourceOnKill(this, e);
     taskOnKill(this, e);
+    secretsOnKill(this, e);
     forgeKillDrops(this, e);
     this.emit('onKill', e);
     if (e.elite) {
@@ -1178,10 +1190,23 @@ export class Run {
     this.pendingPowers++;
     this.bossKills++;
     forgeBossDrops(this);
+    // Bezbłędnie: boss pokonany bez trafienia — dodatkowa moc bossa (trofeum).
+    if (!this.cardState.bossHit) { this.pendingPowers++; this.noHitBosses++; this.showBanner('Bezbłędnie! Dodatkowa moc bossa'); }
     // Pacyfista (sekret): unikat z najbliższego bossa.
     if (this.cardState[PACIFIST_KEY]) { delete this.cardState[PACIFIST_KEY]; this.pendingLoot.push({ source: 'boss', item: rollUnique(this.depth) }); }
     this.cardRerolls++;
     this.gold += 30 * this.stats.greed;
+    // Sekretny boss w lochu (kurhan): łup Króla, jego moc w ofercie, poziom trwa dalej (wyjście portalem).
+    if (this.dungeon) {
+      this.bossTitle = null;
+      if (this.dungeon.kind === 'barrow') {
+        this.pendingLoot.push({ source: 'boss', item: rollUnique(this.depth) });
+        grantMat(this, 'void', 2);
+        this.cardState.kingPower = 1;
+        this.showBanner('Zapomniany Król pokonany!');
+      }
+      return;
+    }
     // Endless: gra toczy się dalej — kolejna głębokość (silniejsi wrogowie, następny biom) i boss za BAL.endlessBossEvery.
     if (this.mode === 'endless') {
       this.collectAll();
@@ -1262,6 +1287,7 @@ export class Run {
     if (n) { n.x = p.x; n.y = p.y - 8; n.life = 0.7; n.text = fmt(total); n.col = C.red; }
     if (total >= this.stats.maxHp * BAL.juice.hurtBig) this.freeze(BAL.juice.hitstopHurt);
     resourceOnHurt(this, total);
+    if (this.boss) this.cardState.bossHit = 1;
     taskOnHurt(this);
     this.emit('onDamageTaken', total);
     // Odwet (węzeł Rozwoju Borguna): oberwanie wyzwala darmowy Wstrząs (najwyżej co `counterSlam` s).
@@ -1368,7 +1394,7 @@ export class Run {
   spawnPickup(x: number, y: number, kind: PickupKind, value: number): Pickup | null {
     const p = this.pickups.obtain();
     if (!p) return null;
-    p.x = x; p.y = y; p.kind = kind; p.value = value; p.flying = false; p.v = 0; p.item = null; p.source = 'drop';
+    p.x = x; p.y = y; p.kind = kind; p.value = value; p.flying = false; p.v = 0; p.item = null; p.source = 'drop'; p.mimic = false;
     return p;
   }
 
@@ -1390,6 +1416,8 @@ export class Run {
     const l = this.rollLoot(source);
     p.item = l.item;
     p.source = source;
+    // Mimik (sekret mapy): część zwykłych skrzyń gryzie po podniesieniu.
+    p.mimic = source === 'drop' && !l.item.unique && rng.chance(BAL.secretsMap.mimicChance);
   }
 
   burst(x: number, y: number, col: number, n: number, speed: number): void {

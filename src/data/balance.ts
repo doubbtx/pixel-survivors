@@ -124,6 +124,19 @@ export const BAL = {
     poolR: [32, 48] as const, swampSlow: 0.4, iceGrip: 2.5,
     arenaR: 260, arenaMin: 150, arenaTime: 45,
   },
+  /**
+   * Sekrety map (systems/mapsecrets.ts): odstęp losowania sekretu (s) i wagi rodzajów, czas życia obiektów; fontanna (postój s,
+   * koszt × głębokość, użycia), runy (odstęp kamieni, moc, zasadzka), grzyby (liczba, odurzenie s), mimik (szansa zwykłej skrzyni),
+   * klucz kurhanu (szansa z elity), Król (mnożnik HP), skarbiec (fale, szansa na unikat), pęknięta ściana (szansa na kawałek terenu).
+   */
+  secretsMap: {
+    every: 70, life: 90,
+    weights: [['fountain', 3], ['runes', 2.5], ['mushrooms', 2.5], ['stag', 2]] as const,
+    fountainStand: 1.2, fountainCost: 20, fountainUses: 3,
+    runeR: 45, runeMight: 0.2, runeSpeed: 0.15, ambush: 10,
+    mushrooms: 4, confused: 5,
+    mimicChance: 0.25, keyChance: 0.1, kingHp: 2, vaultWaves: 2, vaultUnique: 0.5, wallChance: 0.12,
+  },
   /** Pakty ryzyka (data/pacts.ts): esencja × (1 + essencePer × poziom Paktu). */
   pacts: { essencePer: 0.08 },
   /**

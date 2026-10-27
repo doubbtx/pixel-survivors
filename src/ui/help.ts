@@ -8,7 +8,7 @@ import { panel, inside } from './widgets';
 /** Strony pomocy: tytuł i akapity (pierwsze słowa przed dwukropkiem wyróżnione). */
 const PAGES: { title: string; lines: string[] }[] = [
   {
-    title: 'Sterowanie',
+    title: 'Klawisze',
     lines: [
       'Ruch: WASD albo strzałki. Broń strzela sama w najbliższych wrogów.',
       'Umiejętności: Q i E, unik: Spacja (chwilowa nietykalność), ultimate: R (ładuje się zabójstwami).',
@@ -85,6 +85,18 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Zwoje: błogosławieństwo (bez spadku), smoka (+15% szansy), talizman (bez pęknięcia). Klawisze 1-3 w kuźni.',
       'Tryb ryzyka (klawisz 4): +10% szansy, ale pęknięcie NISZCZY przedmiot, już od +4.',
       'Progi: +3 nowy bonus, +6 blask (bonus bazowy x1.2), +9 Przebudzenie (efekt wg typu), +12 runa mocy (super-bonus), +15 Boski.',
+    ],
+  },
+  {
+    title: 'Sekrety',
+    lines: [
+      'Księga sekretów: ukryte buildy (np. pełna trucizna, same bronie ognia, 4 żywioły). Spełnij warunek, a sekret obudzi się do końca runu. Zagadki: Kolekcja, Tab.',
+      'Fontanna życzeń: stań w niej i zapłać złotem. Zwykle błogosławieństwo, czasem klątwa.',
+      'Runy: dotknij 4 kamieni w kolejności kolorów z malowidła. Zła kolejność to zasadzka.',
+      'Grzyby: zjedz na własne ryzyko. Biały jeleń: złap go, a odsłoni ukryty gaj z unikatem.',
+      'Mimik: niektóre skrzynie gryzą. Pęknięta ściana (fioletowa szczelina): rozbij ją, za nią są schody do skarbca.',
+      'Kurhan: zbierz 3 klucze z elit. W środku czeka Zapomniany Król i jego moc.',
+      'Bezbłędnie: pokonaj bossa bez trafienia, a dostaniesz dodatkową moc bossa.',
     ],
   },
   {

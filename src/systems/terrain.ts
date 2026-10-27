@@ -28,6 +28,8 @@ export interface TerrainObj {
   /** Wariant grafiki. */
   v: number;
   chunk: string;
+  /** Pęknięta ściana (sekret mapy): po rozbiciu odsłania schody do skarbca. */
+  secret?: boolean;
 }
 
 /** Zwężająca się arena bossa. */
@@ -59,7 +61,10 @@ function genChunk(run: Run, cx: number, cy: number, key: string): void {
         const x = (cx + r.next()) * S, y = (cy + r.next()) * S, rad = radiusOf(kind, r);
         if (x * x + y * y < T.clearStart ** 2 || (x - p.x) ** 2 + (y - p.y) ** 2 < T.clearPlayer ** 2) continue;
         if (run.terrain.some((o) => (o.x - x) ** 2 + (o.y - y) ** 2 < (o.r + rad + 6) ** 2)) continue;
-        run.terrain.push({ kind, x, y, r: rad, hp: kind === 'cover' ? T.coverHp : 1, t: kind === 'spikes' ? r.range(0, T.spikeCycle) : 0, v: r.int(0, 2), chunk: key });
+        run.terrain.push({
+          kind, x, y, r: rad, hp: kind === 'cover' ? T.coverHp : 1, t: kind === 'spikes' ? r.range(0, T.spikeCycle) : 0, v: r.int(0, 2), chunk: key,
+          secret: kind === 'cover' && r.chance(BAL.secretsMap.wallChance / Math.max(1, mix[0])),
+        });
         break;
       }
     }
@@ -110,7 +115,15 @@ export function hitTerrain(run: Run, t: TerrainObj, dmg = 1): void {
   if (t.kind === 'barrel') { if (t.t <= 0) t.t = 0.05; return; }
   t.hp -= dmg;
   run.burst(t.x, t.y, C.lgray, 2, 30);
-  if (t.hp <= 0) { run.burst(t.x, t.y, C.dgray, 14, 60); sfx.play('hit'); }
+  if (t.hp > 0) return;
+  run.burst(t.x, t.y, C.dgray, 14, 60);
+  sfx.play('hit');
+  // Pęknięta ściana: schody do skarbca.
+  if (t.secret) {
+    run.mapObjects.push({ kind: 'stairs', x: t.x, y: t.y, blessing: 0, charge: 0, life: Infinity });
+    run.showBanner('Za ścianą są schody!');
+    sfx.play('levelup');
+  }
 }
 
 /** Wybuch w zasięgu: beczki odpalają się łańcuchowo, osłony pękają. */

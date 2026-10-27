@@ -222,7 +222,11 @@ export function renderWorld(run: Run, r: Renderer): void {
     const tx = X(t.x), ty = Y(t.y);
     if (t.kind === 'spikes') { drawSprite(g, `tspikes@${t.t <= BAL.terrain.spikeUp ? 1 : 0}`, tx, ty); continue; }
     drawShadow(g, tx, ty + t.r * ZOOM * 0.8, t.r * 3);
-    if (t.kind === 'cover') drawSprite(g, `tcover@${t.v + (t.hp < BAL.terrain.coverHp / 2 ? 3 : 0)}`, tx, ty - 4);
+    if (t.kind === 'cover') {
+      drawSprite(g, `tcover@${t.v + (t.hp < BAL.terrain.coverHp / 2 ? 3 : 0)}`, tx, ty - 4);
+      // Pęknięta ściana (sekret): migocząca fioletowa szczelina.
+      if (t.secret && run.step % 50 < 12) { r.rect(tx - 1, ty - 10, 2, 8, C.pink); r.rect(tx + 1, ty - 4, 2, 2, C.hotpink); }
+    }
     else drawSprite(g, 'tbarrel', tx, ty - 4, { flash: t.t > 0 && run.step % 4 < 2 });
   }
 
@@ -238,6 +242,23 @@ export function renderWorld(run: Run, r: Renderer): void {
         r.rect(ox - 10, oy + 14, 20, 4, C.black);
         r.rect(ox - 9, oy + 15, Math.round(18 * Math.min(1, o.charge / BAL.events.shrineCharge)), 2, C.yellow);
       }
+    } else if (o.kind === 'fountain') {
+      r.withAlpha(0.15, () => r.circle(ox, oy + 4, 18, C.cyan, true));
+      drawSprite(g, `fountain@${Math.floor(run.step / 8) % 3}`, ox, oy);
+      if (o.charge > 0) { r.rect(ox - 10, oy + 14, 20, 4, C.black); r.rect(ox - 9, oy + 15, Math.round(18 * Math.min(1, o.charge / BAL.secretsMap.fountainStand)), 2, C.cyan); }
+    } else if (o.kind === 'rune') {
+      if (o.charge > 0) r.withAlpha(0.3, () => r.circle(ox, oy - 2, 12, C.white, true));
+      drawSprite(g, `rune${o.blessing}@${o.charge > 0 ? 1 : 0}`, ox, oy);
+    } else if (o.kind === 'mural') {
+      drawSprite(g, `mural:${o.order!.join('')}`, ox, oy);
+    } else if (o.kind === 'mushroom') {
+      drawSprite(g, 'mushroom', ox, oy + 4);
+    } else if (o.kind === 'stairs' || o.kind === 'grove') {
+      r.withAlpha(0.2 + 0.1 * Math.sin(run.time * 5), () => r.circle(ox, oy, 16, o.kind === 'grove' ? C.white : C.plum, true));
+      drawSprite(g, o.kind, ox, oy);
+    } else if (o.kind === 'barrow') {
+      r.withAlpha(0.25, () => r.circle(ox, oy, 24, C.gold, true));
+      drawSprite(g, `barrow@${run.step % 40 < 20 ? 1 : 0}`, ox, oy - 4);
     } else if (o.kind === 'sword') {
       if (run.step % 30 < 15) r.rect(ox + 3, oy - 12, 2, 2, C.white);
       drawSprite(g, 'swordstone', ox, oy);

@@ -57,7 +57,7 @@ function drawMinimap(r: Renderer, run: Run, x: number, y: number, w: number, h: 
   // Obiekty mapy: kapliczki, portale; miecz w kamieniu dopiero z bliska (to sekret).
   for (const o of run.mapObjects) {
     if (o.kind === 'sword' && (o.x - p.x) ** 2 + (o.y - p.y) ** 2 > 250 * 250) continue;
-    const col = o.kind === 'shrine' ? C.cyan : o.kind === 'portal' ? C.pink : o.kind === 'exit' ? C.lime : C.yellow;
+    const col = o.kind === 'shrine' || o.kind === 'fountain' ? C.cyan : o.kind === 'portal' || o.kind === 'stairs' ? C.pink : o.kind === 'exit' ? C.lime : o.kind === 'barrow' ? C.gold : C.yellow;
     dot(o.x - 1, o.y - 1, 3, col);
   }
   r.rect(cx - 1, cy - 1, 2, 2, C.white);
@@ -144,7 +144,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   drawText(g, fmtTime(run.time), W / 2, 8, C.white, { align: 'center', scale: 2, ...OUT });
   if (run.boss) {
     const b = run.boss;
-    drawText(g, run.levelInfo.bossName, W / 2, 34, C.salmon, { align: 'center', ...OUT });
+    drawText(g, run.bossTitle ?? run.levelInfo.bossName, W / 2, 34, C.salmon, { align: 'center', ...OUT });
     const bw = 220, bx = W / 2 - bw / 2;
     bar(r, bx, 47, bw, 9, b.hp / b.maxHp, RAMP.purple);
     r.rect(bx - 2, 46, 2, 11, C.gold);

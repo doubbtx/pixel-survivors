@@ -2,20 +2,22 @@ import { rng } from '../core/rng';
 import { sfx } from '../core/audio';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
-import { rollItem } from '../data/items';
+import { rollItem, rollUnique } from '../data/items';
 import type { Stats } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnEnemy } from './spawner';
 import { grantMat } from './forge';
+import { updateMapSecrets, touchSecret } from './mapsecrets';
 
 /**
  * Zdarzenia mapy (sekrety i mini-lochy):
  *  kapliczka  — stań na niej BAL.events.shrineCharge s: losowe błogosławieństwo (czasowy bonus albo efekt),
  *  miecz      — ukryty daleko od startu (szansa raz na poziom): przedmiot Legendarny,
  *  portal     — wejście do mini-lochu: arena ze ścianami, fale wrogów, skarb i portal powrotny.
- * Złoty szlam (rzadki, uciekający wróg) jest w data/enemies.ts i spawnerze.
+ * Złoty szlam (rzadki, uciekający wróg) jest w data/enemies.ts i spawnerze. Sekrety map (fontanna, runy, grzyby,
+ * schody skarbca, kurhan, gaj) — systems/mapsecrets.ts; lochy mają rodzaje: portal, skarbiec (vault) i kurhan (barrow).
  */
-export type MapObjectKind = 'shrine' | 'sword' | 'portal' | 'exit';
+export type MapObjectKind = 'shrine' | 'sword' | 'portal' | 'exit' | 'fountain' | 'rune' | 'mural' | 'mushroom' | 'stairs' | 'barrow' | 'grove';
 
 export interface MapObject {
   kind: MapObjectKind;
@@ -25,7 +27,12 @@ export interface MapObject {
   blessing: number;
   charge: number;
   life: number;
+  /** Malowidło run: kolejność kolorów. */
+  order?: number[];
 }
+
+/** Rodzaj lochu: portal (fale), skarbiec spod pękniętej ściany (krótszy, lepszy łup), kurhan (Zapomniany Król). */
+export type DungeonKind = 'portal' | 'vault' | 'barrow';
 
 /** Czasowy bonus z kapliczki (liczony w recomputeStats). */
 export interface Buff {
@@ -42,6 +49,7 @@ export interface Dungeon {
   cy: number;
   wave: number;
   cleared: boolean;
+  kind: DungeonKind;
 }
 
 interface Blessing {
@@ -76,11 +84,11 @@ function place(run: Run, kind: MapObjectKind, minR: number, maxR: number, life: 
 
 /** Loch jako cały poziom (węzeł Ekspedycji): arena od razu, po oczyszczeniu poziom jest ukończony (bez portalu powrotnego). */
 export function startDungeon(run: Run): void {
-  enterDungeon(run);
+  enterDungeon(run, 'portal');
 }
 
 /** Wejście do lochu: świat zwykłej mapy odkładamy (kryształy i łupy zebrane), gracz trafia na arenę. */
-function enterDungeon(run: Run): void {
+export function enterDungeon(run: Run, kind: DungeonKind): void {
   const p = run.player;
   for (const g of run.gems.items) run.addXp(g.value);
   run.gems.clear();
@@ -92,27 +100,38 @@ function enterDungeon(run: Run): void {
   run.enemies.clear();
   run.bullets.clear();
   run.mapObjects = [];
-  run.dungeon = { rx: p.x, ry: p.y, cx: p.x + 100000, cy: p.y, wave: 0, cleared: false };
+  run.dungeon = { rx: p.x, ry: p.y, cx: p.x + 100000, cy: p.y, wave: 0, cleared: false, kind };
   p.x = run.dungeon.cx;
   p.y = run.dungeon.cy;
   p.iframes = 1;
   spawnWave(run);
-  run.showBanner(`Loch! Pokonaj ${BAL.events.dungeonWaves} fale`);
+  run.showBanner(kind === 'barrow' ? 'Kurhan: Zapomniany Król się budzi!' : kind === 'vault' ? 'Skarbiec! Pokonaj strażników' : `Loch! Pokonaj ${BAL.events.dungeonWaves} fale`);
   run.addShake(4);
   sfx.play('boss');
 }
 
 const WAVE_MIX = ['golem', 'cultist', 'eye', 'wisp', 'slime', 'bat'];
 
+/** Liczba fal lochu wg rodzaju (kurhan: jedna — sam Król). */
+const wavesOf = (d: Dungeon) => (d.kind === 'barrow' ? 1 : d.kind === 'vault' ? BAL.secretsMap.vaultWaves : BAL.events.dungeonWaves);
+
 function spawnWave(run: Run): void {
   const d = run.dungeon!, E = BAL.events;
+  if (d.kind === 'barrow') {
+    // Zapomniany Król: boss z mocniejszym HP i własnym tytułem.
+    const b = spawnEnemy(run, 'boss', d.cx, d.cy - E.arenaR * 0.5);
+    if (b) b.maxHp = b.hp = b.maxHp * BAL.secretsMap.kingHp;
+    run.bossTitle = 'Zapomniany Król';
+    d.wave++;
+    return;
+  }
   const n = E.dungeonWaveSize + d.wave * 4;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
     spawnEnemy(run, rng.pick(WAVE_MIX), d.cx + Math.cos(a) * E.arenaR * 0.8, d.cy + Math.sin(a) * E.arenaR * 0.8);
   }
   // Ostatnia fala: strażnik lochu (elita).
-  if (d.wave === E.dungeonWaves - 1) spawnEnemy(run, 'sentinel', d.cx, d.cy - E.arenaR * 0.6, { elite: ['armored', 'volley'] });
+  if (d.wave === wavesOf(d) - 1) spawnEnemy(run, 'sentinel', d.cx, d.cy - E.arenaR * 0.6, { elite: ['armored', 'volley'] });
   d.wave++;
 }
 
@@ -156,20 +175,26 @@ export function updateEvents(run: Run, dt: number): void {
     clampArena(run);
     const d = run.dungeon;
     if (!d.cleared && run.enemies.count === 0) {
-      if (d.wave < E.dungeonWaves) { spawnWave(run); run.showBanner(`Fala ${d.wave}/${E.dungeonWaves}`); }
+      if (d.wave < wavesOf(d)) { spawnWave(run); run.showBanner(`Fala ${d.wave}/${wavesOf(d)}`); }
       else {
         d.cleared = true;
         run.dropChest(d.cx - 14, d.cy, 'elite');
         run.dropChest(d.cx + 14, d.cy, 'boss');
+        // Skarbiec: unikat (szansa) i iskra pustki.
+        if (d.kind === 'vault') {
+          if (rng.chance(BAL.secretsMap.vaultUnique)) run.pendingLoot.push({ source: 'boss', item: rollUnique(run.depth) });
+          grantMat(run, 'void');
+        }
         grantMat(run, 'ore', BAL.forge.dungeonOre);
         for (let i = 0; i < 20; i++) run.spawnPickup(d.cx + rng.range(-30, 30), d.cy + rng.range(-30, 30), 'coin', 1);
         if (run.levelInfo.dungeon) { run.clearObjective(); return; }
         run.mapObjects.push({ kind: 'exit', x: d.cx, y: d.cy - 40, blessing: 0, charge: 0, life: Infinity });
-        run.showBanner('Loch oczyszczony! Skarb i portal powrotny');
+        run.showBanner(d.kind === 'barrow' ? 'Zapomniany Król pokonany! Portal powrotny' : 'Loch oczyszczony! Skarb i portal powrotny');
         sfx.play('levelup');
       }
     }
   } else if (!run.bossSpawned || run.mode === 'endless') {
+    updateMapSecrets(run, dt);
     run.shrineT -= dt;
     if (run.shrineT <= 0) {
       run.shrineT = E.shrineEvery / (1 + run.flag('shrineRate'));
@@ -212,12 +237,14 @@ export function updateEvents(run: Run, dt: number): void {
       o.life = 0;
     } else if (near && o.kind === 'portal') {
       o.life = 0;
-      enterDungeon(run);
+      enterDungeon(run, 'portal');
       return;
     } else if (near && o.kind === 'exit') {
       exitDungeon(run);
       return;
-    }
+    } else if (near) {
+      if (touchSecret(run, o, dt)) return;
+    } else if (o.kind === 'fountain') o.charge = 0;
   }
   if (run.mapObjects.some((o) => o.life <= 0)) run.mapObjects = run.mapObjects.filter((o) => o.life > 0);
 }

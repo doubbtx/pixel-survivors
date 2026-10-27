@@ -12,7 +12,9 @@ export function updatePlayer(run: Run, input: Input, dt: number): void {
     p.y += p.dvy * dt;
     run.burst(p.x, p.y, run.hero.color, 1, 10);
   } else {
-    const mv = input.move();
+    const raw = input.move();
+    // Odurzenie (grzyb): odwrócone sterowanie.
+    const mv = run.confusedT > 0 ? { x: -raw.x, y: -raw.y } : raw;
     // Teren: bagno spowalnia, na lodzie prędkość dochodzi do wejścia z bezwładnością (poślizg).
     const T = BAL.terrain;
     const speed = run.stats.speed * BAL.speedMul(run.stats.speedBonus) * (run.ground === 'swamp' ? 1 - T.swampSlow : 1);

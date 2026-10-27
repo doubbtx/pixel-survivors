@@ -4,7 +4,7 @@ import { BIOMES, type Biome } from '../data/levels';
 import { Painter } from './painter';
 import { ICON_FNS } from './icons';
 import { ACTORS, boss } from './actors';
-import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes } from './objects';
+import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes, fountain, rune, mural, mushroom, stairs, barrow, grove } from './objects';
 import { spark, poof, boom, arrowSprite, prop, patch, uiSkull } from './world';
 
 /**
@@ -229,6 +229,14 @@ function build(name: string): HTMLCanvasElement {
   // Teren: 'tcover@<wariant>' (wariant + 3 = pęknięta), 'tbarrel', 'tspikes@<0|1>'.
   if (base === 'tcover') return cover(f % 3, f >= 3).canvas();
   if (base === 'tbarrel') return barrel().canvas();
+  // Sekrety map: 'fountain@<klatka>', 'rune<i>@<0|1>', 'mural:<kolejność>', 'mushroom', 'stairs', 'barrow@<0|1>', 'grove'.
+  if (base === 'fountain') return fountain(f).canvas();
+  if (base.startsWith('rune')) return rune(Number(base.slice(4)), f === 1).canvas();
+  if (base.startsWith('mural:')) return mural(base.slice(6).split('').map(Number)).canvas();
+  if (base === 'mushroom') return mushroom().canvas();
+  if (base === 'stairs') return stairs().canvas();
+  if (base === 'barrow') return barrow(f === 1).canvas();
+  if (base === 'grove') return grove().canvas();
   if (base === 'tspikes') return spikes(f === 1).canvas();
   if (base === 'totem') return totem().canvas();
   if (ICON_FNS[name]) {

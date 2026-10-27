@@ -2,6 +2,7 @@ import { sfx } from '../core/audio';
 import { C } from '../core/palette';
 import { itemColor } from '../data/items';
 import type { Run } from '../game/run';
+import { springMimic } from './mapsecrets';
 
 /** Bazowy zasięg przyciągania kryształów (px), mnożony przez statystykę `magnet`. */
 const MAGNET_BASE = 34;
@@ -59,6 +60,7 @@ export function updatePickups(run: Run, dt: number): void {
         sfx.play('pickup');
         break;
       case 'chest': {
+        if (it.mimic) { springMimic(run, it.x, it.y); break; }
         // Łup: pierścień i napis w kolorze jakości przedmiotu.
         if (it.item) run.pendingLoot.push({ source: it.source, item: it.item });
         const col = it.item ? itemColor(it.item) : C.gold;

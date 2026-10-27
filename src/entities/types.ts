@@ -190,6 +190,8 @@ export interface Pickup extends Poolable {
   /** Skrzynia: przedmiot wylosowany przy upadku (jakość widać na ziemi) i źródło łupu. */
   item: Item | null;
   source: LootSource;
+  /** Mimik: zamiast łupu budzi się wróg (systems/mapsecrets.ts). */
+  mimic: boolean;
 }
 
 export interface Particle extends Poolable {

@@ -446,6 +446,11 @@ export const ICON_FNS: Record<string, IconFn> = {
     for (const [x, y] of [[4, 4], [12, 4], [4, 12], [12, 12]]) p.sphere(x, y, 2.5, 2.5, RAMP.night).px(x, y, C.red);
     p.sphere(8, 8, 2.5, 2.5, RAMP.purple).px(7, 7, C.white);
   },
+  bp_crown: (p) => {
+    p.poly([[2, 6], [5, 10], [8, 3], [11, 10], [14, 6], [13, 14], [3, 14]], C.gold);
+    p.rect(3, 12, 10, 2, C.orange).px(8, 7, C.red).px(5, 11, C.cyan).px(11, 11, C.cyan);
+    for (let i = 0; i < 6; i++) p.px(8 + Math.cos(i) * 7.5, 9 + Math.sin(i) * 6.5, C.pink);
+  },
   bp_brood: (p) => {
     p.sphere(8, 6, 4.5, 4, RAMP.purple).rect(6, 5, 1, 2, C.white).rect(10, 5, 1, 2, C.white);
     p.poly([[4, 8], [12, 8], [13, 15], [10.5, 12.5], [8, 15], [5.5, 12.5], [3, 15]], C.pink);

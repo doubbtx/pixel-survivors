@@ -82,6 +82,9 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'spinner', color: C.pink, name: 'Wirownik', sprite: 'spinner', hp: 45, speed: 14, damage: 6, radius: 4, xp: 8, behavior: 'keep', keepDist: 110, knockResist: 0.5,
     shoot: { volley: { shape: 'ring', count: 2, speed: 50, wave: 0.5, sprite: 'eb_pink' }, aim: 'spin', spin: 0.5, cooldown: 0.4, range: 160 },
   },
+  // Sekrety map (systems/mapsecrets.ts): mimik udaje skrzynię, biały jeleń ucieka jak Złoty szlam.
+  mimic: { id: 'mimic', color: C.brown, name: 'Mimik', sprite: 'mimic', hp: 30, speed: 44, damage: 12, radius: 6, xp: 15, behavior: 'chase', knockResist: 0.7 },
+  stag: { id: 'stag', color: C.white, name: 'Biały jeleń', sprite: 'stag', hp: 90, speed: 50, damage: 0, radius: 5, xp: 30, behavior: 'flee', knockResist: 0.6 },
   goldslime: { id: 'goldslime', color: C.gold, name: 'Złoty szlam', sprite: 'goldslime', hp: 60, speed: 46, damage: 0, radius: 4, xp: 20, behavior: 'flee', knockResist: 0.5 },
   cultist: {
     id: 'cultist', color: C.blue, name: 'Kultysta', sprite: 'cultist', hp: 22, speed: 22, damage: 5, radius: 4, xp: 4, behavior: 'keep', keepDist: 100, knockResist: 0.2,
@@ -126,6 +129,8 @@ export interface BossPowerDef {
   icon: string;
   phase: number;
   cd: number;
+  /** Moc sekretnego bossa (Zapomniany Król z kurhanu) — tylko z jego oferty. */
+  secret?: boolean;
 }
 
 export const BOSS_POWERS: BossPowerDef[] = [
@@ -134,6 +139,7 @@ export const BOSS_POWERS: BossPowerDef[] = [
   { id: 'flower', name: 'Kwiat zagłady', desc: 'Co 4 s dwa obrócone pierścienie płonących pocisków.', icon: 'bp_flower', phase: 1, cd: 4 },
   { id: 'stream', name: 'Strumień', desc: 'Co 3 s seria 5 wachlarzy ostrzy w najbliższego wroga.', icon: 'bp_stream', phase: 1, cd: 3 },
   { id: 'minefield', name: 'Pole minowe', desc: 'Co 5 s 6 min wokół ciebie, wybuchają przy wrogach.', icon: 'bp_mines', phase: 2, cd: 5 },
+  { id: 'crown', name: 'Gniew Króla', desc: 'Co 3 s pierścień 16 pocisków i śrut w najbliższego wroga.', icon: 'bp_crown', phase: 3, cd: 3, secret: true },
   { id: 'brood', name: 'Wylęgarnia', desc: 'Co 8 s 3 duchy-sługi walczą za ciebie przez 8 s.', icon: 'bp_brood', phase: 2, cd: 8 },
 ];
 

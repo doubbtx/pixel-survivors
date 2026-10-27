@@ -101,3 +101,68 @@ export function portal(f: number, exit: boolean): Painter {
   }
   return p.outline();
 }
+
+// ---------------- sekrety map (systems/mapsecrets.ts) ----------------
+
+/** Fontanna życzeń: kamienna misa z wodą i strumieniem. */
+export function fountain(f: number): Painter {
+  const p = new Painter(26, 24);
+  p.sphere(13, 18, 12, 5, RAMP.stone).sphere(13, 17, 9, 3, RAMP.blue).px(9, 16, C.white).px(16, 17, C.cyan);
+  p.block(11, 6, 4, 10, RAMP.stone).sphere(13, 5, 4, 2, RAMP.stone);
+  for (let i = 0; i < 3; i++) p.px(13 + (i - 1) * 3, 3 + ((f + i) % 3), C.cyan);
+  p.px(13, 1, C.white);
+  return p.outline();
+}
+
+/** Kolory run (kolejność = indeks runy, mural pokazuje sekwencję). */
+export const RUNE_COLS = [C.red, C.lime, C.cyan, C.yellow];
+
+/** Kamień runiczny `i` (zapalony = jaśniejszy znak). */
+export function rune(i: number, lit: boolean): Painter {
+  const p = new Painter(14, 20);
+  p.block(2, 4, 10, 15, RAMP.stone).rect(3, 2, 8, 2, C.lavender);
+  const c = lit ? C.white : RUNE_COLS[i];
+  p.line(7, 7, 7, 15, c).line(5, 9, 9, 9, c).line(5, 13, 9, 11 + (i % 2) * 2, c);
+  return p.outline();
+}
+
+/** Malowidło: kamienna tablica z kolejnością czterech kolorów. */
+export function mural(order: number[]): Painter {
+  const p = new Painter(30, 20);
+  p.block(1, 3, 28, 15, RAMP.wood).rect(3, 5, 24, 11, C.cream);
+  order.forEach((c, k) => p.sphere(7 + k * 6, 10.5, 2.4, 2.4, [C.black, RUNE_COLS[c], RUNE_COLS[c], C.white]));
+  return p.outline();
+}
+
+/** Dziwny grzyb (do zjedzenia). */
+export function mushroom(): Painter {
+  const p = new Painter(12, 13);
+  p.rect(5, 7, 3, 5, C.cream).sphere(6, 6, 5.5, 3.5, [C.plum, C.pink, C.hotpink, C.salmon]);
+  p.px(4, 5, C.white).px(8, 4, C.white).px(6, 7, C.white);
+  return p.outline();
+}
+
+/** Schody w głąb (pod rozbitą ścianą). */
+export function stairs(): Painter {
+  const p = new Painter(22, 16);
+  p.sphere(11, 9, 10, 6, RAMP.night);
+  for (let k = 0; k < 4; k++) p.rect(5 + k, 5 + k * 2, 12 - k * 2, 1, k % 2 ? C.dgray : C.slate);
+  return p.outline();
+}
+
+/** Kurhan: kopiec z kamiennymi drzwiami i trzema dziurkami na klucze. */
+export function barrow(open: boolean): Painter {
+  const p = new Painter(32, 24);
+  p.sphere(16, 18, 15, 10, RAMP.green).sphere(16, 18, 12, 8, [C.dgreen, C.dgreen, C.green, C.lime]);
+  p.block(11, 10, 10, 12, RAMP.stone).rect(13, 12, 6, 10, open ? C.black : C.dgray);
+  for (let k = 0; k < 3; k++) p.px(13 + k * 3, 9, open ? C.gold : C.black);
+  return p.outline();
+}
+
+/** Ukryty gaj białego jelenia: krąg kwiatów i świecący kamień. */
+export function grove(): Painter {
+  const p = new Painter(26, 18);
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; p.px(13 + Math.cos(a) * 11, 10 + Math.sin(a) * 6, i % 2 ? C.white : C.pink); }
+  p.sphere(13, 10, 4, 3, [C.dblue, C.blue, C.cyan, C.white]);
+  return p.outline();
+}

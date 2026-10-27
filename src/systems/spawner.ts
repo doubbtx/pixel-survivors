@@ -62,6 +62,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   }
   if (def.behavior === 'boss') {
     e.boss = true;
+    run.cardState.bossHit = 0;
     e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp'));
     e.speed = def.speed;
     run.boss = e;

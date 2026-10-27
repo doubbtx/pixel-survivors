@@ -26,6 +26,8 @@ export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   cultist: { seq: [0, 2, 0, 3, 0, 2, 0, 1], speed: 9 },
   sentinel: { seq: [0, 1, 2, 3], speed: 10 },
   boss: { seq: [0, 1, 2, 3], speed: 12 },
+  mimic: { seq: [0, 1], speed: 8 },
+  stag: { seq: [0, 1, 2, 3], speed: 5 },
 };
 
 /** Numer klatki dla czasu (kroki symulacji) z przesunięciem `seed`, żeby tłum nie ruszał się synchronicznie. */
@@ -264,7 +266,30 @@ function sentinel(f: number): Painter {
   return p.outline(C.navy);
 }
 
-export const ACTORS: Record<string, (f: number) => Painter> = { kestra, borgun, ignara, morwen, wraith, wraithbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel };
+/** Mimik: skrzynia z zębami, kłapie (klatka 1 = otwarta paszcza z językiem). */
+function mimic(f: number): Painter {
+  const p = new Painter(20, 18);
+  const open = f === 1 ? 3 : 0;
+  p.block(2, 9, 16, 8, RAMP.wood).rect(2, 12, 16, 1, C.gold);
+  p.block(2, 3 - open, 16, 6, RAMP.wood).rect(2, 3 - open, 16, 1, C.clay);
+  if (open) { p.rect(3, 6, 14, 3, C.dred).rect(7, 7, 6, 2, C.salmon); }
+  for (let x = 3; x < 17; x += 3) { p.px(x, 9 - (open ? 1 : 0), C.white).px(x + 1, 8 + open, C.white); }
+  p.px(6, 4 - open, C.red).px(13, 4 - open, C.red);
+  return p.outline();
+}
+
+/** Biały jeleń: smukła sylwetka z porożem, bieg w 4 klatkach. */
+function stag(f: number): Painter {
+  const p = new Painter(24, 22);
+  const leg = [0, 1, 0, -1][f];
+  p.sphere(11, 11, 7, 3.5, RAMP.bone).sphere(18, 7, 2.5, 2.5, RAMP.bone).px(19, 6, C.black);
+  p.line(17, 4, 15, 0, C.cream).line(16, 2, 14, 2, C.cream).line(19, 4, 21, 0, C.cream).line(20, 2, 22, 2, C.cream);
+  for (const [x, d] of [[6, leg], [9, -leg], [14, leg], [16, -leg]]) p.line(x, 14, x + d, 20, C.lgray);
+  p.px(4, 10, C.white);
+  return p.outline();
+}
+
+export const ACTORS: Record<string, (f: number) => Painter> = { kestra, borgun, ignara, morwen, wraith, wraithbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel, mimic, stag };
 
 /**
  * Boss 36×36: szata w kolorach biomu z wzorem run i pasem, naramienniki z kolcami, czaszka, korona,
