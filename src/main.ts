@@ -57,6 +57,5 @@ app.loop = startLoop(
   () => {
     screen.render();
     if (fadeT > 0) renderer.withAlpha(fadeT / FADE, () => renderer.rect(0, 0, W, H, C.black));
-    renderer.present();
   },
 );

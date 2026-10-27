@@ -16,27 +16,31 @@ export let VW = W;
 export let VH = H;
 
 /**
- * Renderer: bufor W·K × H·K (K całkowite, dobrane do ekranu) — UI rysuje w pikselach logicznych przez transformację ×K,
- * świat (beginWorld) przez ×K·s, gdzie K·s też jest całkowite, więc piksele sprite'ów są równe przy każdym przybliżeniu.
- * Prezentacja: bufor dopasowany do okna (wypełnienie, z wygładzaniem) albo skala całkowita (ostre piksele, z ramką).
+ * Renderer: bufor W·K × H·K (K całkowite) — UI rysuje w pikselach logicznych przez transformację ×K (gładkie linie, zaokrąglenia).
+ * Świat (beginWorld) rysuje się na osobnym płótnie w pikselach logicznych świata (VW × VH, bez nadpróbkowania — tanio)
+ * i endWorld wkleja je do bufora powiększone o K·s (też całkowite, więc piksele sprite'ów są równe).
  * Prymitywy pikselowe (prostokąty, okręgi z cache, linie Bresenhama) trzymają się palety;
  * półprzezroczystość ustawia się przez globalAlpha (cienie, poświaty).
  */
 export class Renderer {
+  /** Płótno ekranu: W·K × H·K pikseli, przeglądarka skaluje je do rozmiaru okna (CSS). */
   readonly buf: HTMLCanvasElement;
-  readonly g: CanvasRenderingContext2D;
-  private readonly ctx: CanvasRenderingContext2D;
-  /** Mnożnik bufora (piksele bufora na piksel logiczny). */
-  private k = 1;
+  /** Bieżący kontekst rysowania: ekran (UI) albo płótno świata (między beginWorld a endWorld). */
+  g: CanvasRenderingContext2D;
+  private readonly ui: CanvasRenderingContext2D;
+  private readonly world: HTMLCanvasElement = document.createElement('canvas');
+  private readonly wg: CanvasRenderingContext2D;
+  /** Mnożnik bufora (piksele płótna na piksel logiczny), 2..4. */
+  private k = 2;
   private fill = true;
   /** Przybliżenie świata żądane w Ustawieniach (rzeczywiste: VIEW_S, zaokrąglone tak, żeby K·s było całkowite). */
   private zoom = 1;
   private circleCache = new Map<string, HTMLCanvasElement>();
 
   constructor(private readonly display: HTMLCanvasElement) {
-    this.buf = document.createElement('canvas');
-    this.g = this.buf.getContext('2d')!;
-    this.ctx = display.getContext('2d')!;
+    this.buf = display;
+    this.ui = this.g = display.getContext('2d')!;
+    this.wg = this.world.getContext('2d')!;
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -58,55 +62,40 @@ export class Renderer {
     VH = H / VIEW_S;
     VIEW_W = VW / ZOOM;
     VIEW_H = VH / ZOOM;
+    this.world.width = Math.ceil(VW);
+    this.world.height = Math.ceil(VH);
+    this.wg.imageSmoothingEnabled = false;
   }
 
   /**
-   * Wypełnienie: płótno o rozmiarze okna w pikselach urządzenia, K = 4 (przybliżenia 1, 1.25 i 1.5 dają całkowite K·s).
-   * Inaczej największa całkowita skala mieszcząca się w oknie (min. 1; mniejsze ekrany skaluje CSS).
+   * Wypełnienie: płótno K× (K = skala okna w pikselach urządzenia, w górę, 2..4) dopasowane do okna przez CSS z wygładzaniem.
+   * Ostre piksele: tylko całkowite powiększenie bez wygładzania (z ramką).
    */
   resize(): void {
     const fit = Math.min(window.innerWidth / W, window.innerHeight / H);
     const dpr = window.devicePixelRatio || 1;
-    if (this.fill && fit >= 1) {
-      const cw = Math.floor(W * fit), ch = Math.floor(H * fit);
-      this.k = 4;
-      this.display.width = Math.round(cw * dpr);
-      this.display.height = Math.round(ch * dpr);
-      this.display.style.width = `${cw}px`;
-      this.display.style.height = `${ch}px`;
-    } else {
-      const s = Math.max(1, Math.floor(fit));
-      this.k = Math.min(4, Math.max(2, s));
-      this.display.width = W * s;
-      this.display.height = H * s;
-      const css = fit >= 1 ? s : fit;
-      this.display.style.width = `${Math.floor(W * css)}px`;
-      this.display.style.height = `${Math.floor(H * css)}px`;
-    }
+    const css = this.fill || fit < 1 ? fit : Math.floor(fit);
+    this.k = Math.min(4, Math.max(2, Math.ceil(css * dpr - 0.01)));
+    this.display.width = W * this.k;
+    this.display.height = H * this.k;
+    this.display.style.width = `${Math.floor(W * css)}px`;
+    this.display.style.height = `${Math.floor(H * css)}px`;
+    this.display.style.imageRendering = this.fill ? 'auto' : 'pixelated';
     // Zmiana rozmiaru płótna zeruje stan kontekstu.
-    this.buf.width = W * this.k;
-    this.buf.height = H * this.k;
-    this.g.imageSmoothingEnabled = false;
-    this.g.setTransform(this.k, 0, 0, this.k, 0, 0);
+    this.ui.imageSmoothingEnabled = false;
+    this.ui.setTransform(this.k, 0, 0, this.k, 0, 0);
     this.applyZoom();
   }
 
-  /** Rysowanie świata: piksele logiczne świata (obszar VW × VH) powiększone o VIEW_S. */
+  /** Rysowanie świata na płótnie świata (piksele logiczne świata, obszar VW × VH). */
   beginWorld(): void {
-    const s = this.k * VIEW_S;
-    this.g.setTransform(s, 0, 0, s, 0, 0);
+    this.g = this.wg;
   }
 
-  /** Powrót do pikseli logicznych UI. */
+  /** Wkleja świat do bufora (powiększenie VIEW_S, piksele równe) i wraca do rysowania UI. */
   endWorld(): void {
-    this.g.setTransform(this.k, 0, 0, this.k, 0, 0);
-  }
-
-  present(): void {
-    const same = this.display.width === this.buf.width && this.display.height === this.buf.height;
-    this.ctx.imageSmoothingEnabled = !same;
-    this.ctx.imageSmoothingQuality = 'high';
-    this.ctx.drawImage(this.buf, 0, 0, this.display.width, this.display.height);
+    this.g = this.ui;
+    this.ui.drawImage(this.world, 0, 0, this.world.width * VIEW_S, this.world.height * VIEW_S);
   }
 
   /** Przelicza współrzędne zdarzenia (px ekranu) na piksele logiczne bufora. */

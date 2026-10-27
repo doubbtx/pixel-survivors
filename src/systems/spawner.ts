@@ -1,3 +1,4 @@
+import { C } from '../core/palette';
 import { rng } from '../core/rng';
 import { sfx } from '../core/audio';
 import { BAL } from '../data/balance';
@@ -63,7 +64,8 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   if (def.behavior === 'boss') {
     e.boss = true;
     run.cardState.bossHit = 0;
-    e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp'));
+    // Boss: mnożnik siły (z obrażeń obszarowych) liczy się słabiej — walka ma trwać około minuty uników, nie kilka.
+    e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp')) * Math.pow(run.powerMul, BAL.bossPowerExp - 1);
     e.speed = def.speed;
     run.boss = e;
   }
@@ -105,11 +107,19 @@ export function updateSpawner(run: Run, dt: number): void {
     // Wznowiony poziom: boss wraca z HP z zapisu.
     if (b && run.bossHpFrac < 1) b.hp = b.maxHp * Math.max(0.05, run.bossHpFrac);
     run.bossHpFrac = 1;
+    // Zwykli wrogowie uciekają przed bossem: arena należy do niego i jego wzorów pocisków (elity zostają).
+    for (const e of run.enemies.items) {
+      if (e.dead || e.boss || e.elite) continue;
+      e.dead = true;
+      run.burst(e.x, e.y, C.lgray, 3, 30);
+    }
     run.showBanner(`Nadchodzi ${run.levelInfo.bossName}!`);
     run.addShake(6);
     sfx.play('boss');
   }
 
+  // W trakcie walki z bossem żadnych nowych wrogów (poza tymi, których przyzywa sam boss).
+  if (run.boss) return;
   while (run.nextEvent < EVENTS.length && EVENTS[run.nextEvent].at <= t) {
     const ev = EVENTS[run.nextEvent++];
     for (let i = 0; i < ev.count; i++) {
@@ -135,7 +145,7 @@ export function updateSpawner(run: Run, dt: number): void {
     if (e) run.showBanner(`Elita: ${picked.map((k) => ELITE_MODS[k].name).join(', ')}`);
   }
 
-  const target = BAL.targetEnemies(waveT) * (run.bossSpawned ? 0.35 : 1) * (1 + run.flag('enemyCount'));
+  const target = BAL.targetEnemies(waveT) * (1 + run.flag('enemyCount'));
   const deficit = target - run.enemies.count;
   if (deficit <= 0) return;
   run.spawnAcc += Math.min(BAL.spawnRateCap(waveT), deficit * 2) * dt;

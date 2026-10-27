@@ -382,6 +382,17 @@ function drawWorld(run: Run, r: Renderer): void {
     if (e.elite) r.circle(ex, ey + e.radius * ZOOM, e.radius * ZOOM * 1.2, run.step % 30 < 15 ? C.yellow : C.orange);
     if (e.boss && e.invuln > 0 && run.step % 6 < 3) continue;
     drawSprite(g, `${e.sprite}@${animFrame(e.sprite, run.step, e.uid * 7)}`, ex, ey, { flash: e.flash > 0, scale: e.scale, flipX: e.x > p.x });
+    // Boss: zapowiedzi ataków — kurczący się krąg przed nazwanym atakiem, linia szarży (unik ma być czytelny).
+    if (e.boss && e.invuln <= 0) {
+      if (e.actT > 0 && e.actT < 0.6) {
+        const k = e.actT / 0.6, R = (e.radius * e.scale + 6 + 30 * k) * ZOOM;
+        r.withAlpha(0.8 - 0.5 * k, () => r.circle(ex, ey, R, C.yellow));
+      }
+      if (e.dashT > 0.5) {
+        const d = Math.hypot(e.dvx, e.dvy) || 1, L = 0.5 * d * ZOOM;
+        r.withAlpha(run.step % 6 < 3 ? 0.7 : 0.35, () => r.line(ex, ey, ex + (e.dvx / d) * L, ey + (e.dvy / d) * L, C.red, 3));
+      }
+    }
     // Tarczownik: łuk tarczy w kierunku, w którym patrzy.
     if (e.def.behavior === 'shield') {
       const R = (e.radius + 4) * ZOOM * e.scale, arc = BAL.newEnemies.shieldArc;

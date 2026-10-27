@@ -371,6 +371,8 @@ export const BAL = {
   /** Limity efektów (wydajność przy masowych wybuchach): cząsteczki na krok, efekty wybuchów na krok i odległość scalania, obłoczki śmierci. */
   fx: { particlesPerStep: 160, sparksPerStep: 12, boomsPerStep: 6, boomMerge: 24, poofCap: 140 },
   bossBaseHp: 3200,
+  /** Wykładnik mnożnika siły (BAL.power) dla HP bossa: 1 = jak zwykli wrogowie, mniej = krótsze walki. */
+  bossPowerExp: 0.5,
 
   // --- gracz: diminishing returns tam, gdzie wartości ≥100% psułyby grę ---
   /** Pancerz → mnożnik otrzymywanych obrażeń. 25 pancerza = -50%. Nigdy 0. */
