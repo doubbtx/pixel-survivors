@@ -166,6 +166,8 @@ export const BAL = {
     runeR: 45, runeMight: 0.2, runeSpeed: 0.15, ambush: 10,
     mushrooms: 4, confused: 5,
     mimicChance: 0.25, keyChance: 0.1, kingHp: 2, vaultWaves: 2, vaultUnique: 0.5, wallChance: 0.12,
+    /** Strażnik skarbca: odstęp ataków (losowy min-max s), spirala co `spin` s; w szale (< połowy HP) odstępy × `rageMul`, szansa na drugi atak naraz. */
+    warden: { actMin: 1.1, actMax: 1.8, spin: 0.6, rageSpin: 0.42, rageMul: 0.7, rageDouble: 0.35 },
   },
   /**
    * Wydarzenia poziomu (systems/levelevents.ts): co `every` s szansa `chance` na wydarzenie trwające `duration` s.

@@ -13,7 +13,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Ruch: WASD albo strzałki. Broń strzela sama w najbliższych wrogów.',
       'Umiejętności: Q i E, unik: Spacja (chwilowa nietykalność), ultimate: R (ładuje się zabójstwami).',
       'Celowanie: myszą albo prawą gałką pada. W Ustawieniach możesz wybrać celowanie automatyczne.',
-      'Menu w grze: Esc pauza, I albo Tab ekwipunek, K kowadło (między poziomami), F pełny ekran.',
+      'Menu w grze: Esc pauza, I albo Tab ekwipunek, C bronie i pasywki (ewolucje, fuzje), K kowadło (między poziomami), F pełny ekran.',
       'Awans: 1-4 albo klik wybiera, R losuje ponownie, X pomija, B wygania opcję z puli do końca runu.',
       'Telefon: lewa połowa ekranu to joystick, ikony umiejętności w prawym dolnym rogu to przyciski.',
     ],

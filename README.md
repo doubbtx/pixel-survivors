@@ -311,6 +311,10 @@ src/
 - Settings redesigned: categories on top (General, Sound, Display, Readability, Other), options listed below with values on the right.
 - Lucky runs: any loot has a small chance to be a **Lucky find** (Legendary item or unique), and enemy HP follows very strong builds less closely.
 
+**Weapons and Passives screen, Vault Warden (0.23)**:
+- Press **C** in game (or open it from Pause) to inspect your weapons and passives: next level, quality bonuses, augments, and evolution/fusion recipes as icons (green = ingredient ready).
+- The vault behind a cracked wall now ends with the **Vault Warden**: a mini-boss with six random attacks (some aimed where you are going), a rage phase below half HP, and boss-like HP instead of a damage sponge.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

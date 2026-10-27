@@ -237,6 +237,67 @@ const BOSS_STYLES: BossAttack[] = [
   },
 ];
 
+/** Kąt w miejsce, w którym gracz będzie, gdy dolecą pociski o prędkości `speed` (wyprzedzenie ruchu). */
+function leadAim(run: Run, e: Enemy, speed: number): number {
+  const p = run.player, t = Math.hypot(p.x - e.x, p.y - e.y) / speed;
+  return Math.atan2(p.y + p.vy * t - e.y, p.x + p.vx * t - e.x);
+}
+
+type WardenAttack = (run: Run, e: Enemy, dmg: number, dx: number, dy: number, dist: number) => void;
+
+/** Ataki Strażnika skarbca (losowane, bez powtórki tego samego dwa razy z rzędu). */
+const WARDEN_ATTACKS: WardenAttack[] = [
+  // Śrut z wyprzedzeniem.
+  (run, e, dmg) => fireVolley(run, e.x, e.y, { ...B_SHOTGUN, sprite: 'eb_cyan' }, leadAim(run, e, 85), dmg),
+  // Trzy pierścienie z przesuwającą się luką.
+  (run, e, dmg) => { const a = aimAt(run, e); sequence(run, e, 3, 0.35, (k) => fireVolley(run, e.x, e.y, { ...B_GAP, count: 24, sprite: 'eb_cyan' }, a + k * 0.7, dmg)); },
+  // Szarża zakończona pierścieniem.
+  (run, e, dmg, dx, dy, dist) => {
+    bossCharge(e, dx, dy, dist, 230);
+    sequence(run, e, 2, 1.15, (k) => { if (k) fireVolley(run, e.x, e.y, { shape: 'ring', count: 16, speed: 70, sprite: 'eb_cyan' }, rng.range(0, TAU), dmg); });
+  },
+  // Strumień celujący z wyprzedzeniem.
+  (run, e, dmg) => sequence(run, e, 6, 0.1, () => fireVolley(run, e.x, e.y, B_STREAM, leadAim(run, e, 125), dmg)),
+  // Hamujące pociski dookoła (pole minowe).
+  (run, e, dmg) => fireVolley(run, e.x, e.y, { ...B_MINEFIELD, count: 20, sprite: 'eb_cyan' }, rng.range(0, TAU), dmg),
+  // Krzyżowy ogień: dwa falujące wachlarze po bokach gracza.
+  (run, e, dmg) => { const a = aimAt(run, e); for (const s of [-0.6, 0.6]) fireVolley(run, e.x, e.y, { ...B_WAVE, sprite: 'eb_cyan' }, a + s, dmg); },
+];
+
+/**
+ * Strażnik skarbca: krąży wokół gracza, strzela stałą spiralą i co chwilę (losowy odstęp) wykonuje losowy atak
+ * z zapowiedzią (miga). Poniżej połowy HP szał: bliżej, gęstsza spirala, krótsze odstępy i czasem dwa ataki naraz.
+ */
+/** `sp`: prędkość ruchu (jednostki/s, po spowolnieniu). */
+function updateWarden(run: Run, e: Enemy, dt: number, dx: number, dy: number, dist: number, nx: number, ny: number, sp: number): void {
+  const Wd = BAL.secretsMap.warden, rage = e.hp < e.maxHp * 0.5;
+  if (e.dashT > 0) {
+    e.dashT -= dt;
+    if (e.dashT < 0.5) { e.x += e.dvx * dt; e.y += e.dvy * dt; } else if (run.step % 4 < 2) e.flash = 2;
+  } else {
+    const k = rage ? 60 : 85, dir = dist > k + 10 ? 1 : dist < k - 10 ? -0.8 : 0, side = e.uid % 2 ? 1 : -1;
+    e.x += (nx * dir - ny * 0.7 * side) * sp * dt;
+    e.y += (ny * dir + nx * 0.7 * side) * sp * dt;
+  }
+  const dmg = e.damage * BAL.bulletDmg;
+  e.shootT -= dt;
+  if (e.shootT <= 0) {
+    e.shootT = rage ? Wd.rageSpin : Wd.spin;
+    e.shootA += 0.37;
+    fireVolley(run, e.x, e.y, { shape: 'ring', count: rage ? 3 : 2, speed: 55, sprite: 'eb_cyan' }, e.shootA, dmg);
+  }
+  e.actT -= dt;
+  if (e.actT > 0 && e.actT < 0.4 && run.step % 6 < 3) e.flash = 2; // zapowiedź ataku
+  if (e.actT > 0) return;
+  const n = WARDEN_ATTACKS.length;
+  let pick = rng.int(0, n - 1);
+  if (pick === e.phase) pick = (pick + 1) % n;
+  e.phase = pick;
+  WARDEN_ATTACKS[pick](run, e, dmg, dx, dy, dist);
+  if (rage && rng.chance(Wd.rageDouble)) WARDEN_ATTACKS[(pick + 3) % n](run, e, dmg, dx, dy, dist);
+  e.actT = rng.range(Wd.actMin, Wd.actMax) * (rage ? Wd.rageMul : 1);
+}
+
 /** Salwa zwykłego wroga wg ShootDef (kąt bazowy zależny od `aim`). */
 function shoot(run: Run, e: Enemy, sh: ShootDef, dmg: number): void {
   const p = run.player;
@@ -368,6 +429,9 @@ export function updateEnemies(run: Run, dt: number): void {
           }
           break;
         }
+        case 'warden':
+          updateWarden(run, e, dt, dx, dy, dist, nx, ny, e.speed * (1 - e.slowF));
+          break;
         case 'keep': {
           const k = e.def.keepDist ?? 80;
           const dir = dist > k + 10 ? 1 : dist < k - 10 ? -0.6 : 0;

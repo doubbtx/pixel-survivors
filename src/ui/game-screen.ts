@@ -21,6 +21,7 @@ import { SLOTS } from '../data/items';
 import { CardPickView, rarityColor } from './cards';
 import { ShopView } from './shop';
 import { SynergyView } from './synergies';
+import { BuildView } from './build';
 import { AnvilView } from './anvil';
 import { rollShop } from '../data/shop';
 import { metaBonus, runEssence, heroMeta, heroTree, NO_META } from '../data/meta';
@@ -47,7 +48,7 @@ import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { WEAPON_BY_ID } from '../data/weapons';
 import { SECRET_BY_ID } from '../data/secrets';
 
-type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'pause' | 'cleared' | 'map' | 'end';
+type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'build' | 'pause' | 'cleared' | 'map' | 'end';
 
 /** Krótka blokada wejścia po otwarciu nakładki — żeby wciśnięty akurat klawisz nie wybrał karty. */
 const OVERLAY_DELAY = 0.3;
@@ -68,6 +69,9 @@ export class GameScreen implements Screen {
   private inventory: InventoryView | null = null;
   private shop: ShopView | null = null;
   private synergies: SynergyView | null = null;
+  private build: BuildView | null = null;
+  /** Stan, do którego wraca podgląd broni i pasywek (gra albo pauza). */
+  private buildReturn: State = 'pause';
   private anvil: AnvilView | null = null;
   private map: ExpeditionMapView | null = null;
   /** Stan, do którego wraca kowadło (ekran ukończenia, sklep albo mapa). */
@@ -133,6 +137,7 @@ export class GameScreen implements Screen {
     this.pauseMenu = new Menu([
       { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
       { label: () => 'Ekwipunek', act: () => this.openInventory('pause') },
+      { label: () => 'Bronie i pasywki [C]', act: () => this.openBuild('pause') },
       { label: () => 'Synergie', act: () => { this.synergies = new SynergyView(this.run); this.state = 'synergies'; this.delay = 0.1; } },
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
@@ -427,6 +432,14 @@ export class GameScreen implements Screen {
     this.delay = 0.1;
   }
 
+  /** Podgląd broni i pasywek (ewolucje, fuzje) z gry albo z pauzy. */
+  private openBuild(from: State): void {
+    this.build = new BuildView(this.run);
+    this.buildReturn = from;
+    this.state = 'build';
+    this.delay = 0.1;
+  }
+
   private openPause(): void {
     this.state = 'pause';
     this.pauseMenu.sel = 0;
@@ -526,6 +539,7 @@ export class GameScreen implements Screen {
       case 'play':
         if ((inp.pressed('pause') || (set.autoPause && inp.focusLost)) && run.outcome === 'none') { this.openPause(); return; }
         if (inp.pressed('inventory') && run.outcome === 'none') { this.openInventory('play'); return; }
+        if (inp.pressed('build') && run.outcome === 'none') { this.openBuild('play'); return; }
         this.toastT = Math.max(0, this.toastT - dt);
         // Zatrzymanie klatki po mocnym trafieniu / zabiciu elity: symulacja stoi przez chwilę (można wyłączyć w Ustawieniach).
         if (run.hitstop > 0 && !set.hitstop) run.hitstop = 0;
@@ -587,6 +601,9 @@ export class GameScreen implements Screen {
         break;
       case 'synergies':
         if (this.synergies!.update(inp)) { this.state = 'pause'; this.delay = 0.1; }
+        break;
+      case 'build':
+        if (this.build!.update(inp)) { this.state = this.buildReturn; this.delay = 0.1; }
         break;
       case 'shop': {
         const act = this.shop!.update(inp, dt);
@@ -652,6 +669,9 @@ export class GameScreen implements Screen {
       case 'synergies':
         this.synergies!.render(r);
         break;
+      case 'build':
+        this.build!.render(r);
+        break;
       case 'anvil':
         this.anvil!.render(r);
         break;
@@ -680,8 +700,8 @@ export class GameScreen implements Screen {
     dim(r);
     drawText(g, 'Pauza', 104, 64, C.yellow, { align: 'center', scale: 3, outline: C.black });
     if (this.mode === 'hardcore' || this.mode === 'expedition') {
-      drawText(g, `${this.mode === 'hardcore' ? 'Hardcore' : 'Ekspedycja'}: poddanie`, 104, 214, C.salmon, { align: 'center', shadow: C.black });
-      drawText(g, 'oznacza utratę wszystkiego', 104, 226, C.salmon, { align: 'center', shadow: C.black });
+      drawText(g, `${this.mode === 'hardcore' ? 'Hardcore' : 'Ekspedycja'}: poddanie`, 104, 234, C.salmon, { align: 'center', shadow: C.black });
+      drawText(g, 'oznacza utratę wszystkiego', 104, 246, C.salmon, { align: 'center', shadow: C.black });
     }
     this.pauseMenu.render(r);
     const px = 208, pw = W - px - 8;

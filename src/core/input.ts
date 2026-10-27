@@ -5,7 +5,7 @@ export type Action =
   | 'up' | 'down' | 'left' | 'right'
   | 'q' | 'e' | 'dash' | 'ult'
   | 'pause' | 'confirm' | 'back' | 'click' | 'inventory' | 'fullscreen'
-  | 'reroll' | 'skip' | 'banish' | 'anvil'
+  | 'reroll' | 'skip' | 'banish' | 'anvil' | 'build'
   | 'n1' | 'n2' | 'n3' | 'n4'
   | 'debug' | 'debugTime' | 'debugLevel' | 'debugLoot';
 
@@ -14,7 +14,7 @@ const KEYMAP: Record<string, Action[]> = {
   KeyA: ['left'], ArrowLeft: ['left'], KeyD: ['right'], ArrowRight: ['right'],
   KeyQ: ['q'], KeyE: ['e'], Space: ['dash', 'confirm'], KeyR: ['ult', 'reroll'],
   Enter: ['confirm'], Escape: ['pause', 'back'], KeyP: ['pause'],
-  KeyF: ['fullscreen'], KeyX: ['skip'], KeyB: ['banish'], KeyI: ['inventory'], Tab: ['inventory'], KeyK: ['anvil'],
+  KeyF: ['fullscreen'], KeyX: ['skip'], KeyB: ['banish'], KeyI: ['inventory'], Tab: ['inventory'], KeyK: ['anvil'], KeyC: ['build'],
   Digit1: ['n1'], Digit2: ['n2'], Digit3: ['n3'], Digit4: ['n4'],
   F3: ['debug'], Backquote: ['debug'], F4: ['debugTime'], F6: ['debugLevel'], F7: ['debugLoot'],
 };

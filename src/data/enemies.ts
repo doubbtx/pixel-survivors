@@ -34,7 +34,7 @@ export interface Volley {
  * summoner — trzyma dystans i przywołuje nietoperze; kamikaze — dobiega, zapala lont i wybucha;
  * blink — teleportuje się obok gracza po zapowiedzi; weaver — trzyma dystans i rzuca pod gracza spowalniające sieci.
  */
-export type EnemyBehavior = 'chase' | 'fast' | 'keep' | 'flee' | 'boss' | 'shield' | 'summoner' | 'kamikaze' | 'blink' | 'weaver';
+export type EnemyBehavior = 'chase' | 'fast' | 'keep' | 'flee' | 'boss' | 'shield' | 'summoner' | 'kamikaze' | 'blink' | 'weaver' | 'warden';
 
 export interface ShootDef {
   volley: Volley;
@@ -102,6 +102,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'sentinel', color: C.cyan, name: 'Strażnik', sprite: 'sentinel', hp: 90, speed: 10, damage: 7, radius: 6, xp: 10, behavior: 'keep', keepDist: 120, knockResist: 0.9,
     shoot: { volley: { shape: 'gapRing', count: 18, gap: 4, speed: 58, sprite: 'eb_cyan' }, aim: 'random', cooldown: 4.5, windup: 0.7, range: 180 },
   },
+  /** Strażnik skarbca (pęknięta ściana): miniboss z losowymi atakami (systems/enemies.ts updateWarden). */
+  warden: { id: 'warden', color: C.cyan, name: 'Strażnik skarbca', sprite: 'sentinel', hp: 45, speed: 34, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1 },
   boss: {
     id: 'boss', color: C.pink, name: 'Władca Otchłani', sprite: 'boss', hp: BAL.bossBaseHp, speed: 22, damage: 25, radius: 10, xp: 400, behavior: 'boss', knockResist: 1,
   },
