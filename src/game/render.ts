@@ -6,7 +6,7 @@ import { drawSprite, drawShadow, getSprite, TILE, TILE_VARIANTS } from '../gfx/s
 import { animFrame } from '../gfx/actors';
 import { FX_FRAMES, ARROW_DIRS, PROP_KINDS } from '../gfx/world';
 import { effectiveStats, orbitRadius, auraRadius } from '../systems/weapons';
-import { RARITIES } from '../data/items';
+import { itemColor } from '../data/items';
 import { BAL } from '../data/balance';
 import type { Run } from './run';
 import { taskTarget } from '../systems/tasks';
@@ -253,7 +253,7 @@ export function renderWorld(run: Run, r: Renderer): void {
     // Skrzynia: poświata, rozchodzący się pierścień i słup światła w kolorze jakości (od Magicznego),
     // iskry unoszące się w słupie; super-bonus = złote iskry wokół.
     if (it.item) {
-      const q = it.item.rarity, col = RARITIES[q].color, pulse = 0.5 + 0.5 * Math.sin(run.time * 5 + it.x);
+      const q = it.item.rarity, col = itemColor(it.item), pulse = 0.5 + 0.5 * Math.sin(run.time * 5 + it.x);
       r.withAlpha(0.2 + 0.15 * pulse, () => r.circle(sx, sy + 4, 12 + q * 4, col, true));
       r.withAlpha(0.35, () => r.circle(sx, sy + 4, 7 + q * 2, C.white, true));
       const wave = (run.time * 0.8 + it.x * 0.01) % 1;
@@ -431,7 +431,7 @@ export function renderWorld(run: Run, r: Renderer): void {
   };
   for (const it of run.pickups.items) {
     if (!it.item || vis(it.x, it.y) || (it.item.rarity < 2 && !it.item.super)) continue;
-    marker(it.x, it.y, RARITIES[it.item.rarity].color);
+    marker(it.x, it.y, itemColor(it.item));
   }
   const goal = taskTarget(run);
   if (goal && !vis(goal.x, goal.y)) marker(goal.x, goal.y, C.cyan);

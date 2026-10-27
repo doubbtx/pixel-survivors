@@ -45,6 +45,9 @@ import { spawnTurret } from '../systems/turrets';
  *  dashSummon      unik przywołuje ducha-sługę
  *  res.gain / res.power / res.max   zasób bohatera: szybszy przyrost, silniejszy efekt, większa pojemność (systems/resource.ts)
  *  heat.safe / heat.vent            Żar Ignary: przegrzanie nie rani, mocniejszy Wydech żaru
+ * Flagi unikatów (data/items.ts UNIQUES):
+ *  facing          bronie kierunkowe strzelają w kierunku ruchu, obrażenia × (1 + wartość)
+ *  healShield      leczenie zamienia się w tarczę (maks. ułamek HP)
  * Flagi map Ekspedycji (data/expedition.ts, na czas poziomu):
  *  enemyDmg / enemyCount / eliteRate / bulletDensity   silniejsi, liczniejsi wrogowie, częstsze elity, gęstsze salwy
  *  healCut         leczenie słabsze o ułamek

@@ -111,7 +111,7 @@ const MENU_DESC = [
   'Jeden poziom bez końca, boss co 5 minut, coraz trudniej.',
   'Jeden poziom z bossem, bez zapisu. Dobry na naukę bohaterów.',
   'Drzewka bohaterów kupowane esencją z Ekspedycji.',
-  'Odkryte karty i bany (wykluczenie kart z ofert).',
+  'Odkryte karty i bany (wykluczenie kart z ofert), odkryte unikaty.',
   'Najlepsze wyniki bohaterów w każdym trybie.',
   'Sterowanie, zasady, żywioły i reakcje, synergie, tryby.',
   'Dźwięk, celowanie, widoczność efektów, podpowiedzi.',

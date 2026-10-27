@@ -19,7 +19,7 @@ import { SRC_ELEMENT, ELEM, type Element } from '../data/elements';
 import type { MetaBonus } from '../data/meta';
 import { CARD_BY_ID, type CardSource, type HookName, type CardHooks, type Tag } from '../data/cards';
 import { SYNERGIES, VERSATILITY, tagPoints, tierOf, type SynergyTier } from '../data/synergies';
-import { equippedSupers, salvageGold, salvageShards, slotKind, rollItem, BASE_BY_ID, type Item, type SlotId, type LootSource } from '../data/items';
+import { equippedSupers, equippedUniques, salvageGold, salvageShards, slotKind, rollItem, rollUnique, BASE_BY_ID, type Item, type SlotId, type LootSource } from '../data/items';
 import {
   SLOT, SLOT_COUNT, type Stats, type Player, type Enemy, type Projectile, type EnemyBullet, type Gem, type Pickup,
   type Particle, type DmgNum, type Zone, type Fx, type WeaponInst, type PassiveInst, type AbilityInst, type PickupKind,
@@ -194,6 +194,8 @@ export class Run {
   /** Z kolekcji (core/save.ts), ustawiane przez ekran gry: bany wykluczone z ofert i karty już odkryte. */
   cardBans = new Set<string>();
   knownCards = new Set<string>();
+  /** Unikaty wylosowane od ostatniej synchronizacji z kolekcją. */
+  uniquesFound = new Set<string>();
   /** Karty zobaczone i wybrane od ostatniej synchronizacji z kolekcją. */
   private cardLog = { seen: new Set<string>(), picked: [] as string[] };
 
@@ -558,6 +560,10 @@ export class Run {
       }
       addHooks(def.hooks, value);
     }
+    for (const u of equippedUniques(this)) {
+      for (const [k, v] of Object.entries(u.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
+      addHooks(u.hooks, 1);
+    }
     // Synergie: punkty tagów całego buildu → progi (kumulowane), efekty jak u kart.
     this.tagPts = tagPoints(this);
     const newTiers: string[] = [];
@@ -790,6 +796,10 @@ export class Run {
       else itemMul[it.implicit.stat] = (itemMul[it.implicit.stat] ?? 1) * it.implicit.value;
       for (const a of it.affixes) s[a.stat] += a.value;
     }
+    for (const u of equippedUniques(this)) {
+      if (u.stats) add(u.stats);
+      for (const k in u.mul ?? {}) itemMul[k as keyof Stats] = (itemMul[k as keyof Stats] ?? 1) * u.mul![k as keyof Stats]!;
+    }
     const ult = this.abilities.ult;
     if (ult.def.kind === 'titan' && ult.activeT > 0) {
       s.might += ult.def.p.might + ult.def.pl.might * (ult.level - 1);
@@ -844,6 +854,9 @@ export class Run {
   heal(v: number): void {
     if (this.flag('noHeal') > 0 || v <= 0) return;
     v *= 1 - Math.min(0.9, this.flag('healCut'));
+    // Zbroja Wiecznej Warty (unikat): leczenie zamienia się w tarczę.
+    const toShield = this.flag('healShield');
+    if (toShield > 0) { this.addShield(v, toShield); return; }
     const p = this.player;
     const room = this.stats.maxHp - p.hp;
     // Widok leczenia: liczymy tylko faktycznie odzyskane HP (zielone liczby co pół sekundy, suma w podsumowaniu).
@@ -1279,8 +1292,14 @@ export class Run {
     return p;
   }
 
-  /** Łup ze źródła (jakość zależy od źródła, głębokości i Fortuny). */
+  /** Łup ze źródła (jakość zależy od źródła, głębokości i Fortuny); z bossów i elit rzadko unikat (BAL.uniques). */
   rollLoot(source: LootSource): { source: LootSource; item: Item } {
+    const U = BAL.uniques, chance = source === 'boss' ? U.boss : source === 'elite' ? U.elite : 0;
+    if (chance > 0 && rng.chance(chance * (1 + this.flag('itemLuck')))) {
+      const item = rollUnique(this.depth);
+      this.uniquesFound.add(item.unique!);
+      return { source, item };
+    }
     return { source, item: rollItem(this.depth, source, this.flag('itemLuck')) };
   }
 

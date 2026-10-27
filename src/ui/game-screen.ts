@@ -154,6 +154,8 @@ export class GameScreen implements Screen {
     const col = this.app.save.collection;
     for (const id of log.seen) if (!col.seen.includes(id)) col.seen.push(id);
     for (const id of log.picked) col.picks[id] = (col.picks[id] ?? 0) + 1;
+    for (const id of this.run.uniquesFound) if (!col.uniques.includes(id)) col.uniques.push(id);
+    this.run.uniquesFound.clear();
   }
 
   private updateRecords(won: boolean): void {
@@ -378,6 +380,7 @@ export class GameScreen implements Screen {
       this.loot = new LootView(run, run.pendingLoot.shift()!);
       this.state = 'loot';
       this.hints.show('loot');
+      if (this.loot.item.unique) this.hints.show('unique');
     } else if (run.pendingLevels > 0) {
       this.levelUp = new LevelUpView(run);
       this.state = 'levelup';

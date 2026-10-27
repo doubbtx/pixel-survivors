@@ -7,7 +7,7 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { fmt } from '../util/format';
 import {
-  RARITIES, BASE_BY_ID, SLOTS, implicitLine, statLine, statTotal, superLine, compareItems, salvageGold, salvageShards,
+  RARITIES, BASE_BY_ID, SLOTS, UNIQUE_BY_ID, UNIQUE_COLOR, implicitLine, statLine, statTotal, superLine, compareItems, salvageGold, salvageShards, itemColor,
   type Item, type LootSource, type SlotId,
 } from '../data/items';
 import type { Run } from '../game/run';
@@ -16,16 +16,15 @@ import { Menu, dim, panel, slot, inside } from './widgets';
 import { itemTags } from '../data/synergies';
 import { drawTagIcons } from './synergies';
 
-export const rarityCol = (it: Item): number => RARITIES[it.rarity].color;
 
 /**
- * Gniazdo z przedmiotem: ramka w kolorze rzadkości, poświata dla epickich i lepszych, gwiazdka przy super-bonusie.
+ * Gniazdo z przedmiotem: ramka w kolorze rzadkości (unikat: własny kolor), poświata dla epickich i lepszych, gwiazdka przy super-bonusie.
  * Pusty slot ekwipunku pokazuje blady zarys ikony (`ghost`).
  */
 export function drawItemSlot(r: Renderer, it: Item | null, x: number, y: number, s: number, selected: boolean, ghost = ''): void {
-  slot(r, x, y, s, it ? rarityCol(it) : C.slate);
+  slot(r, x, y, s, it ? itemColor(it) : C.slate);
   if (it) {
-    if (it.rarity >= 3) r.withAlpha(0.25 + 0.1 * Math.sin(performance.now() / 250), () => r.rect(x + 2, y + 2, s - 4, s - 4, rarityCol(it)));
+    if (it.rarity >= 3) r.withAlpha(0.25 + 0.1 * Math.sin(performance.now() / 250), () => r.rect(x + 2, y + 2, s - 4, s - 4, itemColor(it)));
     drawSprite(r.g, BASE_BY_ID[it.base].icon, x + s / 2, y + s / 2);
     // Legendarny: migocząca iskra wędrująca po rogach gniazda.
     if (it.rarity >= 4) {
@@ -55,19 +54,20 @@ export function drawItemSlot(r: Renderer, it: Item | null, x: number, y: number,
  * (zwraca pozycje Y wierszy bonusów) i — gdy podano `cmp` — różnice względem założonego przedmiotu (zielone/czerwone).
  */
 export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: number, h: number, cmp?: Item | null, rerollButtons = false, stats?: Stats): number[] {
-  const g = r.g, R = RARITIES[it.rarity], base = BASE_BY_ID[it.base];
-  panel(r, x, y, w, h, R.color);
+  const g = r.g, R = RARITIES[it.rarity], base = BASE_BY_ID[it.base], col = itemColor(it);
+  const uniq = it.unique ? UNIQUE_BY_ID[it.unique] : null;
+  panel(r, x, y, w, h, col);
   const cx = x + 22, cy = y + 22;
-  r.withAlpha(0.25, () => r.circle(cx, cy, 15, R.color, true));
+  r.withAlpha(0.25, () => r.circle(cx, cy, 15, col, true));
   r.withAlpha(0.7, () => r.circle(cx, cy, 12, C.black, true));
-  r.circle(cx, cy, 13, R.color);
+  r.circle(cx, cy, 13, col);
   drawSprite(g, base.icon, cx, cy, { scale: 1 + (it.rarity >= 2 ? 1 : 0) });
   let ly = y + 8;
   for (const line of wrapText(it.name, w - 50).slice(0, 2)) {
-    drawText(g, line, x + 40, ly, R.color, { shadow: C.black });
+    drawText(g, line, x + 40, ly, col, { shadow: C.black });
     ly += 11;
   }
-  drawText(g, `${R.name[base.gender]} ${base.name.toLowerCase()}, poz. ${it.ilvl}${it.upg ? `, +${it.upg}` : ''}`, x + 40, Math.max(ly, y + 19), C.dgray);
+  drawText(g, `${uniq ? 'Unikat:' : R.name[base.gender]} ${base.name.toLowerCase()}, poz. ${it.ilvl}${it.upg ? `, +${it.upg}` : ''}`, x + 40, Math.max(ly, y + 19), C.dgray);
   ly = y + 40;
   const tags = itemTags(it);
   if (tags.length) drawTagIcons(r, tags, x + w - 14 - ((tags.length - 1) * 18) / 2, y + h - 14);
@@ -91,6 +91,10 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
     ly += 2;
     line(superLine(it), C.yellow);
   }
+  if (uniq) {
+    ly += 2;
+    line(uniq.desc, UNIQUE_COLOR);
+  }
   if (cmp === undefined) return affixY;
   ly += 3;
   r.rect(x + 8, ly, w - 16, 1, C.slate);
@@ -100,6 +104,7 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
   if (!diff.length) line('Bez zmian w statystykach.', C.lgray);
   for (const d of diff) line(d.text, d.better ? C.lime : C.red);
   if (cmp.super && cmp.super.id !== it.super?.id) line(`Tracisz: ${superLine(cmp).split(':')[0]}`, C.red);
+  if (cmp.unique && cmp.unique !== it.unique) line(`Tracisz efekt: ${cmp.name}`, C.red);
   return affixY;
 }
 
@@ -127,7 +132,7 @@ export class LootView {
       },
       { label: () => `Rozłóż (+${salvageGold(it, run.stats.greed)} zł, +${salvageShards(it)} odł.)`, act: () => { run.salvage(it); this.finish(''); } },
     ], W / 2, 214, 200, 15);
-    sfx.play(it.rarity >= 3 || it.super ? 'levelup' : 'chest');
+    sfx.play(it.rarity >= 3 || it.super || it.unique ? 'levelup' : 'chest');
   }
 
   private finish(note: string): void {
@@ -144,8 +149,8 @@ export class LootView {
   render(r: Renderer): void {
     const it = this.item, run = this.run;
     dim(r);
-    const title = this.source === 'boss' ? 'Łup bossa!' : this.source === 'elite' ? 'Skrzynia elity!' : 'Przedmiot!';
-    drawText(r.g, title, W / 2, 10, it.super ? C.yellow : rarityCol(it), { align: 'center', scale: 2, outline: C.black });
+    const title = it.unique ? 'Unikat!' : this.source === 'boss' ? 'Łup bossa!' : this.source === 'elite' ? 'Skrzynia elity!' : 'Przedmiot!';
+    drawText(r.g, title, W / 2, 10, it.super ? C.yellow : itemColor(it), { align: 'center', scale: 2, outline: C.black });
     const cur = run.equipment[run.slotFor(it)];
     drawItemCard(r, it, 18, 40, 216, 168, cur, false, run.stats);
     if (cur) {

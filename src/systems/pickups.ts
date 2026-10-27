@@ -1,6 +1,6 @@
 import { sfx } from '../core/audio';
 import { C } from '../core/palette';
-import { RARITIES } from '../data/items';
+import { itemColor } from '../data/items';
 import type { Run } from '../game/run';
 
 /** Bazowy zasięg przyciągania kryształów (px), mnożony przez statystykę `magnet`. */
@@ -61,7 +61,7 @@ export function updatePickups(run: Run, dt: number): void {
       case 'chest': {
         // Łup: pierścień i napis w kolorze jakości przedmiotu.
         if (it.item) run.pendingLoot.push({ source: it.source, item: it.item });
-        const col = it.item ? RARITIES[it.item.rarity].color : C.gold;
+        const col = it.item ? itemColor(it.item) : C.gold;
         const f = run.addFx('ring', p.x, p.y, col, 0.35);
         if (f) f.r = 18;
         run.burst(p.x, p.y, col, 12, 70);

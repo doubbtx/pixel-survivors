@@ -26,6 +26,7 @@ export const HINTS = {
   map: 'Mapa wyprawy: wybierz kolejny węzeł. Czerwone kropki pod mapą to modyfikatory: większe ryzyko, większa nagroda.',
   shop: 'Sklep: kup przedmioty i usługi. I otwiera ekwipunek (rozłóż zbędne przedmioty na złoto), K kowadło.',
   anvil: 'Kowadło: ulepszaj i przekuwaj przedmioty za złoto i odłamki (z rozkładania).',
+  unique: 'Unikat! Ma stały efekt, który łamie zasady gry, zwykle za jakąś cenę. Nie da się go przekuć. Trafia do kolekcji.',
   resource: 'Pasek pod HP to zasób bohatera. Każdy bohater zdobywa go i używa inaczej, opis w Pomocy (Esc).',
   task: 'Zadanie! Dotknij turkusowego kamienia, żeby je zacząć. Za wykonanie nagroda, za część porażek karna fala.',
   hurt: 'Oberwałeś! Trafia cię tylko mały środek postaci, więc da się przecisnąć między pociskami. Spacja = unik.',

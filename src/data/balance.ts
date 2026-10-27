@@ -107,6 +107,8 @@ export const BAL = {
   itemScale: (ilvl: number) => Math.pow(1.3, ilvl - 1),
   /** Skalowanie HP/regeneracji z przedmiotów (nadąża za wzrostem obrażeń wrogów). */
   itemHpScale: (ilvl: number) => Math.pow(1.25, ilvl - 1),
+  /** Szansa, że łup bossa / elity (także skrzynia elity) to unikat (× (1 + Fortuna)). */
+  uniques: { boss: 0.12, elite: 0.02 },
   /** Szansa, że zwykły wróg upuści skrzynię z przedmiotem. */
   itemDropChance: 0.0008,
   bagSize: 24,

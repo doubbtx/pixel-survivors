@@ -20,8 +20,10 @@ export function effectiveStats(run: Run, w: WeaponInst): EffWeapon {
   const cooldown = s.cooldown * BAL.attackSpeedMul(st.atkSpeed + (b.atk ?? 0));
   // Żarłoczne ostrza (augment): orbita rośnie z zabójstwami na tym poziomie.
   const grow = w.def.kind === 'orbit' ? 1 + (run.cardState['aug.orbit'] ?? 0) : 1;
+  // Klapki Berserkera (unikat): bronie kierunkowe strzelają w kierunku ruchu za wielokrotność obrażeń.
+  const facing = AIMED.has(w.def.kind) ? 1 + run.flag('facing') : 1;
   return {
-    damage: s.damage * st.might * (1 + (b.dmg ?? 0)),
+    damage: s.damage * st.might * (1 + (b.dmg ?? 0)) * facing,
     cooldown,
     amount: Math.max(0, s.amount + st.amount + (b.amount ?? 0)),
     speed: s.speed * st.projSpeed * (1 + (b.proj ?? 0)),
@@ -31,6 +33,14 @@ export function effectiveStats(run: Run, w: WeaponInst): EffWeapon {
     knock: s.knock,
     hitSteps: Math.max(4, Math.round(cooldown * 60)),
   };
+}
+
+/** Bronie celujące w kierunku (flaga `facing` odbiera im auto-celowanie). */
+const AIMED = new Set<WeaponKind>(['bolt', 'boomerang', 'laser', 'cleave']);
+
+/** Kąt patrzenia gracza, gdy flaga `facing` wyłącza auto-celowanie; inaczej null. */
+function facingAngle(run: Run): number | null {
+  return run.flag('facing') > 0 ? Math.atan2(run.player.fy, run.player.fx) : null;
 }
 
 /** Promień orbity — wspólny dla logiki i renderu. */
@@ -91,6 +101,12 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     if (hp.kind === 'nthVolley' && w.def.id === run.basicWeaponId && ++w.shots % every === 0) {
       amount += 2 + run.flag('passive.extra');
       crit = true;
+    }
+    const face = facingAngle(run);
+    if (face !== null) {
+      for (let i = 0; i < amount; i++) fireProjectile(run, w, s, face + (i - (amount - 1) / 2) * 0.15, crit);
+      sfx.play('shoot');
+      return;
     }
     const targets = nearestN(run, amount, 200);
     if (targets.length === 0) { w.timer = 0.1; return; }
@@ -188,7 +204,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     if (!ready(w, s, dt)) return;
     const p = run.player;
     const t = run.nearestEnemy(p.x, p.y, 180);
-    const base = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx);
+    const base = facingAngle(run) ?? (t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx));
     for (let i = 0; i < s.amount; i++) fireProjectile(run, w, s, base + (i - (s.amount - 1) / 2) * 0.5, false);
   },
 
@@ -197,7 +213,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     if (!ready(w, s, dt)) return;
     const p = run.player;
     const t = run.nearestEnemy(p.x, p.y, 200);
-    const base = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx);
+    const base = facingAngle(run) ?? (t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx));
     for (let i = 0; i < s.amount; i++) {
       const a = base + (i - (s.amount - 1) / 2) * 0.35;
       const z = run.addZone('beam', p.x, p.y, 3 * s.area, s.damage, s.duration, w.slot, w.def.name);
@@ -227,7 +243,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     const p = run.player;
     const R = 26 * s.area;
     const t = run.nearestEnemy(p.x, p.y, R + 30);
-    const base = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx);
+    const base = facingAngle(run) ?? (t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx));
     let hits = 0;
     for (let k = 0; k < Math.max(1, s.amount); k++) {
       const a = base + (k * Math.PI * 2) / Math.max(1, s.amount);

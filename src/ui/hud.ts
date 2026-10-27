@@ -1,5 +1,5 @@
 import { W, H, VIEW_W, VIEW_H, type Renderer } from '../core/renderer';
-import { RARITIES } from '../data/items';
+import { itemColor } from '../data/items';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { C, RAMP } from '../core/palette';
 import { drawText } from '../core/font';
@@ -50,7 +50,7 @@ function drawMinimap(r: Renderer, run: Run, x: number, y: number, w: number, h: 
     if (e.elite) dot(e.x - 1, e.y - 1, 2, C.orange);
     else dot(e.x, e.y, 1, C.red);
   }
-  for (const it of run.pickups.items) if (it.item) dot(it.x - 1, it.y - 1, 2, RARITIES[it.item.rarity].color);
+  for (const it of run.pickups.items) if (it.item) dot(it.x - 1, it.y - 1, 2, itemColor(it.item));
   if (run.boss && run.step % 20 < 14) dot(run.boss.x - 1, run.boss.y - 1, 3, C.pink);
   // Obiekty mapy: kapliczki, portale; miecz w kamieniu dopiero z bliska (to sekret).
   for (const o of run.mapObjects) {

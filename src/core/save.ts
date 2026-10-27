@@ -65,11 +65,12 @@ export interface Settings {
   hitstop: boolean;
 }
 
-/** Kolekcja kart (między runami): odkryte, liczba wyborów i bany (wykluczone z ofert). */
+/** Kolekcja kart (między runami): odkryte, liczba wyborów i bany (wykluczone z ofert); odkryte unikaty (nowe pole bez migracji). */
 export interface CardCollection {
   seen: string[];
   picks: Record<string, number>;
   banned: string[];
+  uniques: string[];
 }
 
 export interface SaveData {
@@ -150,7 +151,7 @@ function defaults(): SaveData {
     slots: { hardcore: null, endless: null, expedition: null },
     board: [],
     notice: '',
-    collection: { seen: [], picks: {}, banned: [] },
+    collection: { seen: [], picks: {}, banned: [], uniques: [] },
     meta: { heroes: {}, unassigned: 0 },
     seenHints: [],
     lastHero: '',

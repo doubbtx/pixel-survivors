@@ -8,6 +8,7 @@ import type { Run } from '../game/run';
  *  reroll    nowy losowy afiks w miejsce wybranego (albo wszystkie naraz, taniej)
  *  rarity    wyższa jakość: mocniejsze wartości + nowy afiks
  *  transfer  super-bonus z przedmiotu-dawcy na inny przedmiot; dawca przepada
+ * Unikaty można tylko ulepszać (bez przekuwania i super-bonusu).
  * Ceny: BAL.anvil (złoto × BAL.shopScale(poziom przedmiotu)).
  */
 export type AnvilOp = 'upgrade' | 'reroll' | 'rarity' | 'transfer';
@@ -77,6 +78,7 @@ export function anvilUpgrade(run: Run, it: Item): AnvilResult {
 }
 
 export function anvilReroll(run: Run, it: Item, idx: number): AnvilResult {
+  if (it.unique) return fail('Unikatu nie da się przekuć');
   const c = anvilCost(run, 'reroll', it);
   if (!it.affixes[idx]) return fail('Brak bonusu do przekucia');
   if (!canAfford(run, c)) return fail('Za mało złota lub odłamków');
@@ -92,6 +94,7 @@ export function rerollAllCost(run: Run, it: Item): Cost {
 }
 
 export function anvilRerollAll(run: Run, it: Item): AnvilResult {
+  if (it.unique) return fail('Unikatu nie da się przekuć');
   if (!it.affixes.length) return fail('Brak bonusów do przekucia');
   const c = rerollAllCost(run, it);
   if (!canAfford(run, c)) return fail('Za mało złota lub odłamków');
@@ -111,6 +114,7 @@ export function anvilRarity(run: Run, it: Item): AnvilResult {
 export function anvilTransfer(run: Run, from: Item, to: Item): AnvilResult {
   if (!from.super) return fail('Dawca nie ma super-bonusu');
   if (from === to) return fail('Wybierz inny przedmiot');
+  if (to.unique) return fail('Unikat nie przyjmie super-bonusu');
   const c = anvilCost(run, 'transfer', to);
   if (!canAfford(run, c)) return fail('Za mało złota lub odłamków');
   to.super = from.super;

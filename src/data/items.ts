@@ -4,6 +4,8 @@ import type { Stats } from '../entities/types';
 import type { Run } from '../game/run';
 import type { CardHooks } from './cards';
 import { BAL } from './balance';
+import { weaponStatsAt } from './weapons';
+import { spawnMinion } from '../systems/minions';
 
 /**
  * Przedmioty ekwipunku: 8 slotów, 5 stopni jakości, losowe afiksy zależne od poziomu przedmiotu
@@ -281,6 +283,97 @@ export const SUPERS: SuperDef[] = [
 
 export const SUPER_BY_ID: Record<string, SuperDef> = Object.fromEntries(SUPERS.map((s) => [s.id, s]));
 
+// ============================ unikaty ============================
+
+/**
+ * Unikaty (jak w PoE): stała nazwa i typ, moc Legendarnego, stałe afiksy (najwyższy rzut) i efekt łamiący zasady
+ * z ceną. Efekt przez `stats`/`mul` (liczone z ekwipunkiem), `flags` i `hooks` (jak karty; hook dostaje 1 jako ostatni argument).
+ * Wypadają rzadko z bossów i elit (BAL.uniques), nie da się ich przekuć ani dać im super-bonusu. Odkryte trafiają do kolekcji.
+ */
+export interface UniqueDef {
+  id: string;
+  name: string;
+  base: string;
+  desc: string;
+  affixes: (keyof Stats)[];
+  stats?: Partial<Stats>;
+  mul?: Partial<Stats>;
+  flags?: Record<string, number>;
+  hooks?: CardHooks;
+}
+
+/** Kolor unikatów (nazwa, ramka, poświata). */
+export const UNIQUE_COLOR = C.tan;
+
+export const UNIQUES: UniqueDef[] = [
+  {
+    id: 'u_blinders', name: 'Klapki Berserkera', base: 'mask', affixes: ['might', 'atkSpeed'], flags: { facing: 1.5 },
+    desc: 'Bronie kierunkowe (pociski, bumerang, promień, cięcie) celują tylko w kierunku ruchu, ale zadają 2.5x obrażeń.',
+  },
+  {
+    id: 'u_bulwark', name: 'Zbroja Wiecznej Warty', base: 'plate', affixes: ['maxHp', 'armor'], flags: { healShield: 0.6 },
+    desc: 'Leczenie nie przywraca HP: zamienia się w tarczę (do 60% maks. HP).',
+  },
+  {
+    id: 'u_stormstep', name: 'Buty Burzy Strzał', base: 'boots', affixes: ['speedBonus', 'amount'],
+    desc: 'Unik wystrzeliwuje pierścień 12 pocisków (60% obrażeń broni podstawowej).',
+    hooks: {
+      onDash: (run) => {
+        const w = run.weapons[0], p = run.player;
+        if (!w) return;
+        const dmg = weaponStatsAt(w.def, w.level).damage * run.stats.might * 0.6;
+        for (let i = 0; i < 12; i++) run.spawnProjectile({ x: p.x, y: p.y, angle: (i / 12) * Math.PI * 2, speed: 200, damage: dmg, src: 'Burza strzał', sprite: w.def.proj ?? 'bolt', pierce: 1, life: 0.7 });
+      },
+    },
+  },
+  {
+    id: 'u_prism', name: 'Pryzmat Żywiołów', base: 'band', affixes: ['elemPower', 'crit'],
+    desc: 'Co 10. trafienie nakłada na cel dwa różne żywioły naraz (reakcja).',
+    hooks: {
+      onHit: (run, e, dmg) => {
+        const n = (run.cardState.prism = (run.cardState.prism ?? 0) + 1);
+        if (n % 10 || e.dead) return;
+        const els = ['fire', 'ice', 'lightning', 'poison'] as const;
+        const a = rng.int(0, 3), b = (a + rng.int(1, 3)) % 4;
+        run.applyElement(e, els[a], dmg);
+        run.applyElement(e, els[b], dmg);
+      },
+    },
+  },
+  {
+    id: 'u_glass', name: 'Szklane Serce', base: 'talisman', affixes: ['critMult', 'growth'], mul: { might: 1.6 }, flags: { dmgTaken: -0.5 },
+    desc: 'Obrażenia x1.6, ale otrzymujesz 50% więcej obrażeń.',
+  },
+  {
+    id: 'u_nightclaw', name: 'Szpony Nocy', base: 'claws', affixes: ['lifesteal', 'crit'], stats: { lifesteal: 0.01 }, mul: { lifesteal: 3, regen: 0 },
+    desc: 'Leczenie z obrażeń x3, ale regeneracja HP nie działa.',
+  },
+  {
+    id: 'u_reaper', name: 'Kosa Żniwiarza', base: 'axe', affixes: ['might', 'duration'], flags: { minionDmg: 0.5 },
+    desc: 'Co 30. zabójstwo przywołuje ducha-sługę. Sługi zadają +50% obrażeń.',
+    hooks: {
+      onKill: (run, e) => {
+        const n = (run.cardState.reaper = (run.cardState.reaper ?? 0) + 1);
+        if (n % 30 === 0) spawnMinion(run, e.x, e.y, run.cardDamage(BAL.minions.passiveDmg), BAL.minions.passiveLife, false, 'Kosa Żniwiarza');
+      },
+    },
+  },
+  {
+    id: 'u_chronos', name: 'Sygnet Chronosa', base: 'signet', affixes: ['cdr', 'duration'], stats: { cdr: 0.4 }, flags: { ultGain: -0.35 },
+    desc: 'Umiejętności odnawiają się 40% szybciej, ale ultimate ładuje się 35% wolniej.',
+  },
+  {
+    id: 'u_hunter', name: 'Płaszcz Łowcy Głów', base: 'cloak', affixes: ['maxHp', 'critMult'], flags: { bossDmg: 0.6, eliteRate: 0.3 },
+    desc: '+60% obrażeń przeciw elitom i bossom, ale elity pojawiają się 30% częściej.',
+  },
+  {
+    id: 'u_midas', name: 'Wisior Midasa', base: 'charm', affixes: ['greed', 'magnet'], mul: { greed: 2 }, flags: { enemyHp: 0.2 },
+    desc: 'Złoto x2, ale wrogowie mają 20% więcej HP.',
+  },
+];
+
+export const UNIQUE_BY_ID: Record<string, UniqueDef> = Object.fromEntries(UNIQUES.map((u) => [u.id, u]));
+
 // ============================ przedmiot ============================
 
 export interface Item {
@@ -298,6 +391,8 @@ export interface Item {
   spent?: { gold: number; shards: number };
   /** Nowy w plecaku (znaczek „!” do pierwszego zamknięcia ekwipunku). */
   fresh?: boolean;
+  /** Unikat: id z UNIQUES (stała nazwa, afiksy i efekt). */
+  unique?: string;
 }
 
 /** Źródło przedmiotu; 'shop' = oferta sklepu między poziomami. */
@@ -372,6 +467,33 @@ export function rollItem(depth: number, source: LootSource, luck = 0, kind?: Ite
   if (rng.chance(R.superChance)) it.super = rollSuper(rarity);
   it.name = itemName(base, rarity, it.affixes, !!it.super);
   return it;
+}
+
+/** Unikat (losowy albo o podanym id) na poziomie głębokości + 1: moc Legendarnego, afiksy z najwyższym rzutem. */
+export function rollUnique(depth: number, id?: string): Item {
+  const def = id ? UNIQUE_BY_ID[id] : rng.pick(UNIQUES);
+  const base = BASE_BY_ID[def.base], rarity = RARITIES.length - 1, R = RARITIES[rarity], ilvl = depth + 1;
+  const imp = IMPLICIT[base.kind];
+  return {
+    base: base.id, rarity, ilvl, name: def.name, unique: def.id,
+    implicit: { stat: imp.stat, mode: imp.mode, value: implicitValue(base.kind, ilvl, R.power) },
+    affixes: def.affixes.map((stat) => {
+      const a = AFFIX_BY_STAT[stat];
+      return { stat, value: a.max * (stat === 'amount' ? 1 : R.power) * affixScale(a, ilvl) };
+    }),
+  };
+}
+
+/** Kolor przedmiotu: unikaty mają własny, reszta kolor rzadkości. */
+export function itemColor(it: Item): number {
+  return it.unique ? UNIQUE_COLOR : RARITIES[it.rarity].color;
+}
+
+/** Efekty założonych unikatów (flagi, hooki, statystyki) — liczone w Run jak super-bonusy. */
+export function equippedUniques(run: Run): UniqueDef[] {
+  const out: UniqueDef[] = [];
+  for (const it of Object.values(run.equipment)) if (it?.unique && UNIQUE_BY_ID[it.unique]) out.push(UNIQUE_BY_ID[it.unique]);
+  return out;
 }
 
 // ============================ kowadło (systems/anvil.ts) ============================
