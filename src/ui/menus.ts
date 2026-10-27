@@ -41,7 +41,8 @@ function menuBackdrop(app: App, t: number): void {
   const lead = ((t * 40 + 320) % (W + 280)) - 40;
   walk('kestra', lead, false, 0);
   walk('borgun', lead - 26, false, 1);
-  PARADE.forEach((name, i) => walk(name, lead - 70 - i * 28, false, i + 2));
+  walk('ignara', lead - 50, false, 2);
+  PARADE.forEach((name, i) => walk(name, lead - 94 - i * 28, false, i + 3));
 }
 
 export class MainMenu implements Screen {
@@ -208,9 +209,10 @@ function renderBoard(app: App, x: number, y: number, w: number, rows: number): v
   });
 }
 
-const CARD_W = 222;
-const CARD_H = 204;
+const LIST_X = 12, LIST_W = 140, ROW_H = 36, TOP = 38;
+const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 204;
 
+/** Wybór bohatera: lista po lewej (do 6 bohaterów), szczegóły zaznaczonego po prawej. */
 export class HeroSelect implements Screen {
   private sel = 0;
 
@@ -221,22 +223,20 @@ export class HeroSelect implements Screen {
     this.app.go(new GameScreen(this.app, HEROES[this.sel].id, this.mode));
   }
 
-  private cardX(i: number): number {
-    return 12 + i * (CARD_W + 12);
-  }
-
   update(): void {
     const inp = this.app.input;
     const n = HEROES.length;
-    if (inp.pressed('left')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
-    if (inp.pressed('right')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
+    if (inp.pressed('up') || inp.pressed('left')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
+    if (inp.pressed('down') || inp.pressed('right')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
     if (inp.pressed('confirm')) this.start();
     if (inp.pressed('back')) this.app.go(this.mode === 'training' ? new MainMenu(this.app) : new SlotScreen(this.app, this.mode));
     if (inp.pressed('click')) {
+      const { x, y } = inp.mouse;
+      if (inside(x, y, DET_X, TOP, DET_W, DET_H)) { this.start(); return; }
       HEROES.forEach((_, i) => {
-        if (!inside(inp.mouse.x, inp.mouse.y, this.cardX(i), 38, CARD_W, CARD_H)) return;
+        if (!inside(x, y, LIST_X, TOP + i * ROW_H, LIST_W, ROW_H - 4)) return;
         if (this.sel === i) this.start();
-        else this.sel = i;
+        else { this.sel = i; sfx.play('select'); }
       });
     }
   }
@@ -247,37 +247,44 @@ export class HeroSelect implements Screen {
     const m = this.mode;
     const title = `${m === 'training' ? 'Trening' : SLOT_TITLE[m].split(' ').pop()}: wybierz bohatera`;
     drawText(g, title, W / 2, 10, m === 'training' ? C.yellow : SLOT_COLOR[m], { align: 'center', scale: 2, outline: C.black });
+    // Lista bohaterów.
     HEROES.forEach((h, i) => {
-      const x = this.cardX(i), y = 38, on = i === this.sel;
-      panel(r, x, y, CARD_W, CARD_H, on ? C.gold : C.slate);
-      r.withAlpha(0.5, () => r.circle(x + 32, y + 34, 22, C.black, true));
-      drawShadow(g, x + 32, y + 56, 30);
-      drawSprite(g, `${h.sprite}@${on ? animFrame(h.sprite, Math.floor(performance.now() / 16), 0) : 0}`, x + 32, y + 34, { scale: 2 });
-      drawText(g, h.name, x + 64, y + 12, h.color, { scale: 2, shadow: C.black });
-      drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 38, C.lavender);
-      const wpn = WEAPON_BY_ID[h.weapon];
-      drawSprite(g, wpn.icon, x + 19, y + 71);
-      drawText(g, `Broń: ${wpn.name}`, x + 32, y + 66, C.white);
-      drawText(g, `Pasywka: ${h.passive.name}`, x + 12, y + 84, C.yellow);
-      let ly = y + 97;
-      for (const line of wrapText(h.passive.desc, CARD_W - 24)) { drawText(g, line, x + 12, ly, C.lgray); ly += 11; }
-      ly += 4;
-      // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa.
-      h.abilities.forEach((a, i) => {
-        const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
-        const ax = x + 12 + (i % 2) * 104, ay = ly + Math.floor(i / 2) * 20;
-        slot(r, ax, ay, 18, a.color);
-        drawSprite(g, a.icon, ax + 9, ay + 9);
-        drawText(g, key, ax + 22, ay - 1, C.lavender);
-        drawText(g, a.name, ax + 22, ay + 8, a.color);
-      });
-      const rec = heroRecord(this.app.save, h.id);
-      const best = m === 'hardcore' ? `Najdalej: poziom ${rec.bestDepth}`
-        : m === 'expedition' ? `Najwięcej węzłów: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}`
-        : m === 'endless' ? `Rekord: ${fmtTime(rec.bestEndless)}` : `Rekord: ${fmtTime(rec.bestTime)}   wygrane: ${rec.wins}`;
-      drawText(g, best, x + 12, y + CARD_H - 20, C.dgray);
+      const y = TOP + i * ROW_H, on = i === this.sel;
+      panel(r, LIST_X, y, LIST_W, ROW_H - 4, on ? C.gold : C.slate);
+      drawSprite(g, `${h.sprite}@${on ? animFrame(h.sprite, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 16);
+      drawText(g, h.name, LIST_X + 34, y + 5, h.color, { shadow: C.black });
+      drawText(g, h.role, LIST_X + 34, y + 17, C.lavender);
     });
-    drawText(g, 'Strzałki: wybór    Enter: start    Esc: wstecz', W / 2, H - 18, C.lavender, { align: 'center' });
+    // Szczegóły zaznaczonego.
+    const h = HEROES[this.sel], x = DET_X, y = TOP;
+    panel(r, x, y, DET_W, DET_H, C.gold);
+    r.withAlpha(0.5, () => r.circle(x + 32, y + 34, 22, C.black, true));
+    drawShadow(g, x + 32, y + 56, 30);
+    drawSprite(g, `${h.sprite}@${animFrame(h.sprite, Math.floor(performance.now() / 16), 0)}`, x + 32, y + 34, { scale: 2 });
+    drawText(g, h.name, x + 64, y + 12, h.color, { scale: 2, shadow: C.black });
+    drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 38, C.lavender);
+    const wpn = WEAPON_BY_ID[h.weapon];
+    drawSprite(g, wpn.icon, x + 19, y + 71);
+    drawText(g, `Broń: ${wpn.name}`, x + 32, y + 66, C.white);
+    drawText(g, `Pasywka: ${h.passive.name}`, x + 12, y + 84, C.yellow);
+    let ly = y + 97;
+    for (const line of wrapText(h.passive.desc, DET_W - 24)) { drawText(g, line, x + 12, ly, C.lgray); ly += 11; }
+    ly += 4;
+    // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa.
+    h.abilities.forEach((a, i) => {
+      const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
+      const ax = x + 12 + (i % 2) * 140, ay = ly + Math.floor(i / 2) * 20;
+      slot(r, ax, ay, 18, a.color);
+      drawSprite(g, a.icon, ax + 9, ay + 9);
+      drawText(g, key, ax + 22, ay - 1, C.lavender);
+      drawText(g, a.name, ax + 22, ay + 8, a.color);
+    });
+    const rec = heroRecord(this.app.save, h.id);
+    const best = m === 'hardcore' ? `Najdalej: poziom ${rec.bestDepth}`
+      : m === 'expedition' ? `Najwięcej węzłów: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}`
+      : m === 'endless' ? `Rekord: ${fmtTime(rec.bestEndless)}` : `Rekord: ${fmtTime(rec.bestTime)}   wygrane: ${rec.wins}`;
+    drawText(g, best, x + 12, y + DET_H - 20, C.dgray);
+    drawText(g, 'Strzałki: wybór    Enter: start    Esc: wstecz', W / 2, H - 16, C.lavender, { align: 'center' });
   }
 }
 

@@ -148,7 +148,7 @@ src/
 - Echo: drugie Q po pół sekundy. Przejrzane opisy pasywek, bonusów przedmiotów, umiejętności i kart (bez „pocisk/ilość”, „wampiryzmu”, „kursora”).
 
 **Kolekcja i bany kart**:
-- Menu główne → **Kolekcja kart**: wszystkie 49 kart; odkryta jest każda, którą zobaczyłeś w ofercie (w dowolnym trybie), nieodkryte to „?”. Szczegóły karty i liczba wyborów.
+- Menu główne → **Kolekcja kart**: wszystkie karty (53); odkryta jest każda, którą zobaczyłeś w ofercie (w dowolnym trybie), nieodkryte to „?”. Szczegóły karty i liczba wyborów.
 - **Bany**: do 5 odkrytych kart (B albo przycisk) — zbanowana karta nie pojawia się w żadnej ofercie, więc łatwiej trafić karty pod swoje synergie. Odbanowanie tym samym przyciskiem.
 - W ofercie kart nowa (nieodkryta) karta ma zielony napis „Nowa!”.
 - Zapis w wersji 3 (migracja z wersji 2: karty z trwającego runu Hardcore od razu trafiają do kolekcji).
@@ -184,6 +184,13 @@ src/
 - Siła wrogów i łupu (głębokość) rośnie co 2 rzędy i z każdym aktem. Ukończenie wyprawy daje x2 esencji; rekordy: najwięcej ukończonych węzłów i liczba ukończonych wypraw. Liczby w `BAL.expedition`.
 - **Sloty zapisu per tryb**: Hardcore, Ekspedycja i Endless mają osobne sloty (ekran slotu: Kontynuuj / Porzuć run / Nowy run). Każdy zapisuje się co ~5 s w trakcie poziomu i przez „Zapisz i wyjdź”; Endless też da się teraz przerwać i wznowić. Zapis w wersji 5 (migracja: run Hardcore i tablica rekordów przechodzą do nowych pól).
 
+**Ignara, Mag ognia (0.6, etap 7: bohaterowie 3/6)**:
+- 85 HP, -10% odnowienia, +15% siły żywiołów. Broń: **Ognisty kostur** (kule ognia, podpalają; ewolucja z Soczewką: **Kostur feniksa**).
+- Pasywka **Echo mocy**: co 3. użycie Q lub E powtarza się po chwili za darmo.
+- Q **Kula ognia** (wybuch w miejscu celownika + płonąca ziemia), E **Pierścień ognia** (odepchnięcie i krąg płomieni), Spacja **Mignięcie**, R **Inferno** (deszcz meteorów wokół ciebie).
+- Ewolucje: Słońce (3 dodatkowe wybuchy), Płomienna bariera (tarcza 15% HP), Kataklizm (dwa razy gęstsze meteory). 4 karty bohaterki (Rozżarzenie, Wieczny płomień, Ognisty deszcz, Podwójne echo).
+- Nowy ekran wyboru bohatera: lista po lewej, szczegóły po prawej.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
@@ -199,6 +206,6 @@ src/
 ## Kolejne etapy
 
 4. Gotowe: sklep między poziomami, zestawy tagów, kowadło, kolekcja i bany kart, Ekspedycja, sloty zapisu per tryb.
-7. Kolejni bohaterowie (docelowo 6 ról).
+7. Bohaterowie (docelowo 6 ról): Kestra, Borgun, Ignara — zostały 3.
 5. Gotowe: meta-progresja, Paragon, prestiż, Endless, formatowanie liczb (break_infinity.js tylko, gdyby wartości wyszły poza zakres double).
 6. Gotowe: optymalizacja (tryb oszczędnych efektów), polish, wirtualny joystick i przyciski na telefonie.

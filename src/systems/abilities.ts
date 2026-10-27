@@ -1,6 +1,7 @@
 import type { Input } from '../core/input';
 import { sfx } from '../core/audio';
 import { C } from '../core/palette';
+import { rng } from '../core/rng';
 import { BAL } from '../data/balance';
 import { abilityParam, abilityCooldown, type AbilityKind, type AbilitySlot } from '../data/heroes';
 import { SLOT, type AbilityInst } from '../entities/types';
@@ -51,6 +52,17 @@ const EVO_EXTRA: Record<string, Cast> = {
     if (f) f.r = r;
     run.addShake(3);
   }),
+  // Słońce: trzy dodatkowe wybuchy wokół celu.
+  i_fireball: (run, a, P) => {
+    const [x, y] = aimPoint(run, P('range'));
+    for (let i = 0; i < 3; i++) {
+      const ang = (i / 3) * Math.PI * 2 + rng.range(0, 1);
+      const d = P('radius') * run.stats.area;
+      run.schedule(0.25 + i * 0.12, () => run.explode(x + Math.cos(ang) * d, y + Math.sin(ang) * d, P('radius') * 0.8 * run.stats.area, P('damage') * 0.6 * run.stats.might, a.def.name, C.gold, 3));
+    }
+  },
+  // Płomienna bariera: tarcza 15% HP.
+  i_ring: (run) => { run.addShield(run.stats.maxHp * 0.15, 0.3); },
 };
 
 /** Zachowania umiejętności. `P(klucz)` zwraca parametr na bieżącym poziomie. */
@@ -133,7 +145,52 @@ const CASTS: Record<AbilityKind, Cast> = {
     run.showBanner(a.def.name + '!');
     run.addShake(5);
   },
+
+  fireball(run, a, P) {
+    const p = run.player;
+    const [x, y] = aimPoint(run, P('range'));
+    const f = run.addFx('line', p.x, p.y, C.orange, 0.15);
+    if (f) { f.x2 = x; f.y2 = y; f.w = 2; }
+    // Krótki lot kuli, potem wybuch i płonąca ziemia.
+    run.schedule(0.12, () => {
+      const r = P('radius') * run.stats.area;
+      run.explode(x, y, r, P('damage') * run.stats.might, a.def.name, C.orange, 4);
+      run.addFire(x, y, r * 0.7, P('damage') * 0.12 * run.stats.might, 2 * run.stats.duration, a.def.name);
+    });
+  },
+
+  firering(run, a, P) {
+    const p = run.player;
+    const r = P('radius') * run.stats.area;
+    // Odepchnięcie od środka, potem krąg płomieni na obwodzie.
+    run.enemiesInCircle(p.x, p.y, r, (e) => run.damageEnemy(e, P('damage') * 2 * run.stats.might, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 7 }));
+    const n = 10;
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2;
+      run.addFire(p.x + Math.cos(ang) * r, p.y + Math.sin(ang) * r, 12 * run.stats.area, P('damage') * run.stats.might, P('duration') * run.stats.duration, a.def.name);
+    }
+    const f = run.addFx('ring', p.x, p.y, C.gold, 0.3);
+    if (f) f.r = r;
+    run.addShake(2);
+  },
+
+  inferno(run, a, P) {
+    a.activeT = P('duration') * run.stats.duration;
+    run.showBanner(a.def.name + '!');
+    run.addShake(4);
+  },
 };
+
+/** Inferno: meteor w losowym punkcie wokół gracza (trafia najbliższego wroga w pobliżu tego punktu). */
+function infernoStrike(run: Run, a: AbilityInst): void {
+  const P = (k: string) => abilityParam(a.def, a.level, k) + run.flag(`${a.def.id}.${k}`);
+  const p = run.player;
+  const ang = rng.range(0, Math.PI * 2), d = Math.sqrt(rng.next()) * P('radius') * run.stats.area;
+  let x = p.x + Math.cos(ang) * d, y = p.y + Math.sin(ang) * d;
+  const e = run.nearestEnemy(x, y, 30);
+  if (e) { x = e.x; y = e.y; }
+  run.explode(x, y, P('blast') * run.stats.area, P('damage') * run.stats.might, a.def.name, C.orange, 3);
+}
 
 /** Czas odnowienia umiejętności po wszystkich modyfikatorach (cdr gracza + karty dla slotu). */
 export function abilityMaxCd(run: Run, slot: AbilitySlot): number {
@@ -163,6 +220,16 @@ export function castAbility(run: Run, slot: AbilitySlot, free = false): void {
   if (a.def.evolved) EVO_EXTRA[a.def.id]?.(run, a, P);
   if (a.def.kind !== 'dash') sfx.play('ability');
   if (free) return;
+  // Echo mocy (pasywka): co N-te Q/E powtarza się za darmo.
+  const hp = run.hero.passive;
+  if (hp.kind === 'echoCast' && (slot === 'q' || slot === 'e')) {
+    const every = Math.max(2, hp.value - run.flag('passive.n'));
+    run.cardState.echoCast = (run.cardState.echoCast ?? 0) + 1;
+    if (run.cardState.echoCast % every === 0) {
+      run.schedule(0.35, () => castAbility(run, slot, true));
+      run.popText(run.player.x, run.player.y - 14, 'Echo!', C.gold);
+    }
+  }
   run.emit('onAbilityCast', slot);
   if (a.def.kind === 'dash') run.emit('onDash');
 }
@@ -183,6 +250,11 @@ export function updateAbilities(run: Run, input: Input, dt: number): void {
         if (f) f.r = r;
         // Awatar (ewolucja): leczenie 2% HP na sekundę (tick co pół sekundy).
         if (a.def.evolved) run.heal(run.stats.maxHp * 0.01);
+      }
+      // Inferno: meteor co 0.2 s (Kataklizm: dwa).
+      if (a.def.kind === 'inferno' && run.step % 12 === 0) {
+        infernoStrike(run, a);
+        if (a.def.evolved) infernoStrike(run, a);
       }
       if (a.activeT <= 0) run.recomputeStats();
     }

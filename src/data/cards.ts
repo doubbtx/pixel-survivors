@@ -109,6 +109,7 @@ export const CARDS: CardDef[] = [
   { id: 's_roll', name: 'Akrobata', rarity: 'silver', tags: ['Szybkość', 'Umiejętności'], desc: 'Unik odnawia się 30% szybciej.', stackable: true, flags: { 'cd.dash': 0.3 } },
   { id: 's_warm', name: 'Ciepły posiłek', rarity: 'silver', tags: ['Życie'], desc: 'Mięso leczy 2x mocniej, +0.2 HP na sekundę.', flags: { meatHeal: 1 }, stats: { regen: 0.2 } },
   { id: 'h_k_net', name: 'Kolczasta sieć', rarity: 'silver', tags: ['Umiejętności', 'Obszar'], hero: 'kestra', desc: 'Sieć: +6 obrażeń co pół sekundy i jest większa.', stackable: true, flags: { 'k_net.damage': 6, 'k_net.radius': 10 } },
+  { id: 'h_i_kindle', name: 'Rozżarzenie', rarity: 'silver', tags: ['Ogień', 'Obszar'], hero: 'ignara', desc: 'Kula ognia: +15 obrażeń, +6 promienia.', stackable: true, flags: { 'i_fireball.damage': 15, 'i_fireball.radius': 6 } },
   { id: 'h_b_hide', name: 'Twarda skóra', rarity: 'silver', tags: ['Tarcze'], hero: 'borgun', desc: 'Tarcza z Żelaznej woli może urosnąć o 10% HP więcej. +2 pancerza.', stackable: true, flags: { 'passive.shieldCap': 0.1 }, stats: { armor: 2 } },
 
   // ======================= ZŁOTE =======================
@@ -187,6 +188,8 @@ export const CARDS: CardDef[] = [
     flags: { 'b_titan.duration': 4 },
     hooks: { onKill: (run) => { if (run.abilities.ult.activeT > 0) run.heal(1); } },
   },
+  { id: 'h_i_ring', name: 'Wieczny płomień', rarity: 'gold', tags: ['Ogień', 'Umiejętności'], hero: 'ignara', desc: 'Pierścień ognia: +2 s, +8 obrażeń co tick, +10 promienia.', stackable: true, flags: { 'i_ring.duration': 2, 'i_ring.damage': 8, 'i_ring.radius': 10 } },
+  { id: 'h_i_inferno', name: 'Ognisty deszcz', rarity: 'gold', tags: ['Ogień', 'Obszar'], hero: 'ignara', desc: 'Inferno: +2 s, +20 obrażeń, +8 promienia wybuchów.', stackable: true, flags: { 'i_inferno.duration': 2, 'i_inferno.damage': 20, 'i_inferno.blast': 8 } },
 
   // ======================= PRYZMATYCZNE =======================
   { id: 'p_bloodpact', name: 'Pakt krwi', rarity: 'prism', tags: ['Klątwa', 'Krytyk'], cursed: true, desc: '+100% obrażeń, ale nie możesz się leczyć.', stats: { might: 1 }, flags: { noHeal: 1 } },
@@ -245,6 +248,10 @@ export const CARDS: CardDef[] = [
       },
     },
   },
+  {
+    id: 'h_i_echo', name: 'Podwójne echo', rarity: 'prism', tags: ['Umiejętności', 'Ogień'], hero: 'ignara', desc: 'Echo mocy działa co 2. użycie Q lub E zamiast co 3., a odnowienie umiejętności jest o 15% krótsze.',
+    flags: { 'passive.n': 1 }, stats: { cdr: 0.15 },
+  },
 ];
 
 /** Ikony kart: pasujące ikony broni, pasywek i umiejętności albo własne (gfx/card-icons.ts, cd_*). */
@@ -260,6 +267,7 @@ const CARD_ICONS: Record<string, string> = {
   p_bloodpact: 'cd_blood', p_tempest: 'cd_tempest', p_twins: 'pi_dup', p_phoenix: 'cd_phoenix', p_nova: 'cd_nova',
   p_frost: 'cd_frost', p_shrapnel: 'cd_shrapnel', p_legion: 'tag:Przywołania', p_overcrit: 'tag:Krytyk', p_hourglass: 'ic_bolt_evo',
   h_k_hawk: 'ic_arrow_evo', h_b_quake: 'ab_b_slam',
+  h_i_kindle: 'ab_i_fireball', h_i_ring: 'ab_i_ring', h_i_inferno: 'ab_i_inferno', h_i_echo: 'cd_echo',
 };
 for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;
 

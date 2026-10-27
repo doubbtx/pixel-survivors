@@ -75,6 +75,16 @@ export const ICON_FNS: Record<string, IconFn> = {
     arrow(p, 5, 8, 14, 8, C.cyan, C.cyan);
     p.line(7, 4, 12, 4, C.cyan).line(8, 12, 13, 12, C.cyan).px(13, 5, C.white).px(14, 11, C.white);
   },
+  ic_staff: (p) => {
+    p.line(3, 14, 10, 7, C.brown).line(4, 14, 11, 7, C.dbrown);
+    p.ring(11.5, 5, 3, 1, C.gold);
+    flame(p, 11.5, 5, 0.45);
+  },
+  ic_staff_evo: (p) => {
+    p.line(2, 14, 9, 7, C.brown).line(3, 14, 10, 7, C.dbrown);
+    p.poly([[6, 3], [10, 6], [5, 7]], C.orange).poly([[15, 1], [12, 7], [10, 3]], C.orange);
+    p.sphere(11, 5, 3.5, 3.5, [C.orange, C.gold, C.yellow, C.white]).px(10, 4, C.white);
+  },
   ic_orbit: (p) => {
     p.sphere(8, 8, 2.5, 2.5, RAMP.blue);
     for (let k = 0; k < 3; k++) {
@@ -222,6 +232,30 @@ export const ICON_FNS: Record<string, IconFn> = {
   ab_b_leap: (p) => {
     p.polyShade([[5, 3], [10, 3], [10, 9], [14, 11], [14, 14], [4, 14], [4, 9]], RAMP.wood);
     p.rect(4, 12, 10, 1, C.ddbrown).line(1, 5, 3, 5, C.lgray).line(0, 8, 3, 8, C.white).line(1, 11, 3, 11, C.lgray);
+  },
+  ab_i_fireball: (p) => {
+    p.line(1, 15, 6, 10, C.orange).line(2, 15, 7, 10, C.gold).line(1, 13, 5, 9, C.rust);
+    p.sphere(10, 6, 5, 5, RAMP.fire).sphere(10.5, 5.5, 2.5, 2.5, [C.gold, C.yellow, C.white]);
+  },
+  ab_i_ring: (p) => {
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * TAU;
+      flame(p, 8 + Math.cos(a) * 5.5, 8.5 + Math.sin(a) * 5.5, 0.28);
+    }
+    p.sphere(8, 8, 1.8, 1.8, RAMP.bone);
+  },
+  ab_i_blink: (p) => {
+    p.ring(4.5, 9, 3, 1, C.dblue).ring(11.5, 7, 3.5, 1, C.cyan);
+    p.px(11.5, 7, C.white).px(4.5, 9, C.blue);
+    for (let x = 6; x <= 9; x += 2) p.px(x, 8, C.lavender);
+    sparkle(p, 13, 2);
+  },
+  ab_i_inferno: (p) => {
+    p.rect(1, 13, 14, 2, C.dred).rect(1, 13, 14, 1, C.rust);
+    for (const [x, y, s] of [[4, 4, 0.35], [11, 2, 0.3], [8, 9, 0.45]] as const) {
+      p.line(x - 3, y - 4, x, y, C.orange);
+      flame(p, x, y, s);
+    }
   },
   ab_b_titan: (p) => {
     p.ring(8, 8.5, 7.5, 1, C.red);

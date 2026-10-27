@@ -8,7 +8,7 @@ import type { Tag } from './cards';
  * Ultimate (slot 'ult') nie ma czasu odnowienia — ładuje się zabójstwami (`charge`).
  */
 export type AbilitySlot = 'q' | 'e' | 'dash' | 'ult';
-export type AbilityKind = 'volley' | 'net' | 'dash' | 'rain' | 'charge' | 'slam' | 'titan';
+export type AbilityKind = 'volley' | 'net' | 'dash' | 'rain' | 'charge' | 'slam' | 'titan' | 'fireball' | 'firering' | 'inferno';
 
 export interface AbilityDef {
   id: string;
@@ -36,7 +36,8 @@ export interface AbilityDef {
   evolved?: boolean;
 }
 
-export type HeroPassiveKind = 'nthVolley' | 'killShield';
+/** nthVolley: co N-ta salwa broni podstawowej mocniejsza; killShield: tarcza za zabójstwa; echoCast: co N-te Q/E powtarza się za darmo. */
+export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast';
 
 export interface HeroDef {
   id: string;
@@ -78,6 +79,7 @@ const ABILITY_DELTA: Record<string, (v: number, def: AbilityDef) => string> = {
   dist: (v) => `+${v} zasięgu`,
   might: (v) => `+${Math.round(v * 100)}% obrażeń w trakcie`,
   stun: (v) => `ogłuszenie o ${v} s dłuższe`,
+  blast: (v) => `+${v} promienia wybuchów`,
 };
 
 /** Co daje następny poziom umiejętności (dla ekranu awansu). */
@@ -149,6 +151,38 @@ export const HEROES: HeroDef[] = [
         cooldown: 0, cdPerLevel: 0, charge: 140, maxLevel: 5,
         p: { duration: 7, might: 0.5, armor: 10, damage: 20, radius: 40 }, pl: { duration: 1, might: 0.15, damage: 10 },
         evo: { tag: 'Życie', name: 'Awatar', desc: 'Dłuższy gniew, większa aura i leczenie 2% HP na sekundę.', icon: 'ab_b_titan_evo', bonus: { duration: 3, damage: 15, radius: 15 } },
+      },
+    ],
+  },
+  {
+    id: 'ignara', name: 'Ignara', role: 'Mag ognia', sprite: 'ignara', color: C.orange,
+    base: { maxHp: 85, speed: 58, cdr: 0.1, elemPower: 0.15 },
+    weapon: 'staff',
+    tags: ['Ogień', 'Umiejętności'],
+    passive: { name: 'Echo mocy', desc: 'Co 3. użycie Q lub E powtarza się po chwili za darmo.', kind: 'echoCast', value: 3 },
+    abilities: [
+      {
+        id: 'i_fireball', name: 'Kula ognia', icon: 'ab_i_fireball', desc: 'Kula ognia w miejscu celownika: wybuch i płonąca ziemia.', slot: 'q', kind: 'fireball', color: C.orange,
+        cooldown: 5, cdPerLevel: -0.3, maxLevel: 5,
+        p: { damage: 45, radius: 26, range: 140 }, pl: { damage: 18, radius: 3 },
+        evo: { tag: 'Ogień', name: 'Słońce', desc: 'Potężniejszy wybuch, po którym wokół celu wybuchają 3 kolejne kule.', icon: 'ab_i_fireball_evo', bonus: { damage: 30, radius: 8 } },
+      },
+      {
+        id: 'i_ring', name: 'Pierścień ognia', icon: 'ab_i_ring', desc: 'Odpychasz wrogów i otaczasz się kręgiem płomieni.', slot: 'e', kind: 'firering', color: C.gold,
+        cooldown: 12, cdPerLevel: -0.6, maxLevel: 5,
+        p: { damage: 10, radius: 40, duration: 3 }, pl: { damage: 5, radius: 4, duration: 0.5 },
+        evo: { tag: 'Tarcze', name: 'Płomienna bariera', desc: 'Większy krąg, a ty dostajesz tarczę 15% HP.', icon: 'ab_i_ring_evo', bonus: { radius: 10, damage: 6 } },
+      },
+      {
+        id: 'i_blink', name: 'Mignięcie', icon: 'ab_i_blink', desc: 'Błyskawiczny przeskok z nietykalnością.', slot: 'dash', kind: 'dash', color: C.blue,
+        cooldown: 2.8, cdPerLevel: 0, maxLevel: 1,
+        p: { dist: 72, iframes: 0.3 }, pl: {},
+      },
+      {
+        id: 'i_inferno', name: 'Inferno', icon: 'ab_i_inferno', desc: 'Przez kilka sekund wokół ciebie spadają płonące meteory.', slot: 'ult', kind: 'inferno', color: C.red,
+        cooldown: 0, cdPerLevel: 0, charge: 130, maxLevel: 5,
+        p: { duration: 5, damage: 30, radius: 90, blast: 22 }, pl: { duration: 0.5, damage: 12, blast: 2 },
+        evo: { tag: 'Umiejętności', name: 'Kataklizm', desc: 'Dłuższy deszcz meteorów, które spadają dwa razy gęściej.', icon: 'ab_i_inferno_evo', bonus: { duration: 2, damage: 15 } },
       },
     ],
   },

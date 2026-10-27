@@ -98,4 +98,23 @@ export const CARD_ICONS_GFX: Record<string, (p: Painter) => void> = {
     p.sphere(8, 9, 5, 5, RAMP.red).rect(5, 9, 7, 1, C.black).px(10, 9, C.yellow);
     p.line(4, 6, 2, 1, C.gold).px(2, 1, C.white).line(12, 6, 14, 1, C.gold).px(14, 1, C.white);
   },
+  ab_i_fireball_evo: (p) => {
+    p.ring(8, 8, 7, 1, C.gold);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * TAU;
+      p.line(8 + Math.cos(a) * 5, 8 + Math.sin(a) * 5, 8 + Math.cos(a) * 7, 8 + Math.sin(a) * 7, C.yellow);
+    }
+    p.sphere(8, 8, 4, 4, [C.orange, C.gold, C.yellow, C.white]).px(7, 7, C.white);
+  },
+  ab_i_ring_evo: (p) => {
+    p.ring(8, 8, 7, 1.5, C.orange).ring(8, 8, 5, 1, C.gold);
+    p.polyShade([[5, 4], [11, 4], [11, 8], [8, 12], [5, 8]], RAMP.blue).px(7, 5, C.white);
+  },
+  ab_i_inferno_evo: (p) => {
+    p.rect(0, 12, 16, 4, C.dred).rect(0, 12, 16, 1, C.orange);
+    for (const [x, y] of [[3, 3], [8, 6], [13, 2], [5, 9], [11, 9]] as const) {
+      p.line(x - 2, y - 3, x, y, C.gold);
+      p.sphere(x, y, 1.8, 1.8, RAMP.fire).px(x, y, C.yellow);
+    }
+  },
 };

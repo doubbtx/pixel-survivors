@@ -12,6 +12,7 @@ import { Painter } from './painter';
 export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   kestra: { seq: [0, 1, 2, 3], speed: 7 },
   borgun: { seq: [0, 1, 2, 3], speed: 8 },
+  ignara: { seq: [0, 1, 2, 3], speed: 7 },
   slime: { seq: [0, 1, 2, 3], speed: 9 },
   goldslime: { seq: [0, 1, 2, 3], speed: 5 },
   bat: { seq: [0, 1, 0, 2], speed: 4 },
@@ -79,6 +80,26 @@ function borgun(f: number): Painter {
   p.line(17, 4 + o, 17, 18 + o, C.brown).px(17, 5 + o, C.clay); // stylisko
   p.poly([[17, 3 + o], [21, 2 + o], [21, 9 + o], [17, 8 + o]], C.lavender).line(20, 2 + o, 20, 9 + o, C.lgray).line(21, 3 + o, 21, 8 + o, C.white).line(17, 3 + o, 17, 8 + o, C.dgray);
   p.rect(15, 10 + o, 3, 2, C.dgray);
+  return p.outline();
+}
+
+function ignara(f: number): Painter {
+  const p = new Painter(20, 21);
+  const o = f % 2 === 1 ? -1 : 0;
+  const [lx, lh, rx, rh] = STRIDE[f];
+  const glow = f % 2 === 0 ? C.yellow : C.gold;
+  p.rect(7 + lx, 16, 2, lh, C.ddbrown).rect(10 + rx, 16, 2, rh, C.ddbrown);
+  p.poly([[5, 9 + o], [14, 9 + o], [15, 17], [4, 17]], C.dred); // szata
+  p.sphere(9.5, 13 + o, 4.5, 4, RAMP.red);
+  p.line(9, 10 + o, 9, 17, C.gold).rect(6, 12 + o, 7, 1, C.dbrown).px(9, 12 + o, C.gold);
+  p.sphere(9.5, 7.5 + o, 4, 4, RAMP.red); // kaptur
+  p.poly([[6, 5 + o], [9, 0 + o], [10, 4 + o]], C.dred).px(9, 1 + o, C.red); // czubek kaptura
+  p.rect(8, 7 + o, 4, 3, C.tan).rect(8, 7 + o, 4, 1, C.peach); // twarz
+  p.px(9, 8 + o, C.black).px(11, 8 + o, C.black);
+  p.line(3, 4 + o, 13, 6 + o, C.orange).px(3, 4 + o, C.rust); // pasmo włosów spod kaptura
+  p.line(16, 5 + o, 16, 18 + o, C.brown).px(16, 9 + o, C.clay); // kostur
+  p.disc(16, 3 + o, 2, C.orange).px(16, 3 + o, glow).px(16, 1 + o, C.gold);
+  p.px(14, 11 + o, C.tan).px(15, 11 + o, C.skin); // dłoń
   return p.outline();
 }
 
@@ -191,7 +212,7 @@ function sentinel(f: number): Painter {
   return p.outline(C.navy);
 }
 
-export const ACTORS: Record<string, (f: number) => Painter> = { kestra, borgun, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel };
+export const ACTORS: Record<string, (f: number) => Painter> = { kestra, borgun, ignara, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel };
 
 /** Boss 36×36: szata w kolorach biomu, czaszka, korona, pulsujące kule mocy. */
 export function boss(b: Biome, f: number): Painter {

@@ -161,6 +161,17 @@ export const WEAPONS: WeaponDef[] = [
     base: S({ damage: 45, cooldown: 0.6, amount: 3, area: 1.7, knock: 5 }),
     levels: [], evolved: true,
   },
+  {
+    id: 'staff', name: 'Ognisty kostur', desc: 'Kule ognia lecące w najbliższych wrogów.', icon: 'ic_staff', kind: 'bolt', color: C.orange, proj: 'ember', hero: 'ignara',
+    base: S({ damage: 14, cooldown: 1.0, speed: 160, area: 1.2, duration: 1.5 }),
+    levels: [{ damage: 5 }, { amount: 1 }, { cooldown: -0.12 }, { damage: 6, pierce: 1 }, { amount: 1 }, { cooldown: -0.1 }, { damage: 12, amount: 1 }],
+    evolve: { passive: 'lens', into: 'staff_evo' },
+  },
+  {
+    id: 'staff_evo', name: 'Kostur feniksa', desc: 'Słoneczne kule przebijające wrogów.', icon: 'ic_staff_evo', kind: 'bolt', color: C.yellow, proj: 'sun', hero: 'ignara',
+    base: S({ damage: 34, cooldown: 0.5, amount: 4, speed: 200, area: 1.6, duration: 1.8, pierce: 3, knock: 2 }),
+    levels: [], evolved: true,
+  },
 ];
 
 export const WEAPON_BY_ID: Record<string, WeaponDef> = Object.fromEntries(WEAPONS.map((w) => [w.id, w]));
