@@ -29,9 +29,12 @@ export interface Volley {
 
 /**
  * chase — idzie prosto na gracza; fast — szybko, falującym torem;
- * keep — trzyma dystans i ostrzeliwuje; flee — ucieka (Złoty szlam); boss — osobna logika faz.
+ * keep — trzyma dystans i ostrzeliwuje; flee — ucieka (Złoty szlam); boss — osobna logika faz;
+ * shield — tarcza z przodu blokuje pociski (obraca się powoli, trzeba obejść albo bić obszarem);
+ * summoner — trzyma dystans i przywołuje nietoperze; kamikaze — dobiega, zapala lont i wybucha;
+ * blink — teleportuje się obok gracza po zapowiedzi; weaver — trzyma dystans i rzuca pod gracza spowalniające sieci.
  */
-export type EnemyBehavior = 'chase' | 'fast' | 'keep' | 'flee' | 'boss';
+export type EnemyBehavior = 'chase' | 'fast' | 'keep' | 'flee' | 'boss' | 'shield' | 'summoner' | 'kamikaze' | 'blink' | 'weaver';
 
 export interface ShootDef {
   volley: Volley;
@@ -82,6 +85,11 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'spinner', color: C.pink, name: 'Wirownik', sprite: 'spinner', hp: 45, speed: 14, damage: 6, radius: 4, xp: 8, behavior: 'keep', keepDist: 110, knockResist: 0.5,
     shoot: { volley: { shape: 'ring', count: 2, speed: 50, wave: 0.5, sprite: 'eb_pink' }, aim: 'spin', spin: 0.5, cooldown: 0.4, range: 160 },
   },
+  shieldbearer: { id: 'shieldbearer', color: C.lgray, name: 'Tarczownik', sprite: 'shieldbearer', hp: 60, speed: 20, damage: 12, radius: 6, xp: 6, behavior: 'shield', knockResist: 0.8 },
+  summoner: { id: 'summoner', color: C.plum, name: 'Przywoływacz', sprite: 'summoner', hp: 40, speed: 18, damage: 6, radius: 5, xp: 8, behavior: 'summoner', keepDist: 120, knockResist: 0.3 },
+  kamikaze: { id: 'kamikaze', color: C.orange, name: 'Kamikaze', sprite: 'kamikaze', hp: 12, speed: 62, damage: 10, radius: 4, xp: 2, behavior: 'kamikaze', knockResist: 0 },
+  blinker: { id: 'blinker', color: C.cyan, name: 'Skoczek', sprite: 'blinker', hp: 25, speed: 30, damage: 8, radius: 4, xp: 4, behavior: 'blink', knockResist: 0.2 },
+  weaver: { id: 'weaver', color: C.dgray, name: 'Pajęczarz', sprite: 'weaver', hp: 35, speed: 22, damage: 6, radius: 5, xp: 6, behavior: 'weaver', keepDist: 110, knockResist: 0.3 },
   // Sekrety map (systems/mapsecrets.ts): mimik udaje skrzynię, biały jeleń ucieka jak Złoty szlam.
   mimic: { id: 'mimic', color: C.brown, name: 'Mimik', sprite: 'mimic', hp: 30, speed: 44, damage: 12, radius: 6, xp: 15, behavior: 'chase', knockResist: 0.7 },
   stag: { id: 'stag', color: C.white, name: 'Biały jeleń', sprite: 'stag', hp: 90, speed: 50, damage: 0, radius: 5, xp: 30, behavior: 'flee', knockResist: 0.6 },

@@ -27,6 +27,11 @@ export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   sentinel: { seq: [0, 1, 2, 3], speed: 10 },
   boss: { seq: [0, 1, 2, 3], speed: 12 },
   mimic: { seq: [0, 1], speed: 8 },
+  shieldbearer: { seq: [0, 1, 2, 1], speed: 9 },
+  summoner: { seq: [0, 1, 2, 1], speed: 8 },
+  kamikaze: { seq: [0, 1], speed: 4 },
+  blinker: { seq: [0, 1, 2, 3], speed: 6 },
+  weaver: { seq: [0, 1, 2, 3], speed: 6 },
   stag: { seq: [0, 1, 2, 3], speed: 5 },
 };
 
@@ -289,7 +294,60 @@ function stag(f: number): Painter {
   return p.outline();
 }
 
-export const ACTORS: Record<string, (f: number) => Painter> = { kestra, borgun, ignara, morwen, wraith, wraithbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel, mimic, stag };
+/** Tarczownik: zbrojny z wielką tarczą z przodu (tarcza rysowana osobno, zgodnie z kierunkiem, w render.ts). */
+function shieldbearer(f: number): Painter {
+  const p = new Painter(18, 20);
+  const s = f === 1 ? 1 : 0;
+  p.rect(6, 15, 2, 4 + s, C.dgray).rect(10, 15, 2, 5 - s, C.dgray);
+  p.block(4, 7, 10, 9, RAMP.stone).rect(4, 11, 10, 1, C.dbrown);
+  p.sphere(9, 5, 3.5, 3.5, RAMP.stone).rect(7, 4, 5, 1, C.black).px(8, 4, C.red).px(10, 4, C.red);
+  p.line(9, 1, 9, 2, C.red);
+  return p.outline();
+}
+
+/** Przywoływacz: szaman w masce z kosturem i kulą, kula pulsuje przed przywołaniem. */
+function summoner(f: number): Painter {
+  const p = new Painter(18, 21);
+  p.polyShade([[9, 3], [14, 9], [15, 20], [3, 20], [4, 9]], RAMP.purple);
+  p.sphere(9, 6, 3.5, 3, RAMP.bone).px(8, 6, C.black).px(10, 6, C.black).rect(8, 8, 3, 1, C.dred);
+  p.line(15, 4, 15, 20, C.brown).sphere(15, 3, 2 + (f % 2) * 0.6, 2 + (f % 2) * 0.6, [C.dgreen, C.green, C.lime, C.white]);
+  return p.outline();
+}
+
+/** Kamikaze: kulista bomba z lontem i nóżkami (klatki: iskra lontu). */
+function kamikaze(f: number): Painter {
+  const p = new Painter(14, 15);
+  p.sphere(7, 8, 5, 5, RAMP.night).px(5, 6, C.slate).rect(5, 8, 1, 1, C.red).rect(9, 8, 1, 1, C.red);
+  p.line(7, 3, 9, 1, C.brown).px(10, 0, f ? C.yellow : C.orange).px(9, 0, f ? C.orange : C.yellow);
+  p.px(4, 13, C.dgray).px(10, 13, C.dgray);
+  return p.outline();
+}
+
+/** Skoczek: zjawa z rozmytym konturem (4 klatki migotania). */
+function blinker(f: number): Painter {
+  const p = new Painter(16, 18);
+  p.polyShade([[8, 1], [13, 7], [12, 17], [8, 14], [4, 17], [3, 7]], [C.navy, C.dblue, C.cyan, C.white]);
+  p.rect(5, 6, 2, 2, C.black).rect(9, 6, 2, 2, C.black).px(5, 6, C.white).px(9, 6, C.white);
+  for (let k = 0; k < 3; k++) p.px(2 + ((f + k * 3) % 12), 2 + ((f * 5 + k * 4) % 14), C.cyan);
+  return p.outline();
+}
+
+/** Pajęczarz: pająk z odwłokiem w czaszkę i ośmioma nogami (4 klatki chodu). */
+function weaver(f: number): Painter {
+  const p = new Painter(22, 16);
+  for (let k = 0; k < 4; k++) {
+    const o = (k + f) % 2 ? 1 : -1;
+    p.line(8, 8, 1 + k, 4 + k * 3 + o, C.dgray).line(14, 8, 21 - k, 4 + k * 3 - o, C.dgray);
+  }
+  p.sphere(11, 9, 5, 4.5, RAMP.night).sphere(11, 5, 3, 2.5, RAMP.night);
+  p.px(10, 4, C.red).px(12, 4, C.red).px(10, 10, C.lgray).px(12, 10, C.lgray).px(11, 11, C.lgray);
+  return p.outline();
+}
+
+export const ACTORS: Record<string, (f: number) => Painter> = {
+  kestra, borgun, ignara, morwen, wraith, wraithbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel, mimic, stag,
+  shieldbearer, summoner, kamikaze, blinker, weaver,
+};
 
 /**
  * Boss 36×36: szata w kolorach biomu z wzorem run i pasem, naramienniki z kolcami, czaszka, korona,

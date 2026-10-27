@@ -217,6 +217,9 @@ export class Run {
   /** Księga sekretów (systems/secrets.ts): obudzone w runie i odkryte od ostatniej synchronizacji z kolekcją. */
   secrets = new Set<string>();
   secretsFound = new Set<string>();
+  /** Sieci Pajęczarzy (spowalniają gracza) i czy gracz w którejś stoi. */
+  webs: { x: number; y: number; r: number; t: number }[] = [];
+  webbed = false;
   /** Wydarzenia poziomu i kombo (systems/levelevents.ts): trwające wydarzenie, czas do losowania, pioruny burzy, kombo zabójstw. */
   levelEvent: { id: LevelEventId; t: number } | null = null;
   levelEventT: number = BAL.levelEvents.every * 0.6;
@@ -441,6 +444,7 @@ export class Run {
     this.taskT = BAL.tasks.first;
     this.secretT = BAL.secretsMap.every * 0.6;
     this.confusedT = 0;
+    this.webs = [];
     this.levelEvent = null;
     this.levelEventT = BAL.levelEvents.every * 0.6;
     this.strikes = [];

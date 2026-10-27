@@ -145,6 +145,15 @@ export const BAL = {
   levelEvents: { every: 150, chance: 0.7, duration: 30, goldRain: 9, stormEvery: 0.7, stormWarn: 0.8, stormR: 26, stormDmg: 30, stormHurt: 0.08 },
   /** Kombo: zabójstwa bez oberwania; co `announce` napis, złoto × (1 + kombo × per), najwyżej +maxBonus. */
   combo: { announce: 50, per: 0.002, maxBonus: 1 },
+  /**
+   * Nowi wrogowie (systems/enemies.ts): obrót tarczy (rad/s) i jej kąt ochrony; kamikaze (dystans zapalenia, lont s, promień,
+   * mnożnik obrażeń wybuchu); skoczek (odstęp teleportu, odległość od gracza); przywoływacz (odstęp, liczba nietoperzy);
+   * pajęczarz (odstęp sieci, promień, czas, spowolnienie gracza).
+   */
+  newEnemies: {
+    shieldTurn: 1.4, shieldArc: 1.1, kamikazeFuseAt: 22, kamikazeFuse: 0.6, kamikazeR: 32, kamikazeDmg: 2.5,
+    blinkEvery: 3.5, blinkMin: 45, blinkMax: 75, summonEvery: 6, summonCount: 3, webEvery: 5, webR: 26, webLife: 5, webSlow: 0.5,
+  },
   /** Pakty ryzyka (data/pacts.ts): esencja × (1 + essencePer × poziom Paktu). */
   pacts: { essencePer: 0.08 },
   /**

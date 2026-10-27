@@ -54,6 +54,16 @@ export function updateProjectiles(run: Run, dt: number): void {
       const rr = pr.radius + e.radius;
       if ((e.x - pr.x) ** 2 + (e.y - pr.y) ** 2 > rr * rr || pr.hits.includes(e.uid)) continue;
       pr.hits.push(e.uid);
+      // Tarczownik: pocisk z przodu (w kącie tarczy) odbija się bez obrażeń.
+      if (e.def.behavior === 'shield' && !e.dead) {
+        let d = Math.atan2(pr.y - e.y, pr.x - e.x) - e.shootA;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        if (Math.abs(d) < BAL.newEnemies.shieldArc) {
+          run.burst(pr.x, pr.y, C.lgray, 3, 40);
+          run.projectiles.release(pr);
+          break;
+        }
+      }
       run.damageEnemy(e, pr.damage * (pr.returning ? pr.retMul : 1), pr.src, { kx: pr.vx, ky: pr.vy, knock: pr.knock, forceCrit: pr.forceCrit });
       // Augmenty (data/augments.ts): odłamki na boki, wybuch przy trafieniu.
       const dir = Math.atan2(pr.vy, pr.vx);

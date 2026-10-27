@@ -204,6 +204,17 @@ export function renderWorld(run: Run, r: Renderer): void {
     }
   }
 
+  // Sieci Pajęczarzy: szare promienie i okręgi.
+  for (const w of run.webs) {
+    if (!vis(w.x, w.y)) continue;
+    const wx = X(w.x), wy = Y(w.y), wr = w.r * ZOOM;
+    r.withAlpha(Math.min(0.7, w.t), () => {
+      for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; r.line(wx, wy, wx + Math.cos(a) * wr, wy + Math.sin(a) * wr, C.lgray); }
+      r.circle(wx, wy, wr, C.lgray);
+      r.circle(wx, wy, wr * 0.55, C.lavender);
+    });
+  }
+
   // Arena bossa: zwężający się krąg kamiennych bloków, poza nim mrok.
   if (run.arena) {
     const a = run.arena, cx = X(a.x), cy = Y(a.y), R = a.r * ZOOM, n = Math.max(48, Math.round(a.r / 4));
@@ -354,6 +365,14 @@ export function renderWorld(run: Run, r: Renderer): void {
     if (e.elite) r.circle(ex, ey + e.radius * ZOOM, e.radius * ZOOM * 1.2, run.step % 30 < 15 ? C.yellow : C.orange);
     if (e.boss && e.invuln > 0 && run.step % 6 < 3) continue;
     drawSprite(g, `${e.sprite}@${animFrame(e.sprite, run.step, e.uid * 7)}`, ex, ey, { flash: e.flash > 0, scale: e.scale, flipX: e.x > p.x });
+    // Tarczownik: łuk tarczy w kierunku, w którym patrzy.
+    if (e.def.behavior === 'shield') {
+      const R = (e.radius + 4) * ZOOM * e.scale, arc = BAL.newEnemies.shieldArc;
+      for (let a = e.shootA - arc; a <= e.shootA + arc; a += 0.12) {
+        r.rect(ex + Math.cos(a) * R - 1, ey + Math.sin(a) * R - 1, 3, 3, C.black);
+        r.rect(ex + Math.cos(a) * R, ey + Math.sin(a) * R, 2, 2, C.lgray);
+      }
+    }
     // Stany żywiołów: płomyki (podpalenie), szron (spowolnienie lodem), iskry (porażenie), bąbelki (trucizna).
     if (e.burnT > 0 || e.slowT > 0 || e.shockT > 0 || e.poisonT > 0) {
       const top = ey - e.radius * ZOOM * e.scale, ph = (run.step + e.uid * 5) % 12;

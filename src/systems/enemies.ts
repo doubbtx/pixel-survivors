@@ -148,7 +148,11 @@ const ELITE_FLOWER: Volley = { shape: 'ring', count: 8, speed: 45, turn: 0.8, al
 /** Ruch, strzelanie, separacja, odrzut, obrażenia kontaktowe i usuwanie martwych. */
 export function updateEnemies(run: Run, dt: number): void {
   const items = run.enemies.items;
-  const p = run.player;
+  const p = run.player, N = BAL.newEnemies;
+  // Sieci Pajęczarzy: wygasają, gracz w sieci jest spowolniony (systems/player.ts).
+  run.webbed = false;
+  for (const w of run.webs) { w.t -= dt; if ((w.x - p.x) ** 2 + (w.y - p.y) ** 2 < w.r * w.r) run.webbed = true; }
+  if (run.webs.some((w) => w.t <= 0)) run.webs = run.webs.filter((w) => w.t > 0);
   for (let i = items.length - 1; i >= 0; i--) {
     const e = items[i];
     if (e.dead) { run.enemies.release(e); continue; }
@@ -202,6 +206,61 @@ export function updateEnemies(run: Run, dt: number): void {
         case 'fast': {
           const w = Math.sin(e.age * 6 + e.uid) * 0.6;
           e.x += (nx - ny * w) * sp; e.y += (ny + nx * w) * sp;
+          break;
+        }
+        case 'shield': {
+          // Tarcza obraca się powoli w stronę gracza (kąt w shootA); idzie wolno naprzód.
+          let d = Math.atan2(dy, dx) - e.shootA;
+          d = Math.atan2(Math.sin(d), Math.cos(d));
+          e.shootA += Math.max(-1, Math.min(1, d)) * N.shieldTurn * dt;
+          e.x += nx * sp; e.y += ny * sp;
+          break;
+        }
+        case 'kamikaze':
+          // Lont: stoi i miga, potem wybuch (rani gracza w promieniu, sam ginie).
+          if (e.dashT > 0) {
+            e.dashT -= dt;
+            if (run.step % 4 < 2) e.flash = 2;
+            if (e.dashT <= 0) {
+              if (dist < N.kamikazeR + p.r) run.hurtPlayer(e.damage * N.kamikazeDmg);
+              run.boomFx(e.x, e.y, N.kamikazeR);
+              run.burst(e.x, e.y, C.orange, 16, 80);
+              sfx.play('explode');
+              run.killEnemy(e);
+              continue;
+            }
+          } else if (dist < N.kamikazeFuseAt) e.dashT = N.kamikazeFuse;
+          else { e.x += nx * sp; e.y += ny * sp; }
+          break;
+        case 'blink':
+          // Teleport obok gracza po zapowiedzi (miganie).
+          e.actT -= dt;
+          if (e.actT < 0.5 && run.step % 4 < 2) e.flash = 2;
+          if (e.actT <= 0) {
+            e.actT = N.blinkEvery * rng.range(0.8, 1.2);
+            const a = rng.range(0, TAU), r = rng.range(N.blinkMin, N.blinkMax);
+            run.burst(e.x, e.y, C.cyan, 6, 40);
+            e.x = p.x + Math.cos(a) * r; e.y = p.y + Math.sin(a) * r;
+            run.burst(e.x, e.y, C.cyan, 6, 40);
+          } else { e.x += nx * sp; e.y += ny * sp; }
+          break;
+        case 'summoner':
+        case 'weaver': {
+          const k = e.def.keepDist ?? 110;
+          const dir = dist > k + 10 ? 1 : dist < k - 10 ? -0.6 : 0;
+          e.x += (nx * dir - ny * 0.3) * sp; e.y += (ny * dir + nx * 0.3) * sp;
+          e.actT -= dt;
+          if (e.actT < 0.5 && dist < 220 && run.step % 6 < 3) e.flash = 2;
+          if (e.actT > 0 || dist > 220) break;
+          if (e.def.behavior === 'summoner') {
+            e.actT = N.summonEvery;
+            for (let i = 0; i < N.summonCount && run.enemies.count < BAL.maxEnemies; i++) spawnEnemy(run, 'bat', e.x + rng.range(-12, 12), e.y + rng.range(-12, 12));
+            run.burst(e.x, e.y, C.lime, 10, 50);
+          } else {
+            // Sieć pod graczem (spowalnia, dopóki w niej stoi).
+            e.actT = N.webEvery;
+            run.webs.push({ x: p.x, y: p.y, r: N.webR, t: N.webLife });
+          }
           break;
         }
         case 'keep': {
