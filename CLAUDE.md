@@ -138,7 +138,34 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 
 ## Plan dalej
 
-- Kolejni bohaterowie: zostały 2 role (np. zabójca, kapłan) — wszystko oryginalne.
+Cel: odróżnić grę od Vampire Survivors zmianami w samej pętli walki i buildów (uzgodnione z użytkownikiem).
+Kolejność etapów dowolna (każdy osobno, gra grywalna po każdym); liczby w `BAL`, opisy w Pomocy (`ui/help.ts`) i podpowiedzi (`ui/hints.ts`).
+
+1. **Zasób bohatera (jak w LoL)** — każdy bohater ma własny pasek zasobu w HUD (pod HP), który zmienia styl gry:
+   Kestra — kumulacje celności za trafienia z dystansu (więcej krytyków, przy max darmowy strzał Q);
+   Borgun — furia rośnie, gdy obrywa i zadaje cios wręcz (więcej obrażeń i redukcji, spada poza walką);
+   Ignara — przegrzanie z czarów (mocniejsze czary, powyżej progu rani ją; Spacja/unik zrzuca żar);
+   Morwen — dusze z ciał zabitych wrogów (wydawane automatycznie na sługi albo wzmocnienie R).
+   Pole `HeroDef.resource`, stan w `Run`, flagi kart/drzewek do zasobu, zapis w snapshocie. Nowi bohaterowie od razu z zasobem.
+2. **Zadania w trakcie poziomu** — co ~60 s opcjonalne zadanie z zegarem (zabij elitę w 20 s, obroń totem, stój w kręgu,
+   nie daj się trafić 30 s, zabij N wrogów żywiołem X). Nagroda: skrzynia / karta / złoto; część porażek przyzywa trudniejszą falę.
+   Nowy system `systems/tasks.ts`, lista definicji w `data/tasks.ts`, panel zadania w HUD, znacznik celu poza ekranem.
+3. **Unikaty (jak w PoE)** — nowa jakość/rodzaj przedmiotu ze stałym efektem łamiącym zasady (np. broń bez auto-celu za x3
+   obrażeń, leczenie zamienia się w tarczę, unik wystrzeliwuje salwę broni, każde 10. trafienie to reakcja żywiołów).
+   Definicje w `data/items.ts` (efekt przez flagi/hooki jak super-bonusy), rzadki drop z bossów i elit, kolor wyróżniony, kolekcja odkrytych.
+4. **Kradzież mocy bossów** — po pokonaniu bossa wybór 1 z jego nazwanych ataków jako umiejętność/augment gracza
+   (salwa bossa strzela w wrogów). Definicje przy bossie (`data/enemies.ts`), slot w `run` (zapis), ikona w HUD; w Ekspedycji też z bossów aktów.
+5. **Łączenie broni (fuzje)** — dwie bronie na maksymalnym poziomie (albo po ewolucji) łączą się w hybrydę i zwalniają slot,
+   np. kostur ognia + łuk = ogniste strzały z wybuchem. Tabela fuzji w `data/weapons.ts` (wg tagów/żywiołów), opcja awansu `fusion`,
+   podpowiedź „Fuzja” jak przy ewolucjach, wpis w Pomocy.
+6. **Pakty ryzyka (jak Heat w Hadesie)** — przed runem (wybór bohatera) włączane utrudnienia z poziomami: szybsze pociski,
+   elity z cechami, mniej leczenia, krótszy czas na zadania, mocniejszy boss. Suma = poziom Paktu, mnoży esencję i daje odznaki/odblokowania.
+   Definicje w `data/pacts.ts` (flagi jak `MAP_MODS`), zapis wybranych w slocie i najwyższego poziomu w `save` (migracja SAVE_VERSION 7).
+7. **Teren, który ma znaczenie** — niszczalne osłony blokujące pociski (wrogów i gracza), pułapki (kolce, beczki wybuchowe —
+   wciąganie wrogów), zwężająca się arena przy bossie, strefy biomów (lód — poślizg, bagno — spowolnienie). Kolizje w spatial hash,
+   grafika proceduralna w `gfx/objects.ts`, generowanie przy starcie poziomu wg biomu, dekoracje w `BAL`.
+
+- Kolejni bohaterowie: zostały 2 role (np. zabójca, kapłan) — wszystko oryginalne, projektowani od razu z zasobem (pkt 1).
 - Balans Ekspedycji po testach (długość walk, nagrody węzłów).
 
 ## Testowanie
