@@ -154,6 +154,10 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
     drawSprite(g, PASSIVE_BY_ID[pa.id].icon, x + SLOT / 2, y + SLOT / 2);
     drawText(g, String(pa.level), x + SLOT - 2, y + SLOT - 11, C.white, { align: 'right', ...OUT });
   }
+  // Nowy przedmiot w plecaku: przypomnienie nad gniazdami broni.
+  if (run.bag.some((it) => it.fresh) && Math.floor(performance.now() / 500) % 2) {
+    drawText(g, '! Nowy przedmiot w plecaku (I)', 4, H - 2 * SLOT - 18, C.lime, OUT);
+  }
 
   // Umiejętności (prawy dół): ikona, odnowienie od góry, ładunek ultimate od dołu.
   const slots: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];

@@ -243,6 +243,8 @@ export class Run {
   /** Zatrzymanie klatki (s, ekran gry wstrzymuje symulację) i chwila, od której można zatrzymać ponownie. */
   hitstop = 0;
   private hitstopAt = 0;
+  /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej). */
+  reactions = 0;
   /** Błysk paska XP po zebraniu kryształu (s). */
   xpPulse = 0;
   rerolls: number = BAL.rerolls;
@@ -638,6 +640,12 @@ export class Run {
     return gold;
   }
 
+  /** Nowy przedmiot do plecaka (oznaczony jako nowy w ekwipunku). */
+  stash(it: Item): void {
+    it.fresh = true;
+    this.bag.push(it);
+  }
+
   /** Zdejmuje przedmiot do plecaka (false, gdy plecak jest pełny). */
   unequip(slot: SlotId): boolean {
     const it = this.equipment[slot];
@@ -960,6 +968,7 @@ export class Run {
     const R = BAL.reactions, power = 1 + this.flag('reactPower');
     const label = (text: string, col: number) => {
       e.reactT = R.cd * Math.max(0, 1 - this.flag('reactCd'));
+      this.reactions++;
       this.popText(e.x, e.y - e.radius - 10, text, col);
       sfx.play('react');
     };

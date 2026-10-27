@@ -25,7 +25,7 @@ export function buyItem(run: Run, i: number): BuyResult {
   run.gold -= price;
   shop.items[i] = null;
   if (!run.equipment[slot]) { run.equip(it, slot); return { ok: true, note: `Założono: ${it.name}` }; }
-  run.bag.push(it);
+  run.stash(it);
   return { ok: true, note: `${it.name} w plecaku` };
 }
 

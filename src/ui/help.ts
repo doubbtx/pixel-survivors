@@ -1,0 +1,120 @@
+import { W, H } from '../core/renderer';
+import { C } from '../core/palette';
+import { drawText, wrapText, textWidth } from '../core/font';
+import { sfx } from '../core/audio';
+import type { App, Screen } from './app';
+import { panel, inside } from './widgets';
+
+/** Strony pomocy: tytuł i akapity (pierwsze słowa przed dwukropkiem wyróżnione). */
+const PAGES: { title: string; lines: string[] }[] = [
+  {
+    title: 'Sterowanie',
+    lines: [
+      'Ruch: WASD albo strzałki. Broń strzela sama w najbliższych wrogów.',
+      'Umiejętności: Q i E, unik: Spacja (chwilowa nietykalność), ultimate: R (ładuje się zabójstwami).',
+      'Celowanie: myszą albo prawą gałką pada. W Ustawieniach możesz wybrać celowanie automatyczne.',
+      'Menu w grze: Esc pauza, I albo Tab ekwipunek, K kowadło (między poziomami).',
+      'Awans: 1-4 albo klik wybiera, R losuje ponownie, X pomija, B wygania opcję z puli do końca runu.',
+      'Telefon: lewa połowa ekranu to joystick, ikony umiejętności w prawym dolnym rogu to przyciski.',
+    ],
+  },
+  {
+    title: 'Rozgrywka',
+    lines: [
+      'Cel poziomu: przetrwaj czas albo pokonaj wrogów (pasek u góry), potem boss.',
+      'Doświadczenie: niebieskie kryształy z wrogów. Każdy awans to nowa broń, pasywka albo ulepszenie.',
+      'Ulepszenia broni mają jakość: od Zwykłego do Legendarnego. Lepsza jakość daje dodatkowe bonusy.',
+      'Ewolucja: broń na maksymalnym poziomie z pasywką z jej opisu zmienia się w mocniejszą wersję.',
+      'Karty: rzadsze, mocne ulepszenia. Co 5 poziomów, po elicie i po bossie.',
+      'Przedmioty: skrzynie z elit i bossów. Kolor to jakość. Kowadło ulepsza je za złoto i odłamki.',
+      'Trafia cię tylko mały środek postaci: przeciskaj się między pociskami.',
+    ],
+  },
+  {
+    title: 'Żywioły i reakcje',
+    lines: [
+      'Ogień: podpalenie (obrażenia w czasie). Lód: spowolnienie, co 5. trafienie zamraża.',
+      'Błyskawica: wróg dostaje więcej obrażeń. Trucizna: kumulujące się warstwy.',
+      'Para (ogień + lód): ogłuszenie i dodatkowe obrażenia.',
+      'Kruszenie (błyskawica + lód): następne trafienie zadaje podwójne obrażenia.',
+      'Wybuch toksyn (ogień + trucizna): wybuch obszarowy za warstwy trucizny.',
+      'Przewodzenie (błyskawica + trucizna): trucizna przeskakuje na pobliskich wrogów.',
+      'Przeciążenie (ogień + błyskawica): mały wybuch z odrzutem.',
+    ],
+  },
+  {
+    title: 'Synergie, augmenty',
+    lines: [
+      'Synergie: bohater, bronie, pasywki, karty i przedmioty dają punkty tagów (Ogień, Krytyk...).',
+      'Progi 3, 6 i 9 punktów włączają kolejne bonusy. Lista jest pod portretem, szczegóły w pauzie.',
+      'Wszechstronność: dodatkowy bonus za liczbę aktywnych synergii naraz.',
+      'Augmenty (turkusowe karty): od 3. poziomu broni zmieniają jej działanie, np. odbijające się pociski.',
+      'Polecane: znaczek przy najlepszej opcji awansu (ewolucje, nowe progi synergii, wysoka jakość).',
+    ],
+  },
+  {
+    title: 'Tryby i Rozwój',
+    lines: [
+      'Trening: jeden poziom, dobry na start i do nauki bohaterów.',
+      'Hardcore: poziomy po kolei z bossami i sklepem między nimi. Śmierć kasuje cały run.',
+      'Endless: jeden poziom bez końca, boss co 5 minut, coraz trudniej.',
+      'Ekspedycja: 3 akty map z modyfikatorami (ryzyko za lepsze nagrody), lochy, kapliczki, sklepy.',
+      'Rozwój: esencja z Ekspedycji kupuje węzły drzewka bohatera. Różowe klucze zmieniają umiejętności.',
+      'Zapis: Hardcore, Endless i Ekspedycja zapisują się same. Wyjście z gry wznawia run.',
+    ],
+  },
+];
+
+/**
+ * Pomoc (menu główne i pauza): strony ze sterowaniem i zasadami. Strzałki lewo/prawo albo klik w zakładkę: strona, Esc: wróć.
+ */
+export class HelpScreen implements Screen {
+  private page = 0;
+
+  constructor(private readonly app: App, private readonly back: Screen) {}
+
+  private tabX(i: number): number {
+    return 10 + i * 93;
+  }
+
+  update(): void {
+    const inp = this.app.input, n = PAGES.length;
+    if (inp.pressed('back') || inp.pressed('pause')) { this.app.go(this.back); return; }
+    if (inp.pressed('left') || inp.pressed('up')) { this.page = (this.page - 1 + n) % n; sfx.play('select'); }
+    if (inp.pressed('right') || inp.pressed('down') || inp.pressed('confirm')) { this.page = (this.page + 1) % n; sfx.play('select'); }
+    if (inp.pressed('click')) {
+      PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, this.tabX(i), 30, 88, 16)) { this.page = i; sfx.play('select'); } });
+      if (inside(inp.mouse.x, inp.mouse.y, W / 2 - 40, H - 22, 80, 16)) this.app.go(this.back);
+    }
+  }
+
+  render(): void {
+    const r = this.app.r, g = r.g;
+    r.clear(C.black);
+    drawText(g, 'Pomoc', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    PAGES.forEach((p, i) => {
+      const on = i === this.page;
+      panel(r, this.tabX(i), 30, 88, 16, on ? C.gold : C.slate);
+      drawText(g, p.title, this.tabX(i) + 44, 32, on ? C.white : C.lgray, { align: 'center' });
+    });
+    panel(r, 10, 52, W - 20, H - 80, C.gold);
+    let y = 62;
+    for (const line of PAGES[this.page].lines) {
+      const cut = line.indexOf(':');
+      const wrapped = wrapText(line, W - 44);
+      wrapped.forEach((l, k) => {
+        // Wyróżnienie nazwy przed dwukropkiem w pierwszej linii akapitu.
+        if (k === 0 && cut > 0 && cut < l.length) {
+          const head = l.slice(0, cut + 1);
+          drawText(g, head, 22, y, C.yellow);
+          drawText(g, l.slice(cut + 1), 22 + textWidth(head), y, C.lgray);
+        } else drawText(g, l, 22, y, C.lgray);
+        y += 11;
+      });
+      y += 5;
+    }
+    panel(r, W / 2 - 40, H - 22, 80, 16, C.slate);
+    drawText(g, 'Wróć', W / 2, H - 20, C.lgray, { align: 'center' });
+    drawText(g, 'Strzałki: strona', W - 12, H - 20, C.dgray, { align: 'right' });
+  }
+}

@@ -28,6 +28,8 @@ import { rollItem } from '../data/items';
 import { NODE_INFO, EX_BLESSINGS, advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth } from '../data/expedition';
 import { rng } from '../core/rng';
 import { ExpeditionMapView } from './expedition';
+import { Hints } from './hints';
+import { HelpScreen } from './help';
 import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import { bonusLines } from '../data/upgrades';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
@@ -69,12 +71,16 @@ export class GameScreen implements Screen {
   private toastT = 0;
   private delay = 0;
   private confirmQuit = false;
+  private hints: Hints;
+  /** Czy ultimate był gotowy w poprzedniej klatce (komunikat „R gotowe!” przy zmianie). */
+  private ultReady = false;
   private pauseMenu: Menu;
   private clearedMenu: Menu;
   private endMenu: Menu;
 
   constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot) {
     this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode);
+    this.hints = new Hints(app.save, () => app.persist());
     this.run.cardBans = new Set(app.save.collection.banned);
     this.run.knownCards = new Set(app.save.collection.seen);
     // Rozwój działa tylko w Ekspedycji (Hardcore i Endless bez meta-bonusów).
@@ -88,6 +94,7 @@ export class GameScreen implements Screen {
       { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
       { label: () => 'Ekwipunek', act: () => this.openInventory('pause') },
       { label: () => 'Synergie', act: () => { this.synergies = new SynergyView(this.run); this.state = 'synergies'; this.delay = 0.1; } },
+      { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
       ...(slotted ? [{ label: () => 'Zapisz i wyjdź', act: () => { this.saveSlot(this.overlayReturn === 'play'); app.go(new MainMenu(app)); } }] : []),
       {
@@ -97,7 +104,7 @@ export class GameScreen implements Screen {
           this.onRunOver();
         },
       },
-    ], 104, 104, 180);
+    ], 104, 96, 180, 15);
     this.clearedMenu = new Menu([
       { label: () => `Dalej: poziom ${this.run.depth + 1}`, act: () => this.nextLevel() },
       { label: () => `Sklep (${fmt(this.run.gold)} zł)`, act: () => this.openShop('cleared') },
@@ -242,6 +249,7 @@ export class GameScreen implements Screen {
 
   /** Mapa Ekspedycji między węzłami (zapis pozycji). */
   private openMap(): void {
+    this.hints.show('map');
     this.map ??= new ExpeditionMapView(this.run);
     this.overlayReturn = 'map';
     this.state = 'map';
@@ -314,6 +322,7 @@ export class GameScreen implements Screen {
   }
 
   private openAnvil(from: State): void {
+    this.hints.show('anvil');
     this.anvil = new AnvilView(this.run, () => this.saveSlot(false));
     this.anvilReturn = from;
     this.state = 'anvil';
@@ -321,6 +330,7 @@ export class GameScreen implements Screen {
   }
 
   private openShop(from: State): void {
+    this.hints.show('shop');
     const label = from === 'map' ? 'Do mapy' : this.resumed ? 'Do walki' : 'Wróć';
     this.shop = new ShopView(this.run, () => this.saveSlot(false), label);
     this.shopReturn = from;
@@ -341,18 +351,40 @@ export class GameScreen implements Screen {
     this.delay = 0.1;
   }
 
+  /** Podpowiedzi i komunikaty zależne od sytuacji w grze (każda podpowiedź raz; skan wrogów co pół sekundy). */
+  private gameplayHints(): void {
+    const run = this.run, h = this.hints;
+    if (run.time > 0.5) h.show('move');
+    if (run.time > 4 && run.gems.count > 0) h.show('gems');
+    if (run.time > 12) h.show('abilities');
+    if (run.player.hp < run.stats.maxHp && run.hurtFx > 0) h.show('hurt');
+    if (run.boss) h.show('boss');
+    if (run.reactions > 0) h.show('reaction');
+    const ready = run.ultCharge >= run.ultNeed() && run.abilities.ult.activeT <= 0;
+    if (ready && !this.ultReady) { run.showBanner('R gotowe!'); sfx.play('levelup'); h.show('ult'); }
+    this.ultReady = ready;
+    if (run.step % 30 !== 0) return;
+    if (run.pickups.items.some((p) => p.kind === 'chest')) h.show('chest');
+    if (run.enemies.items.some((e) => !e.dead && e.elite)) h.show('elite');
+    if (Object.values(run.synTiers).some((t) => (t ?? 0) > 0)) h.show('synergy');
+  }
+
   /** Otwiera nakładkę dla zaległych nagród: łup → awans → karta. */
   private openPending(): boolean {
     const run = this.run;
     if (run.pendingLoot.length > 0) {
       this.loot = new LootView(run, run.pendingLoot.shift()!);
       this.state = 'loot';
+      this.hints.show('loot');
     } else if (run.pendingLevels > 0) {
       this.levelUp = new LevelUpView(run);
       this.state = 'levelup';
+      this.hints.show('levelup');
+      if (this.levelUp.options.some((o) => o.kind === 'augment')) this.hints.show('augment');
     } else if (run.pendingCards.length > 0) {
       this.cardPick = new CardPickView(run, run.pendingCards.shift()!);
       this.state = 'cards';
+      this.hints.show('cards');
     } else {
       return false;
     }
@@ -378,6 +410,7 @@ export class GameScreen implements Screen {
       set.debug = !set.debug;
       this.app.persist();
     }
+    this.hints.update(dt);
     if (this.delay > 0) { this.delay -= dt; return; }
 
     switch (this.state) {
@@ -385,8 +418,10 @@ export class GameScreen implements Screen {
         if ((inp.pressed('pause') || (set.autoPause && inp.focusLost)) && run.outcome === 'none') { this.openPause(); return; }
         if (inp.pressed('inventory') && run.outcome === 'none') { this.openInventory('play'); return; }
         this.toastT = Math.max(0, this.toastT - dt);
-        // Zatrzymanie klatki po mocnym trafieniu / zabiciu elity: symulacja stoi przez chwilę.
+        // Zatrzymanie klatki po mocnym trafieniu / zabiciu elity: symulacja stoi przez chwilę (można wyłączyć w Ustawieniach).
+        if (run.hitstop > 0 && !set.hitstop) run.hitstop = 0;
         if (run.hitstop > 0) { run.hitstop -= dt; break; }
+        this.gameplayHints();
         if (this.app.save.settings.debug) {
           if (inp.pressed('debugTime')) run.debugAdvance();
           if (inp.pressed('debugLevel')) run.addXp(run.xpNext - run.xp);
@@ -514,6 +549,7 @@ export class GameScreen implements Screen {
         this.renderEnd();
         break;
     }
+    if (this.state !== 'pause' && this.state !== 'end') this.hints.render(r, this.state !== 'play');
   }
 
   private renderPause(): void {

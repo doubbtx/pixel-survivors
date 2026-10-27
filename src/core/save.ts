@@ -60,6 +60,9 @@ export interface Settings {
   lowFx: boolean;
   /** Widoczność ataków gracza (pociski, aury, strefy, efekty trafień) — żeby lepiej widzieć pociski wrogów. */
   playerFx: PlayerFx;
+  /** Podpowiedzi kontekstowe (ui/hints.ts) i krótkie zatrzymanie klatki przy mocnych trafieniach. */
+  hints: boolean;
+  hitstop: boolean;
 }
 
 /** Kolekcja kart (między runami): odkryte, liczba wyborów i bany (wykluczone z ofert). */
@@ -82,6 +85,9 @@ export interface SaveData {
   collection: CardCollection;
   /** Meta-progresja: esencja, drzewko rozwoju, Paragon (z całej esencji), prestiż. */
   meta: MetaState;
+  /** Podpowiedzi już pokazane (ui/hints.ts) i ostatnio wybrany bohater (ekran wyboru). Nowe pola bez migracji. */
+  seenHints: string[];
+  lastHero: string;
 }
 
 type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
@@ -139,13 +145,15 @@ function defaults(): SaveData {
     settings: { volume: 0.5, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
-      playerFx: 'visible' },
+      playerFx: 'visible', hints: true, hitstop: true },
     records: {},
     slots: { hardcore: null, endless: null, expedition: null },
     board: [],
     notice: '',
     collection: { seen: [], picks: {}, banned: [] },
     meta: { heroes: {}, unassigned: 0 },
+    seenHints: [],
+    lastHero: '',
   };
 }
 
@@ -176,6 +184,8 @@ export function loadSave(): SaveData {
     notice: d.notice ?? '',
     collection: { ...base.collection, ...d.collection },
     meta: { ...base.meta, ...d.meta },
+    seenHints: d.seenHints ?? [],
+    lastHero: d.lastHero ?? '',
   };
 }
 

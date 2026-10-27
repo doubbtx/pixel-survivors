@@ -296,6 +296,8 @@ export interface Item {
   upg?: number;
   /** Złoto i odłamki wydane na przedmiot w kowadle (część wraca przy rozkładaniu). */
   spent?: { gold: number; shards: number };
+  /** Nowy w plecaku (znaczek „!” do pierwszego zamknięcia ekwipunku). */
+  fresh?: boolean;
 }
 
 /** Źródło przedmiotu; 'shop' = oferta sklepu między poziomami. */

@@ -18,6 +18,7 @@ import { GameScreen } from './game-screen';
 import { CollectionScreen } from './collection';
 import { MetaScreen } from './meta';
 import { BalanceScreen } from './balance';
+import { HelpScreen } from './help';
 import { heroMeta, paragonLevel } from '../data/meta';
 
 const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
@@ -61,8 +62,11 @@ export class MainMenu implements Screen {
       { label: () => (app.save.meta.unassigned > 0 ? `Rozwój (${fmt(app.save.meta.unassigned)} do rozdania)` : 'Rozwój bohaterów'), act: () => app.go(new MetaScreen(app, this)) },
       { label: () => 'Kolekcja kart', act: () => app.go(new CollectionScreen(app, this)) },
       { label: () => 'Rekordy', act: () => app.go(new RecordsScreen(app)) },
+      { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-    ], W / 2, 86, 220, 14);
+    ], W / 2, 86, 220, 12);
+    // Nowy gracz (bez żadnego runu i zapisu): kursor od razu na Treningu.
+    if (isNewPlayer(app)) this.menu.sel = 3;
   }
 
   update(dt: number): void {
@@ -90,11 +94,33 @@ export class MainMenu implements Screen {
       drawText(g, 'Pixel Survivors', W / 2, 28, col, { align: 'center', scale: 3 });
       g.restore();
     }
-    drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 70, C.lavender, { align: 'center', shadow: C.black });
+    drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 66, C.lavender, { align: 'center', shadow: C.black });
     if (this.app.save.notice) drawText(g, this.app.save.notice, W / 2, 74, C.orange, { align: 'center', outline: C.black });
     this.menu.render(this.app.r);
-    drawText(g, 'WASD / strzałki: ruch    Enter / klik: wybór', W / 2, 200, C.slate, { align: 'center' });
+    // Opis zaznaczonej pozycji; nowemu graczowi Trening jest polecany.
+    const desc = MENU_DESC[this.menu.sel] ?? '';
+    const tip = isNewPlayer(this.app) && this.menu.sel === 3 ? 'Polecane na start! ' : '';
+    drawText(g, tip + desc, W / 2, 199, tip ? C.lime : C.lavender, { align: 'center', outline: C.black });
   }
+}
+
+/** Opisy pozycji menu głównego (kolejność jak w menu). */
+const MENU_DESC = [
+  'Poziomy po kolei z bossami i sklepem. Śmierć kasuje cały run.',
+  'Wyprawa przez 3 akty map z modyfikatorami. Daje esencję na Rozwój.',
+  'Jeden poziom bez końca, boss co 5 minut, coraz trudniej.',
+  'Jeden poziom z bossem, bez zapisu. Dobry na naukę bohaterów.',
+  'Drzewka bohaterów kupowane esencją z Ekspedycji.',
+  'Odkryte karty i bany (wykluczenie kart z ofert).',
+  'Najlepsze wyniki bohaterów w każdym trybie.',
+  'Sterowanie, zasady, żywioły i reakcje, synergie, tryby.',
+  'Dźwięk, celowanie, widoczność efektów, podpowiedzi.',
+];
+
+/** Nowy gracz: żadnego zakończonego ani trwającego runu. */
+function isNewPlayer(app: App): boolean {
+  const s = app.save;
+  return Object.values(s.records).every((r) => r.runs === 0 && r.bestTime === 0) && !Object.values(s.slots).some(Boolean);
 }
 
 const SLOT_TITLE: Record<SlotMode, string> = { hardcore: 'Kampania Hardcore', expedition: 'Ekspedycja', endless: 'Endless' };
@@ -219,10 +245,15 @@ const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 204;
 export class HeroSelect implements Screen {
   private sel = 0;
 
-  constructor(private readonly app: App, private readonly mode: Mode) {}
+  constructor(private readonly app: App, private readonly mode: Mode) {
+    // Kursor na ostatnio wybranym bohaterze.
+    this.sel = Math.max(0, HEROES.findIndex((h) => h.id === app.save.lastHero));
+  }
 
   private start(): void {
     sfx.play('levelup');
+    this.app.save.lastHero = HEROES[this.sel].id;
+    this.app.persist();
     this.app.go(new GameScreen(this.app, HEROES[this.sel].id, this.mode));
   }
 
@@ -340,7 +371,7 @@ export class SettingsScreen implements Screen {
   constructor(private readonly app: App, private readonly back: Screen) {
     const s = app.save.settings;
     const vol = (d: number) => () => { s.volume = Math.round(Math.max(0, Math.min(1, s.volume + d)) * 10) / 10; app.persist(); };
-    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx') => () => { s[k] = !s[k]; app.persist(); };
+    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx' | 'hints' | 'hitstop') => () => { s[k] = !s[k]; app.persist(); };
     const aim = (d: number) => () => {
       const i = Math.max(0, AIM_MODES.indexOf(s.aim));
       s.aim = AIM_MODES[(i + d + AIM_MODES.length) % AIM_MODES.length];
@@ -362,11 +393,14 @@ export class SettingsScreen implements Screen {
       { label: () => `Efekty: ${s.lowFx ? 'oszczędne' : 'pełne'}`, act: toggle('lowFx') },
       { label: () => `Ataki gracza: ${FX_LABEL[s.playerFx] ?? FX_LABEL.visible}`, left: fx(-1), right: fx(1) },
       { label: () => `Pauza po wyjściu z okna: ${yes(s.autoPause)}`, act: toggle('autoPause') },
+      { label: () => `Podpowiedzi: ${yes(s.hints)}`, act: toggle('hints') },
+      { label: () => (app.save.seenHints.length ? 'Pokaż podpowiedzi od nowa' : 'Podpowiedzi: wszystkie przed tobą'), act: () => { app.save.seenHints = []; app.persist(); } },
+      { label: () => `Zatrzymanie klatki przy trafieniach: ${yes(s.hitstop)}`, act: toggle('hitstop') },
       { label: () => `Pełny ekran: ${yes(!!document.fullscreenElement)}`, act: () => toggleFullscreen() },
       { label: () => `Licznik FPS / debug: ${yes(s.debug)}`, act: toggle('debug') },
       { label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } },
       { label: () => 'Wróć', act: () => app.go(back) },
-    ], W / 2, 42, 280, 14);
+    ], W / 2, 40, 280, 12);
     this.hints = [
       () => 'Strzałki w lewo/prawo zmieniają wartość.',
       () => AIM_HINT[s.aim] ?? AIM_HINT.mixed,
@@ -377,6 +411,9 @@ export class SettingsScreen implements Screen {
       () => 'Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety (więcej FPS, telefon).',
       () => 'Twoje pociski, aury, strefy i błyski trafień: przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.',
       () => 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.',
+      () => 'Krótkie wskazówki przy pierwszym spotkaniu z mechaniką (awans, skrzynie, elity, reakcje...).',
+      () => 'Kolejna gra pokaże wszystkie podpowiedzi jeszcze raz.',
+      () => 'Gra na ułamek sekundy staje przy zabiciu elity, bossa i mocnym trafieniu.',
       () => 'Przełącza tryb pełnoekranowy przeglądarki.',
       () => 'Licznik klatek i encji; włącza klawisze F4, F6, F7.',
       () => 'Wartości do sprawdzenia: HP przedmiotów i ulepszeń, skalowanie wrogów, miękkie limity.',
@@ -393,9 +430,9 @@ export class SettingsScreen implements Screen {
     const r = this.app.r;
     r.clear(C.black);
     drawText(r.g, 'Ustawienia', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    panel(r, W / 2 - 160, 34, 320, this.menu.items.length * 14 + 16, C.slate);
+    panel(r, W / 2 - 160, 32, 320, this.menu.items.length * 12 + 16, C.slate);
     this.menu.render(r);
-    wrapText(this.hints[this.menu.sel](), 360).forEach((l, i) => drawText(r.g, l, W / 2, 232 + i * 12, C.lavender, { align: 'center' }));
+    wrapText(this.hints[this.menu.sel](), 400).forEach((l, i) => drawText(r.g, l, W / 2, 246 + i * 11, C.lavender, { align: 'center' }));
   }
 }
 

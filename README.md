@@ -43,7 +43,7 @@ Celowanie umiejętności (bronie zawsze namierzają same) wybierasz w **Ustawien
 
 ## Ustawienia
 
-Głośność, tryb celowania, liczby obrażeń nad wrogami, wstrząsy ekranu, auto-pauza po wyjściu z okna/karty, pełny ekran, licznik FPS/debug. Zapisują się w localStorage; nowe pola dostają wartości domyślne bez migracji zapisu (`Settings` w `core/save.ts`).
+Głośność, tryb celowania, liczby obrażeń nad wrogami, wstrząsy ekranu, zatrzymanie klatki, podpowiedzi (z resetem), auto-pauza po wyjściu z okna/karty, pełny ekran, licznik FPS/debug. Zapisują się w localStorage; nowe pola dostają wartości domyślne bez migracji zapisu (`Settings` w `core/save.ts`).
 
 ## Struktura
 
@@ -229,6 +229,13 @@ src/
 - Q **Przywołanie** (duchy gonią i ranią wrogów), E **Bagno dusz** (spowalnia, rani i zatruwa), Spacja **Cień**, R **Armia umarłych** (potężni wojownicy-duchy).
 - Ewolucje: Zastęp, Przeklęta ziemia (bagno też poraża), Nieśmiertelny legion (wojownicy na koniec wybuchają). Karty: Mroczny zew, Liczny zastęp, Głębokie bagno, Lisz. Augmenty Duszek: Wędrujące dusze, Żniwo (zabity wróg może powstać jako sługa). Własne drzewko Rozwoju: Przywołania, Klątwy, Cień, Dusze.
 - Synergia Przywołania (3+) wzmacnia też sługi (+30% obrażeń).
+
+**Polish i prowadzenie gracza (0.12)**:
+- **Podpowiedzi kontekstowe**: każda pojawia się raz, gdy pierwszy raz trafisz na daną mechanikę (ruch, kryształy, umiejętności, awans, skrzynia, łup, karty, elita, boss, synergia, augment, reakcja żywiołów, obrażenia, mapa, sklep, kowadło). Można je wyłączyć albo pokazać od nowa w Ustawieniach.
+- **Pomoc** (menu główne i pauza): 5 stron (sterowanie, rozgrywka, żywioły i reakcje, synergie i augmenty, tryby i Rozwój).
+- Menu główne opisuje zaznaczoną pozycję. Nowy gracz ma od razu zaznaczony Trening z dopiskiem „Polecane na start!”. Wybór bohatera pamięta ostatniego.
+- Napis „R gotowe!”, gdy ultimate jest naładowany. Nowe przedmioty w plecaku mają znacznik „!”, a HUD przypomina o nich (I). Na mapie Ekspedycji jest opis sterowania.
+- Ustawienie „Zatrzymanie klatki” wyłącza efekt hitstop.
 
 ### Jak przetestować
 

@@ -72,6 +72,8 @@ export class ExpeditionMapView {
     const X = BAL.expedition;
     dim(r);
     drawText(g, `Ekspedycja - akt ${ex.act}/${X.acts}`, W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    drawText(g, 'Enter/klik: idź   I: plecak', W - 8, 4, C.dgray, { align: 'right' });
+    drawText(g, 'Esc: menu (zapis)', W - 8, 15, C.dgray, { align: 'right' });
     panel(r, MAP_X, MAP_Y, MAP_W, MAP_H, C.gold);
     const biome = BIOMES[(ex.act - 1) % BIOMES.length];
     drawText(g, biome.name, MAP_X + 8, MAP_Y + 5, C.lavender);

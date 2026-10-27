@@ -37,6 +37,7 @@ export function drawItemSlot(r: Renderer, it: Item | null, x: number, y: number,
       r.rect(x + s - 6, y + 2, 4, 4, C.black);
       r.rect(x + s - 5, y + 3, 2, 2, C.yellow);
     }
+    if (it.fresh) drawText(r.g, '!', x + 3, y + 1, C.lime, { outline: C.black });
   } else if (ghost) {
     r.withAlpha(0.22, () => drawSprite(r.g, ghost, x + s / 2, y + s / 2));
   }
@@ -122,7 +123,7 @@ export class LootView {
       { label: () => 'Załóż', act: () => { const g = run.equip(it); this.finish(g ? `Stary przedmiot rozłożony: +${g} zł` : ''); } },
       {
         label: () => (run.bag.length >= BAL.bagSize ? 'Plecak pełny' : `Do plecaka (${run.bag.length}/${BAL.bagSize})`),
-        act: () => { if (run.bag.length < BAL.bagSize) { run.bag.push(it); this.finish(''); } },
+        act: () => { if (run.bag.length < BAL.bagSize) { run.stash(it); this.finish(''); } },
       },
       { label: () => `Rozłóż (+${salvageGold(it, run.stats.greed)} zł, +${salvageShards(it)} odł.)`, act: () => { run.salvage(it); this.finish(''); } },
     ], W / 2, 214, 200, 15);
@@ -226,7 +227,7 @@ export class InventoryView {
   /** Zwraca true, gdy ekran ma zostać zamknięty. */
   update(input: Input, dt: number): boolean {
     this.noteT = Math.max(0, this.noteT - dt);
-    if (input.pressed('back') || input.pressed('inventory') || input.pressed('pause')) return true;
+    if (input.pressed('back') || input.pressed('inventory') || input.pressed('pause')) return this.close();
     if (input.pressed('up')) this.cy = (this.cy + 3) % 4;
     if (input.pressed('down')) this.cy = (this.cy + 1) % 4;
     if (input.pressed('left')) this.cx = (this.cx + 7) % 8;
@@ -246,10 +247,16 @@ export class InventoryView {
     if (input.pressed('click')) {
       if (inside(m.x, m.y, DET_X, 236, BTN_W, 16)) this.activate(this.cellAt(this.cx, this.cy));
       if (inside(m.x, m.y, DET_X + BTN_W + 6, 236, BTN_W, 16)) this.salvage(this.cellAt(this.cx, this.cy));
-      if (inside(m.x, m.y, 14, 236, 60, 16)) return true;
+      if (inside(m.x, m.y, 14, 236, 60, 16)) return this.close();
     }
     this.lastMouse = m.lastMove;
     return false;
+  }
+
+  /** Zamknięcie: przedmioty w plecaku przestają być „nowe”. */
+  private close(): boolean {
+    for (const it of this.run.bag) it.fresh = false;
+    return true;
   }
 
   render(r: Renderer): void {
