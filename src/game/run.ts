@@ -296,6 +296,8 @@ export class Run {
   }
   /** Tryb Głowy bossów (sekret: kod Konami w menu): bossowie biomów po kolei, na końcu Serce Pustki. */
   rush = false;
+  /** Szybki run: BAL.quick.levels krótkich poziomów z bossami jeden po drugim w tym samym świecie. */
+  quick = false;
   lore: Record<string, number> = {};
   killsById: Record<string, number> = {};
   daily = false;
@@ -422,6 +424,9 @@ export class Run {
   healNumbers = true;
   /** Oszczędne efekty (ustawienie): mniej cząsteczek i iskier; render pomija cienie, poświaty i winietę. */
   lowFx = false;
+  /** Dostępność (Ustawienia): kształty żywiołów i tryb łatwy (słabsi wrogowie, flagi w indexEffects). */
+  elemShapes = false;
+  easy = false;
   /** Ukryte pociski gracza (ustawienie): nadal działają, tylko nie są rysowane. */
   playerFx: PlayerFx = 'visible';
 
@@ -446,8 +451,8 @@ export class Run {
   startLevel(depth: number): void {
     this.depth = depth;
     this.levelInfo = this.levelFor(depth);
-    // Głowy bossów: krótka rozgrzewka przed pierwszym bossem.
-    if (this.rush) this.levelInfo = { ...this.levelInfo, objective: { kind: 'survive', time: BAL.rush.warmup } };
+    // Głowy bossów: krótka rozgrzewka przed pierwszym bossem; Szybki run: krótki cel.
+    if (this.rush || this.quick) this.levelInfo = { ...this.levelInfo, objective: { kind: 'survive', time: this.rush ? BAL.rush.warmup : BAL.quick.levelTime } };
     this.shop = null;
     this.time = 0;
     this.levelKills = 0;
@@ -649,8 +654,12 @@ export class Run {
   private indexEffects(): void {
     this.flags = { ...this.meta.flags };
     for (const [k, v] of Object.entries(this.levelInfo?.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
+    // Tryb łatwy (Ustawienia): wrogowie zadają mniej obrażeń i mają mniej HP.
+    if (this.easy) { this.flags.enemyDmg = (this.flags.enemyDmg ?? 0) - BAL.easy.dmg; this.flags.enemyHp = (this.flags.enemyHp ?? 0) - BAL.easy.hp; }
     // Głowy bossów: bossowie słabsi (krótsze walki jedna po drugiej).
     if (this.rush) this.flags.bossHp = (this.flags.bossHp ?? 0) + BAL.rush.bossHp;
+    // Szybki run: więcej doświadczenia i złota.
+    if (this.quick) { this.flags.mapXp = (this.flags.mapXp ?? 0) + BAL.quick.xp; this.flags.mapGold = (this.flags.mapGold ?? 0) + BAL.quick.gold; }
     for (const [k, v] of Object.entries(eventFlags(this))) this.flags[k] = (this.flags[k] ?? 0) + v;
     for (const p of PACTS) {
       const lvl = Math.min(p.max, this.pacts[p.id] ?? 0);
@@ -1274,16 +1283,18 @@ export class Run {
       }
       return;
     }
-    // Głowy bossów: następny boss po krótkiej przerwie (biomy po kolei, piąty to Serce Pustki), leczenie i kilka awansów.
-    if (this.rush && this.depth <= BIOME_CYCLE) {
+    // Głowy bossów (następny boss po krótkiej przerwie, piąty to Serce Pustki, kilka awansów) i Szybki run (następny poziom):
+    // świat zostaje, zmienia się biom i cel, leczenie.
+    if (this.rush ? this.depth <= BIOME_CYCLE : this.quick && this.depth < BAL.quick.levels) {
       this.collectAll();
       this.heal(this.stats.maxHp * BAL.rush.heal);
-      for (let i = 0; i < BAL.rush.levels; i++) this.addXp(this.xpNext - this.xp);
+      if (this.rush) for (let i = 0; i < BAL.rush.levels; i++) this.addXp(this.xpNext - this.xp);
       this.depth++;
-      this.levelInfo = { ...levelDef(this.depth, this.depth > BIOME_CYCLE), objective: { kind: 'survive', time: this.time + BAL.rush.gap } };
+      const next = this.rush ? levelDef(this.depth, this.depth > BIOME_CYCLE) : this.levelFor(this.depth);
+      this.levelInfo = { ...next, objective: { kind: 'survive', time: this.time + (this.rush ? BAL.rush.gap : BAL.quick.levelTime) } };
       this.bossSpawned = false;
       this.onBuildChanged();
-      this.showBanner(`Głowa ${this.depth - 1}/${BIOME_CYCLE + 1}! Następny: ${this.levelInfo.bossName}`);
+      this.showBanner(this.rush ? `Głowa ${this.depth - 1}/${BIOME_CYCLE + 1}! Następny: ${next.bossName}` : `Poziom ${this.depth}/${BAL.quick.levels}: ${next.name}`);
       sfx.play('explode');
       return;
     }

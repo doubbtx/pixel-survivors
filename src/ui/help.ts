@@ -107,7 +107,7 @@ const PAGES: { title: string; lines: string[] }[] = [
   {
     title: 'Tryby',
     lines: [
-      'Trening: jeden poziom do nauki bohaterów. Wyzwanie dnia: ten sam bohater i pakty dla wszystkich, liczy się czas bossa.',
+      'Trening: jeden poziom do nauki. Szybki run: 3 krótkie poziomy z bossami. Wyzwanie dnia: ten sam bohater i pakty dla wszystkich.',
       'Hardcore: poziomy po kolei z bossami i sklepem, śmierć kasuje run. Endless: jeden poziom bez końca, boss co 5 minut.',
       'Ekspedycja: 3 akty map z modyfikatorami (ryzyko za lepsze nagrody), lochy, kapliczki, sklepy.',
       'Rozwój: esencja z Ekspedycji kupuje węzły drzewka bohatera. Różowe klucze zmieniają umiejętności.',

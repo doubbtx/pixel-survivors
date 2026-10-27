@@ -90,7 +90,7 @@ export class GameScreen implements Screen {
   private endPage = 0;
 
   constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot, opts: GameOpts = {}) {
-    const { daily, rush } = opts;
+    const { daily, rush, quick } = opts;
     // Wyzwanie dnia: to samo ziarno losowania dla wszystkich tego dnia.
     if (daily) rng.seed(daily.seed);
     this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode);
@@ -109,6 +109,7 @@ export class GameScreen implements Screen {
       this.run.startLevel(1);
       for (let i = 0; i < BAL.rush.startLevels; i++) this.run.addXp(this.run.xpNext - this.run.xp);
     }
+    if (quick) { this.run.quick = true; this.run.startLevel(1); }
     this.run.unlocked = new Set(app.save.achievements);
     // Skórka za odznakę Paktu (tylko jeśli nadal zdobyta).
     const skin = app.save.skins[heroId] ?? '';
@@ -145,7 +146,7 @@ export class GameScreen implements Screen {
       { label: () => `Kowadło (${this.run.shards} odł.)`, act: () => this.openAnvil('cleared') },
       { label: () => 'Zapisz i wyjdź do menu', act: () => app.go(new MainMenu(app)) },
     ], W / 2, 194, 240, 16);
-    this.endMenu = new Menu(daily || rush ? [
+    this.endMenu = new Menu(daily || rush || quick ? [
       { label: () => 'Spróbuj ponownie', act: () => app.go(new GameScreen(app, heroId, mode, undefined, opts)) },
       { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
     ] : hc || mode === 'expedition' ? [
@@ -227,7 +228,7 @@ export class GameScreen implements Screen {
     rec.bestLevel = Math.max(rec.bestLevel, run.level);
     // Odznaki Paktu: najwyższy poziom Paktu, z którym bohater pokonał bossa.
     const pacts = this.app.save.pacts.best;
-    if (run.bossKills > 0) pacts[this.heroId] = Math.max(pacts[this.heroId] ?? 0, run.pactLevel);
+    if (run.bossKills > 0 && !run.easy) pacts[this.heroId] = Math.max(pacts[this.heroId] ?? 0, run.pactLevel);
     if (this.mode === 'hardcore') rec.bestDepth = Math.max(rec.bestDepth, run.depth);
     else if (this.mode === 'endless') rec.bestEndless = Math.max(rec.bestEndless, run.totalTime);
     else if (this.mode === 'expedition') rec.bestExpedition = Math.max(rec.bestExpedition, run.expedition!.cleared);
@@ -491,6 +492,8 @@ export class GameScreen implements Screen {
     run.healNumbers = set.healNumbers;
     run.lowFx = set.lowFx;
     run.playerFx = set.playerFx;
+    run.elemShapes = set.elemShapes;
+    if (run.easy !== set.easy) { run.easy = set.easy; run.onBuildChanged(); }
     if (inp.pressed('debug')) {
       set.debug = !set.debug;
       this.app.persist();
@@ -742,6 +745,7 @@ export class GameScreen implements Screen {
     const stats = `Czas ${fmtTime(run.totalTime)}    Zabójstwa ${fmt(run.kills)}    LV ${run.level}    Złoto ${fmt(run.gold)}    Leczenie ${fmt(run.healed)}${run.pactLevel ? `    Pakt ${run.pactLevel}` : ''}`;
     const modeLine = this.mode === 'hardcore' ? `Hardcore: przepadło wszystko. Dotarłeś do poziomu ${run.depth}.`
       : this.mode === 'endless' ? `Endless: przetrwałeś ${fmtTime(run.totalTime)}, głębia ${run.depth} (rekord ${fmtTime(heroRecord(this.app.save, this.heroId).bestEndless)})`
+      : run.quick ? `Szybki run: ${won ? 'wszystkie poziomy ukończone' : `poziom ${run.depth}/${BAL.quick.levels}`}`
       : run.rush ? `Głowy bossów: ${won ? `wszystkie w ${fmtTime(run.time)}` : `zdobyte głowy ${run.bossKills}/${BIOME_CYCLE + 1}`}, rekord ${this.app.save.rushBest ? fmtTime(this.app.save.rushBest) : 'brak'}`
       : run.daily ? `Wyzwanie dnia ${this.app.save.daily.date}: ${won ? `boss pokonany w ${fmtTime(run.time)}` : 'boss niepokonany'}, najlepszy czas ${this.app.save.daily.best ? fmtTime(this.app.save.daily.best) : 'brak'}`
       : ex ? `Ekspedycja: akt ${ex.act}/${BAL.expedition.acts}, ukończone węzły ${ex.cleared}${won ? `, esencja x${BAL.expedition.winEssenceMul}` : ''}` : '';
@@ -833,10 +837,11 @@ export class GameScreen implements Screen {
   }
 }
 
-/** Opcje nowego runu: wyzwanie dnia (bohater, pakty, ziarno) albo tryb Głowy bossów. */
+/** Opcje nowego runu (tryb 'training'): wyzwanie dnia (bohater, pakty, ziarno), Głowy bossów albo Szybki run. */
 export interface GameOpts {
   daily?: DailyDef;
   rush?: boolean;
+  quick?: boolean;
 }
 
 /** Zakładki ekranu końca runu. */

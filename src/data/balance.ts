@@ -45,6 +45,9 @@ export const BAL = {
    * souls: zabity wróg bliżej niż `range` daje 1; pełne: sługa za `auto` dusz; R zużywa wszystkie: +`ultDmg` obrażeń sług za duszę,
    *        +1 sługa za każde `ultExtra` dusz.
    */
+  /** Tryb łatwy (Ustawienia): o tyle mniej obrażeń i HP wrogów. Szybki run: liczba poziomów, czas celu poziomu (s), bonus XP i złota. */
+  easy: { dmg: 0.4, hp: 0.25 },
+  quick: { levels: 3, levelTime: 150, xp: 0.6, gold: 0.5 },
   /** Sekretny biom Pustka: minimalny poziom Paktu (data/levels.ts, Run.levelFor). */
   voidPact: 5,
   /** Głowy bossów: rozgrzewka przed 1. bossem i przerwa między bossami (s), leczenie po bossie, awanse po bossie i na start, HP bossów (flaga bossHp). */

@@ -20,6 +20,7 @@ import { LEVEL_EVENTS, comboGoldMul } from '../systems/levelevents';
 import { powerCd } from '../systems/powers';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { REWARD_LABEL } from '../data/tasks';
+import { drawElemMark } from '../gfx/elemmark';
 
 const KEY_LABEL: Record<AbilitySlot, string> = { q: 'Q', e: 'E', dash: 'Spc', ult: 'R' };
 const OUT = { outline: C.black } as const;
@@ -186,7 +187,8 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
     drawSprite(g, w.def.icon, x + SLOT / 2, y + SLOT / 2);
     // Żywioł broni: kolorowa kropka w lewym górnym rogu gniazda.
     const el = WEAPON_ELEMENT[w.def.id];
-    if (el) { r.rect(x + 2, y + 2, 4, 4, C.black); r.rect(x + 3, y + 3, 2, 2, ELEMENTS[el].color); }
+    if (el && run.elemShapes) drawElemMark(r, el, x + 5, y + 5);
+    else if (el) { r.rect(x + 2, y + 2, 4, 4, C.black); r.rect(x + 3, y + 3, 2, 2, ELEMENTS[el].color); }
     drawText(g, w.def.fused ? '+' : w.def.evolved ? '*' : String(w.level), x + SLOT - 2, y + SLOT - 11, w.def.fused ? C.cyan : w.def.evolved ? C.yellow : C.white, { align: 'right', ...OUT });
   }
   for (let i = 0; i < BAL.passiveSlots; i++) {

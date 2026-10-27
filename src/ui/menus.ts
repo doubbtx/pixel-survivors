@@ -15,7 +15,7 @@ import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
 import { Menu, panel, inside, slot } from './widgets';
 import type { Action } from '../core/input';
-import { GameScreen } from './game-screen';
+import { GameScreen, type GameOpts } from './game-screen';
 import { CollectionScreen } from './collection';
 import { MetaScreen } from './meta';
 import { BalanceScreen } from './balance';
@@ -73,13 +73,14 @@ export class MainMenu implements Screen {
       { label: () => 'Ekspedycja (3 akty)', act: () => app.go(new SlotScreen(app, 'expedition')) },
       { label: () => 'Endless (bez końca)', act: () => app.go(new SlotScreen(app, 'endless')) },
       { label: () => 'Trening (jeden poziom)', act: () => app.go(new HeroSelect(app, 'training')) },
+      { label: () => 'Szybki run (3 poziomy, ok. 10 min)', act: () => app.go(new HeroSelect(app, 'training', { quick: true })) },
       { label: () => 'Wyzwanie dnia', act: () => app.go(new DailyScreen(app)) },
       { label: () => (app.save.meta.unassigned > 0 ? `Rozwój (${fmt(app.save.meta.unassigned)} do rozdania)` : 'Rozwój bohaterów'), act: () => app.go(new MetaScreen(app, this)) },
       { label: () => 'Kolekcja i osiągnięcia', act: () => app.go(new CollectionScreen(app, this)) },
       { label: () => 'Rekordy', act: () => app.go(new RecordsScreen(app)) },
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-    ], W / 2, 84, 220, 11);
+    ], W / 2, 82, 220, 11);
     // Nowy gracz (bez żadnego runu i zapisu): kursor od razu na Treningu.
     if (isNewPlayer(app)) this.menu.sel = 3;
   }
@@ -105,7 +106,7 @@ export class MainMenu implements Screen {
     if (!KONAMI.includes(this.konami)) return false;
     this.konami = '';
     sfx.play('boss');
-    this.app.go(new HeroSelect(this.app, 'training', true));
+    this.app.go(new HeroSelect(this.app, 'training', { rush: true }));
     return true;
   }
 
@@ -129,7 +130,7 @@ export class MainMenu implements Screen {
     // Opis zaznaczonej pozycji; nowemu graczowi Trening jest polecany.
     const desc = MENU_DESC[this.menu.sel] ?? '';
     const tip = isNewPlayer(this.app) && this.menu.sel === 3 ? 'Polecane na start! ' : '';
-    drawText(g, tip + desc, W / 2, 199, tip ? C.lime : C.lavender, { align: 'center', outline: C.black });
+    drawText(g, tip + desc, W / 2, 202, tip ? C.lime : C.lavender, { align: 'center', outline: C.black });
   }
 }
 
@@ -139,6 +140,7 @@ const MENU_DESC = [
   'Wyprawa przez 3 akty map z modyfikatorami. Daje esencję na Rozwój.',
   'Jeden poziom bez końca, boss co 5 minut, coraz trudniej.',
   'Jeden poziom z bossem, bez zapisu. Dobry na naukę bohaterów.',
+  'Trzy krótkie poziomy z bossami jeden po drugim, więcej XP i złota. Na jedną przerwę.',
   'Codziennie ten sam bohater i pakty dla wszystkich. Pokonaj bossa jak najszybciej.',
   'Drzewka bohaterów kupowane esencją z Ekspedycji.',
   'Karty i bany, unikaty, Księga sekretów, bestiariusz i osiągnięcia.',
@@ -312,7 +314,7 @@ const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212;
 export class HeroSelect implements Screen {
   private sel = 0;
 
-  constructor(private readonly app: App, private readonly mode: Mode, private readonly rush = false) {
+  constructor(private readonly app: App, private readonly mode: Mode, private readonly opts: GameOpts = {}) {
     // Kursor na ostatnio wybranym bohaterze.
     this.sel = Math.max(0, HEROES.findIndex((h) => h.id === app.save.lastHero));
   }
@@ -321,7 +323,7 @@ export class HeroSelect implements Screen {
     sfx.play('levelup');
     this.app.save.lastHero = HEROES[this.sel].id;
     this.app.persist();
-    this.app.go(new GameScreen(this.app, HEROES[this.sel].id, this.mode, undefined, { rush: this.rush }));
+    this.app.go(new GameScreen(this.app, HEROES[this.sel].id, this.mode, undefined, this.opts));
   }
 
   update(): void {
@@ -370,8 +372,9 @@ export class HeroSelect implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     const m = this.mode;
-    const title = `${this.rush ? 'Głowy bossów' : m === 'training' ? 'Trening' : SLOT_TITLE[m].split(' ').pop()}: wybierz bohatera`;
-    drawText(g, title, W / 2, 10, this.rush ? C.hotpink : m === 'training' ? C.yellow : SLOT_COLOR[m], { align: 'center', scale: 2, outline: C.black });
+    const o = this.opts;
+    const title = `${o.rush ? 'Głowy bossów' : o.quick ? 'Szybki run' : m === 'training' ? 'Trening' : SLOT_TITLE[m].split(' ').pop()}: wybierz bohatera`;
+    drawText(g, title, W / 2, 10, o.rush ? C.hotpink : o.quick ? C.cyan : m === 'training' ? C.yellow : SLOT_COLOR[m], { align: 'center', scale: 2, outline: C.black });
     // Lista bohaterów.
     HEROES.forEach((h, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel;
@@ -480,7 +483,7 @@ export class SettingsScreen implements Screen {
   constructor(private readonly app: App, private readonly back: Screen) {
     const s = app.save.settings;
     const vol = (d: number) => () => { s.volume = Math.round(Math.max(0, Math.min(1, s.volume + d)) * 10) / 10; app.persist(); };
-    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx' | 'hints' | 'hitstop') => () => { s[k] = !s[k]; app.persist(); };
+    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx' | 'hints' | 'hitstop' | 'easy' | 'elemShapes') => () => { s[k] = !s[k]; app.persist(); };
     const aim = (d: number) => () => {
       const i = Math.max(0, AIM_MODES.indexOf(s.aim));
       s.aim = AIM_MODES[(i + d + AIM_MODES.length) % AIM_MODES.length];
@@ -494,7 +497,9 @@ export class SettingsScreen implements Screen {
     const yes = (v: boolean) => (v ? 'tak' : 'nie');
     this.menu = new Menu([
       { label: () => `Głośność ${Math.round(s.volume * 100)}%`, left: vol(-0.1), right: vol(0.1) },
+      { label: () => `Trudność: ${s.easy ? 'łatwa' : 'normalna'}`, act: toggle('easy'), left: toggle('easy'), right: toggle('easy') },
       { label: () => `Celowanie: ${AIM_LABEL[s.aim] ?? AIM_LABEL.mixed}`, left: aim(-1), right: aim(1) },
+      { label: () => `Kształty żywiołów: ${yes(s.elemShapes)}`, act: toggle('elemShapes') },
       { label: () => `Liczby obrażeń: ${yes(s.damageNumbers)}`, act: toggle('damageNumbers') },
       { label: () => `Liczby leczenia: ${yes(s.healNumbers)}`, act: toggle('healNumbers') },
       { label: () => `Minimapa: ${yes(s.minimap)}`, act: toggle('minimap') },
@@ -509,10 +514,12 @@ export class SettingsScreen implements Screen {
       { label: () => `Licznik FPS / debug: ${yes(s.debug)}`, act: toggle('debug') },
       { label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } },
       { label: () => 'Wróć', act: () => app.go(back) },
-    ], W / 2, 40, 280, 12);
+    ], W / 2, 36, 280, 11);
     this.hints = [
       () => 'Strzałki w lewo/prawo zmieniają wartość.',
+      () => `Łatwa: wrogowie zadają ${Math.round(BAL.easy.dmg * 100)}% mniej obrażeń i mają ${Math.round(BAL.easy.hp * 100)}% mniej HP. Bez odznak Paktu.`,
       () => AIM_HINT[s.aim] ?? AIM_HINT.mixed,
+      () => 'Dla daltonistów: każdy żywioł ma też własny kształt (ogień trójkąt, lód romb, błyskawica zygzak, trucizna kropla).',
       () => 'Liczby nad trafionymi wrogami (obrażenia gracza zawsze widać).',
       () => 'Zielone liczby nad postacią: ile HP odzyskałeś (co pół sekundy).',
       () => 'Mała mapa w prawym górnym rogu: wrogowie, elity, boss i skrzynie.',

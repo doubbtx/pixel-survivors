@@ -63,6 +63,9 @@ export interface Settings {
   /** Podpowiedzi kontekstowe (ui/hints.ts) i krótkie zatrzymanie klatki przy mocnych trafieniach. */
   hints: boolean;
   hitstop: boolean;
+  /** Dostępność: tryb łatwy (słabsi wrogowie, bez odznak Paktu) i kształty żywiołów dla daltonistów. */
+  easy: boolean;
+  elemShapes: boolean;
 }
 
 /** Kolekcja kart (między runami): odkryte, liczba wyborów i bany (wykluczone z ofert); odkryte unikaty (nowe pole bez migracji). */
@@ -160,7 +163,7 @@ function defaults(): SaveData {
     settings: { volume: 0.5, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
-      playerFx: 'visible', hints: true, hitstop: true },
+      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false },
     records: {},
     slots: { hardcore: null, endless: null, expedition: null },
     board: [],

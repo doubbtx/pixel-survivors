@@ -10,6 +10,7 @@ import { itemColor } from '../data/items';
 import { BAL } from '../data/balance';
 import type { Run } from './run';
 import { taskTarget } from '../systems/tasks';
+import { drawElemMark } from '../gfx/elemmark';
 
 const MARGIN = 40;
 const FIRE_COLS = [C.red, C.orange, C.gold, C.yellow, C.orange];
@@ -387,6 +388,11 @@ export function renderWorld(run: Run, r: Renderer): void {
       if (e.slowT > 0) { r.withAlpha(0.35, () => r.circle(ex, ey, e.radius * ZOOM * e.scale + 1, C.cyan)); }
       if (e.shockT > 0 && ph < 4) { r.rect(ex + 3, top + 1, 1, 3, C.yellow); r.rect(ex + 2, top + 2, 3, 1, C.white); }
       if (e.poisonT > 0) { r.rect(ex - 4 + ((ph * 3) % 8), top + 2 - (ph % 4), 2, 2, C.lime); }
+      // Kształty żywiołów (Ustawienia, dla daltonistów): rząd znaczników nad wrogiem.
+      if (run.elemShapes) {
+        const marks = ([['fire', e.burnT], ['ice', e.chill > 0 ? e.slowT : 0], ['lightning', e.shockT], ['poison', e.poisonT]] as const).filter(([, t]) => t > 0);
+        marks.forEach(([el], k) => drawElemMark(r, el, ex + (k - (marks.length - 1) / 2) * 8, top - 8));
+      }
     }
     if (e.stunT > 0) {
       const sy = ey - e.radius * ZOOM * e.scale - 8;
