@@ -23,7 +23,7 @@ export const HINTS = {
   synergy: 'Synergia aktywna! Lista pod portretem pokazuje tagi i progi. Pauza (Esc) pokazuje szczegóły.',
   augment: 'Augment (turkusowa karta) zmienia działanie broni, nie tylko liczby.',
   reaction: 'Reakcja żywiołów! Dwa różne żywioły na jednym wrogu dają dodatkowy efekt. Szczegóły w Pomocy.',
-  map: 'Mapa wyprawy: wybierz kolejny węzeł. Klawisze 1-4 ustawiają trudność mapy: więcej modyfikatorów (czerwone kropki) to większa nagroda.',
+  map: 'Mapa wyprawy: wybierz kolejny węzeł. Klawisze 1-4 ustawiają trudność całej wyprawy (zostaje do zmiany): więcej modyfikatorów (czerwone kropki) to większa nagroda.',
   shop: 'Sklep: kup przedmioty i usługi. I otwiera ekwipunek (rozłóż zbędne przedmioty na złoto), K kowadło.',
   anvil: 'Kowadło: Kuźnia ulepsza przedmioty do +15 za złoto i materiały, ale może się nie udać. Przekuwanie kosztuje odłamki.',
   unique: 'Unikat! Ma stały efekt, który łamie zasady gry, zwykle za jakąś cenę. Nie da się go przekuć. Trafia do kolekcji.',
@@ -64,11 +64,14 @@ export class Hints {
     }
   }
 
-  /** Ramka z podpowiedzią: w grze nad dolną krawędzią (między slotami broni a umiejętnościami), w nakładkach przy samym dole. */
-  render(r: Renderer, overlay: boolean): void {
+  /**
+   * Ramka z podpowiedzią: w grze nad dolną krawędzią (między slotami broni a umiejętnościami), w nakładkach przy samym dole,
+   * z `top` u góry (mapa Ekspedycji: dół zajmują szczegóły węzła).
+   */
+  render(r: Renderer, overlay: boolean, top = false): void {
     if (!this.cur || !this.save.settings.hints) return;
     const lines = wrapText(HINTS[this.cur], overlay ? 300 : 196);
-    const w = overlay ? 316 : 212, h = 12 + lines.length * 11, x = (W - w) / 2, y = overlay ? H - h - 2 : H - h - 50;
+    const w = overlay ? 316 : 212, h = 12 + lines.length * 11, x = (W - w) / 2, y = top ? 2 : overlay ? H - h - 2 : H - h - 50;
     const a = Math.min(1, this.t * 3, (SHOW - this.t) * 6);
     r.withAlpha(a, () => {
       panel(r, x, y, w, h, C.cyan);

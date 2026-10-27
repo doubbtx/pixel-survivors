@@ -1,4 +1,5 @@
 import { C } from '../core/palette';
+import { BAL } from './balance';
 import type { Stats } from '../entities/types';
 import type { Tag } from './cards';
 
@@ -153,7 +154,7 @@ export const HEROES: HeroDef[] = [
     weapon: 'axe',
     tags: ['Tarcze', 'Obszar'],
     passive: { name: 'Żelazna wola', desc: 'Zabójstwa dają tarczę (0.5% HP każde, do 3% HP na sekundę, maks. 15% HP).', kind: 'killShield', value: 0.15 },
-    resource: { kind: 'fury', name: 'Furia', color: C.red, desc: 'Rośnie od ciosów z bliska i obrywania: więcej obrażeń i mniej otrzymanych. Poza walką opada.' },
+    resource: { kind: 'fury', name: 'Furia', color: C.red, desc: 'Rośnie od walki wręcz i obrywania. Pełna wyzwala Szał: kilka sekund dużo silniejszych i szybszych ciosów z leczeniem.' },
     abilities: [
       {
         id: 'b_charge', name: 'Szarża', icon: 'ab_b_charge', desc: 'Pędzisz w stronę celownika, raniąc i ogłuszając wrogów na drodze.', slot: 'q', kind: 'charge', color: C.orange,
@@ -313,5 +314,50 @@ export const HEROES: HeroDef[] = [
     ],
   },
 ];
+
+/** Procent z ułamka (do opisów). */
+const pc = (v: number) => `${Math.round(v * 100)}%`;
+
+/** Szczegóły zasobu z liczbami z BAL.resource (ekran wyboru bohatera). */
+export function resourceDetails(kind: ResourceKind): string[] {
+  const R = BAL.resource;
+  switch (kind) {
+    case 'focus': return [
+      `Maks. ${R.focus.max}. +1 za trafienie wroga dalej niż ${R.focus.range} (z bliska nic).`,
+      `Każdy punkt: +${String(R.focus.crit * 100).replace('.', ',')}% szansy na krytyk (pełna: +${pc(R.focus.crit * R.focus.max)}).`,
+      `Pełna: darmowa Salwa (Q), zostaje ${pc(R.focus.keep)}.`,
+      `Oberwanie zabiera ${pc(R.focus.hurtLoss)} celności.`,
+    ];
+    case 'fury': return [
+      `Maks. ${R.fury.max}. Rośnie od ciosów z bliska, obrywania i zabójstw obok.`,
+      `W trakcie budowania: do +${pc(R.fury.might)} obrażeń i -${pc(R.fury.dr)} otrzymanych.`,
+      `Pełna: Szał na ${R.fury.rage} s: +${pc(R.fury.rageMight)} obrażeń, +${pc(R.fury.rageAtk)} szybkości ataku, -${pc(R.fury.dr)} otrzymanych, leczenie ${pc(R.fury.rageLeech)} zadanych. Potem furia od zera.`,
+      `Po ${R.fury.idle} s bez walki opada.`,
+    ];
+    case 'heat': return [
+      `Maks. ${R.heat.max}. Q i E: +${R.heat.cast}, stygnie ${R.heat.decay} na sekundę.`,
+      `Czary (Q, E, R) do +${pc(R.heat.spell)} obrażeń przy pełnym żarze.`,
+      `Powyżej ${R.heat.burnFrom} (żółta kreska) tracisz ${pc(R.heat.burn)} maks. HP na sekundę.`,
+      `Unik przy ${R.heat.ventMin}+ żaru: wybuch ognia tym silniejszy, im więcej żaru.`,
+    ];
+    case 'souls': return [
+      `Maks. ${R.souls.max}. Wróg zabity w promieniu ${R.souls.range}: +1 (elita 3, boss 10).`,
+      `Pełne: ${R.souls.auto} dusz zamienia się w ducha-sługę.`,
+      `R zużywa wszystkie: +${pc(R.souls.ultDmg)} obrażeń wojowników za duszę, +1 wojownik za każde ${R.souls.ultExtra}.`,
+      'Dusze zostają między poziomami.',
+    ];
+    case 'streak': return [
+      `Maks. ${R.streak.max}. Każde trafienie: +1.`,
+      `Pełne kombo: +${pc(R.streak.might)} obrażeń.`,
+      `Egzekucja (E) zużywa całe: +${pc(R.streak.exec)} obrażeń ciosu za punkt.`,
+      'Oberwanie zeruje kombo.',
+    ];
+    case 'faith': return [
+      `Maks. ${R.faith.max}. Zabójstwo w pobliżu +1 (elita 3, boss 10), leczenie +${R.faith.heal} za 1% HP.`,
+      `Pełna: Łaska (koszt ${R.faith.grace}): leczenie ${pc(R.faith.graceHeal)} HP, tarcza ${pc(R.faith.graceShield)} HP, sługi +${R.faith.minionLife} s.`,
+      `Sąd (R) zużywa całą: +${pc(R.faith.judgDmg)} obrażeń za punkt, +1 cel za każde ${R.faith.judgExtra}.`,
+    ];
+  }
+}
 
 export const HERO_BY_ID: Record<string, HeroDef> = Object.fromEntries(HEROES.map((h) => [h.id, h]));

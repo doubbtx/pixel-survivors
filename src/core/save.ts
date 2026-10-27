@@ -106,6 +106,8 @@ export interface SaveData {
   /** Podpowiedzi już pokazane (ui/hints.ts) i ostatnio wybrany bohater (ekran wyboru). Nowe pola bez migracji. */
   seenHints: string[];
   lastHero: string;
+  /** Ostatnio wybrany poziom trudności map Ekspedycji (nowa wyprawa zaczyna od niego). */
+  exTier: number;
   /** Pakty ryzyka (data/pacts.ts): wybrane na następny run i najwyższy poziom Paktu z pokonanym bossem per bohater. */
   pacts: { chosen: Record<string, number>; best: Record<string, number> };
   /** Zdobyte osiągnięcia (data/achievements.ts), zabójstwa per wróg (bestiariusz) i wyzwanie dnia. Nowe pola bez migracji. */
@@ -186,6 +188,7 @@ function defaults(): SaveData {
     meta: { heroes: {}, unassigned: 0 },
     seenHints: [],
     lastHero: '',
+    exTier: 0,
     pacts: { chosen: {}, best: {} },
     achievements: [],
     bestiary: {},
@@ -225,6 +228,7 @@ export function loadSave(): SaveData {
     meta: { ...base.meta, ...d.meta },
     seenHints: d.seenHints ?? [],
     lastHero: d.lastHero ?? '',
+    exTier: d.exTier ?? 0,
     pacts: { ...base.pacts, ...d.pacts },
     achievements: d.achievements ?? [],
     bestiary: { ...d.bestiary },

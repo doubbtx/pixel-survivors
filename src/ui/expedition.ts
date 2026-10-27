@@ -1,7 +1,7 @@
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { drawText, wrapText, textWidth } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
@@ -18,9 +18,11 @@ const MAP_X = 8, MAP_Y = 30, MAP_W = W - 16, MAP_H = 136;
 const NODE = 20;
 const DET_Y = MAP_Y + MAP_H + 4;
 
-/** Przyciski poziomów trudności mapy w panelu szczegółów (lewy górny róg przycisku). */
+/** Przyciski poziomu trudności w prawym górnym rogu panelu szczegółów (lewy górny róg przycisku). */
 const TIER_W = 46;
-const tierPos = (i: number): [number, number] => [MAP_X + MAP_W - 8 - (4 - i) * (TIER_W + 3), DET_Y + 46];
+const tierPos = (i: number): [number, number] => [MAP_X + MAP_W - 8 - (4 - i) * (TIER_W + 3) + 3, DET_Y + 6];
+/** Mały tekst panelu szczegółów. */
+const SMALL = { scale: 0.75 } as const;
 
 /** Środek węzła (rząd, kolumna) na ekranie. */
 function nodePos(row: number, lane: number): [number, number] {
@@ -43,7 +45,8 @@ export class ExpeditionMapView {
   private sel = 0;
   private lastMouse = 0;
 
-  constructor(private readonly run: Run) {}
+  /** `onTier`: gracz zmienił poziom trudności (zapamiętanie na następne wyprawy). */
+  constructor(private readonly run: Run, private readonly onTier: (tier: number) => void) {}
 
   private get lanes(): number[] {
     return nextLanes(this.run.expedition!);
@@ -67,17 +70,16 @@ export class ExpeditionMapView {
       if (input.pressed('click')) { this.sel = i; return { pick: lanes[i] }; }
     }
     this.lastMouse = m.lastMove;
-    // Poziom trudności zaznaczonej mapy: klawisze 1-4 albo klik w przycisk.
-    const node = this.run.expedition!.map[row][lanes[this.sel]];
-    if (node?.tiers) {
-      const keys = ['n1', 'n2', 'n3', 'n4'] as const;
-      node.tiers.forEach((_, t) => {
-        const [bx, by] = tierPos(t);
-        if (input.pressed(keys[t]) || (input.pressed('click') && inside(m.x, m.y, bx, by, TIER_W, 11))) {
-          if (chooseTier(node, t)) sfx.play('select');
-        }
-      });
-    }
+    // Poziom trudności wyprawy: klawisze 1-4 albo klik w przycisk (gdy zaznaczona mapa ma poziomy).
+    const ex = this.run.expedition!, tiered = !!ex.map[row][lanes[this.sel]]?.tiers;
+    const keys = ['n1', 'n2', 'n3', 'n4'] as const;
+    keys.forEach((key, t) => {
+      const [bx, by] = tierPos(t);
+      if (!input.pressed(key) && !(tiered && input.pressed('click') && inside(m.x, m.y, bx, by, TIER_W, 11))) return;
+      if (!chooseTier(ex, t)) return;
+      sfx.play('select');
+      this.onTier(t);
+    });
     if (input.pressed('confirm')) return { pick: lanes[this.sel] };
     return null;
   }
@@ -128,13 +130,12 @@ export class ExpeditionMapView {
         slot(r, x - NODE / 2, y - NODE / 2 + bob, NODE, picked ? C.white : visited ? C.gold : nodeColor(m));
         drawSprite(g, NODE_INFO[m.kind].icon, x, y + bob);
         // Liczba modyfikatorów mapy: kropki pod węzłem.
-        for (let k = 0; k < (m.mods?.length ?? 0); k++) r.rect(x - 7 + k * 4, y + NODE / 2 + 1 + bob, 3, 2, C.salmon);
+        for (let k = 0; k < (m.mods?.length ?? 0); k++) r.rect(x - 8 + k * 3, y + NODE / 2 + 1 + bob, 2, 2, C.salmon);
       };
       if ((row <= cur && !visited) || row > cur + 1 || (row === cur + 1 && !reachable)) r.withAlpha(0.45, draw);
       else draw();
       if (row === cur && visited) drawSprite(g, `${run.heroSprite}@0`, x, y - 18);
     }));
-    if (cur < 0) drawText(g, 'Start', MAP_X + 8, MAP_Y + MAP_H - 14, C.lavender);
 
     // Szczegóły zaznaczonego węzła.
     panel(r, MAP_X, DET_Y, MAP_W, H - DET_Y - 4);
@@ -150,29 +151,40 @@ export class ExpeditionMapView {
       drawText(g, m.kind === 'boss' ? `${kind.name}: ${lv.bossName}` : `${kind.name}, ${rar.name.toLowerCase()}`, x0 + 26, y0 + 11, C.lavender);
       const goal = lv.dungeon ? `Fale lochu: ${BAL.events.dungeonWaves}` : `Cel: ${objectiveLabel(lv.objective)}`;
       drawText(g, `${goal}   głębokość ${lv.depth}`, x0 + 26, y0 + 22, C.lgray);
-      // Modyfikatory (ryzyko) po lewej, bonus i nagroda po prawej.
+      // Modyfikatory (ryzyko) po lewej: do 3 w liniach, więcej w dwóch kolumnach (nazwa nad opisem).
       const mods = (m.mods ?? []).map((id) => MAP_MOD_BY_ID[id]);
-      mods.forEach((mod, i) => drawText(g, `${mod.name}: ${mod.desc}`, x0, y0 + 36 + i * 10, C.salmon));
-      if (!mods.length) drawText(g, 'Bez modyfikatorów', x0, y0 + 36, C.dgray);
+      const wide = mods.length > 3;
+      mods.forEach((mod, i) => {
+        if (!wide) {
+          drawText(g, `${mod.name}:`, x0, y0 + 36 + i * 10, C.salmon, SMALL);
+          drawText(g, mod.desc, x0 + 3 + textWidth(`${mod.name}:`, SMALL.scale), y0 + 36 + i * 10, C.lgray, SMALL);
+          return;
+        }
+        const mx = x0 + (i % 2) * 124, my = y0 + 33 + Math.floor(i / 2) * 17;
+        drawText(g, mod.name, mx, my, C.salmon, SMALL);
+        drawText(g, mod.desc, mx, my + 8, C.lgray, SMALL);
+      });
+      if (!mods.length) drawText(g, 'Bez modyfikatorów', x0, y0 + 36, C.dgray, SMALL);
+      // Poziom trudności wyprawy (przyciski 1-4) w prawym górnym rogu.
       const rx = MAP_X + MAP_W - 8;
-      if (m.bonus) {
-        const b = MAP_BONUS_BY_ID[m.bonus];
-        drawText(g, `Bonus: ${b.name}`, rx, y0, C.lime, { align: 'right' });
-        wrapText(b.desc, 170).forEach((l, i) => drawText(g, l, rx, y0 + 11 + i * 10, C.lgray, { align: 'right' }));
-      }
-      // Poziomy trudności (gdy wylosowane): przyciski 1-4.
       if (m.tiers) {
-        drawText(g, 'Trudność:', tierPos(0)[0] - 4, tierPos(0)[1] + 1, C.lavender, { align: 'right', scale: 0.75 });
+        drawText(g, 'Trudność [1-4]', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
         m.tiers.forEach((t, i) => {
           const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i];
           r.roundRect(bx, by, TIER_W, 11, 3, on ? C.dblue : C.black, on ? C.navy : C.black);
           r.roundFrame(bx, by, TIER_W, 11, 3, on ? rr.color : C.slate, on ? 1 : 0.5);
-          drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 1.5, on ? rr.color : C.dgray, { align: 'center', scale: 0.75 });
-          drawText(g, `${t.length} mod.`, bx + TIER_W / 2, by + 12, C.dgray, { align: 'center', scale: 0.75 });
+          drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 2, on ? rr.color : C.dgray, { align: 'center', ...SMALL });
+          drawText(g, t.length ? `${t.length} mod.` : 'bez mod.', bx + TIER_W / 2, by + 13, C.dgray, { align: 'center', ...SMALL });
         });
       }
+      // Bonus i nagroda pod przyciskami.
+      if (m.bonus) {
+        const b = MAP_BONUS_BY_ID[m.bonus];
+        drawText(g, `Bonus: ${b.name}`, rx, y0 + 26, C.lime, { align: 'right' });
+        wrapText(b.desc, 200 / SMALL.scale).forEach((l, i) => drawText(g, l, rx, y0 + 37 + i * 9, C.lgray, { align: 'right', ...SMALL }));
+      }
       const rew = mapReward(m);
-      if (rew > 0) drawText(g, `Nagroda: +${rew}% łupu i jakości, +${Math.round(rew * X.rewardEssence)}% esencji`, rx, y0 + 66, C.gold, { align: 'right' });
+      if (rew > 0) drawText(g, `Nagroda: +${rew}% łupu i jakości, +${Math.round(rew * X.rewardEssence)}% esencji`, rx, y0 + 76, C.gold, { align: 'right', ...SMALL });
     } else {
       drawText(g, kind.name, x0 + 26, y0, kind.color, { shadow: C.black });
       wrapText(kind.desc, 300).forEach((l, i) => drawText(g, l, x0 + 26, y0 + 12 + i * 11, C.lgray));

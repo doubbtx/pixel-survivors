@@ -136,36 +136,42 @@ export interface ExpeditionState {
   blessing: { id: string; maps: number } | null;
   /** Klucz Pustki (wygrane Rozdarcie): po ostatnim akcie otwiera sekretny akt 4. */
   voidKey?: boolean;
+  /** Poziom trudności map (MAP_RARITY) wybrany przez gracza; obowiązuje dla kolejnych map do zmiany. */
+  tier?: number;
 }
 
-/** Mapa z walką: nazwa z biomu, rzadkość (rośnie z aktem i rzędem), modyfikatory i bonus. */
-function rollMapNode(kind: NodeKind, act: number, row: number, used: Set<string>): MapNode {
+/** Mapa z walką: nazwa z biomu, poziom trudności wybrany przez gracza, modyfikatory i bonus. */
+function rollMapNode(kind: NodeKind, act: number, tier: number, used: Set<string>): MapNode {
   const X = BAL.expedition;
   const names = MAP_NAMES[actBiome(act)].filter((n) => !used.has(n));
   const name = names.length ? rng.pick(names) : NODE_INFO[kind].name;
   used.add(name);
-  // Proponowany poziom trudności rośnie z aktem i rzędem; modyfikatory każdego poziomu losowane z góry.
-  const p = Math.min(1, (act - 1) * X.rarityPerAct + row * X.rarityPerRow);
-  const rarity = kind === 'boss' ? 0 : rng.chance(p * 0.5) ? 2 : rng.chance(0.25 + p) ? 1 : 0;
+  // Modyfikatory każdego poziomu losowane z góry, gracz wybiera tylko poziom.
   const tiers = MAP_RARITY.map(({ mods: [lo, hi] }) => {
     const pool = MAP_MODS.map((m) => m.id), out: string[] = [];
     for (let n = rng.int(lo, hi); n > 0 && pool.length; n--) out.push(pool.splice(Math.floor(rng.next() * pool.length), 1)[0]);
     return out;
   });
   const bonus = kind === 'boss' || rng.chance(X.noBonusChance) ? undefined : rng.pick(MAP_BONUSES).id;
-  return { kind, name, rarity, mods: tiers[rarity], tiers, bonus };
+  return { kind, name, rarity: tier, mods: tiers[tier], tiers, bonus };
 }
 
-/** Wybór poziomu trudności mapy (gdy ma wylosowane poziomy). */
-export function chooseTier(m: MapNode, tier: number): boolean {
-  if (!m.tiers?.[tier] || m.rarity === tier) return false;
-  m.rarity = tier;
-  m.mods = m.tiers[tier];
+/** Wybór poziomu trudności wyprawy: obowiązuje dla wszystkich jeszcze nieodwiedzonych map (także w kolejnych aktach). */
+export function chooseTier(ex: ExpeditionState, tier: number): boolean {
+  if (tier < 0 || tier >= MAP_RARITY.length || (ex.tier ?? 0) === tier) return false;
+  ex.tier = tier;
+  for (const row of ex.map.slice(exRow(ex) + 1)) {
+    for (const m of row) {
+      if (!m?.tiers) continue;
+      m.rarity = tier;
+      m.mods = m.tiers[tier];
+    }
+  }
   return true;
 }
 
 /** Losuje mapę aktu: pierwszy rząd to walki, w środku mieszanka, ostatni rząd przed bossem gwarantuje obóz lub sklep. */
-export function rollActMap(act: number): (MapNode | null)[][] {
+export function rollActMap(act: number, tier: number): (MapNode | null)[][] {
   const X = BAL.expedition;
   const used = new Set<string>();
   const map: (MapNode | null)[][] = [];
@@ -178,7 +184,7 @@ export function rollActMap(act: number): (MapNode | null)[][] {
       kinds.push(row === 0 ? 'fight' : rng.weighted(X.weights));
     }
     if (row === X.rows - 2 && !kinds.some((k) => k === 'rest' || k === 'shop')) kinds[mid] = rng.chance(0.5) ? 'rest' : 'shop';
-    map.push(kinds.map((k) => (!k ? null : isCombat(k) ? rollMapNode(k, act, row, used) : { kind: k })));
+    map.push(kinds.map((k) => (!k ? null : isCombat(k) ? rollMapNode(k, act, tier, used) : { kind: k })));
   }
   // Ukryty węzeł „?” w aktach 2-3 (zamiast losowego węzła środkowego rzędu).
   if (act >= 2 && act <= X.acts && rng.chance(X.secretChance)) {
@@ -186,13 +192,13 @@ export function rollActMap(act: number): (MapNode | null)[][] {
     map[row][rng.pick(lanes)] = { kind: 'secret', name: 'Rozdarcie', rarity: 2 };
   }
   const boss: (MapNode | null)[] = Array.from({ length: X.lanes }, () => null);
-  boss[mid] = rollMapNode('boss', act, X.rows - 1, used);
+  boss[mid] = rollMapNode('boss', act, tier, used);
   map.push(boss);
   return map;
 }
 
-export function newExpedition(): ExpeditionState {
-  return { act: 1, map: rollActMap(1), path: [], cleared: 0, bonus: 0, blessing: null };
+export function newExpedition(tier: number): ExpeditionState {
+  return { act: 1, map: rollActMap(1, tier), path: [], cleared: 0, bonus: 0, blessing: null, tier };
 }
 
 /** Bieżący rząd (-1 = w tym akcie nie wybrano jeszcze węzła). */
@@ -221,7 +227,7 @@ export const currentNode = (ex: ExpeditionState): NodeKind | null => currentMap(
 export function advanceAct(ex: ExpeditionState): boolean {
   if (ex.act > BAL.expedition.acts || (ex.act === BAL.expedition.acts && !ex.voidKey)) return false;
   ex.act++;
-  ex.map = rollActMap(ex.act);
+  ex.map = rollActMap(ex.act, ex.tier ?? 0);
   ex.path = [];
   return true;
 }

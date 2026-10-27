@@ -5,7 +5,7 @@ import { sfx } from '../core/audio';
 import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
 import { drawSprite, drawShadow, getSprite, TILE } from '../gfx/sprites';
 import { animFrame } from '../gfx/actors';
-import { HEROES, HERO_BY_ID } from '../data/heroes';
+import { HEROES, HERO_BY_ID, resourceDetails, type HeroDef } from '../data/heroes';
 import { WEAPON_BY_ID } from '../data/weapons';
 import { levelDef, objectiveLabel } from '../data/levels';
 import { BAL } from '../data/balance';
@@ -375,11 +375,16 @@ function renderBoard(app: App, x: number, y: number, w: number, rows: number): v
 }
 
 const LIST_X = 12, LIST_W = 140, ROW_H = 32, TOP = 38;
-const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212;
+const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212, TAB_W = 44;
+const TABS = ['Ogólne', 'Zasób'];
+/** Mały tekst szczegółów. */
+const SMALL = { scale: 0.75 } as const;
 
 /** Wybór bohatera: lista po lewej (do 6 bohaterów), szczegóły zaznaczonego po prawej. */
 export class HeroSelect implements Screen {
   private sel = 0;
+  /** Strona szczegółów: 0 ogólne (broń, pasywka, umiejętności), 1 zasób z liczbami. */
+  private page = 0;
 
   constructor(private readonly app: App, private readonly mode: Mode, private readonly opts: GameOpts = {}) {
     // Kursor na ostatnio wybranym bohaterze.
@@ -396,8 +401,9 @@ export class HeroSelect implements Screen {
   update(): void {
     const inp = this.app.input;
     const n = HEROES.length;
-    if (inp.pressed('up') || inp.pressed('left')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
-    if (inp.pressed('down') || inp.pressed('right')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
+    if (inp.pressed('up')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
+    if (inp.pressed('down')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
+    if (inp.pressed('left') || inp.pressed('right')) { this.page = 1 - this.page; sfx.play('select'); }
     if (inp.pressed('confirm')) this.start();
     if (inp.pressed('back')) this.app.go(this.mode === 'training' ? new MainMenu(this.app) : new SlotScreen(this.app, this.mode));
     if (inp.pressed('inventory')) { this.app.go(new PactScreen(this.app, this)); return; }
@@ -405,6 +411,7 @@ export class HeroSelect implements Screen {
     if (inp.pressed('click')) {
       const { x, y } = inp.mouse;
       if (inside(x, y, LIST_X, this.pactY(), LIST_W, 18)) { this.app.go(new PactScreen(this.app, this)); return; }
+      for (let i = 0; i < 2; i++) if (inside(x, y, this.tabX(i), TOP + 22, TAB_W, 12)) { this.page = i; sfx.play('select'); return; }
       if (inside(x, y, DET_X, TOP, DET_W, DET_H)) { this.start(); return; }
       HEROES.forEach((_, i) => {
         if (!inside(x, y, LIST_X, TOP + i * ROW_H, LIST_W, ROW_H - 4)) return;
@@ -428,6 +435,11 @@ export class HeroSelect implements Screen {
   private spriteOf(id: string): string {
     const h = HERO_BY_ID[id], skin = this.app.save.skins[id] ?? '';
     return skin && heroSkins(this.app.save.pacts.best[id] ?? 0).some((b) => b.id === skin) ? `${h.sprite}~${skin}` : h.sprite;
+  }
+
+  /** Lewa krawędź zakładki `i` szczegółów (prawy górny róg panelu). */
+  private tabX(i: number): number {
+    return DET_X + DET_W - 8 - (2 - i) * (TAB_W + 2);
   }
 
   /** Przycisk paktów pod listą bohaterów. */
@@ -469,21 +481,38 @@ export class HeroSelect implements Screen {
     const owned = heroSkins(this.app.save.pacts.best[h.id] ?? 0), cur = this.app.save.skins[h.id] ?? '';
     if (owned.length) drawText(g, `Skórka: ${cur && BADGE_BY_ID[cur] ? BADGE_BY_ID[cur].name : 'zwykła'} [X]`, x + DET_W - 10, y + 8, cur ? BADGE_BY_ID[cur]?.color ?? C.lgray : C.lgray, { align: 'right' });
     drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 38, C.lavender);
+    TABS.forEach((t, i) => {
+      const on = i === this.page;
+      r.roundRect(this.tabX(i), y + 22, TAB_W, 12, 3, on ? C.brown : C.navy);
+      drawText(g, t, this.tabX(i) + TAB_W / 2, y + 24, on ? C.yellow : C.lgray, { align: 'center' });
+    });
+    if (this.page === 0) this.renderGeneral(h, x, y);
+    else this.renderResource(h, x, y);
+    const rec = heroRecord(this.app.save, h.id);
+    const best = m === 'hardcore' ? `Najdalej: poziom ${rec.bestDepth}`
+      : m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}`
+      : m === 'endless' ? `Rekord: ${fmtTime(rec.bestEndless)}` : `Rekord: ${fmtTime(rec.bestTime)}   wygrane: ${rec.wins}`;
+    drawText(g, best, x + 12, y + DET_H - 14, C.dgray);
+    if (m === 'expedition') {
+      const hm = heroMeta(this.app.save.meta, h.id);
+      drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
+    }
+    drawText(g, 'Góra/dół: bohater    Lewo/prawo: szczegóły    Enter: start    Esc: wstecz', W / 2, H - 16, C.lavender, { align: 'center' });
+  }
+
+  /** Strona ogólna: broń, pasywka, zasób w skrócie, umiejętności. */
+  private renderGeneral(h: HeroDef, x: number, y: number): void {
+    const r = this.app.r, g = r.g;
     const wpn = WEAPON_BY_ID[h.weapon];
     drawSprite(g, wpn.icon, x + 19, y + 71);
     drawText(g, `Broń: ${wpn.name}`, x + 32, y + 66, C.white);
     drawText(g, `Pasywka: ${h.passive.name}`, x + 12, y + 84, C.yellow);
     let ly = y + 97;
     for (const line of wrapText(h.passive.desc, DET_W - 24)) { drawText(g, line, x + 12, ly, C.lgray); ly += 11; }
-    // Zasób bohatera: nazwa w kolorze paska, opis w tej samej linii.
-    const head = `Zasób: ${h.resource.name}. `;
-    wrapText(head + h.resource.desc, DET_W - 24).forEach((line, i) => {
-      if (i === 0) {
-        drawText(g, head, x + 12, ly + 2, h.resource.color);
-        drawText(g, line.slice(head.length), x + 12 + textWidth(head), ly + 2, C.lgray);
-      } else drawText(g, line, x + 12, ly + 2, C.lgray);
-      ly += 11;
-    });
+    // Zasób bohatera: tylko nazwa, opis z liczbami na drugiej zakładce.
+    drawText(g, `Zasób: ${h.resource.name}`, x + 12, ly + 2, h.resource.color);
+    drawText(g, 'szczegóły: strzałka w prawo', x + 16 + textWidth(`Zasób: ${h.resource.name}`), ly + 2, C.dgray);
+    ly += 11;
     ly += 6;
     // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa.
     h.abilities.forEach((a, i) => {
@@ -494,16 +523,28 @@ export class HeroSelect implements Screen {
       drawText(g, key, ax + 22, ay - 1, C.lavender);
       drawText(g, a.name, ax + 22, ay + 8, a.color);
     });
-    const rec = heroRecord(this.app.save, h.id);
-    const best = m === 'hardcore' ? `Najdalej: poziom ${rec.bestDepth}`
-      : m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}`
-      : m === 'endless' ? `Rekord: ${fmtTime(rec.bestEndless)}` : `Rekord: ${fmtTime(rec.bestTime)}   wygrane: ${rec.wins}`;
-    drawText(g, best, x + 12, y + DET_H - 14, C.dgray);
-    if (m === 'expedition') {
-      const hm = heroMeta(this.app.save.meta, h.id);
-      drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
+  }
+
+  /** Strona zasobu: pasywka i zasób z liczbami z balansu (małym tekstem). */
+  private renderResource(h: HeroDef, x: number, y: number): void {
+    const g = this.app.r.g, w = (DET_W - 30) / SMALL.scale;
+    let ly = y + 64;
+    drawText(g, `Pasywka: ${h.passive.name}`, x + 12, ly, C.yellow);
+    ly += 12;
+    for (const line of wrapText(h.passive.desc, w)) { drawText(g, line, x + 12, ly, C.lgray, SMALL); ly += 9; }
+    ly += 6;
+    drawText(g, `Zasób: ${h.resource.name}`, x + 12, ly, h.resource.color);
+    ly += 12;
+    for (const line of wrapText(h.resource.desc, w)) { drawText(g, line, x + 12, ly, C.white, SMALL); ly += 9; }
+    ly += 3;
+    for (const item of resourceDetails(h.resource.kind)) {
+      wrapText(item, w).forEach((line, i) => {
+        if (i === 0) drawText(g, '-', x + 12, ly, h.resource.color, SMALL);
+        drawText(g, line, x + 18, ly, C.lgray, SMALL);
+        ly += 9;
+      });
+      ly += 2;
     }
-    drawText(g, 'Strzałki: wybór    Enter: start    Esc: wstecz', W / 2, H - 16, C.lavender, { align: 'center' });
   }
 }
 

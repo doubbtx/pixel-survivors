@@ -217,7 +217,7 @@ src/
 - **Żywioły na przedmiotach**: super-bonusy Płomienne krytyki, Mroźny oddech, Przewodnik, Burzowe serce, Zaraza.
 
 **Etap C: Ekspedycja jak mapy z PoE i Rozwój per bohater (0.9)**:
-- **Ekspedycja**: 3 akty, każdy to mapa 6 rzędów × 4 kolumny i boss. Węzły z walką to **mapy** z nazwą i rzadkością: Zwykła (bez modyfikatorów), Magiczna (1-2), Rzadka (3-4). Modyfikatory to ryzyko (Opancerzeni, Okrutni, Zwinni, Nawałnica, Hordy elit, Kruchość, Susza, Tłum), a każdy daje nagrodę: więcej łupu, lepszą jakość i więcej esencji. Do tego **bonus mapy** (Święta ziemia, Żyła złota, Mądrość przodków, Ukryty skarb, Wróżba, Źródło).
+- **Ekspedycja**: 3 akty, każdy to mapa 6 rzędów × 4 kolumny i boss. Węzły z walką to **mapy** z nazwą i poziomem trudności wybranym dla całej wyprawy: Zwykła (bez modyfikatorów), Magiczna (1-2), Rzadka (3-4), Koszmarna (5-6). Modyfikatory to ryzyko (Opancerzeni, Okrutni, Zwinni, Nawałnica, Hordy elit, Kruchość, Susza, Tłum), a każdy daje nagrodę: więcej łupu, lepszą jakość i więcej esencji. Do tego **bonus mapy** (Święta ziemia, Żyła złota, Mądrość przodków, Ukryty skarb, Wróżba, Źródło).
 - Nowe węzły: **Loch** (arena z 3 falami i strażnikiem, dwie skrzynie) i **Kapliczka** (błogosławieństwo na 3 kolejne mapy).
 - **Rozwój tylko w Ekspedycji**: Hardcore i Endless są bez meta-bonusów (uczciwe rekordy), esencję daje tylko Ekspedycja.
 - **Drzewko per bohater**: 4 gałęzie tematyczne + wspólna Wyprawa. Kestra: Krytyki, Zasięg, Mobilność, Pułapki; Borgun: Wytrzymałość, Kontratak, Obszar, Tarcza; Ignara: Ogień, Echo, Bariera, Żywioły. Ostatni węzeł gałęzi to **klucz**, który zmienia umiejętność (np. Przewrót zostawia Sieć, Wstrząs uderza sam po otrzymaniu obrażeń, Kula ognia leci dwa razy, Pierścień ognia daje tarczę). Osobna esencja, Paragon i prestiż dla każdego bohatera; Q/E przełącza bohatera.
@@ -245,7 +245,7 @@ src/
 - Ustawienie „Zatrzymanie klatki” wyłącza efekt hitstop.
 
 **Inna gra niż Vampire Survivors (0.13)** — zmiany w samej pętli walki i buildów:
-- **Zasób bohatera** (pasek pod HP): Kestra — **Celność** z trafień z dystansu (więcej krytyków, pełna wypuszcza darmową Salwę, oberwanie zabiera połowę); Borgun — **Furia** z ciosów z bliska i obrywania (do +40% obrażeń i -20% otrzymanych, poza walką opada); Ignara — **Żar** z Q/E (czary do +60% mocniejsze, powyżej żółtej kreski żar rani, unik od 40 żaru zrzuca go wybuchem ognia); Morwen — **Dusze** z wrogów ginących w pobliżu (pełne zamieniają się w sługę, R zużywa wszystkie: mocniejsza i liczniejsza armia). Nowe karty: Spokojna ręka, Krwawy szał, Serce żaru, Zbieracz dusz.
+- **Zasób bohatera** (pasek pod HP): Kestra — **Celność** z trafień z dystansu (więcej krytyków, pełna wypuszcza darmową Salwę, oberwanie zabiera połowę); Borgun — **Furia** z ciosów z bliska, obrywania i zabójstw (pełna wyzwala Szał, poza walką opada); Ignara — **Żar** z Q/E (czary do +60% mocniejsze, powyżej żółtej kreski żar rani, unik od 40 żaru zrzuca go wybuchem ognia); Morwen — **Dusze** z wrogów ginących w pobliżu (pełne zamieniają się w sługę, R zużywa wszystkie: mocniejsza i liczniejsza armia). Nowe karty: Spokojna ręka, Krwawy szał, Serce żaru, Zbieracz dusz.
 - **Zadania**: co minutę turkusowy kamień — dotknij, żeby zacząć zadanie z zegarem: Łowy (zabij elitę), Obrona totemu, Krąg mocy, Bez skazy (nie daj się trafić), Próba żywiołu. Nagroda: skrzynia, karta albo złoto; część porażek przyzywa karną falę. Panel po prawej, znacznik celu poza ekranem.
 - **Unikaty**: 10 przedmiotów z bossów i elit ze stałym efektem łamiącym zasady (np. bronie strzelają w kierunku ruchu za 2.5x obrażeń, leczenie zamienia się w tarczę, unik wystrzeliwuje pierścień pocisków, co 10. trafienie to reakcja żywiołów). Nie da się ich przekuć; kolekcja odkrytych (Kolekcja → Tab).
 - **Moce bossów**: po bossie wybierasz 1 z 3 jego nazwanych ataków (Śrut Otchłani, Pierścień Otchłani, Kwiat zagłady, Strumień, Pole minowe, Wylęgarnia). Moc strzela sama w twoich wrogów; wybór tej samej podnosi jej poziom (do 3).
@@ -286,6 +286,12 @@ src/
 - Rozwój bohatera wolniejszy: ok. 10 wygranych wypraw na pełne drzewko.
 - Ekspedycja: przed wejściem na mapę wybierasz trudność (1-4: Zwykła, Magiczna, Rzadka, Koszmarna), modyfikatory są losowe.
 - Karty awansu pokazują przepis ewolucji i fuzji ikonami (broń + pasywka > ewolucja). Runy znikają po złej kolejności.
+
+**Szał i trudność wyprawy (0.19)**:
+- Furia Borguna przebudowana: pełna wyzwala **Szał** (6 s: +40% obrażeń, +30% szybkości ataku, leczenie z ciosów, -20% otrzymanych), potem pasek od zera.
+- Ekspedycja: wybrany poziom trudności (1-4) zostaje dla całej wyprawy i następnych, bez losowania trudności map.
+- Wybór bohatera: zakładka **Zasób** (strzałka w prawo) z dokładnymi liczbami pasywki i zasobu.
+- Poprawki układu: panel mapy Ekspedycji, synergie, karty awansu.
 
 ### Jak przetestować
 

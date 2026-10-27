@@ -1,7 +1,7 @@
 import { W, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { drawText, wrapText, textWidth } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { RARITIES } from '../data/items';
@@ -47,9 +47,12 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   const hintAll = o.hint ? wrapText(o.hint, CARD_W - 12) : [];
   const hint = o.recipe ? (hintAll.length === 1 ? hintAll : []) : hintAll.slice(0, 2);
   const descMax = (o.tags.length ? 5 : 6) - hint.length - (o.recipe ? 2 : 0);
-  for (const line of wrapText(o.desc, CARD_W - 14).slice(0, descMax)) {
-    drawText(r.g, line, cx, ly, C.lgray, { align: 'center' });
-    ly += 11;
+  // Opis, który się nie mieści, małym tekstem (więcej linii w tym samym miejscu).
+  const big = wrapText(o.desc, CARD_W - 14), small = big.length > descMax;
+  const lines = small ? wrapText(o.desc, (CARD_W - 14) / 0.75).slice(0, Math.floor((descMax * 11) / 9)) : big;
+  for (const line of lines) {
+    drawText(r.g, line, cx, ly, C.lgray, { align: 'center', scale: small ? 0.75 : 1 });
+    ly += small ? 9 : 11;
   }
   for (const line of hint) {
     drawText(r.g, line, cx, ly + 2, C.lavender, { align: 'center' });
@@ -207,6 +210,9 @@ export class LevelUpView {
       panel(r, b.x, BTN_Y, BTN_W, 20, on ? C.red : C.slate);
       drawText(r.g, b.label, b.x + BTN_W / 2, BTN_Y + 4, on ? C.salmon : C.white, { align: 'center', shadow: C.black });
     }
-    drawText(r.g, 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', W / 2, 236, C.lavender, { align: 'center', shadow: C.black });
+    // Podpis na ciemnym tle: pod nim są sloty HUD.
+    const note = 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', nw = textWidth(note) + 12;
+    r.withAlpha(0.85, () => r.roundRect(W / 2 - nw / 2, 233, nw, 14, 4, C.black));
+    drawText(r.g, note, W / 2, 236, C.lavender, { align: 'center', shadow: C.black });
   }
 }

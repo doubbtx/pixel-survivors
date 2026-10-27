@@ -161,7 +161,7 @@ export class GameScreen implements Screen {
       { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
     ], W / 2, 210, 200, 17);
     if (mode === 'expedition' && !snapshot) {
-      this.run.expedition = newExpedition();
+      this.run.expedition = newExpedition(app.save.exTier);
       this.openMap();
     } else if (mode === 'expedition' && !snapshot!.inProgress) {
       // Zapis z mapy: sklep, w którym gracz wyszedł, albo mapa.
@@ -331,7 +331,7 @@ export class GameScreen implements Screen {
   /** Mapa Ekspedycji między węzłami (zapis pozycji). */
   private openMap(): void {
     this.hints.show('map');
-    this.map ??= new ExpeditionMapView(this.run);
+    this.map ??= new ExpeditionMapView(this.run, (t) => { this.app.save.exTier = t; this.app.persist(); });
     this.overlayReturn = 'map';
     this.state = 'map';
     this.delay = 0.1;
@@ -666,7 +666,7 @@ export class GameScreen implements Screen {
         this.renderEnd();
         break;
     }
-    if (this.state !== 'pause' && this.state !== 'end') this.hints.render(r, this.state !== 'play');
+    if (this.state !== 'pause' && this.state !== 'end') this.hints.render(r, this.state !== 'play', this.state === 'map');
   }
 
   private renderPause(): void {

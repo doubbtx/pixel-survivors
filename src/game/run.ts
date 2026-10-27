@@ -334,6 +334,9 @@ export class Run {
   res = 0;
   resGap = 0;
   resIdle = 0;
+  /** Szał Borguna (pełna furia): pozostały i pełny czas. */
+  rageT = 0;
+  rageMax = 1;
   /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej). */
   reactions = 0;
   /** Błysk paska XP po zebraniu kryształu (s). */
@@ -517,6 +520,8 @@ export class Run {
     for (const a of Object.values(this.abilities)) { a.cd = 0; a.activeT = 0; }
     // Dusze zostają między poziomami, pozostałe zasoby budują się od nowa.
     if (this.hero.resource.kind !== 'souls') this.res = 0;
+    this.rageT = 0;
+    delete this.cardState['sec.berserk'];
     // Błogosławieństwo kapliczki Ekspedycji na kolejne mapy (trwa cały poziom).
     const bless = this.expedition?.blessing ? EX_BLESSINGS.find((b) => b.id === this.expedition!.blessing!.id) : null;
     if (bless) this.buffs.push({ name: bless.name, stats: bless.stats, t: Infinity });
@@ -970,6 +975,12 @@ export class Run {
     }
     for (const { def, v } of equippedAwakenings(this)) if (def.stats) add(def.stats(v));
     for (const sec of activeSecrets(this)) if (sec.stats) add(sec.stats);
+    // Szał Borguna: szybkość ataku i leczenie z obrażeń (obrażenia: resourceDamageMul).
+    if (this.rageT > 0) {
+      const F = BAL.resource.fury, pw = 1 + this.flag('res.power');
+      s.atkSpeed += F.rageAtk * pw;
+      s.lifesteal += F.rageLeech;
+    }
     const ult = this.abilities.ult;
     if (ult.def.kind === 'titan' && ult.activeT > 0) {
       s.might += ult.def.p.might + ult.def.pl.might * (ult.level - 1);

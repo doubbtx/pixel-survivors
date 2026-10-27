@@ -9,6 +9,8 @@ import type { Run } from '../game/run';
 import { dim, panel, plate, inside } from './widgets';
 
 const OUT = { outline: C.black } as const;
+/** Mały tekst progów (ekran synergii). */
+const SMALL = { scale: 0.75 } as const;
 
 /** Następny próg albo ostatni (gdy wszystkie osiągnięte). */
 function nextThreshold(def: SynergyDef, tier: number): number {
@@ -89,8 +91,8 @@ export class SynergyView {
     drawText(g, VERSATILITY.name, 30, 31, vt > 0 ? C.pink : C.white, { shadow: C.black });
     drawText(g, `aktywne synergie: ${run.versCount}`, 30, 43, C.lgray);
     VERSATILITY.tiers.forEach((t, k) => {
-      const x = 140 + (k % 2) * 168, y = 31 + Math.floor(k / 2) * 12;
-      drawText(g, `${VERSATILITY.thresholds[k]}: ${t.desc}`, x, y, k < vt ? C.lime : C.dgray);
+      const x = 140 + (k % 2) * 166, y = 33 + Math.floor(k / 2) * 11;
+      drawText(g, `${VERSATILITY.thresholds[k]}: ${t.desc}`, x, y, k < vt ? C.lime : C.dgray, SMALL);
     });
     SYNERGIES.forEach((d, i) => {
       const x = 6 + (i % 2) * 236, y = 60 + Math.floor(i / 2) * 42;
@@ -101,7 +103,7 @@ export class SynergyView {
       drawText(g, `${pts} pkt`, x + 224, y + 3, tier > 0 ? C.yellow : C.lgray, { align: 'right' });
       d.tiers.forEach((t, k) => {
         const on = k < tier;
-        drawText(g, `${d.thresholds[k]}: ${t.desc}`, x + 24, y + 13 + k * 9, on ? C.lime : C.dgray);
+        drawText(g, `${d.thresholds[k]}: ${t.desc}`, x + 24, y + 14 + k * 8.5, on ? C.lime : C.dgray, SMALL);
       });
     });
   }

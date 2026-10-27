@@ -429,6 +429,11 @@ function drawWorld(run: Run, r: Renderer): void {
     }
   }
 
+  // Szał Borguna: pulsująca czerwona poświata.
+  if (run.rageT > 0 && run.outcome !== 'dead') {
+    r.withAlpha(0.22 + 0.12 * Math.sin(run.time * 12), () => r.circle(px, py, 16, C.red, true));
+    r.circle(px, py, 15 + Math.round(Math.sin(run.time * 12)), C.salmon);
+  }
   // Znacznik gracza (Ustawienia): pulsujący krąg pod postacią.
   if (run.playerMarker && run.outcome !== 'dead') {
     const pr = 11 + Math.round(Math.sin(run.time * 5));

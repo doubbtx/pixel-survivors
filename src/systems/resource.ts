@@ -40,7 +40,7 @@ function isSpell(run: Run, src: string): boolean {
 /** Mnożnik obrażeń zadawanych: furia (wszystko) i żar (czary). */
 export function resourceDamageMul(run: Run, src: string): number {
   const k = run.hero.resource.kind;
-  if (k === 'fury') return 1 + R.fury.might * resFrac(run) * power(run);
+  if (k === 'fury') return 1 + (run.rageT > 0 ? R.fury.rageMight : R.fury.might * resFrac(run)) * power(run);
   if (k === 'streak') return 1 + R.streak.might * resFrac(run) * power(run);
   if (k === 'heat' && isSpell(run, src)) return 1 + R.heat.spell * resFrac(run) * power(run);
   return 1;
@@ -53,7 +53,7 @@ export function resourceCrit(run: Run): number {
 
 /** Mnożnik otrzymywanych obrażeń (furia). */
 export function resourceTakenMul(run: Run): number {
-  return run.hero.resource.kind === 'fury' ? Math.max(0.3, 1 - R.fury.dr * resFrac(run) * power(run)) : 1;
+  return run.hero.resource.kind === 'fury' ? Math.max(0.3, 1 - R.fury.dr * (run.rageT > 0 ? 1 : resFrac(run)) * power(run)) : 1;
 }
 
 /** Trafienie wroga (bez obrażeń od stanów i procentowych): celność z dystansu, furia z bliska, kombo z każdego. */
@@ -83,9 +83,24 @@ export function resourceOnHit(run: Run, e: Enemy): void {
     const F = R.fury;
     if (d2 > F.meleeR * F.meleeR) return;
     run.resGap = F.gap;
-    run.resIdle = 0;
-    gain(run, F.hit);
+    furyGain(run, F.hit);
   }
+}
+
+/** Przyrost furii (poza Szałem); pełna wyzwala Szał. */
+function furyGain(run: Run, v: number): void {
+  run.resIdle = 0;
+  if (run.rageT > 0) return;
+  gain(run, v);
+  if (run.res < resMax(run)) return;
+  const F = R.fury, p = run.player;
+  run.rageT = run.rageMax = F.rage * (run.flag('furyHold') > 0 ? F.rageHold : 1);
+  run.cardState['sec.berserk'] = (run.cardState['sec.berserk'] ?? 0) + 1;
+  run.recomputeStats();
+  run.popText(p.x, p.y - 16, 'Szał!', C.red);
+  run.burst(p.x, p.y, C.red, 24, 80);
+  run.addShake(3);
+  sfx.play('boss');
 }
 
 /** Oberwanie: celność spada, furia rośnie (wg ułamka maks. HP). */
@@ -95,7 +110,7 @@ export function resourceOnHurt(run: Run, dmg: number): void {
     run.cardState['sec.falcon'] = 0;
     if (run.flag('focusKeep') <= 0) run.res *= 1 - R.focus.hurtLoss;
   }
-  else if (k === 'fury') { run.resIdle = 0; gain(run, (R.fury.hurt * 100 * dmg) / run.stats.maxHp); }
+  else if (k === 'fury') furyGain(run, (R.fury.hurt * 100 * dmg) / run.stats.maxHp);
   else if (k === 'streak') run.res = 0;
 }
 
@@ -160,6 +175,10 @@ function vent(run: Run): void {
 /** Zabójstwo: dusze i wiara z wrogów ginących w pobliżu; pełne dusze zamieniają się w sługę. */
 export function resourceOnKill(run: Run, e: Enemy): void {
   const k = run.hero.resource.kind, p = run.player;
+  if (k === 'fury') {
+    if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 <= (R.fury.meleeR * 1.5) ** 2) furyGain(run, R.fury.kill);
+    return;
+  }
   if (k === 'faith') {
     if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 <= R.faith.range ** 2) faithGain(run, e.boss ? 10 : e.elite ? 3 : 1);
     return;
@@ -188,9 +207,12 @@ export function updateResource(run: Run, dt: number): void {
   run.resIdle += dt;
   const k = run.hero.resource.kind;
   if (k === 'fury') {
-    if (run.resIdle > R.fury.idle && run.flag('furyHold') <= 0) run.res = Math.max(0, run.res - R.fury.decay * dt);
-    // Sekret Berserk: czas z pełną furią.
-    run.cardState['sec.berserk'] = run.res >= resMax(run) ? (run.cardState['sec.berserk'] ?? 0) + dt : 0;
+    // Szał: pasek odlicza pozostały czas, po końcu furia od zera.
+    if (run.rageT > 0) {
+      run.rageT = Math.max(0, run.rageT - dt);
+      run.res = (resMax(run) * run.rageT) / run.rageMax;
+      if (run.rageT <= 0) run.recomputeStats();
+    } else if (run.resIdle > R.fury.idle && run.flag('furyHold') <= 0) run.res = Math.max(0, run.res - R.fury.decay * dt);
   }
   if (k !== 'heat') return;
   const H = R.heat, p = run.player;

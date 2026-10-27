@@ -95,9 +95,9 @@ export const SECRETS: SecretDef[] = [
     flags: { focusKeep: 1 },
   },
   {
-    id: 'berserk', name: 'Berserk', riddle: 'Furia, która nie gaśnie przez dwadzieścia uderzeń serca.', hero: 'borgun',
-    desc: 'Furia nie opada poza walką, +15% obrażeń.',
-    check: (run) => (run.cardState['sec.berserk'] ?? 0) >= 20,
+    id: 'berserk', name: 'Berserk', riddle: 'Trzy razy wpaść w szał na jednym poziomie.', hero: 'borgun',
+    desc: 'Furia nie opada poza walką, Szał trwa o połowę dłużej, +15% obrażeń.',
+    check: (run) => (run.cardState['sec.berserk'] ?? 0) >= 3,
     flags: { furyHold: 1 }, stats: { might: 0.15 },
   },
   {

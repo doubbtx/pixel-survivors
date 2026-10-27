@@ -38,8 +38,10 @@ export const BAL = {
    * Zasoby bohaterów (systems/resource.ts). Karty: res.gain (+przyrost), res.power (+siła efektu), res.max (+pojemność).
    * focus: trafienie wroga dalej niż `range` daje 1 (najwyżej co `gap` s); +`crit` krytyka za punkt; pełna = darmowa Salwa i zostaje `keep`;
    *        oberwanie zabiera ułamek `hurtLoss`.
-   * fury: cios we wroga bliżej niż `meleeR` daje `hit` (co `gap` s), oberwanie `hurt` × ułamek maks. HP × 100; przy pełnej
-   *       +`might` obrażeń i -`dr` otrzymanych; po `idle` s bez walki opada o `decay`/s.
+   * fury: cios we wroga bliżej niż `meleeR` daje `hit` (co `gap` s), oberwanie `hurt` × ułamek maks. HP × 100, zabójstwo w pobliżu `kill`;
+   *       w trakcie budowania do +`might` obrażeń i -`dr` otrzymanych; po `idle` s bez walki opada o `decay`/s.
+   *       Pełna furia = Szał na `rage` s (sekret Berserk: × `rageHold`): +`rageMight` obrażeń, +`rageAtk` szybkości ataku,
+   *       leczenie `rageLeech` zadanych obrażeń, -`dr` otrzymanych; pasek odlicza czas Szału i spada do zera.
    * heat: Q/E dają `cast`; czary zadają do +`spell` obrażeń; powyżej `burnFrom` tracisz `burn` maks. HP/s (nie zabija); opada `decay`/s;
    *       unik od `ventMin` zrzuca żar: wybuch (promień `ventR`, obrażenia kart `vent` × żar) i płonąca ziemia.
    * souls: zabity wróg bliżej niż `range` daje 1; pełne: sługa za `auto` dusz; R zużywa wszystkie: +`ultDmg` obrażeń sług za duszę,
@@ -66,7 +68,7 @@ export const BAL = {
   bestiary: { master: 0.05, legend: 0.1 },
   resource: {
     focus: { max: 40, range: 70, gap: 0.15, crit: 0.005, keep: 0.25, hurtLoss: 0.5 },
-    fury: { max: 100, meleeR: 52, hit: 1.2, gap: 0.12, hurt: 4, might: 0.4, dr: 0.2, idle: 3, decay: 15 },
+    fury: { max: 100, meleeR: 52, hit: 1, gap: 0.12, hurt: 1.5, kill: 1, might: 0.15, dr: 0.2, idle: 3, decay: 15, rage: 6, rageHold: 1.5, rageMight: 0.4, rageAtk: 0.3, rageLeech: 0.03 },
     heat: { max: 100, cast: 20, spell: 0.6, burnFrom: 75, burn: 0.03, decay: 3, ventMin: 40, ventR: 50, vent: 0.7 },
     souls: { max: 30, range: 150, auto: 10, ultDmg: 0.03, ultExtra: 10 },
     /** Kombo (Vesper): +1 za trafienie co `gap` s; obrażenia do +might przy pełnym; Egzekucja +exec za punkt; Taniec ostrzy tnie co danceEvery kroków. */
@@ -316,9 +318,6 @@ export const BAL = {
     emptyChance: 0.3,
     /** Wagi typów węzłów w środkowych rzędach. */
     weights: [['fight', 40], ['elite', 14], ['dungeon', 7], ['treasure', 7], ['shop', 10], ['anvil', 8], ['rest', 9], ['shrine', 8]] as const,
-    /** Rzadkość map rośnie z aktem i rzędem (szansa Magicznej / Rzadkiej). */
-    rarityPerAct: 0.25,
-    rarityPerRow: 0.06,
     /** Szansa, że mapa nie ma bonusu. */
     noBonusChance: 0.35,
     /** Nagroda modyfikatorów: punkt ilości łupu (%) daje tyle szczęścia przedmiotów (× ułamek) i esencji (× ułamek). */

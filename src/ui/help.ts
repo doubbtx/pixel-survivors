@@ -59,7 +59,7 @@ const PAGES: { title: string; lines: string[] }[] = [
     lines: [
       'Zasób bohatera: pasek pod HP. Każdy bohater ma własny i zmienia on styl gry.',
       'Celność (Kestra): trafienia z dystansu dają więcej krytyków. Pełna wypuszcza darmową Salwę, oberwanie zabiera połowę.',
-      'Furia (Borgun): rośnie od ciosów z bliska i obrywania. Daje obrażenia i redukcję obrażeń, poza walką opada.',
+      'Furia (Borgun): rośnie od walki wręcz, obrywania i zabójstw obok. Pełna wyzwala Szał: kilka sekund mocniejszych, szybszych ciosów z leczeniem.',
       'Żar (Ignara): Q i E rozgrzewają, czary są mocniejsze. Powyżej żółtej kreski żar cię rani. Unik (od 40 żaru) zrzuca go wybuchem.',
       'Dusze (Morwen): wrogowie ginący w pobliżu dają dusze. Pełne stają się sługą, R zużywa wszystkie na mocniejszą armię.',
       'Kombo (Vesper): każde trafienie podbija obrażenia. Egzekucja (E) zużywa całe kombo, oberwanie je zeruje.',

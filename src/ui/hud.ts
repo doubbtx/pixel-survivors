@@ -78,7 +78,7 @@ function drawResource(r: Renderer, run: Run, x: number, y: number, w: number): v
   bar(r, x, y, w, 8, fr, RES_RAMP[res.kind], C.navy);
   if (res.kind === 'heat') r.rect(x + (w * BAL.resource.heat.burnFrom) / resMax(run), y, 1, 8, C.yellow);
   if ((hot || fr >= 0.95) && run.step % 16 < 8) r.withAlpha(0.4, () => r.roundRect(x + 1, y + 1, w - 2, 6, 2, C.white));
-  drawText(r.g, `${res.name} ${Math.floor(run.res)}`, x + 4, y + 0.5, hot ? C.red : C.white, SMALL);
+  drawText(r.g, run.rageT > 0 ? `Szał ${Math.ceil(run.rageT)}s` : `${res.name} ${Math.floor(run.res)}`, x + 4, y + 0.5, hot || run.rageT > 0 ? C.yellow : C.white, SMALL);
 }
 
 /** Pigułka: zaokrąglona płytka z krótkim napisem w kolorze `col` (wydarzenia, kombo). Zwraca szerokość. */
