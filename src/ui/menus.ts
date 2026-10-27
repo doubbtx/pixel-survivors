@@ -20,6 +20,8 @@ import { MetaScreen } from './meta';
 import { BalanceScreen } from './balance';
 import { HelpScreen } from './help';
 import { heroMeta, paragonLevel } from '../data/meta';
+import { pactLevel, pactBadge } from '../data/pacts';
+import { PactScreen } from './pacts';
 
 const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
 
@@ -264,8 +266,10 @@ export class HeroSelect implements Screen {
     if (inp.pressed('down') || inp.pressed('right')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
     if (inp.pressed('confirm')) this.start();
     if (inp.pressed('back')) this.app.go(this.mode === 'training' ? new MainMenu(this.app) : new SlotScreen(this.app, this.mode));
+    if (inp.pressed('inventory')) { this.app.go(new PactScreen(this.app, this)); return; }
     if (inp.pressed('click')) {
       const { x, y } = inp.mouse;
+      if (inside(x, y, LIST_X, this.pactY(), LIST_W, 18)) { this.app.go(new PactScreen(this.app, this)); return; }
       if (inside(x, y, DET_X, TOP, DET_W, DET_H)) { this.start(); return; }
       HEROES.forEach((_, i) => {
         if (!inside(x, y, LIST_X, TOP + i * ROW_H, LIST_W, ROW_H - 4)) return;
@@ -273,6 +277,11 @@ export class HeroSelect implements Screen {
         else { this.sel = i; sfx.play('select'); }
       });
     }
+  }
+
+  /** Przycisk paktów pod listą bohaterów. */
+  private pactY(): number {
+    return TOP + HEROES.length * ROW_H + 2;
   }
 
   render(): void {
@@ -288,7 +297,13 @@ export class HeroSelect implements Screen {
       drawSprite(g, `${h.sprite}@${on ? animFrame(h.sprite, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 16);
       drawText(g, h.name, LIST_X + 34, y + 5, h.color, { shadow: C.black });
       drawText(g, h.role, LIST_X + 34, y + 17, C.lavender);
+      // Odznaka Paktu: najwyższy poziom Paktu z pokonanym bossem.
+      const best = this.app.save.pacts.best[h.id] ?? 0, badge = pactBadge(best);
+      if (badge) drawText(g, `${badge.name} ${best}`, LIST_X + LIST_W - 6, y + 5, badge.color, { align: 'right' });
     });
+    const pl = pactLevel(this.app.save.pacts.chosen);
+    panel(r, LIST_X, this.pactY(), LIST_W, 18, pl ? C.salmon : C.slate);
+    drawText(g, pl ? `Pakty: poziom ${pl} [Tab]` : 'Pakty ryzyka [Tab]', LIST_X + LIST_W / 2, this.pactY() + 3, pl ? C.salmon : C.lgray, { align: 'center' });
     // Szczegóły zaznaczonego.
     const h = HEROES[this.sel], x = DET_X, y = TOP;
     panel(r, x, y, DET_W, DET_H, C.gold);

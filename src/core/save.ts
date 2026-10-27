@@ -7,7 +7,7 @@ import type { MetaState } from '../data/meta';
  * która przekształca dane do wersji o 1 wyższej. Ładowanie aplikuje migracje po kolei.
  */
 const KEY = 'pixel-survivors-save';
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export interface HeroRecord {
   bestTime: number;
@@ -89,6 +89,8 @@ export interface SaveData {
   /** Podpowiedzi już pokazane (ui/hints.ts) i ostatnio wybrany bohater (ekran wyboru). Nowe pola bez migracji. */
   seenHints: string[];
   lastHero: string;
+  /** Pakty ryzyka (data/pacts.ts): wybrane na następny run i najwyższy poziom Paktu z pokonanym bossem per bohater. */
+  pacts: { chosen: Record<string, number>; best: Record<string, number> };
 }
 
 type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
@@ -138,6 +140,8 @@ const MIGRATIONS: Record<number, Migration> = {
     const notice = refund > 0 ? 'Rozwój: każdy bohater ma własne drzewko. Twoja esencja czeka do rozdania.' : old.notice;
     return { ...old, version: 6, meta: { heroes: {}, unassigned: refund, legacy: m.total ?? 0 }, slots: { ...slots, expedition: null }, notice };
   },
+  // 6 → 7: pakty ryzyka (wybrane na kolejne runy i najwyższy poziom z pokonanym bossem per bohater).
+  6: (old) => ({ ...old, version: 7, pacts: { chosen: {}, best: {} } }),
 };
 
 function defaults(): SaveData {
@@ -155,6 +159,7 @@ function defaults(): SaveData {
     meta: { heroes: {}, unassigned: 0 },
     seenHints: [],
     lastHero: '',
+    pacts: { chosen: {}, best: {} },
   };
 }
 
@@ -187,6 +192,7 @@ export function loadSave(): SaveData {
     meta: { ...base.meta, ...d.meta },
     seenHints: d.seenHints ?? [],
     lastHero: d.lastHero ?? '',
+    pacts: { ...base.pacts, ...d.pacts },
   };
 }
 

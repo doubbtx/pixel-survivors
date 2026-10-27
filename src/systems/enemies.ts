@@ -27,7 +27,7 @@ export function fireVolley(run: Run, x: number, y: number, v: Volley, base: numb
     const b = run.bullets.obtain();
     if (!b) return;
     const var_ = v.speedVar ?? 0.35;
-    const sp = v.speed * (v.shape === 'shotgun' ? rng.range(1 - var_, 1 + var_) : 1);
+    const sp = v.speed * (v.shape === 'shotgun' ? rng.range(1 - var_, 1 + var_) : 1) * (1 + run.flag('bulletSpeed'));
     b.x = x; b.y = y;
     b.vx = Math.cos(a) * sp;
     b.vy = Math.sin(a) * sp;

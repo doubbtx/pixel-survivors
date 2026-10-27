@@ -82,6 +82,8 @@ export class GameScreen implements Screen {
 
   constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot) {
     this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode);
+    // Nowy run: pakty ryzyka wybrane przed startem (ui/pacts.ts) obowiązują do jego końca.
+    if (!snapshot) this.run.pacts = { ...app.save.pacts.chosen };
     this.hints = new Hints(app.save, () => app.persist());
     this.run.cardBans = new Set(app.save.collection.banned);
     this.run.knownCards = new Set(app.save.collection.seen);
@@ -167,6 +169,9 @@ export class GameScreen implements Screen {
     rec.bestTime = Math.max(rec.bestTime, run.totalTime);
     rec.bestKills = Math.max(rec.bestKills, run.kills);
     rec.bestLevel = Math.max(rec.bestLevel, run.level);
+    // Odznaki Paktu: najwyższy poziom Paktu, z którym bohater pokonał bossa.
+    const pacts = this.app.save.pacts.best;
+    if (run.bossKills > 0) pacts[this.heroId] = Math.max(pacts[this.heroId] ?? 0, run.pactLevel);
     if (this.mode === 'hardcore') rec.bestDepth = Math.max(rec.bestDepth, run.depth);
     else if (this.mode === 'endless') rec.bestEndless = Math.max(rec.bestEndless, run.totalTime);
     else if (this.mode === 'expedition') rec.bestExpedition = Math.max(rec.bestExpedition, run.expedition!.cleared);
@@ -662,7 +667,7 @@ export class GameScreen implements Screen {
     const won = run.outcome === 'victory' && run.mode !== 'expedition' || (!!ex && run.outcome === 'victory' && ex.act === BAL.expedition.acts && currentNode(ex) === 'boss');
     const title = won ? (ex ? 'Ekspedycja ukończona!' : 'Zwycięstwo!') : run.outcome === 'dead' ? 'Zginąłeś' : 'Koniec runu';
     drawText(g, title, W / 2, 6, won ? C.yellow : C.salmon, { align: 'center', scale: 2, outline: C.black });
-    const stats = `Czas ${fmtTime(run.totalTime)}    Zabójstwa ${fmt(run.kills)}    LV ${run.level}    Złoto ${fmt(run.gold)}    Leczenie ${fmt(run.healed)}`;
+    const stats = `Czas ${fmtTime(run.totalTime)}    Zabójstwa ${fmt(run.kills)}    LV ${run.level}    Złoto ${fmt(run.gold)}    Leczenie ${fmt(run.healed)}${run.pactLevel ? `    Pakt ${run.pactLevel}` : ''}`;
     const modeLine = this.mode === 'hardcore' ? `Hardcore: przepadło wszystko. Dotarłeś do poziomu ${run.depth}.`
       : this.mode === 'endless' ? `Endless: przetrwałeś ${fmtTime(run.totalTime)}, głębia ${run.depth} (rekord ${fmtTime(heroRecord(this.app.save, this.heroId).bestEndless)})`
       : ex ? `Ekspedycja: akt ${ex.act}/${BAL.expedition.acts}, ukończone węzły ${ex.cleared}${won ? `, esencja x${BAL.expedition.winEssenceMul}` : ''}` : '';

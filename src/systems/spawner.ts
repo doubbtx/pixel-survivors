@@ -40,13 +40,19 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   e.phase = 0; e.invuln = 0; e.actT = 3; e.dashT = 0; e.dvx = 0; e.dvy = 0;
 
   if (o.elite) {
-    e.elite = o.elite;
+    // Pakt „Elity z cechami”: dodatkowe, różne cechy.
+    const mods = [...o.elite];
+    for (let i = 0; i < run.flag('eliteMods'); i++) {
+      const left = Object.keys(ELITE_MODS).filter((k) => !mods.includes(k));
+      if (left.length) mods.push(rng.pick(left));
+    }
+    e.elite = mods;
     e.scale = 2;
     e.radius *= 1.8;
     e.maxHp = e.hp = e.hp * BAL.eliteHpMul;
     e.damage *= 1.5;
     e.xp *= 10;
-    for (const m of o.elite.map((k) => ELITE_MODS[k])) {
+    for (const m of mods.map((k) => ELITE_MODS[k])) {
       if (m.speedMul) e.speed *= m.speedMul;
       if (m.dr) e.dr = m.dr;
       if (m.regen) e.regen = m.regen;
@@ -56,6 +62,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   }
   if (def.behavior === 'boss') {
     e.boss = true;
+    e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp'));
     e.speed = def.speed;
     run.boss = e;
   }

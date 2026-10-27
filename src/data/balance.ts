@@ -107,6 +107,8 @@ export const BAL = {
   itemScale: (ilvl: number) => Math.pow(1.3, ilvl - 1),
   /** Skalowanie HP/regeneracji z przedmiotów (nadąża za wzrostem obrażeń wrogów). */
   itemHpScale: (ilvl: number) => Math.pow(1.25, ilvl - 1),
+  /** Pakty ryzyka (data/pacts.ts): esencja × (1 + essencePer × poziom Paktu). */
+  pacts: { essencePer: 0.08 },
   /** Moce bossów (systems/powers.ts): maks. poziom i przyrost obrażeń za poziom. */
   bossPowers: { maxLevel: 3, perLevel: 0.5 },
   /** Szansa, że łup bossa / elity (także skrzynia elity) to unikat (× (1 + Fortuna)). */

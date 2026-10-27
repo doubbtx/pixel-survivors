@@ -42,6 +42,7 @@ import { updateResource, resourceOnHit, resourceOnHurt, resourceOnKill, resource
 import { updateTasks, taskOnHurt, taskOnKill, type Task } from '../systems/tasks';
 import { updatePower } from '../systems/powers';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
+import { PACTS, pactLevel } from '../data/pacts';
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
@@ -153,6 +154,9 @@ export interface RunSnapshot {
   resource?: number;
   /** Moc bossa: id i poziom (od 0.13). */
   power?: [string, number];
+  /** Pakty ryzyka runu i pokonani bossowie (od 0.13). */
+  pacts?: Record<string, number>;
+  bossKills?: number;
 }
 
 /**
@@ -270,6 +274,9 @@ export class Run {
   power: { id: string; level: number } | null = null;
   powerT = 0;
   pendingPowers = 0;
+  /** Pakty ryzyka na cały run (data/pacts.ts, ustawiane przy starcie z zapisu gracza) i pokonani bossowie (odznaki Paktu). */
+  pacts: Record<string, number> = {};
+  bossKills = 0;
   /** Skrzynie do otwarcia: przedmiot (wylosowany przy upadku) i źródło (tytuł ekranu łupu). */
   pendingLoot: { source: LootSource; item: Item }[] = [];
 
@@ -553,6 +560,10 @@ export class Run {
   private indexEffects(): void {
     this.flags = { ...this.meta.flags };
     for (const [k, v] of Object.entries(this.levelInfo?.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
+    for (const p of PACTS) {
+      const lvl = Math.min(p.max, this.pacts[p.id] ?? 0);
+      for (const [k, v] of Object.entries(p.flags)) if (lvl) this.flags[k] = (this.flags[k] ?? 0) + v * lvl;
+    }
     for (const k of Object.keys(this.hooks) as HookName[]) this.hooks[k] = [];
     const addHooks = (hooks: CardHooks | undefined, n: number) => {
       for (const [k, fn] of Object.entries(hooks ?? {})) (this.hooks[k as HookName] as { fn: unknown; stacks: number }[]).push({ fn, stacks: n });
@@ -616,9 +627,14 @@ export class Run {
     if (fresh) this.player.hp = this.stats.maxHp;
   }
 
-  /** Mnożnik esencji za run (drzewko i prestiż). */
+  /** Mnożnik esencji za run (drzewko, prestiż i poziom Paktu). */
   get essenceMul(): number {
-    return this.meta.essenceMul;
+    return this.meta.essenceMul * (1 + BAL.pacts.essencePer * this.pactLevel);
+  }
+
+  /** Poziom Paktu runu (suma poziomów paktów). */
+  get pactLevel(): number {
+    return pactLevel(this.pacts);
   }
 
   /** Czy run ma augment broni o danym id. */
@@ -1112,6 +1128,7 @@ export class Run {
     this.pendingLoot.push(this.rollLoot('boss'));
     this.pendingCards.push('boss');
     this.pendingPowers++;
+    this.bossKills++;
     this.cardRerolls++;
     this.gold += 30 * this.stats.greed;
     // Endless: gra toczy się dalej — kolejna głębokość (silniejsi wrogowie, następny biom) i boss za BAL.endlessBossEvery.
@@ -1391,6 +1408,8 @@ export class Run {
       augments: [...this.augments],
       resource: this.res,
       power: this.power ? [this.power.id, this.power.level] : undefined,
+      pacts: { ...this.pacts },
+      bossKills: this.bossKills,
     };
   }
 
@@ -1420,6 +1439,8 @@ export class Run {
     run.basicWeaponId = s.basicWeaponId;
     run.dmgBySource = new Map(s.dmgBySource);
     run.cardState = { ...s.cardState };
+    run.pacts = { ...s.pacts };
+    run.bossKills = s.bossKills ?? 0;
     // Przedmioty nieznanych typów (np. z nowszej wersji danych) są pomijane.
     const known = (it: Item | null | undefined): it is Item => !!it && !!BASE_BY_ID[it.base];
     for (const sl of Object.keys(run.equipment) as SlotId[]) {

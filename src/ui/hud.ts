@@ -2,7 +2,7 @@ import { W, H, VIEW_W, VIEW_H, type Renderer } from '../core/renderer';
 import { itemColor } from '../data/items';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { C, RAMP } from '../core/palette';
-import { drawText } from '../core/font';
+import { drawText, textWidth } from '../core/font';
 import { drawSprite } from '../gfx/sprites';
 import type { AbilitySlot } from '../data/heroes';
 import { BAL } from '../data/balance';
@@ -129,8 +129,13 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   drawResource(r, run, 40, 29);
   const hc = run.mode === 'hardcore';
   const ex = run.expedition;
-  drawText(g, ex ? `Akt ${ex.act}, głębia ${run.depth}` : `Poziom ${run.depth}`, 41, 36, hc ? C.orange : C.lgray, OUT);
-  if (hc) drawText(g, 'Hardcore', 89, 36, C.salmon, OUT);
+  // Poziom (albo akt), dopiski Hardcore i Pakt jeden za drugim.
+  let lx = 41;
+  for (const [text, col] of [[ex ? `Akt ${ex.act}, głębia ${run.depth}` : `Poziom ${run.depth}`, hc ? C.orange : C.lgray], [hc ? 'Hardcore' : '', C.salmon], [run.pactLevel ? `Pakt ${run.pactLevel}` : '', C.red]] as const) {
+    if (!text) continue;
+    drawText(g, text, lx, 36, col, OUT);
+    lx += textWidth(text) + 6;
+  }
   // Aktywne błogosławieństwa kapliczek z czasem.
   if (run.buffs.length) drawText(g, run.buffs.map((b) => (Number.isFinite(b.t) ? `${b.name} ${Math.ceil(b.t)}s` : b.name)).join('  '), 41, 47, C.yellow, OUT);
 

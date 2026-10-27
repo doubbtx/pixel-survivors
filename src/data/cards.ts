@@ -45,6 +45,11 @@ import { spawnTurret } from '../systems/turrets';
  *  dashSummon      unik przywołuje ducha-sługę
  *  res.gain / res.power / res.max   zasób bohatera: szybszy przyrost, silniejszy efekt, większa pojemność (systems/resource.ts)
  *  heat.safe / heat.vent            Żar Ignary: przegrzanie nie rani, mocniejszy Wydech żaru
+ * Flagi paktów (data/pacts.ts, na cały run):
+ *  bulletSpeed     szybsze pociski wrogów (+ułamek)
+ *  eliteMods       dodatkowe cechy elit (liczba)
+ *  bossHp          +HP bossów (ułamek)
+ *  taskTime        krótszy czas na zadania (ułamek, maks. 0.5)
  * Flagi unikatów (data/items.ts UNIQUES):
  *  facing          bronie kierunkowe strzelają w kierunku ruchu, obrażenia × (1 + wartość)
  *  healShield      leczenie zamienia się w tarczę (maks. ułamek HP)
