@@ -115,7 +115,7 @@ const MENU_DESC = [
   'Drzewka bohaterów kupowane esencją z Ekspedycji.',
   'Odkryte karty i bany (wykluczenie kart z ofert), odkryte unikaty.',
   'Najlepsze wyniki bohaterów w każdym trybie.',
-  'Sterowanie, zasady, żywioły i reakcje, synergie, tryby.',
+  'Sterowanie, zasady, żywioły, synergie, zasoby, moce, tryby.',
   'Dźwięk, celowanie, widoczność efektów, podpowiedzi.',
 ];
 

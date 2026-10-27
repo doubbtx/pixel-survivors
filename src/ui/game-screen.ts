@@ -370,6 +370,7 @@ export class GameScreen implements Screen {
     if (run.boss) h.show('boss');
     if (run.reactions > 0) h.show('reaction');
     if (run.time > 20) h.show('resource');
+    if (run.time > 30 && run.terrain.some((t) => (t.x - run.player.x) ** 2 + (t.y - run.player.y) ** 2 < 120 * 120)) h.show('terrain');
     if (run.task) h.show('task');
     const ready = run.ultCharge >= run.ultNeed() && run.abilities.ult.activeT <= 0;
     if (ready && !this.ultReady) { run.showBanner('R gotowe!'); sfx.play('levelup'); h.show('ult'); }

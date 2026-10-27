@@ -58,10 +58,21 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Zasób bohatera: pasek pod HP. Każdy bohater ma własny i zmienia on styl gry.',
       'Celność (Kestra): trafienia z dystansu dają więcej krytyków. Pełna wypuszcza darmową Salwę, oberwanie zabiera połowę.',
       'Furia (Borgun): rośnie od ciosów z bliska i obrywania. Daje obrażenia i redukcję obrażeń, poza walką opada.',
-      'Żar (Ignara): Q i E rozgrzewają, czary są mocniejsze. Powyżej żółtej kreski żar cię rani. Unik zrzuca żar wybuchem.',
+      'Żar (Ignara): Q i E rozgrzewają, czary są mocniejsze. Powyżej żółtej kreski żar cię rani. Unik (od 40 żaru) zrzuca go wybuchem.',
       'Dusze (Morwen): wrogowie ginący w pobliżu dają dusze. Pełne stają się sługą, R zużywa wszystkie na mocniejszą armię.',
       'Zadania: co minutę pojawia się turkusowy kamień. Dotknij go: zadanie z zegarem (panel po prawej) i nagrodą.',
       'Rodzaje zadań: Łowy, Obrona totemu, Krąg mocy, Bez skazy, Próba żywiołu. Porażka w części z nich przyzywa karną falę.',
+    ],
+  },
+  {
+    title: 'Moce',
+    lines: [
+      'Unikaty: rzadkie przedmioty z bossów i elit ze stałym efektem, który łamie zasady, zwykle za jakąś cenę. Kolekcja: Tab.',
+      'Moc bossa: po bossie wybierasz 1 z 3 jego ataków. Strzela sam, ta sama moc wybrana ponownie rośnie.',
+      'Fuzja: dwie bronie na maks. poziomie (albo po ewolucji) łączą się w hybrydę i zwalniają slot.',
+      'Pakty: przed runem (wybór bohatera, Tab) włączasz utrudnienia. Więcej esencji i odznaki za bossa.',
+      'Teren: osłony blokują pociski (także twoje) i da się je zniszczyć. Beczki wybuchają, kolce ranią wszystkich.',
+      'Bagno spowalnia ciebie i wrogów, na lodzie się ślizgasz. Przy bossie arena się zwęża.',
     ],
   },
   {

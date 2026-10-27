@@ -16,7 +16,7 @@ kartami-augmentami i ekwipunkiem z jakościami. Wszystko po polsku.
 ## Technologia
 
 HTML5 Canvas 2D + TypeScript + Vite. Bufor 480×270 skalowany całkowitoliczbowo, świat rysowany z ZOOM 1.5.
-Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 6).
+Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 7).
 Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków).
 
 ## Struktura `src/`
@@ -24,13 +24,14 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `core/` — pętla, renderer (W/H/ZOOM, `rect`, `circle`, `withAlpha`), input (akcje abstrakcyjne: klawiatura, pad, mysz/dotyk),
   font (`drawText`, `wrapText`, LINE_H 12, polskie znaki), paleta (`C`, `RAMP`), audio (Web Audio, `sfx.play`), rng, save.
 - `gfx/` — `painter.ts` (sphere, polyShade, block, ring, disc, outline), `sprites.ts` (rejestr po nazwie, `drawSprite`),
-  `icons.ts` (ikony 16×16: `ic_<broń>`, `pi_<pasywka>`, `ab_<umiejętność>`, `tag:<Tag>`), `items.ts` (`it_<przedmiot>`),
-  `actors.ts` (animowane postacie, `name@klatka`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów).
-- `data/` — `balance.ts`, `weapons.ts` (z ewolucjami), `passives.ts`, `enemies.ts` (Volley: kształt i ruch salw), `waves.ts`, `heroes.ts`,
-  `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `upgrades.ts` (jakość ulepszeń broni, `WeaponBonus`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (82 karty: stats/mul/flags/hooks; lista flag w komentarzu pliku),
-  `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, rollItem, porównania).
+  `icons.ts` (ikony 16×16: `ic_<broń>`, `pi_<pasywka>`, `ab_<umiejętność>`, `tag:<Tag>`, `bp_<moc bossa>`; `fu:<A>:<B>` = ikona hybrydy złożona w sprites.ts), `items.ts` (`it_<przedmiot>`),
+  `actors.ts` (animowane postacie, `name@klatka`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów), `objects.ts` (kapliczki, portale, kamień zadania, totem, teren: `tcover@v`, `tbarrel`, `tspikes@0/1`).
+- `data/` — `balance.ts`, `weapons.ts` (z ewolucjami, hybrydy i `FUSIONS`), `passives.ts`, `enemies.ts` (Volley: kształt i ruch salw, `BOSS_POWERS`), `waves.ts`, `heroes.ts`,
+  `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `upgrades.ts` (jakość ulepszeń broni, `WeaponBonus`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (88 kart: stats/mul/flags/hooks; lista flag w komentarzu pliku),
+  `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, unikaty `UNIQUES`, rollItem, rollUnique, porównania), `tasks.ts` (zadania), `pacts.ts` (pakty ryzyka, odznaki).
 - `entities/` — typy encji.
 - `systems/` — gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans (levelup), wieżyczki, sługi (`minions.ts`),
+  `resource.ts` (zasób bohatera), `tasks.ts` (zadania w trakcie poziomu), `powers.ts` (moce bossów), `terrain.ts` (teren i arena bossa),
   sklep (zakupy), kowadło (`anvil.ts`: ulepsz, przekuj, jakość, przenieś super-bonus).
 - `game/run.ts` — klasa `Run`: postać + świat poziomu, `damageEnemy` (jedyne miejsce utraty HP wroga), `killEnemy`,
   `hurtPlayer`, `recomputeStats` (bohater + pasywki + karty + ekwipunek), `indexEffects` (flagi i hooki z kart i super-bonusów),
@@ -38,9 +39,9 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `salvage`, `slotFor`), `toSnapshot`/`fromSnapshot`.
 - `game/` — też `render.ts` (świat), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy, tablica Hardcore).
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
-  `shop.ts` (ShopView), `anvil.ts` (AnvilView), `expedition.ts` (ExpeditionMapView), `collection.ts` (kolekcja i bany kart), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `game-screen.ts` (stany: play/levelup/cards/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb).
+  `shop.ts` (ShopView), `anvil.ts` (AnvilView), `expedition.ts` (ExpeditionMapView), `collection.ts` (kolekcja i bany kart, zakładka Unikaty), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb).
 
-## Stan (wersja 0.12.0)
+## Stan (wersja 0.13.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -136,41 +137,42 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   baner „R gotowe!”, nowe przedmioty w plecaku (`Item.fresh` przez `run.stash`, znacznik „!”, przypomnienie w HUD),
   ustawienie `hitstop`, licznik `run.reactions`.
 
+- Etap 0.13 (plan „odróżnić od Vampire Survivors”, wszystkie 7 punktów):
+  1. Zasób bohatera (`HeroDef.resource`, `systems/resource.ts`, `BAL.resource`, stan `run.res/resGap/resIdle`, zapis `resource`):
+     Celność (Kestra: trafienia z dystansu, krytyk, pełna = darmowa Salwa), Furia (Borgun: ciosy z bliska i obrywanie, obrażenia
+     i redukcja, opada poza walką), Żar (Ignara: Q/E, mocniejsze czary, przegrzanie rani, unik od `ventMin` = Wydech żaru),
+     Dusze (Morwen: zabici w pobliżu, pełne = sługa, R zużywa wszystkie — `spendSouls`). Pasek pod HP, opis na wyborze bohatera.
+     Flagi `res.gain/res.power/res.max`, `heat.safe/heat.vent`, karty `h_k_focus`, `h_b_fury`, `h_i_heat`, `h_m_souls`.
+  2. Zadania (`data/tasks.ts`, `systems/tasks.ts`, `BAL.tasks`, `run.task`): kamień co minutę, dotknięcie zaczyna zadanie
+     (Łowy, Obrona totemu, Krąg mocy, Bez skazy, Próba żywiołu), panel w HUD, znacznik poza ekranem (`taskTarget`),
+     nagroda (skrzynia / karta / złoto), część porażek = karna fala. Boss albo loch przerywa zadanie.
+  3. Unikaty (`UNIQUES` w data/items.ts, `Item.unique`, `rollUnique`, `itemColor`, `equippedUniques` w indexEffects/recomputeStats):
+     10 przedmiotów, łup z bossów i elit (`BAL.uniques`, `run.rollLoot`), flagi `facing`, `healShield`; kowadło ich nie przekuwa;
+     kolekcja `save.collection.uniques` (`run.uniquesFound`, `syncCollection`), zakładka Unikaty (Tab).
+  4. Moce bossów (`BOSS_POWERS`, `systems/powers.ts`, `ui/powers.ts`): po bossie `run.pendingPowers` → wybór 1 z 3, jedna moc
+     (`run.power`, zapis `power`), ta sama = poziom (`BAL.bossPowers`), strzela sama co `cd` (× cdr), gniazdo w HUD.
+  5. Fuzje (`FUSIONS`, hybrydy `fused` z `hybrid: blast/split/seek` w data/weapons.ts): opcja awansu `fusion` (zawsze w ofercie),
+     podpowiedź „Fuzja z”, hybryda w slocie pierwszej broni, druga znika (`addWeapon` bierze najmniejszy wolny slot),
+     tagi obu rodziców, żywioły w `WEAPON_ELEMENT`.
+  6. Pakty (`data/pacts.ts`, `ui/pacts.ts`, `BAL.pacts`): na wyborze bohatera (Tab), `save.pacts.chosen` → `run.pacts` (flagi w
+     indexEffects; nowe `bulletSpeed`, `eliteMods`, `bossHp`), esencja × poziom Paktu (`run.essenceMul`), odznaki za bossa
+     (`save.pacts.best`, `run.bossKills`), zapis v7.
+  7. Teren (`systems/terrain.ts`, `BAL.terrain`, `run.terrain/terrainChunks/arena/ground`): kawałki generowane wokół gracza wg
+     biomu, osłony blokują pociski obu stron (`terrainBlocker`, `hitTerrain`), beczki (łańcuchy przez `terrainBlast` w `explode`),
+     kolce, bagno (spowolnienie), lód (bezwładność `Player.vx/vy`), zwężająca się arena bossa (gracz i wrogowie w środku).
+  Pomoc: strony Zasoby i Moce; podpowiedzi `resource`, `task`, `unique`, `power`, `fusion`, `terrain`.
+
 ## Plan dalej
 
-Cel: odróżnić grę od Vampire Survivors zmianami w samej pętli walki i buildów (uzgodnione z użytkownikiem).
-Kolejność etapów dowolna (każdy osobno, gra grywalna po każdym); liczby w `BAL`, opisy w Pomocy (`ui/help.ts`) i podpowiedzi (`ui/hints.ts`).
-
-1. **Zasób bohatera (jak w LoL)** — każdy bohater ma własny pasek zasobu w HUD (pod HP), który zmienia styl gry:
-   Kestra — kumulacje celności za trafienia z dystansu (więcej krytyków, przy max darmowy strzał Q);
-   Borgun — furia rośnie, gdy obrywa i zadaje cios wręcz (więcej obrażeń i redukcji, spada poza walką);
-   Ignara — przegrzanie z czarów (mocniejsze czary, powyżej progu rani ją; Spacja/unik zrzuca żar);
-   Morwen — dusze z ciał zabitych wrogów (wydawane automatycznie na sługi albo wzmocnienie R).
-   Pole `HeroDef.resource`, stan w `Run`, flagi kart/drzewek do zasobu, zapis w snapshocie. Nowi bohaterowie od razu z zasobem.
-2. **Zadania w trakcie poziomu** — co ~60 s opcjonalne zadanie z zegarem (zabij elitę w 20 s, obroń totem, stój w kręgu,
-   nie daj się trafić 30 s, zabij N wrogów żywiołem X). Nagroda: skrzynia / karta / złoto; część porażek przyzywa trudniejszą falę.
-   Nowy system `systems/tasks.ts`, lista definicji w `data/tasks.ts`, panel zadania w HUD, znacznik celu poza ekranem.
-3. **Unikaty (jak w PoE)** — nowa jakość/rodzaj przedmiotu ze stałym efektem łamiącym zasady (np. broń bez auto-celu za x3
-   obrażeń, leczenie zamienia się w tarczę, unik wystrzeliwuje salwę broni, każde 10. trafienie to reakcja żywiołów).
-   Definicje w `data/items.ts` (efekt przez flagi/hooki jak super-bonusy), rzadki drop z bossów i elit, kolor wyróżniony, kolekcja odkrytych.
-4. **Kradzież mocy bossów** — po pokonaniu bossa wybór 1 z jego nazwanych ataków jako umiejętność/augment gracza
-   (salwa bossa strzela w wrogów). Definicje przy bossie (`data/enemies.ts`), slot w `run` (zapis), ikona w HUD; w Ekspedycji też z bossów aktów.
-5. **Łączenie broni (fuzje)** — dwie bronie na maksymalnym poziomie (albo po ewolucji) łączą się w hybrydę i zwalniają slot,
-   np. kostur ognia + łuk = ogniste strzały z wybuchem. Tabela fuzji w `data/weapons.ts` (wg tagów/żywiołów), opcja awansu `fusion`,
-   podpowiedź „Fuzja” jak przy ewolucjach, wpis w Pomocy.
-6. **Pakty ryzyka (jak Heat w Hadesie)** — przed runem (wybór bohatera) włączane utrudnienia z poziomami: szybsze pociski,
-   elity z cechami, mniej leczenia, krótszy czas na zadania, mocniejszy boss. Suma = poziom Paktu, mnoży esencję i daje odznaki/odblokowania.
-   Definicje w `data/pacts.ts` (flagi jak `MAP_MODS`), zapis wybranych w slocie i najwyższego poziomu w `save` (migracja SAVE_VERSION 7).
-7. **Teren, który ma znaczenie** — niszczalne osłony blokujące pociski (wrogów i gracza), pułapki (kolce, beczki wybuchowe —
-   wciąganie wrogów), zwężająca się arena przy bossie, strefy biomów (lód — poślizg, bagno — spowolnienie). Kolizje w spatial hash,
-   grafika proceduralna w `gfx/objects.ts`, generowanie przy starcie poziomu wg biomu, dekoracje w `BAL`.
-
-- Kolejni bohaterowie: zostały 2 role (np. zabójca, kapłan) — wszystko oryginalne, projektowani od razu z zasobem (pkt 1).
-- Balans Ekspedycji po testach (długość walk, nagrody węzłów).
+- Kolejni bohaterowie: zostały 2 role (np. zabójca, kapłan) — wszystko oryginalne, od razu z zasobem (`HeroDef.resource`, systems/resource.ts).
+- Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby, zadania (totem), moce bossów, hybrydy, teren (gęstość osłon).
+- Pomysły: więcej unikatów i receptur fuzji, moce z bossów aktów Ekspedycji z własnymi atakami, odblokowania za odznaki Paktu.
 
 ## Testowanie
 
-- `npm run dev`, w grze F3 = debug, F4 = przyspiesz cel poziomu, F6 = awans, F7 = łup bossa.
+- `npm run dev`, w grze F3 = debug, F4 = przyspiesz cel poziomu, F6 = awans, F7 = łup bossa (12% szans na unikat).
+- Bez UI: moduły z serwera Vite w Playwright (`await import('/src/game/run.ts')`, `new Run(...)`, `run.update(1/60, wejście)`) —
+  szybki test systemów (zasoby, zadania, moce, fuzje: `generateOptions`/`applyOption`, teren: `run.terrain`).
 - Sklep bez grania do bossa: wstrzyknij w localStorage zapis w `slots.hardcore` z `inProgress: false` i polem `shop`, potem Kontynuuj.
 - Ekspedycja: zapis w `slots.expedition` z polem `expedition` (np. `path` przed bossem) pozwala od razu testować bossa i przejście aktu.
 - Szczegóły sterowania i dodawania zawartości: README.md.

@@ -181,7 +181,7 @@ export const HEROES: HeroDef[] = [
     weapon: 'staff',
     tags: ['Ogień', 'Umiejętności'],
     passive: { name: 'Echo mocy', desc: 'Co 3. użycie Q lub E powtarza się po chwili za darmo.', kind: 'echoCast', value: 3 },
-    resource: { kind: 'heat', name: 'Żar', color: C.orange, desc: 'Q i E rozgrzewają: czary są mocniejsze, ale przegrzanie rani. Unik zrzuca żar wybuchem ognia.' },
+    resource: { kind: 'heat', name: 'Żar', color: C.orange, desc: 'Q i E rozgrzewają: czary są mocniejsze, ale przegrzanie rani. Unik (od 40 żaru) zrzuca go wybuchem ognia.' },
     abilities: [
       {
         id: 'i_fireball', name: 'Kula ognia', icon: 'ab_i_fireball', desc: 'Kula ognia w miejscu celownika: wybuch i płonąca ziemia.', slot: 'q', kind: 'fireball', color: C.orange,

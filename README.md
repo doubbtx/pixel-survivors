@@ -52,11 +52,12 @@ src/
   core/      pętla 60 Hz (stały krok), renderer 480×270 (świat ×1.5), input, pula obiektów, spatial hash,
              czcionka pikselowa, paleta ENDESGA 32, dźwięk (Web Audio), zapis z migracjami
   gfx/       malarz sprite'ów (cieniowanie, obrys), rejestr sprite'ów po nazwach, ikony (icons.ts, items.ts)
-  data/      balance.ts (wszystkie wzory), bronie, pasywki, wrogowie, fale, bohaterowie,
-             poziomy kampanii (levels.ts), karty (cards.ts), przedmioty (items.ts), sklep (shop.ts)
+  data/      balance.ts (wszystkie wzory), bronie (z fuzjami), pasywki, wrogowie (z mocami bossów), fale, bohaterowie,
+             poziomy kampanii (levels.ts), karty (cards.ts), przedmioty i unikaty (items.ts), sklep (shop.ts),
+             zadania (tasks.ts), pakty ryzyka (pacts.ts)
   entities/  typy encji
   systems/   gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans,
-             wieżyczki, zakupy w sklepie
+             wieżyczki, zakupy w sklepie, zasób bohatera, zadania, moce bossów, teren
   game/      Run (postać + świat poziomu, obrażenia, hooki kart, snapshot), kampania, render świata
   ui/        menu, sloty trybów, mapa Ekspedycji (expedition.ts), wybór bohatera, HUD, awans, wybór karty, łup i ekwipunek (items.ts), sklep (shop.ts), pauza,
              ukończenie poziomu, podsumowanie
@@ -67,7 +68,13 @@ src/
 - **Broń**: wpis w `data/weapons.ts` (statystyki bazowe + przyrosty na poziom, opcjonalna ewolucja `{ passive, into }`). Nowy wzorzec ataku = nowa funkcja w `BEHAVIORS` w `systems/weapons.ts`.
 - **Pasywka**: jedna linia w `data/passives.ts` (statystyka + przyrost na poziom).
 - **Wróg**: wpis w `data/enemies.ts` (zachowanie `chase|fast|keep`, opcjonalny `shoot`: salwa `Volley` — kształt `fan|ring|gapRing|shotgun`, ruch pocisków `acc/turn/altTurn/wave`, celowanie `player|spin|random`, seria `burst`, zapowiedź `windup`), sprite w `gfx/actors.ts` i dodanie do `data/waves.ts`.
-- **Bohater**: wpis w `data/heroes.ts` — statystyki, broń startowa, pasywka, 4 umiejętności (`kind` → zachowanie w `systems/abilities.ts`).
+- **Bohater**: wpis w `data/heroes.ts` — statystyki, broń startowa, pasywka, zasób (`resource`: rodzaj z `systems/resource.ts`), 4 umiejętności (`kind` → zachowanie w `systems/abilities.ts`).
+- **Unikat**: wpis w `UNIQUES` w `data/items.ts` (typ bazowy, stałe afiksy, opis i efekt przez `stats`/`mul`/`flags`/`hooks`).
+- **Fuzja**: hybryda jako broń w `WEAPONS` (`fused: true`, opcjonalnie `hybrid`) + wpis w `FUSIONS` (dwie bronie bazowe), żywioł w `WEAPON_ELEMENT`.
+- **Moc bossa**: wpis w `BOSS_POWERS` (`data/enemies.ts`) + funkcja w `FIRE` (`systems/powers.ts`) + ikona `bp_<id>`.
+- **Zadanie**: wpis w `TASKS` (`data/tasks.ts`) + przypadek w `systems/tasks.ts` (start, postęp, status).
+- **Pakt**: wpis w `PACTS` (`data/pacts.ts`) z flagami silnika na poziom.
+- **Teren**: liczby i skład kawałków wg biomu w `BAL.terrain`, nowy rodzaj obiektu w `systems/terrain.ts` (+ sprite w `gfx/objects.ts`).
 - **Karta**: wpis w `data/cards.ts` — rzadkość, 1-2 tagi, opcjonalnie bohater, a efekt jako `stats` (dodatki), `mul` (mnożniki), `flags` (przełączniki mechanik, lista w komentarzu pliku) i/lub `hooks` (`onHit`, `onKill`, `onAbilityCast`, `onDash`, `onDamageTaken`, `onLevelUp`, `onTick`). Silnika nie trzeba ruszać.
 - **Przedmiot**: nowy typ bazowy = wpis w `BASES` w `data/items.ts` + ikona `it_<id>` w `gfx/items.ts`; nowy afiks = wpis w `AFFIXES`; nowy super-bonus = wpis w `SUPERS` (zakres wartości, opis z `{v}`, `flags` albo `hooks` jak u kart — hook dostaje wartość bonusu jako ostatni argument).
 - **Synergia**: tagi źródeł w `data/synergies.ts` (`STAT_TAG`, `WEAPON_TAGS`, `SUPER_TAGS`, tagi bohatera w `heroes.ts`, tagi kart w `cards.ts`); nowy próg lub efekt = wpis w `SYNERGIES` (stats / mul / flags / hooks).
@@ -75,7 +82,7 @@ src/
 - **Poziom kampanii**: generowany z numeru w `data/levels.ts` (biom, cel, przesunięcie fal, nazwa bossa); nowy biom = wpis w `BIOMES`.
 - **Balans**: tylko `data/balance.ts` — krzywa XP, skalowanie HP/obrażeń wrogów w czasie, gęstość fal, diminishing returns (pancerz, cdr, szybkość), limity wydajnościowe.
 
-## Stan: etapy 1-3 + przedmioty + etap 4 (sklep, synergie, kowadło, kolekcja kart, Ekspedycja, sloty zapisu) + etap 5 (meta-progresja, Endless) + etap 6 (telefon, optymalizacja, polish) + sekrety i mini-lochy
+## Stan: etapy 1-3 + przedmioty + etap 4 (sklep, synergie, kowadło, kolekcja kart, Ekspedycja, sloty zapisu) + etap 5 (meta-progresja, Endless) + etap 6 (telefon, optymalizacja, polish) + sekrety i mini-lochy + 0.13 (zasoby, zadania, unikaty, moce bossów, fuzje, pakty, teren)
 
 **Etap 1 (MVP)** — ruch, automatyczna broń, wrogowie, kryształy XP, awans z wyborem 3 kart (4 z Koniczyną), zasoby runu: losowanie (3), pominięcie (2), wygnanie (2), śmierć, ekran podsumowania, restart.
 
@@ -237,6 +244,16 @@ src/
 - Napis „R gotowe!”, gdy ultimate jest naładowany. Nowe przedmioty w plecaku mają znacznik „!”, a HUD przypomina o nich (I). Na mapie Ekspedycji jest opis sterowania.
 - Ustawienie „Zatrzymanie klatki” wyłącza efekt hitstop.
 
+**Inna gra niż Vampire Survivors (0.13)** — zmiany w samej pętli walki i buildów:
+- **Zasób bohatera** (pasek pod HP): Kestra — **Celność** z trafień z dystansu (więcej krytyków, pełna wypuszcza darmową Salwę, oberwanie zabiera połowę); Borgun — **Furia** z ciosów z bliska i obrywania (do +40% obrażeń i -20% otrzymanych, poza walką opada); Ignara — **Żar** z Q/E (czary do +60% mocniejsze, powyżej żółtej kreski żar rani, unik od 40 żaru zrzuca go wybuchem ognia); Morwen — **Dusze** z wrogów ginących w pobliżu (pełne zamieniają się w sługę, R zużywa wszystkie: mocniejsza i liczniejsza armia). Nowe karty: Spokojna ręka, Krwawy szał, Serce żaru, Zbieracz dusz.
+- **Zadania**: co minutę turkusowy kamień — dotknij, żeby zacząć zadanie z zegarem: Łowy (zabij elitę), Obrona totemu, Krąg mocy, Bez skazy (nie daj się trafić), Próba żywiołu. Nagroda: skrzynia, karta albo złoto; część porażek przyzywa karną falę. Panel po prawej, znacznik celu poza ekranem.
+- **Unikaty**: 10 przedmiotów z bossów i elit ze stałym efektem łamiącym zasady (np. bronie strzelają w kierunku ruchu za 2.5x obrażeń, leczenie zamienia się w tarczę, unik wystrzeliwuje pierścień pocisków, co 10. trafienie to reakcja żywiołów). Nie da się ich przekuć; kolekcja odkrytych (Kolekcja → Tab).
+- **Moce bossów**: po bossie wybierasz 1 z 3 jego nazwanych ataków (Śrut Otchłani, Pierścień Otchłani, Kwiat zagłady, Strumień, Pole minowe, Wylęgarnia). Moc strzela sama w twoich wrogów; wybór tej samej podnosi jej poziom (do 3).
+- **Fuzje broni**: dwie bronie na maks. poziomie (albo po ewolucji) łączą się w hybrydę i zwalniają slot — 12 receptur, np. Strzała + Meteor = Płonące strzały (wybuchy), Topór + Aura = Mroźny wir, Kostur + Piorun = Kostur burzy (naprowadzane kule), Duszki + Miny = Grobowe miny. Awans zawsze proponuje dostępną fuzję, ulepszenia broni podpowiadają „Fuzja z”.
+- **Pakty ryzyka** (jak Heat w Hadesie): na ekranie wyboru bohatera (Tab) 8 utrudnień z poziomami (twardsi i silniejsi wrogowie, hordy, szybsze pociski, elity z cechami, słabsze leczenie, krótszy czas zadań, mocniejszy boss). Poziom Paktu mnoży esencję i daje odznaki bohatera (Brąz 5 … Mistrz 20) za pokonanego bossa. Zapis v7.
+- **Teren**: osłony blokują pociski wrogów i twoje (da się je rozbić), beczki wybuchają łańcuchowo (zwabiaj wrogów), kolce ranią wszystkich, bagno spowalnia, na lodzie się ślizgasz; skład zależy od biomu. Przy bossie arena się zwęża.
+- Pomoc ma nowe strony (Zasoby, Moce) i nowe podpowiedzi.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
@@ -247,9 +264,16 @@ src/
 6. Ewolucja: rozwiń broń do poziomu 8, weź pasywkę z jej opisu (np. Magiczny pocisk + Moc), a kolejny awans zaproponuje ewolucję.
 7. Przedmioty: włącz debug (F3) i wciśnij F7 kilka razy — każde to łup bossa. Załóż coś, potem I/Tab otwiera ekwipunek; najedź na przedmiot w plecaku, żeby zobaczyć porównanie. Pauza pokazuje założone przedmioty.
 8. Ekspedycja: menu → Ekspedycja → Nowa ekspedycja → bohater. Na mapie strzałki/mysz wybierają węzeł, Enter/klik wchodzi. W walce F3 + F4 szybko kończy cel. Esc na mapie → „Zapisz i wyjdź”, przeładuj stronę → Kontynuuj wraca na mapę (albo do przerwanej walki / otwartego sklepu).
-9. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
+9. Zasoby: Trening dowolnym bohaterem — pasek pod HP (Kestra: strzelaj z dystansu; Borgun: walcz wręcz; Ignara: Q/E, potem Spacja przy żarze 40+; Morwen: zabijaj blisko, potem R).
+10. Zadania: po ok. 40 s pojawia się turkusowy kamień (znacznik na krawędzi ekranu) — dotknij go, panel po prawej pokazuje postęp i czas.
+11. Moce bossów i unikaty: F3 + F4 kilka razy → boss → po nagrodach ekran „Moc bossa”. F7 daje łup bossa (12% na unikat); odkryte unikaty: Kolekcja → Tab.
+12. Fuzje: F6 do maks. poziomu dwóch broni z receptury (np. Strzała + Meteor u Kestry) — awans zaproponuje „Fuzja”.
+13. Pakty: wybór bohatera → Tab, ustaw poziomy strzałkami; poziom Paktu widać w HUD. Teren: bagno w biomie 2, lód w biomie 4 (Hardcore: poziomy 2 i 4), arena zwęża się przy bossie.
+14. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
 
 ## Kolejne etapy
+
+0.13. Gotowe: zasoby bohaterów, zadania, unikaty, moce bossów, fuzje broni, pakty ryzyka, teren.
 
 4. Gotowe: sklep między poziomami, zestawy tagów, kowadło, kolekcja i bany kart, Ekspedycja, sloty zapisu per tryb.
 7. Bohaterowie (docelowo 6 ról): Kestra, Borgun, Ignara, Morwen — zostały 2.
