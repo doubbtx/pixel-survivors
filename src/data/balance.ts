@@ -32,6 +32,8 @@ export const BAL = {
       elem: [0, 0.08, 0.12, 0.2, 0.3],
     },
   },
+  /** Sługi (systems/minions.ts): limit naraz, szybkość, zasięg szukania celu, odstęp ciosów, promień zwarcia, odległość od gracza bez celu. */
+  minions: { cap: 40, speed: 85, range: 180, hitEvery: 0.5, radius: 6, bigRadius: 10, follow: 26, passiveDmg: 12, passiveLife: 8, harvestChance: 0.1 },
   /** Poziom broni, od którego przy awansie pojawiają się jej augmenty (data/augments.ts). */
   augmentMinLevel: 3,
   passiveSlots: 6,

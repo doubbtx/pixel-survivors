@@ -157,6 +157,7 @@ function groundTile(b: Biome, v: number): Painter {
 const BUILDERS: Record<string, () => Painter> = {
   ui_skull: uiSkull,
   bolt: () => orb(9, RAMP.blue, C.dblue),
+  soul: () => orb(7, [C.plum, C.pink, C.salmon, C.white], C.lime), // zielony obrys: odróżnia od różowych pocisków wrogów
   ember: () => orb(7, RAMP.fire, C.gold), // złoty obrys: odróżnia od pomarańczowych pocisków wrogów
   sun: () => orb(11, [C.orange, C.gold, C.yellow, C.white], C.rust),
   star, blade,

@@ -208,7 +208,7 @@ export interface DmgNum extends Poolable {
   col: number;
 }
 
-export type ZoneKind = 'meteor' | 'mine' | 'net' | 'rain' | 'beam' | 'fire';
+export type ZoneKind = 'meteor' | 'mine' | 'net' | 'rain' | 'beam' | 'fire' | 'curse';
 
 /** Strefa obrażeń w świecie: meteoryt, mina, sieć, deszcz strzał, promień lasera, ogień. */
 export interface Zone extends Poolable {
@@ -278,6 +278,20 @@ export interface Turret extends Poolable {
   y: number;
   life: number;
   timer: number;
+}
+
+/** Sługa gracza (systems/minions.ts): goni najbliższego wroga i rani go w zwarciu; `big` = wojownik Armii umarłych. */
+export interface Minion extends Poolable {
+  x: number;
+  y: number;
+  life: number;
+  damage: number;
+  hitT: number;
+  big: boolean;
+  /** Wybuch przy zniknięciu (Nieśmiertelny legion). */
+  burst: boolean;
+  /** Źródło obrażeń (nazwa umiejętności albo pasywki). */
+  src: string;
 }
 
 /** Karta (augment) zebrana w runie; karty statystyczne mogą mieć kilka stosów. */

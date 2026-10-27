@@ -13,6 +13,9 @@ export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   kestra: { seq: [0, 1, 2, 3], speed: 7 },
   borgun: { seq: [0, 1, 2, 3], speed: 8 },
   ignara: { seq: [0, 1, 2, 3], speed: 7 },
+  morwen: { seq: [0, 1, 2, 3], speed: 8 },
+  wraith: { seq: [0, 1, 2, 3], speed: 6 },
+  wraithbig: { seq: [0, 1, 2, 3], speed: 7 },
   slime: { seq: [0, 1, 2, 3], speed: 9 },
   goldslime: { seq: [0, 1, 2, 3], speed: 5 },
   bat: { seq: [0, 1, 0, 2], speed: 4 },
@@ -102,6 +105,43 @@ function ignara(f: number): Painter {
   p.px(14, 11 + o, C.tan).px(15, 11 + o, C.skin); // dłoń
   return p.outline();
 }
+
+/** Morwen: przywoływaczka w fioletowej szacie z kapturem, kostur z czaszką i zielonym płomieniem duszy. */
+function morwen(f: number): Painter {
+  const p = new Painter(20, 21);
+  const o = f % 2 === 1 ? -1 : 0;
+  const [lx, lh, rx, rh] = STRIDE[f];
+  p.rect(7 + lx, 16, 2, lh, C.black).rect(10 + rx, 16, 2, rh, C.black);
+  p.poly([[5, 9 + o], [14, 9 + o], [15, 17], [4, 17]], C.plum); // szata
+  p.sphere(9.5, 13 + o, 4.5, 4, RAMP.purple);
+  p.line(6, 16, 13, 16, C.black).rect(6, 12 + o, 7, 1, C.ddbrown).px(9, 12 + o, C.lime);
+  p.sphere(9.5, 7.5 + o, 4, 4, RAMP.purple); // kaptur
+  p.sphere(9.5, 8 + o, 2.6, 2.4, [C.black, C.black, C.navy, C.navy]); // cień pod kapturem
+  p.px(8, 8 + o, C.lime).px(11, 8 + o, C.lime); // świecące oczy
+  p.line(16, 5 + o, 16, 18 + o, C.dbrown).px(16, 10 + o, C.brown); // kostur
+  p.sphere(16, 3 + o, 2, 2, RAMP.bone).px(15, 3 + o, C.black).px(17, 3 + o, C.black);
+  p.px(16, 0 + o, f % 2 ? C.lime : C.green).px(15, 1 + o, C.green).px(17, 1 + o, C.lime); // płomień duszy
+  p.px(14, 11 + o, C.lavender).px(15, 11 + o, C.lgray); // dłoń
+  return p.outline();
+}
+
+/** Duch-sługa (mały) i wojownik Armii umarłych (duży): półprzezroczysta postać z falującym ogonem. */
+function wraithOf(f: number, big: boolean): Painter {
+  const s = big ? 1.5 : 1;
+  const w = Math.round(14 * s), h = Math.round(16 * s);
+  const p = new Painter(w, h);
+  const cx = w / 2, sway = [0, 1, 0, -1][f] * s;
+  p.poly([[cx - 4 * s, 7 * s], [cx + 4 * s, 7 * s], [cx + 2 * s + sway, 15 * s], [cx + sway, 12 * s], [cx - 2 * s + sway, 15 * s]], C.lavender);
+  p.sphere(cx, 6 * s, 4.5 * s, 4.5 * s, [C.slate, C.lavender, C.lgray, C.white]);
+  p.px(cx - 2 * s, 6 * s, C.lime).px(cx + 1.5 * s, 6 * s, C.lime).rect(cx - 1, 8.5 * s, 2, 1, C.dgray);
+  if (big) {
+    p.poly([[cx - 4 * s, 2 * s], [cx - 1, 0], [cx + 1, 0], [cx + 4 * s, 2 * s], [cx, 3 * s]], C.gold); // korona
+    p.line(w - 3, 4 * s, w - 3, h - 3, C.lgray).px(w - 3, 4 * s - 1, C.white); // miecz
+  }
+  return p.outline(C.plum);
+}
+const wraith = (f: number) => wraithOf(f, false);
+const wraithbig = (f: number) => wraithOf(f, true);
 
 /** Szlam w kolorach rampy (zielony zwykły, złoty — rzadki Złoty szlam). */
 function slimeOf(f: number, ramp: readonly number[], mouth: number): Painter {
@@ -224,7 +264,7 @@ function sentinel(f: number): Painter {
   return p.outline(C.navy);
 }
 
-export const ACTORS: Record<string, (f: number) => Painter> = { kestra, borgun, ignara, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel };
+export const ACTORS: Record<string, (f: number) => Painter> = { kestra, borgun, ignara, morwen, wraith, wraithbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel };
 
 /**
  * Boss 36×36: szata w kolorach biomu z wzorem run i pasem, naramienniki z kolcami, czaszka, korona,

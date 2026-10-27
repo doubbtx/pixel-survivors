@@ -85,6 +85,20 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.poly([[6, 3], [10, 6], [5, 7]], C.orange).poly([[15, 1], [12, 7], [10, 3]], C.orange);
     p.sphere(11, 5, 3.5, 3.5, [C.orange, C.gold, C.yellow, C.white]).px(10, 4, C.white);
   },
+  ic_souls: (p) => {
+    for (const [x, y, s] of [[5, 10, 3], [11, 5, 2.6], [12, 12, 2]] as const) {
+      p.sphere(x, y, s, s, [C.plum, C.pink, C.salmon, C.white]).px(x - 1, y - 1, C.white);
+      p.px(x + s, y + 1, C.lime);
+    }
+  },
+  ic_souls_evo: (p) => {
+    p.ring(8, 8, 6.5, 1, C.lime);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU;
+      p.sphere(8 + Math.cos(a) * 5, 8 + Math.sin(a) * 5, 1.8, 1.8, [C.plum, C.pink, C.salmon, C.white]);
+    }
+    p.sphere(8, 8, 2.4, 2.4, RAMP.bone).px(7, 8, C.black).px(9, 8, C.black);
+  },
   ic_orbit: (p) => {
     p.sphere(8, 8, 2.5, 2.5, RAMP.blue);
     for (let k = 0; k < 3; k++) {
@@ -256,6 +270,30 @@ export const ICON_FNS: Record<string, IconFn> = {
       p.line(x - 3, y - 4, x, y, C.orange);
       flame(p, x, y, s);
     }
+  },
+  ab_m_raise: (p) => {
+    p.rect(1, 13, 14, 2, C.dbrown).rect(1, 13, 14, 1, C.brown);
+    for (const [x, s] of [[5, 1], [11, 0.8]] as const) {
+      p.poly([[x - 3 * s, 8], [x + 3 * s, 8], [x + 1, 13], [x - 1, 13]], C.lavender);
+      p.sphere(x, 6, 3 * s, 3 * s, [C.slate, C.lavender, C.lgray, C.white]).px(x - 1, 6, C.lime).px(x + 1, 6, C.lime);
+    }
+  },
+  ab_m_curse: (p) => {
+    p.sphere(8, 11, 7, 3.5, [C.black, C.teal, C.dgreen, C.green]);
+    p.px(5, 10, C.lime).px(10, 11, C.lime).px(8, 12, C.pink);
+    p.sphere(8, 5, 2.5, 2.5, RAMP.bone).px(7, 5, C.black).px(9, 5, C.black);
+    p.line(4, 2, 5, 4, C.lime).line(12, 2, 11, 4, C.lime);
+  },
+  ab_m_shade: (p) => {
+    p.sphere(10, 8, 4, 5, [C.black, C.plum, C.plum, C.pink]).px(9, 7, C.lime).px(11, 7, C.lime);
+    for (let x = 1; x <= 6; x += 2) p.line(x, 6 + (x % 3), x + 2, 6 + (x % 3), C.plum).line(x, 10, x + 1, 10, C.dgray);
+  },
+  ab_m_legion: (p) => {
+    for (const [x, y] of [[4, 9], [8, 7], [12, 9]] as const) {
+      p.sphere(x, y, 2.6, 2.6, [C.slate, C.lavender, C.lgray, C.white]).px(x - 1, y, C.lime).px(x + 1, y, C.lime);
+      p.line(x, y + 3, x, y + 6, C.lavender);
+    }
+    p.poly([[5, 3], [8, 1], [11, 3], [8, 4]], C.gold);
   },
   ab_b_titan: (p) => {
     p.ring(8, 8.5, 7.5, 1, C.red);

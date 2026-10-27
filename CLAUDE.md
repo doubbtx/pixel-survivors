@@ -27,10 +27,10 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `icons.ts` (ikony 16×16: `ic_<broń>`, `pi_<pasywka>`, `ab_<umiejętność>`, `tag:<Tag>`), `items.ts` (`it_<przedmiot>`),
   `actors.ts` (animowane postacie, `name@klatka`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów).
 - `data/` — `balance.ts`, `weapons.ts` (z ewolucjami), `passives.ts`, `enemies.ts` (Volley: kształt i ruch salw), `waves.ts`, `heroes.ts`,
-  `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `upgrades.ts` (jakość ulepszeń broni, `WeaponBonus`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (78 kart: stats/mul/flags/hooks; lista flag w komentarzu pliku),
+  `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `upgrades.ts` (jakość ulepszeń broni, `WeaponBonus`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (82 karty: stats/mul/flags/hooks; lista flag w komentarzu pliku),
   `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, rollItem, porównania).
 - `entities/` — typy encji.
-- `systems/` — gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans (levelup), wieżyczki,
+- `systems/` — gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans (levelup), wieżyczki, sługi (`minions.ts`),
   sklep (zakupy), kowadło (`anvil.ts`: ulepsz, przekuj, jakość, przenieś super-bonus).
 - `game/run.ts` — klasa `Run`: postać + świat poziomu, `damageEnemy` (jedyne miejsce utraty HP wroga), `killEnemy`,
   `hurtPlayer`, `recomputeStats` (bohater + pasywki + karty + ekwipunek), `indexEffects` (flagi i hooki z kart i super-bonusów),
@@ -40,7 +40,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView), `expedition.ts` (ExpeditionMapView), `collection.ts` (kolekcja i bany kart), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `game-screen.ts` (stany: play/levelup/cards/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb).
 
-## Stan (wersja 0.10.0)
+## Stan (wersja 0.11.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -124,10 +124,16 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   liczby obrażeń tylko dla krytyków w tłumie, dźwięki żywiołów i reakcji, mocniejszy boss, dźwięk najechania w menu,
   więcej klatek wrogów (golem, kultysta, strażnik, wirujący) i 4-klatkowy boss z detalami, druga warstwa podłoża (`patch`),
   migotanie legendarnych przedmiotów.
+- Etap 8 (0.11, bohaterowie 4/6): Morwen — Przywoływaczka. Sługi: `systems/minions.ts` (`spawnMinion`, `run.minions`, `BAL.minions`,
+  flagi `minionDmg/minionSpeed/minionLife`, synergia Przywołania +30% obrażeń sług). Broń `souls`/`souls_evo` (trucizna),
+  umiejętności `summon`/`curse` (strefa `curse`)/`dash`/`legion` z ewolucjami (Zastęp, Przeklęta ziemia — poraża, Nieśmiertelny
+  legion — sługi wybuchają), pasywka `killSummon` (Zew dusz), 4 karty `h_m_*`, augmenty Duszek (Wędrujące dusze, Żniwo — `run.lastHitSrc`),
+  drzewko Rozwoju (Przywołania, Klątwy, Cień, Dusze; klucz `dashSummon`), sprite'y `morwen`, `wraith`, `wraithbig`, `soul`.
+  Uwaga: `HeroDef.base` nadpisuje wartości domyślne statystyk (np. `duration: 1.1`, nie `0.1`).
 
 ## Plan dalej
 
-- Kolejni bohaterowie: zostały 3 role (np. przywoływacz, zabójca, kapłan) — wszystko oryginalne.
+- Kolejni bohaterowie: zostały 2 role (np. zabójca, kapłan) — wszystko oryginalne.
 - Balans Ekspedycji po testach (długość walk, nagrody węzłów).
 
 ## Testowanie

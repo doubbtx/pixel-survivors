@@ -8,7 +8,7 @@ import type { Tag } from './cards';
  * Ultimate (slot 'ult') nie ma czasu odnowienia — ładuje się zabójstwami (`charge`).
  */
 export type AbilitySlot = 'q' | 'e' | 'dash' | 'ult';
-export type AbilityKind = 'volley' | 'net' | 'dash' | 'rain' | 'charge' | 'slam' | 'titan' | 'fireball' | 'firering' | 'inferno';
+export type AbilityKind = 'volley' | 'net' | 'dash' | 'rain' | 'charge' | 'slam' | 'titan' | 'fireball' | 'firering' | 'inferno' | 'summon' | 'curse' | 'legion';
 
 export interface AbilityDef {
   id: string;
@@ -36,8 +36,11 @@ export interface AbilityDef {
   evolved?: boolean;
 }
 
-/** nthVolley: co N-ta salwa broni podstawowej mocniejsza; killShield: tarcza za zabójstwa; echoCast: co N-te Q/E powtarza się za darmo. */
-export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast';
+/**
+ * nthVolley: co N-ta salwa broni podstawowej mocniejsza; killShield: tarcza za zabójstwa; echoCast: co N-te Q/E powtarza się za darmo;
+ * killSummon: co N-te zabójstwo przywołuje ducha-sługę.
+ */
+export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast' | 'killSummon';
 
 export interface HeroDef {
   id: string;
@@ -73,7 +76,7 @@ export function abilityCooldown(def: AbilityDef, level: number): number {
 /** Opisy przyrostów parametrów umiejętności na poziom (klucze z `pl`). */
 const ABILITY_DELTA: Record<string, (v: number, def: AbilityDef) => string> = {
   damage: (v) => `+${v} obrażeń`,
-  count: (v, d) => `+${v} ${d.kind === 'volley' ? 'strzała' : 'pocisk'}`,
+  count: (v, d) => `+${v} ${d.kind === 'volley' ? 'strzała' : d.kind === 'summon' || d.kind === 'legion' ? 'sługa' : 'pocisk'}`,
   radius: (v) => `+${v} promienia`,
   duration: (v) => `działa o ${v} s dłużej`,
   dist: (v) => `+${v} zasięgu`,
@@ -183,6 +186,38 @@ export const HEROES: HeroDef[] = [
         cooldown: 0, cdPerLevel: 0, charge: 130, maxLevel: 5,
         p: { duration: 5, damage: 30, radius: 90, blast: 22 }, pl: { duration: 0.5, damage: 12, blast: 2 },
         evo: { tag: 'Umiejętności', name: 'Kataklizm', desc: 'Dłuższy deszcz meteorów, które spadają dwa razy gęściej.', icon: 'ab_i_inferno_evo', bonus: { duration: 2, damage: 15 } },
+      },
+    ],
+  },
+  {
+    id: 'morwen', name: 'Morwen', role: 'Przywoływaczka', sprite: 'morwen', color: C.pink,
+    base: { maxHp: 95, speed: 56, duration: 1.1 },
+    weapon: 'souls',
+    tags: ['Przywołania', 'Klątwa'],
+    passive: { name: 'Zew dusz', desc: 'Co 15. zabójstwo z ciała wroga powstaje duch-sługa na 8 s.', kind: 'killSummon', value: 15 },
+    abilities: [
+      {
+        id: 'm_raise', name: 'Przywołanie', icon: 'ab_m_raise', desc: 'Przywołujesz duchy-sługi, które gonią i ranią wrogów.', slot: 'q', kind: 'summon', color: C.pink,
+        cooldown: 9, cdPerLevel: -0.5, maxLevel: 5,
+        p: { count: 2, damage: 14, duration: 10 }, pl: { count: 1, damage: 6 },
+        evo: { tag: 'Przywołania', name: 'Zastęp', desc: 'Więcej i silniejszych duchów, które dłużej trwają.', icon: 'ab_m_raise_evo', bonus: { count: 2, damage: 10, duration: 4 } },
+      },
+      {
+        id: 'm_curse', name: 'Bagno dusz', icon: 'ab_m_curse', desc: 'Przeklęte bagno w miejscu celownika: spowalnia, rani i zatruwa.', slot: 'e', kind: 'curse', color: C.lime,
+        cooldown: 11, cdPerLevel: -0.6, maxLevel: 5,
+        p: { damage: 8, radius: 34, duration: 4, range: 130 }, pl: { damage: 4, radius: 4, duration: 0.5 },
+        evo: { tag: 'Klątwa', name: 'Przeklęta ziemia', desc: 'Większe bagno, które także poraża wrogów (więcej obrażeń ze wszystkich źródeł).', icon: 'ab_m_curse_evo', bonus: { radius: 14, damage: 6 } },
+      },
+      {
+        id: 'm_shade', name: 'Cień', icon: 'ab_m_shade', desc: 'Rozpływasz się w cień i przemykasz z nietykalnością.', slot: 'dash', kind: 'dash', color: C.plum,
+        cooldown: 2.8, cdPerLevel: 0, maxLevel: 1,
+        p: { dist: 60, iframes: 0.45 }, pl: {},
+      },
+      {
+        id: 'm_legion', name: 'Armia umarłych', icon: 'ab_m_legion', desc: 'Z ziemi wstają potężni wojownicy-duchy, które walczą za ciebie.', slot: 'ult', kind: 'legion', color: C.salmon,
+        cooldown: 0, cdPerLevel: 0, charge: 130, maxLevel: 5,
+        p: { count: 5, damage: 40, duration: 12 }, pl: { count: 1, damage: 15 },
+        evo: { tag: 'Umiejętności', name: 'Nieśmiertelny legion', desc: 'Więcej wojowników, a każdy na koniec wybucha (3x obrażeń).', icon: 'ab_m_legion_evo', bonus: { count: 2, damage: 15 } },
       },
     ],
   },

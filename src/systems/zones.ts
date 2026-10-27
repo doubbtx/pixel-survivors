@@ -60,6 +60,7 @@ export function updateZones(run: Run, dt: number): void {
       case 'net':
       case 'rain':
       case 'fire':
+      case 'curse':
         if (tick) {
           run.enemiesInCircle(z.x, z.y, z.r, (e) => {
             run.damageEnemy(e, z.damage, z.src);

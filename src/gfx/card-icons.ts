@@ -117,4 +117,23 @@ export const CARD_ICONS_GFX: Record<string, (p: Painter) => void> = {
       p.sphere(x, y, 1.8, 1.8, RAMP.fire).px(x, y, C.yellow);
     }
   },
+  ab_m_raise_evo: (p) => {
+    for (const [x, y] of [[3, 8], [8, 5], [13, 8], [6, 12], [11, 12]] as const) {
+      p.sphere(x, y, 2.2, 2.2, [C.slate, C.lavender, C.lgray, C.white]).px(x, y, C.lime);
+    }
+    p.ring(8, 9, 7.5, 1, C.pink);
+  },
+  ab_m_curse_evo: (p) => {
+    p.sphere(8, 11, 7.5, 4, [C.black, C.plum, C.dgreen, C.lime]);
+    p.line(4, 3, 7, 8, C.yellow).line(7, 8, 6, 9, C.yellow).line(6, 9, 9, 13, C.white);
+    p.sphere(11, 5, 2.4, 2.4, RAMP.bone).px(10, 5, C.black).px(12, 5, C.black);
+  },
+  ab_m_legion_evo: (p) => {
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU;
+      p.line(8, 8, 8 + Math.cos(a) * 7, 8 + Math.sin(a) * 7, i % 2 ? C.pink : C.gold);
+    }
+    p.sphere(8, 8, 3.5, 3.5, [C.slate, C.lavender, C.lgray, C.white]).px(7, 8, C.lime).px(9, 8, C.lime);
+    p.poly([[5, 4], [8, 2], [11, 4], [8, 5]], C.gold);
+  },
 };

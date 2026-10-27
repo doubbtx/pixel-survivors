@@ -140,6 +140,12 @@ export function renderWorld(run: Run, r: Renderer): void {
             r.rect(ax, ay, 1, 1, C.white);
           }
           break;
+        case 'curse':
+          // Bagno dusz: zielono-fioletowa toń z bąblami i ognikami.
+          r.withAlpha(0.22, () => r.circle(zx, zy, zr, C.dgreen, true));
+          r.circle(zx, zy, zr, run.step % 30 < 15 ? C.lime : C.plum);
+          for (let k = 0; k < 4; k++) r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7, 2, 2, k % 2 ? C.lime : C.pink);
+          break;
         case 'fire':
           r.withAlpha(0.2, () => r.circle(zx, zy, zr, C.orange, true));
           for (let k = 0; k < 5; k++) {
@@ -244,6 +250,13 @@ export function renderWorld(run: Run, r: Renderer): void {
   // Wieżyczki (karty z tagiem Przywołania).
   for (const t of run.turrets.items) {
     if (t.life > 1.5 || run.step % 8 < 5) drawSprite(g, 'turret', X(t.x), Y(t.y));
+  }
+
+  // Sługi (duchy): półprzezroczyste, migają przed zniknięciem.
+  for (const m of run.minions.items) {
+    if (!vis(m.x, m.y) || (m.life < 1.5 && run.step % 8 >= 5)) continue;
+    const name = m.big ? 'wraithbig' : 'wraith';
+    r.withAlpha(0.85, () => drawSprite(g, `${name}@${animFrame(name, run.step, m._i * 5)}`, X(m.x), Y(m.y) - 2, { flipX: m.x > p.x }));
   }
 
   // Wrogowie.

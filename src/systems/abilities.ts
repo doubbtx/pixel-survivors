@@ -6,6 +6,7 @@ import { BAL } from '../data/balance';
 import { abilityParam, abilityCooldown, type AbilityKind, type AbilitySlot } from '../data/heroes';
 import { SLOT, type AbilityInst } from '../entities/types';
 import type { Run } from '../game/run';
+import { spawnMinion } from './minions';
 
 const ORDER: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
 
@@ -63,6 +64,11 @@ const EVO_EXTRA: Record<string, Cast> = {
   },
   // Płomienna bariera: tarcza 15% HP.
   i_ring: (run) => { run.addShield(run.stats.maxHp * 0.15, 0.3); },
+  // Przeklęta ziemia: wrogowie w bagnie zostają porażeni.
+  m_curse: (run, _a, P) => {
+    const [x, y] = aimPoint(run, P('range'));
+    run.enemiesInCircle(x, y, P('radius') * run.stats.area, (e) => run.applyElement(e, 'lightning', P('damage') * run.stats.might));
+  },
 };
 
 /** Zachowania umiejętności. `P(klucz)` zwraca parametr na bieżącym poziomie. */
@@ -174,6 +180,25 @@ const CASTS: Record<AbilityKind, Cast> = {
     run.addShake(2);
   },
 
+  summon(run, a, P) {
+    const p = run.player;
+    for (let i = 0; i < Math.round(P('count')); i++) spawnMinion(run, p.x, p.y, P('damage') * run.stats.might, P('duration'), false, a.def.name);
+  },
+
+  curse(run, a, P) {
+    const [x, y] = aimPoint(run, P('range'));
+    const z = run.addZone('curse', x, y, P('radius') * run.stats.area, P('damage') * run.stats.might, P('duration') * run.stats.duration, SLOT.e, a.def.name);
+    if (z) { z.slow = 0.4; z.tick = 30; }
+    run.burst(x, y, C.lime, 12, 40);
+  },
+
+  legion(run, a, P) {
+    const p = run.player;
+    for (let i = 0; i < Math.round(P('count')); i++) spawnMinion(run, p.x, p.y, P('damage') * run.stats.might, P('duration'), true, a.def.name, !!a.def.evolved);
+    run.showBanner(a.def.name + '!');
+    run.addShake(5);
+  },
+
   inferno(run, a, P) {
     a.activeT = P('duration') * run.stats.duration;
     run.showBanner(a.def.name + '!');
@@ -225,6 +250,7 @@ export function castAbility(run: Run, slot: AbilitySlot, free = false): void {
   if (slot === 'dash') {
     const reset = run.flag('dashResetQ');
     if (reset > 0) run.abilities.q.cd *= 1 - Math.min(1, reset);
+    if (run.flag('dashSummon') > 0) spawnMinion(run, run.player.x, run.player.y, 14 * run.stats.might, 8, false, 'Cień');
     if (run.flag('dashNet') > 0) {
       const z = run.addZone('net', run.player.x, run.player.y, 26 * run.stats.area, 8 * run.stats.might, 2.5 * run.stats.duration, SLOT.e, 'Sidła');
       if (z) { z.slow = 0.6; z.tick = 30; }

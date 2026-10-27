@@ -223,6 +223,13 @@ src/
 - **Grafika**: więcej klatek animacji wrogów (Golem chodzi i macha rękami, Kultysta faluje szatą, Strażnik ma krążące runy), boss w 4 klatkach z naramiennikami, pasem, runami i iskrami, druga warstwa podłoża (plamy terenu), migoczące legendarne przedmioty.
 - **Czytelność późnej gry**: przy ponad 350 wrogach liczby obrażeń tylko dla krytyków.
 
+**Morwen, Przywoływaczka (0.11, bohaterowie 4/6)**:
+- 95 HP, efekty trwają 10% dłużej. Broń: **Duszki** (zatrute dusze; ewolucja z Klepsydrą: **Rój dusz**).
+- Pasywka **Zew dusz**: co 15. zabójstwo z ciała wroga powstaje duch-sługa na 8 s.
+- Q **Przywołanie** (duchy gonią i ranią wrogów), E **Bagno dusz** (spowalnia, rani i zatruwa), Spacja **Cień**, R **Armia umarłych** (potężni wojownicy-duchy).
+- Ewolucje: Zastęp, Przeklęta ziemia (bagno też poraża), Nieśmiertelny legion (wojownicy na koniec wybuchają). Karty: Mroczny zew, Liczny zastęp, Głębokie bagno, Lisz. Augmenty Duszek: Wędrujące dusze, Żniwo (zabity wróg może powstać jako sługa). Własne drzewko Rozwoju: Przywołania, Klątwy, Cień, Dusze.
+- Synergia Przywołania (3+) wzmacnia też sługi (+30% obrażeń).
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
@@ -238,6 +245,6 @@ src/
 ## Kolejne etapy
 
 4. Gotowe: sklep między poziomami, zestawy tagów, kowadło, kolekcja i bany kart, Ekspedycja, sloty zapisu per tryb.
-7. Bohaterowie (docelowo 6 ról): Kestra, Borgun, Ignara — zostały 3.
+7. Bohaterowie (docelowo 6 ról): Kestra, Borgun, Ignara, Morwen — zostały 2.
 5. Gotowe: meta-progresja, Paragon, prestiż, Endless, formatowanie liczb (break_infinity.js tylko, gdyby wartości wyszły poza zakres double).
 6. Gotowe: optymalizacja (tryb oszczędnych efektów), polish, wirtualny joystick i przyciski na telefonie.

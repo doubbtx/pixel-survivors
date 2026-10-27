@@ -23,7 +23,7 @@ import { equippedSupers, salvageGold, salvageShards, slotKind, rollItem, BASE_BY
 import {
   SLOT, SLOT_COUNT, type Stats, type Player, type Enemy, type Projectile, type EnemyBullet, type Gem, type Pickup,
   type Particle, type DmgNum, type Zone, type Fx, type WeaponInst, type PassiveInst, type AbilityInst, type PickupKind,
-  type Turret, type CardInst, type ProjKind,
+  type Turret, type Minion, type CardInst, type ProjKind,
 } from '../entities/types';
 import { fmt } from '../util/format';
 import { updatePlayer } from '../systems/player';
@@ -36,6 +36,7 @@ import { updateZones } from '../systems/zones';
 import { updatePickups } from '../systems/pickups';
 import { updateEffects } from '../systems/effects';
 import { updateTurrets } from '../systems/turrets';
+import { updateMinions, spawnMinion } from '../systems/minions';
 import { updateEvents, startDungeon, type MapObject, type Buff, type Dungeon } from '../systems/events';
 
 export const DEFAULT_STATS: Stats = {
@@ -203,6 +204,7 @@ export class Run {
   readonly zones = new Pool<Zone>(newZone, 500);
   readonly fx = new Pool<Fx>(newFx, 400);
   readonly turrets = new Pool<Turret>(() => ({ _i: -1, x: 0, y: 0, life: 0, timer: 0 }), 24);
+  readonly minions = new Pool<Minion>(() => ({ _i: -1, x: 0, y: 0, life: 0, damage: 0, hitT: 0, big: false, burst: false, src: '' }), BAL.minions.cap);
   readonly hash = new SpatialHash<Enemy>(16, 8, 2048);
   /** Wspólne bufory zapytań (żeby nie alokować tablic co klatkę). */
   readonly qa: Enemy[] = [];
@@ -302,6 +304,8 @@ export class Run {
   dpsEma = 0;
   powerMul = 1;
   private dmgStep = 0;
+  /** Źródło ostatniego trafienia (np. Żniwo: czy wroga zabiła dusza). */
+  private lastHitSrc = '';
   /** > 0 w trakcie hooków trafienia procentowego (PCT_SOURCES). */
   private pctDepth = 0;
   nextEvent = 0;
@@ -368,7 +372,7 @@ export class Run {
     this.swordRolled = false;
     this.goldSlimeT = BAL.events.goldSlimeGap * 0.5;
     delete this.cardState['aug.orbit'];
-    for (const p of [this.enemies, this.projectiles, this.bullets, this.gems, this.pickups, this.particles, this.dmgNums, this.zones, this.fx, this.turrets] as Pool<{ _i: number }>[]) p.clear();
+    for (const p of [this.enemies, this.projectiles, this.bullets, this.gems, this.pickups, this.particles, this.dmgNums, this.zones, this.fx, this.turrets, this.minions] as Pool<{ _i: number }>[]) p.clear();
     this.timers = [];
     const p = this.player;
     p.x = 0; p.y = 0; p.dashT = 0; p.iframes = 1; p.hurtCd = 0;
@@ -441,6 +445,7 @@ export class Run {
     updateAbilities(this, input, dt);
     updateWeapons(this, dt);
     updateTurrets(this, dt);
+    updateMinions(this, dt);
     this.emit('onTick', dt);
     updateProjectiles(this, dt);
     updateEnemyBullets(this, dt);
@@ -874,6 +879,7 @@ export class Run {
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dmg);
     const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;
     if (!pct) this.dmgStep += dmg;
+    this.lastHitSrc = src;
     if (st.lifesteal > 0) this.heal(Math.min(dmg * st.lifesteal, st.maxHp * 0.02));
     if (o.knock) {
       const l = Math.hypot(o.kx ?? 0, o.ky ?? 0) || 1;
@@ -1016,7 +1022,17 @@ export class Run {
     if (e.boss || e.elite) this.boomFx(e.x, e.y, e.boss ? 40 : 20);
     this.spawnGem(e.x, e.y, e.xp);
     sfx.play('kill');
-    if (this.hero.passive.kind === 'killShield') this.killShield(BAL.killShieldPerKill, this.hero.passive.value + this.flag('passive.shieldCap'));
+    const hp = this.hero.passive;
+    if (hp.kind === 'killShield') this.killShield(BAL.killShieldPerKill, hp.value + this.flag('passive.shieldCap'));
+    // Zew dusz (Morwen): co N-te zabójstwo z ciała wroga powstaje duch-sługa.
+    if (hp.kind === 'killSummon' && (this.cardState.killSummon = (this.cardState.killSummon ?? 0) + 1) >= Math.max(3, hp.value - this.flag('passive.n'))) {
+      this.cardState.killSummon = 0;
+      spawnMinion(this, e.x, e.y, this.cardDamage(BAL.minions.passiveDmg), BAL.minions.passiveLife, false, hp.name);
+    }
+    // Żniwo (augment Duszek): wróg zabity duszą może powstać jako sługa.
+    if (this.aug('souls_raise') && (this.lastHitSrc === 'Duszki' || this.lastHitSrc === 'Rój dusz') && rng.chance(BAL.minions.harvestChance)) {
+      spawnMinion(this, e.x, e.y, this.cardDamage(BAL.minions.passiveDmg), BAL.minions.passiveLife, false, 'Żniwo');
+    }
     this.emit('onKill', e);
     if (e.elite) {
       this.dropChest(e.x, e.y, 'elite');

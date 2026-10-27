@@ -151,7 +151,7 @@ export const SYNERGIES: SynergyDef[] = [
   {
     tag: 'Przywołania', thresholds: STD, tiers: [
       { desc: 'Co 15 s wieżyczka na 8 s', hooks: { onTick: (run, dt) => { if (every(run, 'syn.summon', dt, 15)) spawnTurret(run, run.player.x, run.player.y, 8); } } },
-      { desc: 'Wieżyczki strzelają 50% szybciej', flags: { turretRate: 0.5 } },
+      { desc: 'Wieżyczki strzelają 50% szybciej, sługi zadają +30% obrażeń', flags: { turretRate: 0.5, minionDmg: 0.3 } },
       { desc: 'Co 7 s kolejna wieżyczka na 8 s', hooks: { onTick: (run, dt) => { if (every(run, 'syn.summon2', dt, 7)) spawnTurret(run, run.player.x, run.player.y, 8); } } },
     ],
   },

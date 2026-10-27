@@ -67,7 +67,7 @@ function fireProjectile(run: Run, w: WeaponInst, s: EffWeapon, angle: number, fo
   if (boomerang) pr.t = -s.duration; // bumerang: t<0 = lot w przód
   // Augmenty pocisków (data/augments.ts).
   const base = weaponBase(w.def);
-  if ((base === 'bolt' && run.aug('bolt_seek')) || (base === 'staff' && run.aug('staff_seek'))) pr.retarget = 2;
+  if ((base === 'bolt' && run.aug('bolt_seek')) || (base === 'staff' && run.aug('staff_seek')) || (base === 'souls' && run.aug('souls_seek'))) pr.retarget = 2;
   if (base === 'bolt' && run.aug('bolt_split')) pr.split = 1;
   if (base === 'arrow' && run.aug('arrow_split')) pr.splitEnd = 1;
   if (base === 'boomerang' && run.aug('boom_return')) pr.retMul = 2;

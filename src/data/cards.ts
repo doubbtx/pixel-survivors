@@ -41,6 +41,8 @@ import { spawnTurret } from '../systems/turrets';
  *  dashNet         unik zostawia sieć (spowalnia i rani)
  *  ringShield      Pierścień ognia daje tarczę (ułamek maks. HP)
  *  counterSlam     oberwanie wyzwala darmowe E (wartość = odstęp w s)
+ *  minionDmg / minionSpeed / minionLife   mocniejsze, szybsze, dłużej żyjące sługi (systems/minions.ts)
+ *  dashSummon      unik przywołuje ducha-sługę
  * Flagi map Ekspedycji (data/expedition.ts, na czas poziomu):
  *  enemyDmg / enemyCount / eliteRate / bulletDensity   silniejsi, liczniejsi wrogowie, częstsze elity, gęstsze salwy
  *  healCut         leczenie słabsze o ułamek
@@ -161,6 +163,7 @@ export const CARDS: CardDef[] = [
     id: 'h_i_blinkfire', name: 'Ognisty skok', rarity: 'silver', tags: ['Ogień', 'Szybkość'], hero: 'ignara', desc: 'Mignięcie zostawia wybuch ognia w miejscu startu.',
     hooks: { onDash: (run) => run.explode(run.player.x, run.player.y, 26 * run.stats.area, run.cardDamage(25), 'Ognisty skok', C.orange, 4) },
   },
+  { id: 'h_m_call', name: 'Mroczny zew', rarity: 'silver', tags: ['Przywołania'], hero: 'morwen', desc: 'Zew dusz działa o 4 zabójstwa wcześniej.', stackable: true, flags: { 'passive.n': 4 } },
   { id: 'h_i_kindle', name: 'Rozżarzenie', rarity: 'silver', tags: ['Ogień', 'Obszar'], hero: 'ignara', desc: 'Kula ognia: +15 obrażeń, +6 promienia.', stackable: true, flags: { 'i_fireball.damage': 15, 'i_fireball.radius': 6 } },
   { id: 'h_b_hide', name: 'Twarda skóra', rarity: 'silver', tags: ['Tarcze'], hero: 'borgun', desc: 'Tarcza z Żelaznej woli może urosnąć o 10% HP więcej. +2 pancerza.', stackable: true, flags: { 'passive.shieldCap': 0.1 }, stats: { armor: 2 } },
 
@@ -297,6 +300,8 @@ export const CARDS: CardDef[] = [
       },
     },
   },
+  { id: 'h_m_army', name: 'Liczny zastęp', rarity: 'gold', tags: ['Przywołania', 'Umiejętności'], hero: 'morwen', desc: 'Przywołanie: +2 duchy, trwają 4 s dłużej.', stackable: true, flags: { 'm_raise.count': 2, 'm_raise.duration': 4 } },
+  { id: 'h_m_swamp', name: 'Głębokie bagno', rarity: 'gold', tags: ['Klątwa', 'Obszar'], hero: 'morwen', desc: 'Bagno dusz: +12 promienia, +2 s, +6 obrażeń co tick.', stackable: true, flags: { 'm_curse.radius': 12, 'm_curse.duration': 2, 'm_curse.damage': 6 } },
 
   // ======================= PRYZMATYCZNE =======================
   { id: 'p_bloodpact', name: 'Pakt krwi', rarity: 'prism', tags: ['Klątwa', 'Krytyk'], cursed: true, desc: '+100% obrażeń, ale nie możesz się leczyć.', stats: { might: 1 }, flags: { noHeal: 1 } },
@@ -359,6 +364,7 @@ export const CARDS: CardDef[] = [
     id: 'h_i_echo', name: 'Podwójne echo', rarity: 'prism', tags: ['Umiejętności', 'Ogień'], hero: 'ignara', desc: 'Echo mocy działa co 2. użycie Q lub E zamiast co 3., a odnowienie umiejętności jest o 15% krótsze.',
     flags: { 'passive.n': 1 }, stats: { cdr: 0.15 },
   },
+  { id: 'h_m_lich', name: 'Lisz', rarity: 'prism', tags: ['Przywołania', 'Klątwa'], hero: 'morwen', desc: 'Sługi zadają +60% obrażeń, są 30% szybsze i żyją 50% dłużej.', flags: { minionDmg: 0.6, minionSpeed: 0.3, minionLife: 0.5 } },
   { id: 'p_catalyst', name: 'Katalizator', rarity: 'prism', tags: ['Ogień', 'Obszar'], desc: 'Reakcje żywiołów są 2x silniejsze i odnawiają się na wrogu 2x szybciej.', flags: { reactPower: 1, reactCd: 0.5 } },
   {
     id: 'p_overdrive', name: 'Przeładowanie', rarity: 'prism', tags: ['Umiejętności', 'Szybkość'], desc: 'Co 10 s bronie atakują 3x szybciej przez 3 s.',
@@ -408,6 +414,7 @@ const CARD_ICONS: Record<string, string> = {
   g_prism: 'syn_all', g_reactor: 'cd_explode', g_storm: 'cd_tempest', g_spread: 'ic_orbit_evo', g_veteran: 'pi_heart',
   g_giant: 'ui_skull', g_cull: 'ic_axe_evo', c_brittle: 'cd_glass', c_haunt: 'cd_fever',
   h_k_cover: 'ab_k_rain', h_b_counter: 'ab_b_titan', h_i_vortex: 'ab_i_ring_evo',
+  h_m_call: 'ab_m_raise', h_m_army: 'ab_m_raise_evo', h_m_swamp: 'ab_m_curse', h_m_lich: 'ab_m_legion_evo',
   p_catalyst: 'cd_nova', p_overdrive: 'pi_fury', c_ritual: 'cd_blood', h_k_inspire: 'ab_k_rain_evo',
 };
 for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;

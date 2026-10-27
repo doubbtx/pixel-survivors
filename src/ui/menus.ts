@@ -44,7 +44,8 @@ function menuBackdrop(app: App, t: number): void {
   walk('kestra', lead, false, 0);
   walk('borgun', lead - 26, false, 1);
   walk('ignara', lead - 50, false, 2);
-  PARADE.forEach((name, i) => walk(name, lead - 94 - i * 28, false, i + 3));
+  walk('morwen', lead - 74, false, 3);
+  PARADE.forEach((name, i) => walk(name, lead - 118 - i * 28, false, i + 4));
 }
 
 export class MainMenu implements Screen {

@@ -172,6 +172,17 @@ export const WEAPONS: WeaponDef[] = [
     base: S({ damage: 34, cooldown: 0.5, amount: 4, speed: 200, area: 1.6, duration: 1.8, pierce: 3, knock: 2 }),
     levels: [], evolved: true,
   },
+  {
+    id: 'souls', name: 'Duszki', desc: 'Zatrute dusze lecą w najbliższych wrogów.', icon: 'ic_souls', kind: 'bolt', color: C.pink, proj: 'soul', hero: 'morwen',
+    base: S({ damage: 11, cooldown: 0.9, speed: 140, duration: 1.7, pierce: 1 }),
+    levels: [{ damage: 4 }, { amount: 1 }, { cooldown: -0.1 }, { pierce: 1, damage: 4 }, { amount: 1 }, { cooldown: -0.1 }, { damage: 10, amount: 1 }],
+    evolve: { passive: 'hourglass', into: 'souls_evo' },
+  },
+  {
+    id: 'souls_evo', name: 'Rój dusz', desc: 'Chmara dusz przenikających wrogów.', icon: 'ic_souls_evo', kind: 'bolt', color: C.salmon, proj: 'soul', hero: 'morwen',
+    base: S({ damage: 26, cooldown: 0.45, amount: 4, speed: 170, area: 1.3, duration: 2, pierce: 4, knock: 1 }),
+    levels: [], evolved: true,
+  },
 ];
 
 export const WEAPON_BY_ID: Record<string, WeaponDef> = Object.fromEntries(WEAPONS.map((w) => [w.id, w]));

@@ -39,6 +39,8 @@ export const AUGMENTS: AugmentDef[] = [
   { id: 'axe_blood', weapon: 'axe', name: 'Krwawe cięcie', desc: 'Cięcie leczy 0.5 HP za każdego trafionego wroga (do 5 HP).' },
   { id: 'staff_blast', weapon: 'staff', name: 'Wybuchowe kule', desc: 'Kula ognia wybucha przy trafieniu (50% obrażeń).' },
   { id: 'staff_seek', weapon: 'staff', name: 'Wędrujący płomień', desc: 'Po trafieniu kula leci do najbliższego innego wroga (2 razy).' },
+  { id: 'souls_seek', weapon: 'souls', name: 'Wędrujące dusze', desc: 'Po trafieniu dusza leci do kolejnego wroga (2 razy).' },
+  { id: 'souls_raise', weapon: 'souls', name: 'Żniwo', desc: 'Wróg zabity duszą ma 10% szans powstać jako duch-sługa.' },
 ];
 
 export const AUGMENT_BY_ID: Record<string, AugmentDef> = Object.fromEntries(AUGMENTS.map((a) => [a.id, a]));

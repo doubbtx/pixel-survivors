@@ -24,7 +24,7 @@ export const WEAPON_ELEMENT: Record<string, Element> = {
   chain: 'lightning', chain_evo: 'lightning', laser: 'lightning', laser_evo: 'lightning',
   meteor: 'fire', meteor_evo: 'fire', mines: 'fire', mines_evo: 'fire',
   orbit: 'poison', orbit_evo: 'poison',
-  staff: 'fire', staff_evo: 'fire',
+  staff: 'fire', staff_evo: 'fire', souls: 'poison', souls_evo: 'poison',
 };
 
 /** Źródła obrażeń spoza broni z żywiołem (karty, synergie, umiejętności). */
@@ -32,6 +32,7 @@ const EXTRA_SOURCES: Record<string, Element> = {
   'Iskra': 'fire', 'Płonący ślad': 'fire', 'Synergia: Ogień': 'fire', 'Ognista dusza': 'fire', 'Wybuchowe zgony': 'fire',
   'Gniew burzy': 'lightning', 'Krytyczna masa': 'lightning',
   'Sieć': 'ice', 'Lodowa sieć': 'ice', 'Sidła': 'ice', 'Ognisty skok': 'fire',
+  'Bagno dusz': 'poison', 'Przeklęta ziemia': 'poison',
   'Kula ognia': 'fire', 'Słońce': 'fire', 'Pierścień ognia': 'fire', 'Płomienna bariera': 'fire', 'Inferno': 'fire', 'Kataklizm': 'fire',
 };
 
