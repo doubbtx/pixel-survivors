@@ -76,10 +76,18 @@ export class Menu {
   sel = 0;
   private lastMouse = 0;
 
-  constructor(public items: MenuItem[], public cx: number, public y: number, public w = 180, public lineH = 17) {}
+  /** `gaps`: dodatkowy odstęp (px) przed pozycją o danym indeksie (grupy w menu głównym). */
+  constructor(public items: MenuItem[], public cx: number, public y: number, public w = 180, public lineH = 17, public gaps: Record<number, number> = {}) {}
+
+  /** Górna krawędź pozycji `i` (z odstępami grup). */
+  top(i: number): number {
+    let y = this.y + i * this.lineH;
+    for (const k in this.gaps) if (Number(k) <= i) y += this.gaps[k];
+    return y;
+  }
 
   private rect(i: number): [number, number, number, number] {
-    return [this.cx - this.w / 2, this.y + i * this.lineH, this.w, this.lineH - 2];
+    return [this.cx - this.w / 2, this.top(i), this.w, this.lineH - 2];
   }
 
   update(input: Input): void {

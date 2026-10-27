@@ -15,7 +15,10 @@ kartami-augmentami i ekwipunkiem z jakościami. Wszystko po polsku.
 
 ## Technologia
 
-HTML5 Canvas 2D + TypeScript + Vite. Bufor 480×270 skalowany całkowitoliczbowo, świat rysowany z ZOOM 1.5.
+HTML5 Canvas 2D + TypeScript + Vite. Logika ekranu 480×270 (W, H): UI rysuje w tych współrzędnych na płótnie ekranu W·K × H·K
+(K 2-4, transformacja ×K, więc dostępne są linie ułamkowe: `roundRect`, `roundFrame`, tekst `scale: 0.75`). Świat rysuje się
+między `r.beginWorld()` i `r.endWorld()` na osobnym płótnie VW × VH (piksele logiczne świata, ZOOM 1.5 na jednostkę) i jest
+wklejany powiększony o VIEW_S (przybliżenie z Ustawień, K·VIEW_S całkowite). VIEW_W/VIEW_H/VW/VH/VIEW_S to żywe eksporty renderer.ts.
 Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 7; nowe pola bez migracji dostają wartości domyślne w `loadSave`).
 Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków).
 
@@ -44,7 +47,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.16.0)
+## Stan (wersja 0.17.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -210,6 +213,14 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     zakładka Wyczyny w Kolekcji, osiągnięcia z kartami Spokój (`calm`), Nimb (`firstBlock`), Medal.
   - Obraz: `Renderer.setFill` (wypełnienie okna przez bufor o całkowitej skali + wygładzone dopasowanie; inaczej skala całkowita),
     klawisz F = pełny ekran, Ustawienia → Obraz i widoczność: przyciemnienie tła (`bgDim`), obwódki pocisków wrogów, znacznik gracza.
+
+- Etap 0.17 (wygląd i bossowie):
+  - Renderer: płótno ekranu K× (bez osobnego bufora i kopiowania), świat na płótnie VW × VH, przybliżenie świata `settings.zoom`.
+  - UI: `panel` (zaokrąglone, gradient, romby w rogach), `slot`, `bar` (gradient rampy, podziałki), `plate`, `Menu` (podświetlenie,
+    `gaps` dla grup), cieńszy obrys tekstu (pół piksela, 8 kierunków). HUD: karta bohatera, plakietka czasu i celu, pigułki,
+    baner na wstędze. Menu główne: niebo z księżycem i wzgórzami, panel grup (GRAJ / POSTĘP / INNE) i panel opisu z informacjami.
+  - Bossowie: przy pojawieniu się bossa zwykli wrogowie znikają, w walce nie ma nowych (spawner); HP bossa × powerMul^`bossPowerExp`;
+    zapowiedzi ataków (krąg, linia szarży) w render.ts.
 
 ## Plan dalej
 

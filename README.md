@@ -43,7 +43,7 @@ Celowanie umiejętności (bronie zawsze namierzają same) wybierasz w **Ustawien
 
 ## Ustawienia
 
-Głośność efektów i muzyki, trudność (łatwa: słabsi wrogowie, bez odznak Paktu), kształty żywiołów dla daltonistów, tryb celowania, liczby obrażeń nad wrogami, wstrząsy ekranu, zatrzymanie klatki, podpowiedzi (z resetem), auto-pauza po wyjściu z okna/karty, pełny ekran, licznik FPS/debug. Zapisują się w localStorage; nowe pola dostają wartości domyślne bez migracji zapisu (`Settings` w `core/save.ts`).
+Głośność efektów i muzyki, przybliżenie świata, trudność (łatwa: słabsi wrogowie, bez odznak Paktu), kształty żywiołów dla daltonistów, tryb celowania, liczby obrażeń nad wrogami, wstrząsy ekranu, zatrzymanie klatki, podpowiedzi (z resetem), auto-pauza po wyjściu z okna/karty, pełny ekran, licznik FPS/debug. Zapisują się w localStorage; nowe pola dostają wartości domyślne bez migracji zapisu (`Settings` w `core/save.ts`).
 
 ## Struktura
 
@@ -275,6 +275,11 @@ src/
 - Naprawiony błąd: dotyk wroga ranił w każdej klatce (teraz co 0,7 s na wroga), krótka nietykalność po trafieniu, łagodniejsze pierwsze 2 minuty.
 - **Wyczyny** z nagrodami: poziom bez trafienia (karta i passa +8% obrażeń), bez uniku, bez Q/E, z jedną bronią, szybki boss, boss przy niskim HP, boss na niskim poziomie postaci (unikat), Rzeź, Mistrz kombo, Łowca elit i **Bez skazy** (cały run bez trafienia). Lista w Kolekcji, 3 nowe osiągnięcia z kartami.
 - **Obraz**: gra wypełnia całe okno, F = pełny ekran, Ustawienia → Obraz i widoczność (przyciemnienie tła, wyraźne pociski wrogów, znacznik gracza).
+
+**Wygląd i bossowie (0.17)**:
+- **Przybliżenie świata** (Ustawienia → Obraz i widoczność: daleko / normalne / blisko): większe postacie i pociski.
+- Gra rysuje w wyższej rozdzielczości: gładkie, zaokrąglone okna, paski z gradientem, cieńszy obrys tekstu, nowy HUD i menu główne.
+- **Bossowie na uniki**: przy pojawieniu się bossa zwykli wrogowie znikają i nie przychodzą nowi, walka trwa ok. 1-2 minut, ataki mają zapowiedzi (krąg, linia szarży).
 
 ### Jak przetestować
 

@@ -1,5 +1,5 @@
 import { W, H } from '../core/renderer';
-import { C } from '../core/palette';
+import { C, PAL } from '../core/palette';
 import { drawText, wrapText, textWidth } from '../core/font';
 import { sfx } from '../core/audio';
 import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
@@ -28,16 +28,36 @@ import { PactScreen } from './pacts';
 
 const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
 
-/** Tło menu: gwiazdy, przewijany pas łąki i defilada potworów goniących bohaterów. */
+/** Tło menu: nocne niebo z gradientem, gwiazdy, księżyc, dwa pasma wzgórz, przewijany pas łąki i defilada potworów goniących bohaterów. */
 function menuBackdrop(app: App, t: number): void {
   const r = app.r, g = r.g;
-  r.clear(C.black);
-  for (let i = 0; i < 70; i++) {
-    const x = ((i * 97 + t * (4 + (i % 3) * 3)) % (W + 20)) - 10;
-    const y = (i * 53) % (H - 70);
-    r.rect(x, y, 1, 1, i % 5 === 0 ? C.lgray : i % 2 ? C.slate : C.navy);
-  }
   const groundY = H - 58;
+  const sky = g.createLinearGradient(0, 0, 0, groundY);
+  sky.addColorStop(0, PAL[C.black]);
+  sky.addColorStop(0.7, PAL[C.navy]);
+  sky.addColorStop(1, PAL[C.slate]);
+  g.fillStyle = sky;
+  g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 70; i++) {
+    const x = ((i * 97 + t * (2 + (i % 3) * 2)) % (W + 20)) - 10;
+    const y = (i * 53) % (groundY - 40);
+    const tw = (Math.sin(t * 2 + i) + 1) / 2;
+    r.withAlpha(0.4 + 0.6 * tw, () => r.rect(x, y, i % 7 === 0 ? 1 : 0.5, i % 7 === 0 ? 1 : 0.5, i % 5 === 0 ? C.white : C.lgray));
+  }
+  // Księżyc z poświatą.
+  r.withAlpha(0.12, () => r.circle(404, 38, 22, C.cream, true));
+  r.circle(404, 38, 12, C.cream, true);
+  r.circle(400, 35, 3, C.tan, true);
+  r.circle(408, 42, 2, C.tan, true);
+  // Wzgórza: dalsze jaśniejsze, bliższe ciemniejsze, przesuwają się wolniej niż łąka (paralaksa).
+  for (const [col, base, amp, speed, freq] of [[C.navy, groundY - 34, 12, 4, 0.021], [C.black, groundY - 14, 10, 10, 0.034]] as const) {
+    g.fillStyle = PAL[col];
+    g.beginPath();
+    g.moveTo(0, groundY);
+    for (let x = 0; x <= W; x += 4) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin((x + t * speed) * freq)) - 6 * Math.sin((x + t * speed) * freq * 2.7));
+    g.lineTo(W, groundY);
+    g.fill();
+  }
   const off = Math.floor(t * 30) % TILE;
   for (let x = -off; x < W; x += TILE) for (let y = groundY; y < H; y += TILE) g.drawImage(getSprite(`tile0_${((x + off) / TILE + y) % 10}`).img, x, y);
   r.rect(0, groundY, W, 1, C.black);
@@ -81,7 +101,7 @@ export class MainMenu implements Screen {
       { label: () => 'Rekordy', act: () => app.go(new RecordsScreen(app)) },
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-    ], W / 2, 82, 220, 11);
+    ], MENU_X + MENU_W / 2, 64, MENU_W - 12, 11, { 6: 11, 9: 11 });
     music.setMood(MENU_MOOD);
     // Nowy gracz (bez żadnego runu i zapisu): kursor od razu na Treningu.
     if (isNewPlayer(app)) this.menu.sel = 3;
@@ -114,27 +134,72 @@ export class MainMenu implements Screen {
 
   render(): void {
     menuBackdrop(this.app, this.t);
-    const g = this.app.r.g;
+    const r = this.app.r, g = r.g, m = this.menu;
     // Logo: cień, obrys i pionowy gradient (żółty → złoty → pomarańczowy) przez przycinanie pasami.
-    drawText(g, 'Pixel Survivors', W / 2 + 2, 30, C.dred, { align: 'center', scale: 3 });
-    drawText(g, 'Pixel Survivors', W / 2, 28, C.yellow, { align: 'center', scale: 3, outline: C.black });
-    for (const [y0, col] of [[39, C.gold], [48, C.orange]] as const) {
+    drawText(g, 'Pixel Survivors', W / 2 + 2, 10, C.dred, { align: 'center', scale: 3 });
+    drawText(g, 'Pixel Survivors', W / 2, 8, C.yellow, { align: 'center', scale: 3, outline: C.black });
+    for (const [y0, col] of [[19, C.gold], [28, C.orange]] as const) {
       g.save();
       g.beginPath();
       g.rect(0, y0, W, 30);
       g.clip();
-      drawText(g, 'Pixel Survivors', W / 2, 28, col, { align: 'center', scale: 3 });
+      drawText(g, 'Pixel Survivors', W / 2, 8, col, { align: 'center', scale: 3 });
       g.restore();
     }
-    drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 66, C.lavender, { align: 'center', shadow: C.black });
-    if (this.app.save.notice) drawText(g, this.app.save.notice, W / 2, 74, C.orange, { align: 'center', outline: C.black });
-    this.menu.render(this.app.r);
-    // Opis zaznaczonej pozycji; nowemu graczowi Trening jest polecany.
-    const desc = MENU_DESC[this.menu.sel] ?? '';
-    const tip = isNewPlayer(this.app) && this.menu.sel === 3 ? 'Polecane na start! ' : '';
-    drawText(g, tip + desc, W / 2, 202, tip ? C.lime : C.lavender, { align: 'center', outline: C.black });
+    drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 39, C.lavender, { align: 'center', scale: 0.75, outline: C.black });
+    // Lewy panel: pozycje w grupach z nagłówkami.
+    panel(r, MENU_X, 48, MENU_W, 166, C.gold);
+    MENU_GROUPS.forEach(([name, first]) => {
+      const y = m.top(first) - 9;
+      drawText(g, name, MENU_X + 10, y, C.gold, { scale: 0.75 });
+      r.withAlpha(0.4, () => r.rect(MENU_X + 10 + textWidth(name) * 0.75 + 4, y + 3.5, MENU_W - 30 - textWidth(name) * 0.75, 0.5, C.gold));
+    });
+    m.render(r);
+    // Prawy panel: ikona, nazwa i opis zaznaczonej pozycji; nowemu graczowi Trening jest polecany.
+    const dx = MENU_X + MENU_W + 10, dw = W - dx - 18;
+    panel(r, dx, 48, dw, 112, C.lavender);
+    slot(r, dx + 10, 58, 28, C.gold);
+    drawSprite(g, MENU_ICON[m.sel], dx + 24, 72);
+    drawText(g, m.items[m.sel].label(), dx + 46, 60, C.yellow, { shadow: C.black });
+    const tip = isNewPlayer(this.app) && m.sel === 3;
+    if (tip) drawText(g, 'Polecane na start!', dx + 46, 72, C.lime, { shadow: C.black });
+    let ly = 94;
+    for (const l of wrapText(MENU_DESC[m.sel] ?? '', dw - 22)) { drawText(g, l, dx + 11, ly, C.lgray); ly += 11; }
+    ly += 4;
+    for (const [l, col] of this.info(m.sel)) { drawText(g, l, dx + 11, ly, col, { scale: 0.75 }); ly += 9; }
+    drawText(g, 'Strzałki / mysz: wybór   Enter: wejdź   F: pełny ekran', dx + dw / 2, 148, C.dgray, { align: 'center', scale: 0.75 });
+    if (this.app.save.notice) {
+      panel(r, dx, 166, dw, 44, C.orange);
+      wrapText(this.app.save.notice, dw - 22).slice(0, 3).forEach((l, i) => drawText(g, l, dx + 11, 172 + i * 11, C.orange));
+    }
+  }
+
+  /** Dodatkowe informacje w panelu opisu: zapisany run, rekordy, bohater dnia, postęp kolekcji. */
+  private info(sel: number): [string, number][] {
+    const s = this.app.save;
+    const slotMode = (['hardcore', 'expedition', 'endless'] as const)[sel];
+    if (slotMode) {
+      const snap = s.slots[slotMode];
+      return snap ? [[`Zapisany run: ${HERO_BY_ID[snap.hero]?.name ?? snap.hero}, LV ${snap.level}`, C.lime], ...slotLines(slotMode, snap).slice(0, 1).map((l): [string, number] => [l, C.lgray])] : [['Brak zapisanego runu.', C.dgray]];
+    }
+    if (sel === 3 || sel === 4) {
+      const recs = Object.values(s.records);
+      return [[`Wygrane treningi: ${recs.reduce((n, r) => n + r.wins, 0)} / ${recs.reduce((n, r) => n + r.runs, 0)}`, C.lgray]];
+    }
+    if (sel === 5) {
+      const d = dailyOf(todayKey()), today = s.daily.date === d.date;
+      return [[`Bohater dnia: ${HERO_BY_ID[d.hero].name}`, HERO_BY_ID[d.hero].color], [today && s.daily.best ? `Twój czas dziś: ${fmtTime(s.daily.best)}` : 'Dziś jeszcze bez wyniku.', C.lgray]];
+    }
+    if (sel === 6) return [[s.meta.unassigned > 0 ? `Esencja do rozdania: ${fmt(s.meta.unassigned)}` : 'Esencję zdobywasz w Ekspedycji.', C.cyan]];
+    if (sel === 7) return [[`Karty ${s.collection.seen.length}, sekrety ${s.collection.secrets.length}, osiągnięcia ${s.achievements.length}`, C.lgray]];
+    return [];
   }
 }
+
+/** Menu główne: lewy panel z pozycjami (grupy: od indeksu) i ikony pozycji w panelu opisu. */
+const MENU_X = 18, MENU_W = 196;
+const MENU_GROUPS: [string, number][] = [['GRAJ', 0], ['POSTĘP', 6], ['INNE', 9]];
+const MENU_ICON = ['ui_skull', 'ex_boss', 'ic_orbit_evo', 'ab_k_volley', 'pi_clock', 'ex_shrine', 'syn_all', 'ex_chest', 'cd_gold', 'tag:Umiejętności', 'ex_anvil'];
 
 /** Opisy pozycji menu głównego (kolejność jak w menu). */
 const MENU_DESC = [
