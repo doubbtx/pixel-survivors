@@ -7,12 +7,12 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { fmt } from '../util/format';
 import {
-  RARITIES, BASE_BY_ID, SLOTS, UNIQUE_BY_ID, forgeMul, UNIQUE_COLOR, implicitLine, statLine, statTotal, superLine, compareItems, salvageGold, salvageShards, itemColor,
+  RARITIES, BASE_BY_ID, SLOTS, itemAbout, UNIQUE_BY_ID, forgeMul, UNIQUE_COLOR, implicitLine, statLine, statTotal, superLine, compareItems, salvageGold, salvageShards, itemColor,
   type Item, type LootSource, type SlotId,
 } from '../data/items';
 import type { Run } from '../game/run';
 import type { Stats } from '../entities/types';
-import { Menu, dim, panel, slot, inside } from './widgets';
+import { button, Menu, dim, panel, slot, inside } from './widgets';
 import { itemTags } from '../data/synergies';
 import { AWAKENINGS } from '../data/forge';
 import { drawTagIcons } from './synergies';
@@ -292,12 +292,20 @@ export class InventoryView {
         if (c.kind === 'eq') drawText(g, SLOT_LABEL[c.slot], x + CELL / 2, y + CELL + 1, on ? C.yellow : C.dgray, { align: 'center' });
       }
     }
-    drawText(g, `Plecak ${run.bag.length}/${BAL.bagSize}`, BAG_X, 150, C.lavender);
-    drawText(g, `Złoto: ${fmt(run.gold)}   odłamki: ${fmt(run.shards)}`, BAG_X, 164, C.gold);
-    drawText(g, 'Gwiazdka = super-bonus', BAG_X, 180, C.dgray);
-    drawText(g, 'W nawiasie: twoja suma', BAG_X, 190, C.dgray);
-    drawText(g, 'X: rozłóż   Esc: wróć', BAG_X, 204, C.dgray);
-    const it = this.itemAt(sel);
+    drawText(g, `Plecak ${run.bag.length}/${BAL.bagSize}`, BAG_X, 148, C.lavender);
+    drawText(g, `${fmt(run.gold)} zł   ${fmt(run.shards)} odł.`, BAG_X + BAG_COLS * (CELL + 1) - 1, 148, C.gold, { align: 'right' });
+    // Opis zaznaczonego przedmiotu (albo slotu) małym tekstem pod plecakiem.
+    const it = this.itemAt(sel), aw = (BAG_COLS * (CELL + 1) - 2) / 0.75;
+    drawText(g, it ? 'O przedmiocie' : 'Wskazówka', BAG_X, 162, C.yellow);
+    const about = it ? itemAbout(it) : [sel.kind === 'eq' ? 'Pusty slot: najedź na przedmiot w plecaku i kliknij, żeby go założyć.' : 'Najedź na przedmiot, żeby zobaczyć opis. Klik: załóż / zdejmij, X: rozłóż na złoto.'];
+    let ay = 174;
+    for (const para of about) {
+      for (const l of wrapText(para, aw)) {
+        if (ay > 220) break;
+        drawText(g, l, BAG_X, ay, C.lgray, { scale: 0.75 });
+        ay += 8;
+      }
+    }
     if (it) {
       const cmp = sel.kind === 'bag' ? run.equipment[run.slotFor(it)] : undefined;
       drawItemCard(r, it, DET_X, 34, DET_W, 196, cmp, false, run.stats);
@@ -306,8 +314,7 @@ export class InventoryView {
       drawText(g, sel.kind === 'eq' ? 'Pusty slot' : 'Puste miejsce', DET_X + DET_W / 2, 124, C.dgray, { align: 'center' });
     }
     const btn = (x: number, w: number, label: string, col: number) => {
-      panel(r, x, 236, w, 16, C.slate);
-      drawText(g, label, x + w / 2, 238, col, { align: 'center' });
+      button(r, x, 236, w, 16, label, { col });
     };
     btn(14, 60, 'Wróć', C.lgray);
     if (it) {

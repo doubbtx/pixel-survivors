@@ -10,7 +10,7 @@ import {
 } from '../data/meta';
 import { fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { panel, inside } from './widgets';
+import { button, panel, inside } from './widgets';
 
 const COL_W = 90, COL_X = 6, COL_STEP = 94;
 const NODE_Y = 66, NODE_H = 28, NODE_STEP = 30;
@@ -145,8 +145,7 @@ export class MetaScreen implements Screen {
     // Zakładki bohaterów.
     HEROES.forEach((hero, i) => {
       const x = 8 + i * (TAB_W + 4), on = i === this.hero;
-      panel(r, x, TAB_Y, TAB_W, 14, on ? hero.color : C.slate);
-      drawText(g, hero.name, x + TAB_W / 2, TAB_Y + 1, on ? C.white : C.lgray, { align: 'center' });
+      button(r, x, TAB_Y, TAB_W, 14, hero.name, { active: on, accent: hero.color });
     });
     drawText(g, 'Q / E: bohater', 8 + HEROES.length * (TAB_W + 4) + 4, TAB_Y + 1, C.dgray);
     const par = paragonLevel(h.total);
@@ -176,17 +175,14 @@ export class MetaScreen implements Screen {
     const next = !n.key && lvl < n.max ? `   Następny poziom: ${nodeLine(n, lvl + 1)}` : '';
     drawText(g, `${n.name}. ${now}${next}`, W / 2, 222, C.lgray, { align: 'center' });
     // Przyciski.
-    panel(r, 8, BTN_Y, 70, 16, C.slate);
-    drawText(g, 'Wróć', 43, BTN_Y + 2, C.lgray, { align: 'center' });
+    button(r, 8, BTN_Y, 70, 16, 'Wróć');
     if (meta.unassigned > 0) {
-      panel(r, W / 2 - 80, BTN_Y, 160, 16, C.cyan);
-      drawText(g, `[B] Przydziel ${fmt(meta.unassigned)} esencji`, W / 2, BTN_Y + 2, C.white, { align: 'center' });
+      button(r, W / 2 - 80, BTN_Y, 160, 16, `[B] Przydziel ${fmt(meta.unassigned)} esencji`, { accent: C.cyan, pulse: true });
     } else {
       drawText(g, 'Esencja: koniec każdej Ekspedycji', W / 2, BTN_Y + 2, C.dgray, { align: 'center' });
     }
     const canPrestige = spentEssence(h, tree) >= BAL.meta.prestigeCost;
-    panel(r, W - 128, BTN_Y, 120, 16, this.confirmPrestige ? C.red : canPrestige ? C.pink : C.slate);
-    drawText(g, this.confirmPrestige ? 'Na pewno? [X]' : '[X] Prestiż', W - 68, BTN_Y + 2, canPrestige ? C.white : C.dgray, { align: 'center' });
+    button(r, W - 128, BTN_Y, 120, 16, this.confirmPrestige ? 'Na pewno? [X]' : '[X] Prestiż', { active: this.confirmPrestige, accent: this.confirmPrestige ? C.red : C.pink, col: canPrestige ? undefined : C.dgray });
     if (this.noteT > 0) drawText(g, this.note, W / 2, H - 12, C.yellow, { align: 'center', outline: C.black });
   }
 }

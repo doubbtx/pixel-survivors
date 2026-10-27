@@ -20,7 +20,7 @@ import {
 } from '../systems/anvil';
 import type { Run } from '../game/run';
 import { drawItemSlot, drawItemCard } from './items';
-import { Menu, dim, panel, inside } from './widgets';
+import { button, Menu, dim, panel, inside } from './widgets';
 
 const CELL = 24, STEP = 25;
 const GRID_X = 14, EQ_Y = 46, BAG_Y = 80;
@@ -362,8 +362,7 @@ export class AnvilView {
           drawText(g, 'R', RB_X + RB_W / 2, y - 1, C.cyan, { align: 'center' });
         }
         if (it.affixes.length) {
-          panel(r, DET_X, ALL_Y, DET_W, 16, C.slate);
-          drawText(g, `Przekuj wszystkie: ${costText(rerollAllCost(run, it))}`, DET_X + DET_W / 2, ALL_Y + 2, C.cyan, { align: 'center' });
+          button(r, DET_X, ALL_Y, DET_W, 16, `Przekuj wszystkie: ${costText(rerollAllCost(run, it))}`, { col: C.cyan, accent: C.cyan });
         }
       }
     } else {
@@ -375,10 +374,8 @@ export class AnvilView {
     if (this.stage === 'ops' && it) this.menu.render(r);
     if (this.stage === 'pick') {
       const max = run.anvilLevel >= BAL.anvilUpgrade.max;
-      panel(r, 14, 192, 200, 18, max ? C.gold : C.orange);
-      drawText(g, max ? `Kowadło poziom ${run.anvilLevel} (max)` : `[R] Ulepsz kowadło (poz. ${run.anvilLevel}): ${costText(anvilUpgradeCost(run))}`, 114, 195, max ? C.gold : C.white, { align: 'center' });
-      panel(r, 14, WORKSHOP_Y, 200, 16, C.orange);
-      drawText(g, '[B] Warsztat: przetapianie materiałów', 114, WORKSHOP_Y + 2, C.white, { align: 'center' });
+      button(r, 14, 192, 200, 18, max ? `Kowadło poziom ${run.anvilLevel} (max)` : `[R] Ulepsz kowadło (poz. ${run.anvilLevel}): ${costText(anvilUpgradeCost(run))}`, { accent: C.orange, col: max ? C.gold : undefined });
+      button(r, 14, WORKSHOP_Y, 200, 16, '[B] Warsztat: przetapianie materiałów', { accent: C.orange });
       drawText(g, 'Enter / klik: wybierz przedmiot', 114, 232, C.dgray, { align: 'center' });
     }
     // Wynik ostatniej próby kucia (także po wyjściu z panelu, np. po zniszczeniu przedmiotu).
@@ -436,7 +433,6 @@ export class AnvilView {
       wrapText(`Próg +${tier.at} ${tier.name}: ${desc}`, DET_W - 16).slice(0, 2).forEach((l, k) => drawText(g, l, x + 8, 187 + k * 10, C.cyan));
     }
     const block = forgeBlock(run, it, this.opts);
-    panel(r, x + 40, FORGE_BTN_Y, DET_W - 80, 16, block ? C.slate : this.opts.risk ? C.red : C.gold);
-    drawText(g, this.hammer > 0 ? 'Kucie...' : block ?? (this.confirmRisk ? '[Enter] Na pewno?' : '[Enter] Kuj'), cx, FORGE_BTN_Y + 2, block ? C.salmon : C.white, { align: 'center' });
+    button(r, x + 40, FORGE_BTN_Y, DET_W - 80, 16, this.hammer > 0 ? 'Kucie...' : block ?? (this.confirmRisk ? '[Enter] Na pewno?' : '[Enter] Kuj'), { accent: this.opts.risk ? C.red : C.gold, col: block ? C.salmon : undefined, pulse: !block && this.hammer <= 0 });
   }
 }

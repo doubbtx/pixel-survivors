@@ -7,7 +7,7 @@ import { rng } from '../core/rng';
 import { drawSprite } from '../gfx/sprites';
 import { RARITY, rollOffer, cardPool, type CardDef, type CardSource, type Rarity } from '../data/cards';
 import type { Run } from '../game/run';
-import { dim, panel, inside } from './widgets';
+import { button, dim, panel, inside } from './widgets';
 import { drawTagGain } from './synergies';
 
 const CARD_W = 136;
@@ -148,8 +148,7 @@ export class CardPickView {
       // Postęp synergii po wyborze (zielony = nowy próg).
       drawTagGain(r, this.run, c.tags, x + CARD_W / 2, CARD_Y + CARD_H - 13);
       const can = this.run.cardRerolls > 0;
-      panel(r, x + 28, BTN_Y, CARD_W - 56, 20, i === this.sel && can ? C.lavender : C.slate);
-      drawText(r.g, i === this.sel ? '[R] Losuj' : 'Losuj', x + CARD_W / 2, BTN_Y + 4, can ? C.white : C.dgray, { align: 'center', shadow: C.black });
+      button(r, x + 28, BTN_Y, CARD_W - 56, 20, i === this.sel ? '[R] Losuj' : 'Losuj', { active: i === this.sel && can, accent: C.lavender, col: can ? undefined : C.dgray });
     });
     drawText(r.g, `Losowania kart: ${this.run.cardRerolls}    1-3 / klik: wybierz`, W / 2, 238, C.lavender, { align: 'center', shadow: C.black });
   }

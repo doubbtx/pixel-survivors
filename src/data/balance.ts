@@ -107,14 +107,15 @@ export const BAL = {
   /**
    * Siła buildu: HP wrogów dopasowuje się do średniego DPS gracza (średnia krocząca `emaSec` s), tak by przeciętny wróg
    * ginął w ok. `ttk(t)` sekundy całego DPS. Tylko w górę (mnożnik ≥ 1), z wykładnikiem `exp` (łagodniej niż 1:1) i limitem `max`.
-   * Obrażenia wrogów rosną z tym mnożnikiem do potęgi `dmgExp` oraz z poziomem postaci (`levelHp`, `levelDmg` na poziom).
+   * Obrażenia wrogów rosną z tym mnożnikiem (najwyżej `dmgMax`) do potęgi `dmgExp` oraz z poziomem postaci (`levelHp`, `levelDmg` na poziom).
    */
   power: {
     emaSec: 15,
     baseHp: 15,
     ttk: (t: number) => 0.06 + 0.06 * Math.exp(-t / 240),
-    exp: 0.75,
-    max: 60,
+    exp: 0.9,
+    max: 500,
+    dmgMax: 60,
     dmgExp: 0.45,
     levelHp: 0.01,
     levelDmg: 0.012,
@@ -326,10 +327,12 @@ export const BAL = {
     /** Błogosławieństwo kapliczki działa na tyle kolejnych map z walką. */
     blessingMaps: 3,
     /** Cel pełnego poziomu aktu (boss): czas przetrwania (s) albo liczba zabójstw. */
-    objTime: (act: number) => 150 + 30 * act,
-    objKills: (act: number) => 300 + 250 * act,
+    objTime: (act: number) => 180 + 40 * act,
+    objKills: (act: number) => 500 + 400 * act,
     /** Długość celu zwykłej walki i elity względem pełnego poziomu. */
-    fightScale: 0.5,
+    fightScale: 0.75,
+    /** Dodatkowy tłum wrogów na mapach Ekspedycji (flaga enemyCount) w akcie. */
+    crowd: (act: number) => 0.5 + 0.25 * act,
     /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */
     waveOffsetPerDepth: 50,
     /** Elity w węźle elity pojawiają się co eliteEvery × ten mnożnik. */

@@ -3,7 +3,7 @@ import { C } from '../core/palette';
 import { drawText, wrapText, textWidth } from '../core/font';
 import { sfx } from '../core/audio';
 import type { App, Screen } from './app';
-import { panel, inside } from './widgets';
+import { moreArrow, button, panel, inside } from './widgets';
 
 /** Strony pomocy: tytuł i akapity (pierwsze słowa przed dwukropkiem wyróżnione). */
 const PAGES: { title: string; lines: string[] }[] = [
@@ -150,8 +150,7 @@ export class HelpScreen implements Screen {
     drawText(g, 'Pomoc', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
     PAGES.forEach((p, i) => {
       const on = i === this.page;
-      panel(r, this.tabX(i), 30, TAB_W, 16, on ? C.gold : C.slate);
-      drawText(g, p.title, this.tabX(i) + TAB_W / 2, 32, on ? C.white : C.lgray, { align: 'center' });
+      button(r, this.tabX(i), 30, TAB_W, 16, p.title, { active: on, accent: C.gold });
     });
     panel(r, 10, 52, W - 20, H - 80, C.gold);
     let y = 62;
@@ -169,8 +168,11 @@ export class HelpScreen implements Screen {
       });
       y += 5;
     }
-    panel(r, W / 2 - 40, H - 22, 80, 16, C.slate);
-    drawText(g, 'Wróć', W / 2, H - 20, C.lgray, { align: 'center' });
-    drawText(g, 'Strzałki: strona', W - 12, H - 20, C.dgray, { align: 'right' });
+    button(r, W / 2 - 40, H - 22, 80, 16, 'Wróć');
+    // Kolejna strona: strzałka i podpis.
+    if (this.page < PAGES.length - 1) {
+      moreArrow(r, W - 16, H - 14, 1);
+      drawText(g, `Dalej: ${PAGES[this.page + 1].title}`, W - 24, H - 20, C.lavender, { align: 'right' });
+    }
   }
 }

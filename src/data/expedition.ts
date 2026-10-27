@@ -243,6 +243,11 @@ export const nodeDepth = (ex: ExpeditionState): number => depthAt(ex.act, exRow(
 export const mapReward = (m: MapNode): number => (m.mods ?? []).reduce((s, id) => s + (MAP_MOD_BY_ID[id]?.reward ?? 0), 0);
 
 /** Flagi mapy na czas poziomu: modyfikatory, bonus, nagroda (ilość i jakość łupu). */
+/** Ekspedycja: większy tłum wrogów niż w kampanii (rośnie z aktem), dodany do modyfikatorów mapy. */
+function crowded(f: Record<string, number>, act: number): Record<string, number> {
+  return { ...f, enemyCount: (f.enemyCount ?? 0) + BAL.expedition.crowd(act) };
+}
+
 function mapFlags(m: MapNode): Record<string, number> {
   const f: Record<string, number> = {};
   const add = (o: Record<string, number> | undefined) => { for (const [k, v] of Object.entries(o ?? {})) f[k] = (f[k] ?? 0) + v; };
@@ -275,7 +280,7 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
     boss,
     eliteMul: m.kind === 'elite' || m.kind === 'secret' ? X.eliteEveryMul : 1,
     dungeon: m.kind === 'dungeon',
-    flags: m.kind === 'secret' ? { enemyHp: 0.5, enemyDmg: 0.3, mapLoot: 1, mapGold: 1 } : mapFlags(m),
+    flags: crowded(m.kind === 'secret' ? { enemyHp: 0.5, enemyDmg: 0.3, mapLoot: 1, mapGold: 1 } : mapFlags(m), act),
   };
 }
 

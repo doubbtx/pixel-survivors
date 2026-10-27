@@ -28,6 +28,55 @@ export function inside(px: number, py: number, x: number, y: number, w: number, 
   return px >= x && px < x + w && py >= y && py < y + h;
 }
 
+/**
+ * Wskaźnik myszy do podświetleń przy rysowaniu (main.ts ustawia go przed każdą klatką; dotyk/pad = poza ekranem).
+ * `hit`: w tej klatce mysz jest nad czymś klikalnym — main.ts zmienia wtedy kursor na rączkę.
+ */
+export const pointer = { x: -1, y: -1, hit: false };
+
+/** Czy mysz jest nad prostokątem (i oznacza go jako klikalny). */
+export function hovered(x: number, y: number, w: number, h: number): boolean {
+  const on = inside(pointer.x, pointer.y, x, y, w, h);
+  if (on) pointer.hit = true;
+  return on;
+}
+
+export interface ButtonOpts {
+  /** Wybrany / włączony (wypełnienie i ramka w kolorze akcentu). */
+  active?: boolean;
+  accent?: number;
+  /** Kolor etykiety (domyślnie biały, żółty gdy wybrany lub pod myszą). */
+  col?: number;
+  /** Pulsujące obramowanie: tu jest coś do zobaczenia. */
+  pulse?: boolean;
+  scale?: number;
+}
+
+/** Przycisk: zaokrąglony, pod myszą jaśniejszy i lekko uniesiony, wybrany wypełniony kolorem akcentu. */
+export function button(r: Renderer, x: number, y: number, w: number, h: number, label: string, o: ButtonOpts = {}): void {
+  const hot = hovered(x, y, w, h), acc = o.accent ?? C.blue, lift = hot ? -1 : 0;
+  r.withAlpha(0.45, () => r.roundRect(x + 1, y + 2, w, h, 4, C.black));
+  r.roundRect(x, y + lift, w, h, 4, o.active ? C.dblue : hot ? C.slate : C.navy, C.black);
+  r.roundFrame(x + 0.5, y + 0.5 + lift, w - 1, h - 1, 3.5, o.active || hot ? acc : C.slate, o.active ? 1 : 0.75);
+  if (o.pulse && !o.active) r.withAlpha(0.35 + 0.35 * Math.sin(performance.now() / 160), () => r.roundFrame(x - 0.5, y - 0.5 + lift, w + 1, h + 1, 4.5, C.yellow, 1));
+  if (hot || o.active) r.withAlpha(0.5, () => r.rect(x + 3, y + 1 + lift, w - 6, 0.5, C.white));
+  const sc = o.scale ?? 1;
+  drawText(r.g, label, x + w / 2, y + lift + Math.round((h - 11 * sc) / 2), o.col ?? (o.active || hot ? C.yellow : C.white), { align: 'center', shadow: C.black, scale: sc });
+}
+
+/** Pulsująca strzałka-trójkąt: w tym kierunku jest więcej treści (`dir` 1 = w prawo, -1 = w lewo). */
+export function moreArrow(r: Renderer, x: number, y: number, dir: 1 | -1, col: number = C.yellow): void {
+  const off = Math.round(Math.sin(performance.now() / 150) * 1.5) * dir;
+  r.g.fillStyle = PAL[C.black];
+  r.g.beginPath();
+  r.g.moveTo(x + off - 4 * dir, y - 5); r.g.lineTo(x + off + 4 * dir, y); r.g.lineTo(x + off - 4 * dir, y + 5);
+  r.g.fill();
+  r.g.fillStyle = PAL[col];
+  r.g.beginPath();
+  r.g.moveTo(x + off - 3 * dir, y - 3.5); r.g.lineTo(x + off + 2.5 * dir, y); r.g.lineTo(x + off - 3 * dir, y + 3.5);
+  r.g.fill();
+}
+
 /** Przyciemnienie świata pod nakładkami (pauza, awans) + ciemniejsza wstęga na tytuł ze złotymi liniami. */
 export function dim(r: Renderer): void {
   r.withAlpha(0.65, () => r.rect(0, 0, W, H, C.black));
@@ -120,6 +169,7 @@ export class Menu {
     this.items.forEach((it, i) => {
       const [x, y, w, h] = this.rect(i);
       const on = i === this.sel;
+      hovered(x, y, w, h);
       if (on) {
         r.withAlpha(0.9, () => r.roundRect(x, y, w, h, 3, C.dblue, C.navy));
         r.roundFrame(x, y, w, h, 3, C.blue, 0.5);

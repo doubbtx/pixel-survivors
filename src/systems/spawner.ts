@@ -27,7 +27,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   e.x = x; e.y = y; e.kx = 0; e.ky = 0;
   e.maxHp = e.hp = def.hp * hpMul;
   e.speed = def.speed * rng.range(0.9, 1.1) * (1 + run.flag('enemySpeed'));
-  e.damage = def.damage * BAL.enemyDmgMul(run.time) * BAL.depthDmgMul(run.depth) * Math.pow(run.powerMul, P.dmgExp) * (1 + P.levelDmg * lvl) * (1 + run.flag('enemyDmg'));
+  e.damage = def.damage * BAL.enemyDmgMul(run.time) * BAL.depthDmgMul(run.depth) * Math.pow(Math.min(P.dmgMax, run.powerMul), P.dmgExp) * (1 + P.levelDmg * lvl) * (1 + run.flag('enemyDmg'));
   e.radius = def.radius;
   e.xp = def.xp;
   e.flash = 0; e.slowT = 0; e.slowF = 0; e.stunT = 0;

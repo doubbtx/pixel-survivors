@@ -14,7 +14,7 @@ import { buyItem, buyService, buyElixir, buyShopUpgrade, refreshShop, type BuyRe
 import type { Run } from '../game/run';
 import { CardPickView } from './cards';
 import { drawItemSlot, drawItemCard } from './items';
-import { dim, panel, slot, inside } from './widgets';
+import { button, dim, panel, slot, inside } from './widgets';
 
 const CELL = 28;
 const GAP = 35;
@@ -184,8 +184,7 @@ export class ShopView {
     this.renderDetails(r);
 
     const btn = (x: number, w: number, label: string, col: number) => {
-      panel(r, x, BTN_Y, w, 16, C.slate);
-      drawText(g, label, x + w / 2, BTN_Y + 2, col, { align: 'center' });
+      button(r, x, BTN_Y, w, 16, label, { col });
     };
     const rp = refreshPrice(shop);
     btn(14, 62, `Odśwież ${rp}`, run.gold >= rp ? C.yellow : C.red);
@@ -240,7 +239,6 @@ export class ShopView {
       if (el) drawText(g, `Kupione eliksiry: ${run.elixirsBought}`, cx, 174, C.dgray, { align: 'center' });
     }
     if (!avail) return;
-    panel(r, DET_X, BTN_Y, DET_W, 16, C.slate);
-    drawText(g, `Kup za ${price} zł`, DET_X + DET_W / 2, BTN_Y + 2, run.gold >= price ? C.yellow : C.red, { align: 'center' });
+    button(r, DET_X, BTN_Y, DET_W, 16, `Kup za ${price} zł`, { col: run.gold >= price ? C.yellow : C.red, accent: C.gold, pulse: run.gold >= price });
   }
 }

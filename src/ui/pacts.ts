@@ -5,7 +5,7 @@ import { sfx } from '../core/audio';
 import { BAL } from '../data/balance';
 import { PACTS, pactLevel, pactDesc, PACT_BADGES } from '../data/pacts';
 import type { App, Screen } from './app';
-import { panel, inside } from './widgets';
+import { button, panel, inside } from './widgets';
 
 const ROW_H = 21, TOP = 40, X = 20, RW = W - 40;
 
@@ -75,7 +75,6 @@ export class PactScreen implements Screen {
     const badges = PACT_BADGES.map((b) => `${b.name} ${b.from}`).join(', ');
     drawText(g, `Odznaki bohatera za bossa pokonanego z Paktem: ${badges}.`, W / 2, TOP + PACTS.length * ROW_H + 4, C.dgray, { align: 'center' });
     drawText(g, 'Strzałki: wybór i poziom    R: wyzeruj    Esc: wróć', W / 2, H - 40, C.lavender, { align: 'center' });
-    panel(r, W / 2 - 40, H - 24, 80, 16, C.slate);
-    drawText(g, 'Gotowe', W / 2, H - 22, C.lgray, { align: 'center' });
+    button(r, W / 2 - 40, H - 24, 80, 16, 'Gotowe');
   }
 }

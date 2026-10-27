@@ -107,8 +107,9 @@ function passiveHint(run: Run, id: string): string {
 function candidates(run: Run): Option[] {
   const out: Option[] = [];
   const ownedW = new Set(run.weapons.map((w) => w.def.id));
-  // Broń bazowa, której ewolucję już masz, nie wraca do oferty.
+  // Broń bazowa, której ewolucję albo fuzję już masz, nie wraca do oferty.
   for (const d of WEAPONS) if (d.evolve && ownedW.has(d.evolve.into)) ownedW.add(d.id);
+  for (const f of FUSIONS) if (ownedW.has(f.into)) { ownedW.add(f.a); ownedW.add(f.b); }
   const ownedP = new Map(run.passives.map((p) => [p.id, p.level]));
 
   for (const w of run.weapons) {

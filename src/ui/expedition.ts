@@ -12,7 +12,7 @@ import {
 } from '../data/expedition';
 import type { Run } from '../game/run';
 import { fmt } from '../util/format';
-import { dim, panel, slot, inside } from './widgets';
+import { dim, panel, slot, inside, hovered } from './widgets';
 
 const MAP_X = 8, MAP_Y = 30, MAP_W = W - 16, MAP_H = 136;
 const NODE = 20;
@@ -123,6 +123,7 @@ export class ExpeditionMapView {
       if (!m) return;
       const [x, y] = nodePos(row, lane);
       const reachable = row === cur + 1 && lanes.includes(lane);
+      if (reachable) hovered(x - NODE / 2, y - NODE / 2, NODE, NODE);
       const picked = lane === target && reachable;
       const visited = ex.path[row] === lane;
       const bob = picked ? Math.round(Math.sin(t * 6)) : 0;
@@ -170,10 +171,10 @@ export class ExpeditionMapView {
       if (m.tiers) {
         drawText(g, 'Trudność [1-4]', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
         m.tiers.forEach((t, i) => {
-          const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i];
-          r.roundRect(bx, by, TIER_W, 11, 3, on ? C.dblue : C.black, on ? C.navy : C.black);
-          r.roundFrame(bx, by, TIER_W, 11, 3, on ? rr.color : C.slate, on ? 1 : 0.5);
-          drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 2, on ? rr.color : C.dgray, { align: 'center', ...SMALL });
+          const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i], hot = hovered(bx, by, TIER_W, 11);
+          r.roundRect(bx, by, TIER_W, 11, 3, on ? C.dblue : hot ? C.slate : C.black, on ? C.navy : C.black);
+          r.roundFrame(bx, by, TIER_W, 11, 3, on || hot ? rr.color : C.slate, on ? 1 : 0.5);
+          drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 2, on || hot ? rr.color : C.dgray, { align: 'center', ...SMALL });
           drawText(g, t.length ? `${t.length} mod.` : 'bez mod.', bx + TIER_W / 2, by + 13, C.dgray, { align: 'center', ...SMALL });
         });
       }

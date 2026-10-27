@@ -13,7 +13,7 @@ import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
-import { Menu, dim, panel, inside } from './widgets';
+import { button, Menu, dim, panel, inside } from './widgets';
 import { renderHud } from './hud';
 import { LevelUpView } from './levelup';
 import { LootView, InventoryView, drawItemSlot } from './items';
@@ -774,8 +774,7 @@ export class GameScreen implements Screen {
     drawText(g, essence, W / 2, 50, feats && this.mode !== 'expedition' ? C.gold : C.cyan, { align: 'center', shadow: C.black });
     // Zakładki: obrażenia, wykres DPS, karta buildu (Tab / strzałki / klik).
     END_TABS.forEach((t, i) => {
-      panel(r, 50 + i * 128, 62, 124, 14, i === this.endPage ? C.gold : C.slate);
-      drawText(g, t, 112 + i * 128, 63, i === this.endPage ? C.white : C.lgray, { align: 'center' });
+      button(r, 50 + i * 128, 62, 124, 14, t, { active: i === this.endPage, accent: C.gold });
     });
     panel(r, 50, 78, 380, 124);
     if (this.endPage === 0) this.renderDamage();

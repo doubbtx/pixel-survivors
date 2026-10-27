@@ -110,6 +110,28 @@ const IMPLICIT: Record<ItemKind, { stat: keyof Stats; mode: 'add' | 'mul'; value
   amulet: { stat: 'growth', mode: 'add', value: () => 0.08 },
 };
 
+/** Rola typu przedmiotu (opis w ekwipunku). */
+const KIND_ABOUT: Record<ItemKind, string> = {
+  weapon: 'Broń mnoży obrażenia wszystkiego, co zadajesz. Mnożnik rośnie z poziomem przedmiotu: to najważniejszy slot.',
+  helmet: 'Hełm daje pancerz: każdy punkt zmniejsza obrażenia od ciosów i pocisków (25 pancerza = o połowę).',
+  armor: 'Zbroja daje maks. HP, które rośnie z poziomem przedmiotu.',
+  gloves: 'Rękawice zwiększają szansę na krytyk.',
+  boots: 'Buty przyspieszają ruch, łatwiej o uniki.',
+  ring: 'Pierścień skraca odnowienie umiejętności. Masz dwa sloty na pierścienie.',
+  amulet: 'Amulet daje więcej doświadczenia, więc szybsze awanse.',
+};
+
+/** Opis przedmiotu w ekwipunku: rola slotu, co daje rzadkość, gwiazdka, kowadło. */
+export function itemAbout(it: Item): string[] {
+  const base = BASE_BY_ID[it.base], R = RARITIES[it.rarity];
+  const out = [KIND_ABOUT[base.kind]];
+  if (!it.unique) out.push(`${R.name[base.gender]}: ${R.affixes} losowe bonusy (niebieskie), wartości x${R.power}.`);
+  else out.push('Unikat: stały efekt specjalny, który zmienia zasady gry.');
+  if (it.super) out.push('Gwiazdka: super-bonus (złoty), rzadki efekt specjalny.');
+  out.push(`Kowadło ulepsza do +${BAL.anvil.maxUpgrades}. W nawiasie: twoja suma.`);
+  return out;
+}
+
 // ============================ afiksy ============================
 
 /** Jak afiks rośnie z poziomem przedmiotu: 'hp' i 'power' wykładniczo, 'mild' liniowo i łagodnie. */

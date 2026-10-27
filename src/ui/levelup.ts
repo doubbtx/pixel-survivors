@@ -7,7 +7,7 @@ import { drawSprite } from '../gfx/sprites';
 import { RARITIES } from '../data/items';
 import { generateOptions, applyOption, canBanish, optionScore, type Option, type Recipe } from '../systems/levelup';
 import type { Run } from '../game/run';
-import { panel, dim, inside, slot } from './widgets';
+import { button, panel, dim, inside, slot } from './widgets';
 import { drawTagGain } from './synergies';
 
 const CARD_W = 108;
@@ -207,8 +207,7 @@ export class LevelUpView {
     });
     for (const b of this.buttons()) {
       const on = b.label.includes('Wygnaj') && this.banishMode;
-      panel(r, b.x, BTN_Y, BTN_W, 20, on ? C.red : C.slate);
-      drawText(r.g, b.label, b.x + BTN_W / 2, BTN_Y + 4, on ? C.salmon : C.white, { align: 'center', shadow: C.black });
+      button(r, b.x, BTN_Y, BTN_W, 20, b.label, { active: on, accent: on ? C.red : C.blue, col: on ? C.salmon : undefined });
     }
     // Podpis na ciemnym tle: pod nim są sloty HUD.
     const note = 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', nw = textWidth(note) + 12;

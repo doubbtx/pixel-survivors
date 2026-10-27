@@ -6,6 +6,7 @@ import { sfx } from './core/audio';
 import { loadSave, writeSave } from './core/save';
 import type { App, Screen } from './ui/app';
 import { MainMenu, toggleFullscreen } from './ui/menus';
+import { pointer } from './ui/widgets';
 import { music } from './core/music';
 
 /**
@@ -55,7 +56,13 @@ app.loop = startLoop(
     input.endStep();
   },
   () => {
+    // Podświetlenia pod myszą tylko przy myszy (dotyk i pad nie mają kursora).
+    const mouse = input.lastDevice === 'kbm' && input.mouse.lastMove > 0;
+    pointer.x = mouse ? input.mouse.x : -1;
+    pointer.y = mouse ? input.mouse.y : -1;
+    pointer.hit = false;
     screen.render();
+    canvas.style.cursor = pointer.hit ? 'pointer' : '';
     if (fadeT > 0) renderer.withAlpha(fadeT / FADE, () => renderer.rect(0, 0, W, H, C.black));
   },
 );

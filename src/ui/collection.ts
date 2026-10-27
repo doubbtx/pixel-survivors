@@ -8,7 +8,7 @@ import { CARDS, type CardDef } from '../data/cards';
 import { HERO_BY_ID } from '../data/heroes';
 import type { App, Screen } from './app';
 import { drawCard, rarityColor } from './cards';
-import { panel, slot, inside } from './widgets';
+import { button, panel, slot, inside } from './widgets';
 import { UNIQUES, UNIQUE_COLOR, BASE_BY_ID, rollUnique, type Item } from '../data/items';
 import { drawItemCard } from './items';
 import { SECRETS } from '../data/secrets';
@@ -275,8 +275,7 @@ export class CollectionScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g, col = this.col;
     r.clear(C.black);
-    panel(r, W - 116, 8, 108, 18, this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.slate);
-    drawText(g, `[Tab] ${TAB_NAME[TABS[(TABS.indexOf(this.tab) + 1) % TABS.length]]}`, W - 62, 11, C.white, { align: 'center' });
+    button(r, W - 116, 8, 108, 18, `[Tab] ${TAB_NAME[TABS[(TABS.indexOf(this.tab) + 1) % TABS.length]]} >`, { pulse: true, accent: this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.blue });
     if (this.tab === 'bestiary' || this.tab === 'achievements' || this.tab === 'feats') {
       const head = { bestiary: ['Bestiariusz', C.lavender], achievements: ['Osiągnięcia', C.lime], feats: ['Wyczyny', C.gold] }[this.tab] as [string, number];
       drawText(g, head[0], W / 2, 10, head[1], { align: 'center', scale: 2, outline: C.black });
@@ -335,8 +334,7 @@ export class CollectionScreen implements Screen {
       banned ? 'Zbanowana: nie pojawia się w ofertach' : '',
     ].filter(Boolean);
     info.forEach((l, i) => drawText(g, l, GRID_X, 213 + i * 10, banned && i === info.length - 1 ? C.salmon : C.lgray));
-    panel(r, CARD_X + 18, 214, 100, 16, banned ? C.red : C.slate);
-    drawText(g, banned ? 'Odbanuj [B]' : 'Zbanuj [B]', CARD_X + 68, 216, known ? C.white : C.dgray, { align: 'center' });
+    button(r, CARD_X + 18, 214, 100, 16, banned ? 'Odbanuj [B]' : 'Zbanuj [B]', { active: banned, accent: C.red, col: known ? undefined : C.dgray });
     drawText(g, 'Zbanowane karty nie wypadają w ofertach. Banować można tylko odkryte.', W / 2, 244, C.dgray, { align: 'center' });
     if (this.noteT > 0) drawText(g, this.note, W / 2, H - 14, C.salmon, { align: 'center', outline: C.black });
   }

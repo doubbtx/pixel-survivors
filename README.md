@@ -293,6 +293,12 @@ src/
 - Wybór bohatera: zakładka **Zasób** (strzałka w prawo) z dokładnymi liczbami pasywki i zasobu.
 - Poprawki układu: panel mapy Ekspedycji, synergie, karty awansu.
 
+**Trudniejsza Ekspedycja i żywsze UI (0.20)**:
+- Wrogowie nadążają za bardzo silnymi buildami (wyższy limit HP od siły buildu), w Ekspedycji walki są dłuższe i wrogów jest więcej.
+- Po fuzji broni jej składniki nie wracają już do awansów.
+- Ekwipunek: opis zaznaczonego przedmiotu (co daje slot, rzadkość, gwiazdka, kowadło).
+- Przyciski podświetlają się pod myszą (kursor-rączka), pulsujące ramki i strzałki pokazują, gdzie jest więcej informacji.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
