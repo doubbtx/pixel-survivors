@@ -10,7 +10,8 @@ import type { Stats } from '../entities/types';
 import { WEAPON_TAGS, STAT_TAG, SYNERGY_BY_TAG, tierOf } from '../data/synergies';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 
-export type OptionKind = 'weaponNew' | 'weaponUp' | 'passiveNew' | 'passiveUp' | 'ability' | 'abilityEvolve' | 'evolve' | 'heal' | 'gold';
+/** 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts). */
+export type OptionKind = 'weaponNew' | 'weaponUp' | 'passiveNew' | 'passiveUp' | 'ability' | 'abilityEvolve' | 'evolve' | 'stat';
 
 /** Jedna karta wyboru przy awansie. */
 export interface Option {
@@ -31,7 +32,7 @@ export interface Option {
 const tagsOf = (stat: keyof Stats): Tag[] => (STAT_TAG[stat] ? [STAT_TAG[stat]!] : []);
 
 const WEIGHTS: Record<OptionKind, number> = {
-  evolve: 6, abilityEvolve: 6, weaponUp: 2.2, passiveUp: 1.4, ability: 1.6, weaponNew: 1.2, passiveNew: 1, heal: 1, gold: 1,
+  evolve: 6, abilityEvolve: 6, weaponUp: 2.2, passiveUp: 1.4, ability: 1.6, weaponNew: 1.2, passiveNew: 1, stat: 1,
 };
 
 /** Podpowiedź ewolucji dla broni: jaka pasywka jest potrzebna. */
@@ -53,6 +54,8 @@ function passiveHint(run: Run, id: string): string {
 function candidates(run: Run): Option[] {
   const out: Option[] = [];
   const ownedW = new Set(run.weapons.map((w) => w.def.id));
+  // Broń bazowa, której ewolucję już masz, nie wraca do oferty.
+  for (const d of WEAPONS) if (d.evolve && ownedW.has(d.evolve.into)) ownedW.add(d.id);
   const ownedP = new Map(run.passives.map((p) => [p.id, p.level]));
 
   for (const w of run.weapons) {
@@ -108,7 +111,7 @@ export function reachesThreshold(run: Run, t: Tag): boolean {
  * > rozwój posiadanej broni > reszta. Prosta heurystyka — ma pomóc, nie grać za gracza.
  */
 export function optionScore(run: Run, o: Option): number {
-  let s = { evolve: 100, abilityEvolve: 95, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, heal: 1, gold: 0 }[o.kind];
+  let s = { evolve: 100, abilityEvolve: 95, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, stat: 0 }[o.kind];
   if (o.tags.some((t) => reachesThreshold(run, t))) s += 40;
   if (o.hint.startsWith('Potrzebna do ewolucji') || o.hint.endsWith('(masz)')) s += 25;
   return s;
@@ -116,9 +119,16 @@ export function optionScore(run: Run, o: Option): number {
 
 const key = (o: Option) => `${o.kind}:${o.id}`;
 
+/** Opcje premii statystyk (BAL.statBoosts) — dopełniają ofertę, gdy zabrakło ulepszeń. */
+function statOptions(): Option[] {
+  return BAL.statBoosts.map((b) => ({
+    kind: 'stat' as const, id: String(b.stat), name: b.name, desc: b.desc, hint: 'Wszystko rozwinięte: stała premia', icon: b.icon, tag: 'Premia', color: C.lgray, tags: [],
+  }));
+}
+
 /**
  * Losuje `count` różnych opcji (ważonych). Dostępna ewolucja jest zawsze wśród nich
- * (dawniej gwarantowała ją skrzynia, która teraz daje przedmioty). Gdy nic nie zostało — leczenie i złoto.
+ * (dawniej gwarantowała ją skrzynia, która teraz daje przedmioty). Brakujące miejsca dopełniają premie statystyk.
  */
 export function generateOptions(run: Run, count: number, exclude: Option[] = []): Option[] {
   const pool = candidates(run).filter((o) => !exclude.some((x) => key(x) === key(o)));
@@ -129,10 +139,8 @@ export function generateOptions(run: Run, count: number, exclude: Option[] = [])
     out.push(pick);
     pool.splice(pool.indexOf(pick), 1);
   }
-  if (out.length === 0) {
-    out.push({ kind: 'heal', id: 'heal', name: 'Mikstura', desc: 'Leczy 50% HP.', hint: '', icon: 'meat', tag: '', color: C.red, tags: [] });
-    out.push({ kind: 'gold', id: 'gold', name: 'Sakiewka', desc: '+25 złota.', hint: '', icon: 'coin', tag: '', color: C.gold, tags: [] });
-  }
+  const stats = statOptions().filter((o) => !exclude.some((x) => key(x) === key(o)));
+  while (out.length < count && stats.length) out.push(stats.splice(Math.floor(rng.next() * stats.length), 1)[0]);
   return out;
 }
 
@@ -171,12 +179,11 @@ export function applyOption(run: Run, o: Option): void {
       a.def = evolveAbility(a.def);
       break;
     }
-    case 'heal':
-      run.heal(run.stats.maxHp * 0.5);
+    case 'stat': {
+      const b = BAL.statBoosts.find((x) => String(x.stat) === o.id)!;
+      run.addBonus(b.stat, b.value);
       break;
-    case 'gold':
-      run.gold += 25;
-      break;
+    }
   }
   // Nowa broń / pasywka / ewolucja zmienia punkty synergii.
   run.onBuildChanged();

@@ -40,6 +40,9 @@ export interface HardcoreEntry {
  */
 export type AimMode = 'auto' | 'mixed' | 'manual';
 
+/** Ataki gracza: widoczne, przygaszone (półprzezroczyste, bez poświat) albo ukryte (działają dalej). */
+export type PlayerFx = 'visible' | 'dim' | 'hidden';
+
 /** Nowe ustawienia nie wymagają migracji: brakujące pola dostają wartości domyślne przy wczytaniu. */
 export interface Settings {
   volume: number;
@@ -55,8 +58,8 @@ export interface Settings {
   healNumbers: boolean;
   /** Oszczędne efekty (słabszy sprzęt, telefon): mniej cząsteczek, bez cieni, poświat i winiety. */
   lowFx: boolean;
-  /** Ukrycie pocisków gracza (działają dalej) — żeby lepiej widzieć pociski wrogów. */
-  hideProjectiles: boolean;
+  /** Widoczność ataków gracza (pociski, aury, strefy, efekty trafień) — żeby lepiej widzieć pociski wrogów. */
+  playerFx: PlayerFx;
 }
 
 /** Kolekcja kart (między runami): odkryte, liczba wyborów i bany (wykluczone z ofert). */
@@ -117,7 +120,7 @@ function defaults(): SaveData {
     settings: { volume: 0.5, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
-      hideProjectiles: false },
+      playerFx: 'visible' },
     records: {},
     slots: { hardcore: null, endless: null, expedition: null },
     board: [],
@@ -147,7 +150,7 @@ export function loadSave(): SaveData {
   const d = raw as unknown as Partial<SaveData>;
   return {
     version: SAVE_VERSION,
-    settings: { ...base.settings, ...d.settings },
+    settings: settingsOf(base.settings, d.settings),
     records: { ...d.records },
     slots: { ...base.slots, ...d.slots },
     board: d.board ?? [],
@@ -155,6 +158,12 @@ export function loadSave(): SaveData {
     collection: { ...base.collection, ...d.collection },
     meta: { ...base.meta, ...d.meta },
   };
+}
+
+/** Ustawienia z zapisu: brakujące pola domyślne; dawne "ukryj pociski gracza" przechodzi w `playerFx: 'hidden'`. */
+function settingsOf(base: Settings, saved: Partial<Settings> & { hideProjectiles?: boolean } = {}): Settings {
+  const { hideProjectiles, ...rest } = saved;
+  return { ...base, ...rest, playerFx: rest.playerFx ?? (hideProjectiles ? 'hidden' : 'visible') };
 }
 
 export function writeSave(d: SaveData): void {

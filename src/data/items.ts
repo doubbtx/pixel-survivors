@@ -264,9 +264,14 @@ export interface Item {
   rarity: number;
   ilvl: number;
   name: string;
-  implicit: { stat: keyof Stats; mode: 'add' | 'mul'; value: number };
-  affixes: { stat: keyof Stats; value: number }[];
+  /** `up` = suma przyrostów z ulepszeń w kowadle (ułamek wartości z łupu; brak = 0). */
+  implicit: { stat: keyof Stats; mode: 'add' | 'mul'; value: number; up?: number };
+  affixes: { stat: keyof Stats; value: number; up?: number }[];
   super?: { id: string; value: number };
+  /** Ulepszenia w kowadle (do BAL.anvil.maxUpgrades). */
+  upg?: number;
+  /** Złoto i odłamki wydane na przedmiot w kowadle (część wraca przy rozkładaniu). */
+  spent?: { gold: number; shards: number };
 }
 
 /** Źródło przedmiotu; 'shop' = oferta sklepu między poziomami. */
@@ -295,10 +300,14 @@ function affixValue(a: AffixDef, ilvl: number, power: number, rolls = 1): number
   return roll * (a.stat === 'amount' ? 1 : power) * affixScale(a, ilvl);
 }
 
-function implicitValue(kind: ItemKind, ilvl: number, power: number): number {
+/** Bonus bazowy z łupu × (1 + `up`) — dla mnożnika rośnie tylko nadwyżka ponad 1. */
+function implicitValue(kind: ItemKind, ilvl: number, power: number, up = 0): number {
   const imp = IMPLICIT[kind];
-  return imp.mode === 'mul' ? 1 + (imp.value(ilvl) - 1) * power : imp.value(ilvl) * power;
+  return imp.mode === 'mul' ? 1 + (imp.value(ilvl) - 1) * power * (1 + up) : imp.value(ilvl) * power * (1 + up);
 }
+
+/** Przyrost nowego afiksu na przedmiocie już ulepszanym (średni przyrost × liczba ulepszeń). */
+const upOf = (it: Item) => (it.upg ?? 0) * (BAL.anvil.upgradeMin + BAL.anvil.upgradeMax) / 2;
 
 /** Losowy afiks, którego przedmiot jeszcze nie ma (z dodatkowym filtrem, np. tag synergii). */
 function newAffix(it: Item, filter: (a: AffixDef) => boolean = () => true): AffixDef | null {
@@ -341,12 +350,25 @@ export function rollItem(depth: number, source: LootSource, luck = 0, kind?: Ite
 
 // ============================ kowadło (systems/anvil.ts) ============================
 
-/** Kowadło: +1 poziom przedmiotu — bonus bazowy i afiksy skalują się jak u łupu z głębszego poziomu. */
-export function upgradeItem(it: Item): void {
-  const next = it.ilvl + 1;
-  for (const a of it.affixes) { const d = AFFIX_BY_STAT[a.stat]; a.value *= affixScale(d, next) / affixScale(d, it.ilvl); }
-  it.ilvl = next;
-  it.implicit.value = implicitValue(BASE_BY_ID[it.base].kind, next, RARITIES[it.rarity].power);
+/**
+ * Kowadło: ulepszenie (do BAL.anvil.maxUpgrades). Każda wartość rośnie o losowe upgradeMin..upgradeMax
+ * swojej wartości z łupu — liniowo i nigdy w dół. False = limit ulepszeń.
+ */
+export function upgradeItem(it: Item): boolean {
+  const n = it.upg ?? 0;
+  if (n >= BAL.anvil.maxUpgrades) return false;
+  const step = () => rng.range(BAL.anvil.upgradeMin, BAL.anvil.upgradeMax);
+  const imp = it.implicit;
+  imp.up = (imp.up ?? 0) + step();
+  imp.value = implicitValue(BASE_BY_ID[it.base].kind, it.ilvl, RARITIES[it.rarity].power, imp.up);
+  for (const a of it.affixes) {
+    if (a.stat === 'amount') continue;
+    const up = a.up ?? 0, next = up + step();
+    a.value *= (1 + next) / (1 + up);
+    a.up = next;
+  }
+  it.upg = n + 1;
+  return true;
 }
 
 /** Kowadło: nowy losowy afiks w miejsce afiksu `idx`. False = brak kandydatów. */
@@ -356,7 +378,8 @@ export function rerollAffix(it: Item, idx: number, rolls = 1): boolean {
   const rest = { ...it, affixes: it.affixes.filter((_, i) => i !== idx) };
   const a = newAffix(rest, (x) => x.stat !== old.stat);
   if (!a) return false;
-  it.affixes[idx] = { stat: a.stat, value: affixValue(a, it.ilvl, RARITIES[it.rarity].power, rolls) };
+  const up = upOf(it);
+  it.affixes[idx] = { stat: a.stat, value: affixValue(a, it.ilvl, RARITIES[it.rarity].power, rolls) * (1 + up), up };
   return true;
 }
 
@@ -366,11 +389,12 @@ export function raiseRarity(it: Item, rolls = 1, superBonus = 0): boolean {
   const from = RARITIES[it.rarity].power, R = RARITIES[++it.rarity];
   for (const a of it.affixes) if (a.stat !== 'amount') a.value *= R.power / from;
   const base = BASE_BY_ID[it.base];
-  it.implicit.value = implicitValue(base.kind, it.ilvl, R.power);
+  it.implicit.value = implicitValue(base.kind, it.ilvl, R.power, it.implicit.up);
   while (it.affixes.length < R.affixes) {
     const a = newAffix(it);
     if (!a) break;
-    it.affixes.push({ stat: a.stat, value: affixValue(a, it.ilvl, R.power, rolls) });
+    const up = upOf(it);
+    it.affixes.push({ stat: a.stat, value: affixValue(a, it.ilvl, R.power, rolls) * (1 + up), up });
   }
   if (!it.super && rng.chance(R.superChance + superBonus)) it.super = rollSuper(it.rarity);
   it.name = itemName(base, it.rarity, it.affixes, !!it.super);
@@ -391,9 +415,14 @@ export function salvageValue(it: Item): number {
   return Math.round(4 * (it.rarity + 1) ** 2 * (1 + 0.5 * (it.ilvl - 1)));
 }
 
-/** Odłamki (waluta kowadła) za rozłożenie przedmiotu — zależą tylko od jakości. */
+/** Odłamki (waluta kowadła) za rozłożenie przedmiotu — zależą od jakości, plus zwrot części wydanych w kowadle. */
 export function salvageShards(it: Item): number {
-  return BAL.anvil.shardsByRarity[it.rarity] ?? 1;
+  return (BAL.anvil.shardsByRarity[it.rarity] ?? 1) + Math.floor((it.spent?.shards ?? 0) * BAL.anvil.salvageRefund);
+}
+
+/** Złoto za rozłożenie: wartość przedmiotu × chciwość + zwrot części złota wydanego w kowadle. */
+export function salvageGold(it: Item, greed: number): number {
+  return Math.round(salvageValue(it) * greed + (it.spent?.gold ?? 0) * BAL.anvil.salvageRefund);
 }
 
 export function slotKind(slot: SlotId): ItemKind {

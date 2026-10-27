@@ -6,7 +6,7 @@ import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { fmt } from '../util/format';
-import { RARITIES, BASE_BY_ID, SLOTS, salvageValue, salvageShards, superLine, type Item } from '../data/items';
+import { RARITIES, BASE_BY_ID, SLOTS, salvageGold, salvageShards, superLine, type Item } from '../data/items';
 import {
   anvilCost, anvilUpgrade, anvilReroll, anvilRerollAll, anvilRarity, anvilTransfer, anvilUpgradeCost, rerollAllCost, upgradeAnvil,
   type AnvilResult, type Cost,
@@ -51,7 +51,10 @@ export class AnvilView {
   constructor(private readonly run: Run, private readonly onChange: () => void) {
     const it = () => this.item()!;
     this.menu = new Menu([
-      { label: () => `Ulepsz do poz. ${it().ilvl + 1}: ${costText(anvilCost(run, 'upgrade', it()))}`, act: () => this.apply(anvilUpgrade(run, it())) },
+      {
+        label: () => ((it().upg ?? 0) >= BAL.anvil.maxUpgrades ? 'Limit ulepszeń' : `Ulepsz ${(it().upg ?? 0) + 1}/${BAL.anvil.maxUpgrades}: ${costText(anvilCost(run, 'upgrade', it()))}`),
+        act: () => this.apply(anvilUpgrade(run, it())),
+      },
       {
         label: () => (it().rarity >= RARITIES.length - 1 ? 'Najwyższa jakość' : `Jakość: ${RARITIES[it().rarity + 1].name[BASE_BY_ID[it().base].gender]}: ${costText(anvilCost(run, 'rarity', it()))}`),
         act: () => this.apply(anvilRarity(run, it())),
@@ -61,7 +64,7 @@ export class AnvilView {
         label: () => (it().super ? 'Przenieś super-bonus na inny' : 'Brak super-bonusu'),
         act: () => { if (it().super) { this.donor = it(); this.stage = 'target'; } },
       },
-      { label: () => `Rozłóż: +${fmt(Math.round(salvageValue(it()) * run.stats.greed))} zł, +${salvageShards(it())} odł.`, act: () => this.salvage() },
+      { label: () => `Rozłóż: +${fmt(salvageGold(it(), run.stats.greed))} zł, +${salvageShards(it())} odł.`, act: () => this.salvage() },
     ], GRID_X + 100, 189, 216, 13);
   }
 

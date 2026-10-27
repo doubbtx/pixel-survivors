@@ -120,7 +120,7 @@ export class LevelUpView {
       this.run.banishes--;
       this.banishMode = false;
       const repl = generateOptions(this.run, 1, this.options)[0];
-      if (repl && repl.kind !== 'heal' && repl.kind !== 'gold') this.options[i] = repl;
+      if (repl) this.options[i] = repl;
       else this.options.splice(i, 1);
       this.sel = 0;
       sfx.play('kill');

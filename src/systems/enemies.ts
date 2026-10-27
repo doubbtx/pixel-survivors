@@ -17,7 +17,8 @@ const RELOCATE_DIST = 330;
  * albo obrót pierścienia (dla pierścienia z luką — środek luki).
  */
 export function fireVolley(run: Run, x: number, y: number, v: Volley, base: number, damage: number): void {
-  const n = v.count;
+  // W późnej grze salwy są gęstsze (BAL.patternDensity); pierścień z luką zachowuje lukę.
+  const n = Math.round(v.count * BAL.patternDensity(run.waveTime()));
   const gap = v.shape === 'gapRing' ? v.gap ?? 3 : 0;
   for (let i = 0; i < n; i++) {
     // Pierścień z luką: pomijamy pociski najbliżej kąta bazowego (po obu stronach).

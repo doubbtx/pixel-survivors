@@ -2,7 +2,7 @@ import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
 import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
-import { heroRecord, type AimMode } from '../core/save';
+import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
 import { drawSprite, drawShadow, getSprite, TILE } from '../gfx/sprites';
 import { animFrame } from '../gfx/actors';
 import { HEROES, HERO_BY_ID } from '../data/heroes';
@@ -17,6 +17,7 @@ import { Menu, panel, inside, slot } from './widgets';
 import { GameScreen } from './game-screen';
 import { CollectionScreen } from './collection';
 import { MetaScreen } from './meta';
+import { BalanceScreen } from './balance';
 
 const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
 
@@ -314,6 +315,8 @@ export class RecordsScreen implements Screen {
 }
 
 const AIM_MODES: AimMode[] = ['auto', 'mixed', 'manual'];
+const FX_MODES: PlayerFx[] = ['visible', 'dim', 'hidden'];
+const FX_LABEL: Record<PlayerFx, string> = { visible: 'widoczne', dim: 'przygaszone', hidden: 'ukryte' };
 const AIM_LABEL: Record<AimMode, string> = { auto: 'automatyczne', mixed: 'mieszane', manual: 'ręczne' };
 const AIM_HINT: Record<AimMode, string> = {
   auto: 'Umiejętności zawsze celują w najbliższego wroga.',
@@ -329,10 +332,15 @@ export class SettingsScreen implements Screen {
   constructor(private readonly app: App, private readonly back: Screen) {
     const s = app.save.settings;
     const vol = (d: number) => () => { s.volume = Math.round(Math.max(0, Math.min(1, s.volume + d)) * 10) / 10; app.persist(); };
-    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx' | 'hideProjectiles') => () => { s[k] = !s[k]; app.persist(); };
+    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx') => () => { s[k] = !s[k]; app.persist(); };
     const aim = (d: number) => () => {
       const i = Math.max(0, AIM_MODES.indexOf(s.aim));
       s.aim = AIM_MODES[(i + d + AIM_MODES.length) % AIM_MODES.length];
+      app.persist();
+    };
+    const fx = (d: number) => () => {
+      const i = Math.max(0, FX_MODES.indexOf(s.playerFx));
+      s.playerFx = FX_MODES[(i + d + FX_MODES.length) % FX_MODES.length];
       app.persist();
     };
     const yes = (v: boolean) => (v ? 'tak' : 'nie');
@@ -344,10 +352,11 @@ export class SettingsScreen implements Screen {
       { label: () => `Minimapa: ${yes(s.minimap)}`, act: toggle('minimap') },
       { label: () => `Wstrząsy ekranu: ${yes(s.shake)}`, act: toggle('shake') },
       { label: () => `Efekty: ${s.lowFx ? 'oszczędne' : 'pełne'}`, act: toggle('lowFx') },
-      { label: () => `Pociski gracza: ${s.hideProjectiles ? 'ukryte' : 'widoczne'}`, act: toggle('hideProjectiles') },
+      { label: () => `Ataki gracza: ${FX_LABEL[s.playerFx] ?? FX_LABEL.visible}`, left: fx(-1), right: fx(1) },
       { label: () => `Pauza po wyjściu z okna: ${yes(s.autoPause)}`, act: toggle('autoPause') },
       { label: () => `Pełny ekran: ${yes(!!document.fullscreenElement)}`, act: () => toggleFullscreen() },
       { label: () => `Licznik FPS / debug: ${yes(s.debug)}`, act: toggle('debug') },
+      { label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } },
       { label: () => 'Wróć', act: () => app.go(back) },
     ], W / 2, 42, 280, 14);
     this.hints = [
@@ -358,10 +367,11 @@ export class SettingsScreen implements Screen {
       () => 'Mała mapa w prawym górnym rogu: wrogowie, elity, boss i skrzynie.',
       () => 'Drganie ekranu przy wybuchach i trafieniach.',
       () => 'Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety (więcej FPS, telefon).',
-      () => 'Ukryte: twoje pociski działają, ale ich nie widać (łatwiej unikać pocisków wrogów).',
+      () => 'Twoje pociski, aury, strefy i błyski trafień: przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.',
       () => 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.',
       () => 'Przełącza tryb pełnoekranowy przeglądarki.',
       () => 'Licznik klatek i encji; włącza klawisze F4, F6, F7.',
+      () => 'Wartości do sprawdzenia: HP przedmiotów i ulepszeń, skalowanie wrogów, miękkie limity.',
       () => '',
     ];
   }

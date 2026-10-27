@@ -113,10 +113,10 @@ export class Renderer {
     }
   }
 
-  /** Rysowanie z przezroczystością (cienie, poświaty, przyciemnienia). */
+  /** Rysowanie z przezroczystością (cienie, poświaty, przyciemnienia). Zagnieżdżone wywołania mnożą przezroczystość. */
   withAlpha(a: number, fn: () => void): void {
     const prev = this.g.globalAlpha;
-    this.g.globalAlpha = a;
+    this.g.globalAlpha = prev * a;
     fn();
     this.g.globalAlpha = prev;
   }

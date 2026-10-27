@@ -183,6 +183,26 @@ export function drawText(g: CanvasRenderingContext2D, s: string, x: number, y: n
   }
 }
 
+const labels = new Map<string, HTMLCanvasElement>();
+
+/**
+ * Napis z obrysem wyśrodkowany w (x, y) z gotowego obrazka — jedno rysowanie zamiast pięciu na znak.
+ * Dla często powtarzanych krótkich napisów (liczby obrażeń); pamięć podręczna czyszczona po 500 wpisach.
+ */
+export function drawLabel(g: CanvasRenderingContext2D, s: string, x: number, y: number, col: number, outline: number): void {
+  const key = `${s}|${col}|${outline}`;
+  let c = labels.get(key);
+  if (!c) {
+    if (labels.size > 500) labels.clear();
+    c = document.createElement('canvas');
+    c.width = textWidth(s) + 2;
+    c.height = CELL_H + 2;
+    drawText(c.getContext('2d')!, s, 1, 1, col, { outline });
+    labels.set(key, c);
+  }
+  g.drawImage(c, Math.round(x - c.width / 2), Math.round(y) - 1);
+}
+
 /** Łamie tekst na linie o szerokości max `maxW` pikseli (po słowach, z uwzględnieniem szerokości glifów). */
 export function wrapText(s: string, maxW: number): string[] {
   const out: string[] = [];

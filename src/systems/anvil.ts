@@ -4,7 +4,7 @@ import type { Run } from '../game/run';
 
 /**
  * Kowadło między poziomami: operacje na przedmiotach za złoto i odłamki (z rozkładania).
- *  upgrade   +1 poziom przedmiotu
+ *  upgrade   ulepszenie (do BAL.anvil.maxUpgrades): każda wartość rośnie, losowe jest tylko o ile
  *  reroll    nowy losowy afiks w miejsce wybranego (albo wszystkie naraz, taniej)
  *  rarity    wyższa jakość: mocniejsze wartości + nowy afiks
  *  transfer  super-bonus z przedmiotu-dawcy na inny przedmiot; dawca przepada
@@ -20,7 +20,7 @@ export interface Cost {
 export function anvilCost(run: Run, op: AnvilOp, it: Item): Cost {
   const base = BAL.anvil[op];
   const scale = BAL.shopScale(it.ilvl) * anvilDiscount(run);
-  const mul = op === 'rarity' ? it.rarity + 1 : 1;
+  const mul = op === 'rarity' ? it.rarity + 1 : op === 'upgrade' ? 1 + BAL.anvil.upgradeCostGrowth * (it.upg ?? 0) : 1;
   return { gold: Math.round(base.gold * scale * mul), shards: Math.round(base.shards * mul) };
 }
 
@@ -60,18 +60,20 @@ export interface AnvilResult {
 
 const fail = (note: string): AnvilResult => ({ ok: false, note });
 
-/** Wspólne zakończenie: zapłata i przeliczenie buildu (zmiana założonego przedmiotu zmienia statystyki i synergie). */
-function done(run: Run, c: Cost, note: string): AnvilResult {
+/** Wspólne zakończenie: zapłata (zapamiętana na przedmiocie — zwrot przy rozkładaniu) i przeliczenie buildu. */
+function done(run: Run, it: Item, c: Cost, note: string): AnvilResult {
   pay(run, c);
+  it.spent = { gold: (it.spent?.gold ?? 0) + c.gold, shards: (it.spent?.shards ?? 0) + c.shards };
   run.onBuildChanged();
   return { ok: true, note };
 }
 
 export function anvilUpgrade(run: Run, it: Item): AnvilResult {
   const c = anvilCost(run, 'upgrade', it);
+  if ((it.upg ?? 0) >= BAL.anvil.maxUpgrades) return fail('Limit ulepszeń');
   if (!canAfford(run, c)) return fail('Za mało złota lub odłamków');
   upgradeItem(it);
-  return done(run, c, `Poziom przedmiotu: ${it.ilvl}`);
+  return done(run, it, c, `Ulepszenie ${it.upg}/${BAL.anvil.maxUpgrades}`);
 }
 
 export function anvilReroll(run: Run, it: Item, idx: number): AnvilResult {
@@ -79,7 +81,7 @@ export function anvilReroll(run: Run, it: Item, idx: number): AnvilResult {
   if (!it.affixes[idx]) return fail('Brak bonusu do przekucia');
   if (!canAfford(run, c)) return fail('Za mało złota lub odłamków');
   if (!rerollAffix(it, idx, anvilRolls(run))) return fail('Brak innych bonusów do wylosowania');
-  return done(run, c, 'Bonus przekuty');
+  return done(run, it, c, 'Bonus przekuty');
 }
 
 /** Koszt przekucia wszystkich bonusów naraz (taniej niż po kolei). */
@@ -94,7 +96,7 @@ export function anvilRerollAll(run: Run, it: Item): AnvilResult {
   const c = rerollAllCost(run, it);
   if (!canAfford(run, c)) return fail('Za mało złota lub odłamków');
   for (let i = 0; i < it.affixes.length; i++) rerollAffix(it, i, anvilRolls(run));
-  return done(run, c, 'Wszystkie bonusy przekute');
+  return done(run, it, c, 'Wszystkie bonusy przekute');
 }
 
 export function anvilRarity(run: Run, it: Item): AnvilResult {
@@ -102,7 +104,7 @@ export function anvilRarity(run: Run, it: Item): AnvilResult {
   const c = anvilCost(run, 'rarity', it);
   if (!canAfford(run, c)) return fail('Za mało złota lub odłamków');
   raiseRarity(it, anvilRolls(run), BAL.anvilUpgrade.superBonus * (run.anvilLevel - 1));
-  return done(run, c, `Nowa jakość: ${RARITIES[it.rarity].name.m}`);
+  return done(run, it, c, `Nowa jakość: ${RARITIES[it.rarity].name.m}`);
 }
 
 /** Przenosi super-bonus z `from` na `to`; `from` przepada (bez złota i odłamków). */
@@ -114,5 +116,5 @@ export function anvilTransfer(run: Run, from: Item, to: Item): AnvilResult {
   to.super = from.super;
   for (const s of Object.keys(run.equipment) as (keyof typeof run.equipment)[]) if (run.equipment[s] === from) run.equipment[s] = null;
   run.bag = run.bag.filter((b) => b !== from);
-  return done(run, c, 'Super-bonus przeniesiony');
+  return done(run, to, c, 'Super-bonus przeniesiony');
 }

@@ -40,7 +40,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView), `expedition.ts` (ExpeditionMapView), `collection.ts` (kolekcja i bany kart), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `game-screen.ts` (stany: play/levelup/cards/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb).
 
-## Stan (wersja 0.6.0)
+## Stan (wersja 0.7.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -82,7 +82,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - Żywioły (`data/elements.ts`: WEAPON_ELEMENT, SRC_ELEMENT po nazwie źródła, stany na Enemy: burn/chill/shock/poison,
   `run.applyElement`, ticki DoT w systems/enemies.ts, `DamageOpts.dot`), statystyka `elemPower`.
 - Przekuwanie tylko w kowadle (przyciski R na karcie przedmiotu, `anvilReroll`/`anvilRerollAll`, bez celu tagu).
-  `drawItemCard(..., stats)` pokazuje sumy statystyk (`statTotal`). Pauza: DPS broni. Ustawienie `hideProjectiles`.
+  `drawItemCard(..., stats)` pokazuje sumy statystyk (`statTotal`). Pauza: DPS broni. Ustawienie `playerFx` (ataki gracza: widoczne/przygaszone/ukryte).
 - Szybkość ataku (`Stats.atkSpeed`, `BAL.attackSpeedMul`) przyspiesza bronie; `cdr` dotyczy już tylko umiejętności.
 - Ustawienia: głośność, celowanie umiejętności (auto/mieszane/ręczne, `AimMode` w `core/save.ts`), liczby obrażeń,
   wstrząsy, auto-pauza po utracie fokusu, pełny ekran, debug.
@@ -97,8 +97,19 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   w systems/abilities.ts, ewolucje Słońce/Płomienna bariera/Kataklizm, pasywka `echoCast` — co N-te Q/E darmowe powtórzenie, `cardState.echoCast`),
   4 karty `h_i_*`. Wybór bohatera: lista po lewej + szczegóły (miejsce na 6 bohaterów).
 
+- Etap A (0.7, poprawki i balans): `playerFx` (render.ts `atk()`: aury, strefy, orbity, pociski, cząsteczki, efekty; `withAlpha` mnoży),
+  broń bazowa nie wraca po ewolucji, opcje `stat` przy awansie (`BAL.statBoosts`) gdy brak ulepszeń, siła buildu `BAL.power`
+  (`run.dpsEma`, `run.powerMul` — HP i obrażenia wrogów rosną z DPS gracza i poziomem; `PCT_SOURCES` w run.ts nie liczą się do DPS),
+  `BAL.eliteGap`, `BAL.patternDensity`, późne fale, łagodniejszy start; ulepszenie przedmiotu w kowadle liniowe (`Item.upg`, `up`,
+  `BAL.anvil.maxUpgrades`), miękkie limity `BAL.softCaps`, zwrot 25% kosztów kowadła przy rozkładaniu (`Item.spent`, `salvageGold`),
+  Głód krwi z limitem, Złoty szlam rzadziej (`goldSlimeGap`, jeden naraz), limity efektów `BAL.fx` (cząsteczki, iskry, scalanie wybuchów),
+  `drawLabel` (liczby obrażeń z pamięci podręcznej), `warmFx`, ekran Podgląd balansu (`ui/balance.ts`, Ustawienia w trybie debug).
+
 ## Plan dalej
 
+- Uzgodniona kolejność: etap B (reakcje żywiołów, nowe karty, augmenty broni i bohaterów, żywioły na przedmiotach),
+  etap C (Ekspedycja jak mapy z PoE: więcej map z modyfikatorami/bonusami, kapliczki i lochy jako węzły; Rozwój tylko w Ekspedycji,
+  drzewko per bohater, migracja zapisu do v6), etap D (grafika, „soczystość”, UI, dźwięk, jakość ulepszeń broni przy awansie).
 - Kolejni bohaterowie: zostały 3 role (np. przywoływacz, zabójca, kapłan) — wszystko oryginalne.
 - Balans Ekspedycji po testach (długość walk, nagrody węzłów).
 

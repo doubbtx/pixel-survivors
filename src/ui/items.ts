@@ -7,7 +7,7 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { fmt } from '../util/format';
 import {
-  RARITIES, BASE_BY_ID, SLOTS, implicitLine, statLine, statTotal, superLine, compareItems, salvageValue, salvageShards,
+  RARITIES, BASE_BY_ID, SLOTS, implicitLine, statLine, statTotal, superLine, compareItems, salvageGold, salvageShards,
   type Item, type LootSource, type SlotId,
 } from '../data/items';
 import type { Run } from '../game/run';
@@ -60,7 +60,7 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
     drawText(g, line, x + 40, ly, R.color, { shadow: C.black });
     ly += 11;
   }
-  drawText(g, `${R.name[base.gender]} ${base.name.toLowerCase()}, poz. ${it.ilvl}`, x + 40, Math.max(ly, y + 19), C.dgray);
+  drawText(g, `${R.name[base.gender]} ${base.name.toLowerCase()}, poz. ${it.ilvl}${it.upg ? `, +${it.upg}` : ''}`, x + 40, Math.max(ly, y + 19), C.dgray);
   ly = y + 40;
   const tags = itemTags(it);
   if (tags.length) drawTagIcons(r, tags, x + w - 14 - ((tags.length - 1) * 18) / 2, y + h - 14);
@@ -118,7 +118,7 @@ export class LootView {
         label: () => (run.bag.length >= BAL.bagSize ? 'Plecak pełny' : `Do plecaka (${run.bag.length}/${BAL.bagSize})`),
         act: () => { if (run.bag.length < BAL.bagSize) { run.bag.push(it); this.finish(''); } },
       },
-      { label: () => `Rozłóż (+${Math.round(salvageValue(it) * run.stats.greed)} zł, +${salvageShards(it)} odł.)`, act: () => { run.salvage(it); this.finish(''); } },
+      { label: () => `Rozłóż (+${salvageGold(it, run.stats.greed)} zł, +${salvageShards(it)} odł.)`, act: () => { run.salvage(it); this.finish(''); } },
     ], W / 2, 214, 200, 15);
     sfx.play(it.rarity >= 3 || it.super ? 'levelup' : 'chest');
   }
@@ -282,7 +282,7 @@ export class InventoryView {
     btn(14, 60, 'Wróć', C.lgray);
     if (it) {
       btn(DET_X, BTN_W, sel.kind === 'eq' ? 'Zdejmij' : 'Załóż', C.white);
-      btn(DET_X + BTN_W + 6, BTN_W, `Rozłóż +${fmt(Math.round(salvageValue(it) * run.stats.greed))}`, C.gold);
+      btn(DET_X + BTN_W + 6, BTN_W, `Rozłóż +${fmt(salvageGold(it, run.stats.greed))}`, C.gold);
     }
     if (this.noteT > 0) drawText(g, this.note, W / 2, H - 12, C.yellow, { align: 'center', outline: C.black });
   }

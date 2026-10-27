@@ -18,14 +18,15 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   const e = run.enemies.obtain();
   if (!e) return null;
   const def = ENEMIES[id];
-  const hpMul = BAL.enemyHpMul(run.time) * BAL.depthHpMul(run.depth) * (1 + run.flag('enemyHp'));
+  const P = BAL.power, lvl = run.level - 1;
+  const hpMul = BAL.enemyHpMul(run.time) * BAL.depthHpMul(run.depth) * (1 + run.flag('enemyHp')) * run.powerMul * (1 + P.levelHp * lvl);
   e.uid = run.newUid();
   e.def = def;
   e.sprite = def.behavior === 'boss' ? `boss${run.levelInfo.biome}` : def.sprite;
   e.x = x; e.y = y; e.kx = 0; e.ky = 0;
   e.maxHp = e.hp = def.hp * hpMul;
   e.speed = def.speed * rng.range(0.9, 1.1);
-  e.damage = def.damage * BAL.enemyDmgMul(run.time) * BAL.depthDmgMul(run.depth);
+  e.damage = def.damage * BAL.enemyDmgMul(run.time) * BAL.depthDmgMul(run.depth) * Math.pow(run.powerMul, P.dmgExp) * (1 + P.levelDmg * lvl);
   e.radius = def.radius;
   e.xp = def.xp;
   e.flash = 0; e.slowT = 0; e.slowF = 0; e.stunT = 0;
@@ -108,9 +109,10 @@ export function updateSpawner(run: Run, dt: number): void {
     run.showBanner('Okrążenie!');
   }
 
+  run.goldSlimeT -= dt;
   run.eliteT -= dt;
   if (run.eliteT <= 0) {
-    run.eliteT = BAL.eliteEvery * run.levelInfo.eliteMul;
+    run.eliteT = BAL.eliteEvery * run.levelInfo.eliteMul * BAL.eliteGap(waveT);
     const mods = Object.keys(ELITE_MODS);
     const picked = [rng.pick(mods)];
     if (waveT > 150) {
@@ -132,7 +134,11 @@ export function updateSpawner(run: Run, dt: number): void {
     run.spawnAcc -= 1;
     const [x, y] = ringPos(run, rng.range(0, Math.PI * 2), SPAWN_R + rng.range(0, 30));
     // Złoty szlam: rzadki, uciekający wróg pełen złota.
-    if (rng.chance(BAL.events.goldSlimeChance)) { spawnEnemy(run, 'goldslime', x, y); run.showBanner('Złoty szlam! Złap go!'); }
+    if (run.goldSlimeT <= 0 && rng.chance(BAL.events.goldSlimeChance) && !run.enemies.items.some((e) => !e.dead && e.def.id === 'goldslime')) {
+      run.goldSlimeT = BAL.events.goldSlimeGap;
+      spawnEnemy(run, 'goldslime', x, y);
+      run.showBanner('Złoty szlam! Złap go!');
+    }
     else spawnEnemy(run, rng.weighted(mix), x, y);
   }
 }

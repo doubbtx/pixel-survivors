@@ -1,6 +1,6 @@
 import { W, H, ZOOM, type Renderer } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText } from '../core/font';
+import { drawLabel } from '../core/font';
 import { rng } from '../core/rng';
 import { drawSprite, drawShadow, getSprite, TILE, TILE_VARIANTS } from '../gfx/sprites';
 import { animFrame } from '../gfx/actors';
@@ -37,6 +37,11 @@ function getVignette(): HTMLCanvasElement {
  * w powiększeniu ZOOM: sx = x·ZOOM − kamera. Kolejność warstw: podłoże → strefy → cienie →
  * znajdźki → wrogowie → gracz → pociski → cząsteczki/efekty → liczby obrażeń → winieta.
  */
+/** Buduje z góry klatki efektów wybuchów, żeby pierwszy wybuch w runie nie przycinał gry. */
+export function warmFx(): void {
+  for (const [kind, n] of Object.entries(FX_FRAMES)) for (let f = 0; f < n; f++) getSprite(`${kind}@${f}`);
+}
+
 export function renderWorld(run: Run, r: Renderer): void {
   const g = r.g;
   const shx = run.shake > 0 ? rng.range(-run.shake, run.shake) * ZOOM : 0;
@@ -72,69 +77,77 @@ export function renderWorld(run: Run, r: Renderer): void {
     }
   }
 
-  // Aury broni i tytana: półprzezroczyste pole + pulsujący brzeg.
-  for (const w of run.weapons) {
-    if (w.def.kind !== 'aura') continue;
-    const rad = auraRadius(effectiveStats(run, w).area) * ZOOM;
-    r.withAlpha(0.16, () => r.circle(px, py, rad, w.def.color, true));
-    r.circle(px, py, rad, run.step % 20 < 10 ? w.def.color : C.orange);
-  }
-  const ult = run.abilities.ult;
-  if (ult.def.kind === 'titan' && ult.activeT > 0) {
-    const rad = ult.def.p.radius * run.stats.area * ZOOM;
-    r.withAlpha(0.18, () => r.circle(px, py, rad, C.red, true));
-    r.circle(px, py, rad, C.red);
-  }
+  // Ataki gracza (ustawienie): przygaszone = półprzezroczyste i bez poświat, ukryte = pominięte (działają dalej).
+  const atkOn = run.playerFx !== 'hidden', glow = run.playerFx === 'visible';
+  const atk = (fn: () => void) => { if (atkOn) { if (glow) fn(); else r.withAlpha(0.35, fn); } };
 
-  // Strefy.
-  for (const z of run.zones.items) {
-    const zx = X(z.x), zy = Y(z.y), zr = z.r * ZOOM;
-    switch (z.kind) {
-      case 'meteor': {
-        r.withAlpha(0.25, () => r.circle(zx, zy, zr, C.red, true));
-        if (run.step % 8 < 5) r.circle(zx, zy, zr, C.red);
-        const fall = Math.max(0, 1 - z.t / z.delay);
-        drawSprite(g, 'eb_orange', zx + fall * 45, zy - fall * 135, { scale: 2 });
-        break;
-      }
-      case 'mine':
-        drawShadow(g, zx, zy + 5, 10);
-        drawSprite(g, z.t > 0.4 && run.step % 20 < 10 ? 'mine1' : 'mine0', zx, zy);
-        break;
-      case 'net':
-        r.withAlpha(0.15, () => r.circle(zx, zy, zr, C.lgray, true));
-        r.circle(zx, zy, zr, C.lgray);
-        for (let k = -zr + 5; k < zr; k += 8) {
-          const hw = Math.sqrt(zr * zr - k * k);
-          r.rect(zx - hw, zy + k, hw * 2, 1, C.lavender);
-          r.rect(zx + k, zy - hw, 1, hw * 2, C.lavender);
+  // Aury broni i tytana: półprzezroczyste pole + pulsujący brzeg.
+  const ult = run.abilities.ult;
+  atk(() => {
+    for (const w of run.weapons) {
+      if (w.def.kind !== 'aura') continue;
+      const rad = auraRadius(effectiveStats(run, w).area) * ZOOM;
+      if (glow) r.withAlpha(0.16, () => r.circle(px, py, rad, w.def.color, true));
+      r.circle(px, py, rad, run.step % 20 < 10 ? w.def.color : C.orange);
+    }
+    if (ult.def.kind === 'titan' && ult.activeT > 0) {
+      const rad = ult.def.p.radius * run.stats.area * ZOOM;
+      if (glow) r.withAlpha(0.18, () => r.circle(px, py, rad, C.red, true));
+      r.circle(px, py, rad, C.red);
+    }
+  });
+
+  // Strefy (wszystkie są atakami gracza).
+  atk(() => {
+    for (const z of run.zones.items) {
+      const zx = X(z.x), zy = Y(z.y), zr = z.r * ZOOM;
+      switch (z.kind) {
+        case 'meteor': {
+          r.withAlpha(0.25, () => r.circle(zx, zy, zr, C.red, true));
+          if (run.step % 8 < 5) r.circle(zx, zy, zr, C.red);
+          const fall = Math.max(0, 1 - z.t / z.delay);
+          drawSprite(g, 'eb_orange', zx + fall * 45, zy - fall * 135, { scale: 2 });
+          break;
         }
-        break;
-      case 'rain':
-        r.withAlpha(0.15, () => r.circle(zx, zy, zr, C.gold, true));
-        r.circle(zx, zy, zr, C.gold);
-        for (let k = 0; k < 8; k++) {
-          const ax = zx + rng.range(-zr, zr) * 0.8, ay = zy + rng.range(-zr, zr) * 0.8;
-          r.line(ax, ay - 9, ax, ay, C.brown);
-          r.rect(ax, ay, 1, 1, C.white);
+        case 'mine':
+          drawShadow(g, zx, zy + 5, 10);
+          drawSprite(g, z.t > 0.4 && run.step % 20 < 10 ? 'mine1' : 'mine0', zx, zy);
+          break;
+        case 'net':
+          r.withAlpha(0.15, () => r.circle(zx, zy, zr, C.lgray, true));
+          r.circle(zx, zy, zr, C.lgray);
+          for (let k = -zr + 5; k < zr; k += 8) {
+            const hw = Math.sqrt(zr * zr - k * k);
+            r.rect(zx - hw, zy + k, hw * 2, 1, C.lavender);
+            r.rect(zx + k, zy - hw, 1, hw * 2, C.lavender);
+          }
+          break;
+        case 'rain':
+          r.withAlpha(0.15, () => r.circle(zx, zy, zr, C.gold, true));
+          r.circle(zx, zy, zr, C.gold);
+          for (let k = 0; k < 8; k++) {
+            const ax = zx + rng.range(-zr, zr) * 0.8, ay = zy + rng.range(-zr, zr) * 0.8;
+            r.line(ax, ay - 9, ax, ay, C.brown);
+            r.rect(ax, ay, 1, 1, C.white);
+          }
+          break;
+        case 'fire':
+          r.withAlpha(0.2, () => r.circle(zx, zy, zr, C.orange, true));
+          for (let k = 0; k < 5; k++) {
+            r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7 - rng.range(0, 4), 2, 2, rng.pick(FIRE_COLS));
+          }
+          break;
+        case 'beam': {
+          const ex = zx + Math.cos(z.angle) * z.len * ZOOM, ey = zy + Math.sin(z.angle) * z.len * ZOOM;
+          const wdt = Math.max(2, Math.round(z.r * 2 * ZOOM));
+          r.withAlpha(0.35, () => r.line(zx, zy, ex, ey, C.pink, wdt + 4));
+          r.line(zx, zy, ex, ey, C.pink, wdt);
+          r.line(zx, zy, ex, ey, C.white, Math.max(1, wdt - 3));
+          break;
         }
-        break;
-      case 'fire':
-        r.withAlpha(0.2, () => r.circle(zx, zy, zr, C.orange, true));
-        for (let k = 0; k < 5; k++) {
-          r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7 - rng.range(0, 4), 2, 2, rng.pick(FIRE_COLS));
-        }
-        break;
-      case 'beam': {
-        const ex = zx + Math.cos(z.angle) * z.len * ZOOM, ey = zy + Math.sin(z.angle) * z.len * ZOOM;
-        const wdt = Math.max(2, Math.round(z.r * 2 * ZOOM));
-        r.withAlpha(0.35, () => r.line(zx, zy, ex, ey, C.pink, wdt + 4));
-        r.line(zx, zy, ex, ey, C.pink, wdt);
-        r.line(zx, zy, ex, ey, C.white, Math.max(1, wdt - 3));
-        break;
       }
     }
-  }
+  });
 
   // Cienie (pod wszystkimi stojącymi na ziemi; pomijane w trybie oszczędnych efektów).
   const fancy = !run.lowFx;
@@ -275,30 +288,30 @@ export function renderWorld(run: Run, r: Renderer): void {
   r.rect(px - 8, py + 13, Math.round(16 * Math.max(0, p.hp / run.stats.maxHp)), 2, C.red);
   r.rect(px - 8, py + 13, Math.round(16 * Math.max(0, p.hp / run.stats.maxHp)), 1, C.salmon);
 
-  // Ostrza orbity.
-  for (const w of run.weapons) {
-    if (w.def.kind !== 'orbit') continue;
-    const s = effectiveStats(run, w);
-    const n = Math.max(1, s.amount), R = orbitRadius(s.area) * ZOOM;
-    for (let k = 0; k < n; k++) {
-      const a = w.angle + (k * Math.PI * 2) / n;
-      drawSprite(g, w.def.proj ?? 'blade', px + Math.cos(a) * R, py + Math.sin(a) * R, { scale: s.area >= 1.5 ? 2 : 1 });
+  // Ostrza orbity i pociski gracza.
+  atk(() => {
+    for (const w of run.weapons) {
+      if (w.def.kind !== 'orbit') continue;
+      const s = effectiveStats(run, w);
+      const n = Math.max(1, s.amount), R = orbitRadius(s.area) * ZOOM;
+      for (let k = 0; k < n; k++) {
+        const a = w.angle + (k * Math.PI * 2) / n;
+        drawSprite(g, w.def.proj ?? 'blade', px + Math.cos(a) * R, py + Math.sin(a) * R, { scale: s.area >= 1.5 ? 2 : 1 });
+      }
     }
-  }
-
-  // Pociski gracza (można je ukryć w ustawieniach — czytelność pocisków wrogów).
-  for (const pr of run.projectiles.items) {
-    if (run.hideProjectiles || !vis(pr.x, pr.y)) continue;
-    const x = X(pr.x), y = Y(pr.y);
-    if (pr.kind === 'arrow') {
-      const dir = (Math.round((Math.atan2(pr.vy, pr.vx) / (Math.PI * 2)) * ARROW_DIRS) + ARROW_DIRS) % ARROW_DIRS;
-      drawSprite(g, `${pr.forceCrit ? 'arrowc' : 'arrow'}@${dir}`, x, y);
-    } else if (pr.kind === 'boomerang') {
-      drawSprite(g, `boom${Math.floor(pr.t * 16) & 3}`, x, y);
-    } else {
-      drawSprite(g, pr.sprite, x, y);
+    for (const pr of run.projectiles.items) {
+      if (!vis(pr.x, pr.y)) continue;
+      const x = X(pr.x), y = Y(pr.y);
+      if (pr.kind === 'arrow') {
+        const dir = (Math.round((Math.atan2(pr.vy, pr.vx) / (Math.PI * 2)) * ARROW_DIRS) + ARROW_DIRS) % ARROW_DIRS;
+        drawSprite(g, `${pr.forceCrit ? 'arrowc' : 'arrow'}@${dir}`, x, y);
+      } else if (pr.kind === 'boomerang') {
+        drawSprite(g, `boom${Math.floor(pr.t * 16) & 3}`, x, y);
+      } else {
+        drawSprite(g, pr.sprite, x, y);
+      }
     }
-  }
+  });
 
   // Pociski wrogów: najpierw poświaty (jedna zmiana przezroczystości dla wszystkich), potem kule.
   // Przy bardzo dużej liczbie pocisków poświaty są pomijane (wydajność).
@@ -311,47 +324,47 @@ export function renderWorld(run: Run, r: Renderer): void {
     if (vis(b.x, b.y)) drawSprite(g, b.sprite, X(b.x), Y(b.y));
   }
 
-  // Cząsteczki.
-  for (const pt of run.particles.items) {
-    if (vis(pt.x, pt.y)) r.rect(X(pt.x), Y(pt.y), pt.size + 1, pt.size + 1, pt.col);
-  }
-
-  // Efekty.
-  for (const f of run.fx.items) {
-    const k = f.life / f.max;
-    switch (f.kind) {
-      case 'line':
-        r.withAlpha(0.4, () => r.line(X(f.x), Y(f.y), X(f.x2), Y(f.y2), f.col, f.w + 3));
-        r.line(X(f.x), Y(f.y), X(f.x2), Y(f.y2), f.col, f.w + 1);
-        r.line(X(f.x), Y(f.y), X(f.x2), Y(f.y2), C.white, 1);
-        break;
-      case 'ring': {
-        const rr = f.r * ZOOM * (1.15 - k * 0.3);
-        r.withAlpha(0.3 * k, () => r.circle(X(f.x), Y(f.y), rr, f.col, true));
-        r.circle(X(f.x), Y(f.y), rr, f.col);
-        break;
-      }
-      case 'spark':
-      case 'poof':
-      case 'boom': {
-        const n = FX_FRAMES[f.kind];
-        const fr = Math.min(n - 1, Math.floor((1 - k) * n));
-        drawSprite(g, `${f.kind}@${fr}`, X(f.x), Y(f.y), { scale: Math.max(1, Math.round(f.r)) });
-        break;
-      }
-      case 'arc':
-        for (let a = f.a0; a <= f.a1; a += 0.08) {
-          const rr = f.r * ZOOM * (0.6 + 0.4 * (1 - k));
-          r.rect(X(f.x) + Math.cos(a) * rr, Y(f.y) + Math.sin(a) * rr, 3, 3, f.col);
-          r.rect(X(f.x) + Math.cos(a) * (rr - 3), Y(f.y) + Math.sin(a) * (rr - 3), 2, 2, C.white);
-        }
-        break;
+  // Cząsteczki i efekty (trafienia, wybuchy, błyski) — też ataki gracza.
+  atk(() => {
+    for (const pt of run.particles.items) {
+      if (vis(pt.x, pt.y)) r.rect(X(pt.x), Y(pt.y), pt.size + 1, pt.size + 1, pt.col);
     }
-  }
+    for (const f of run.fx.items) {
+      const k = f.life / f.max;
+      switch (f.kind) {
+        case 'line':
+          if (glow) r.withAlpha(0.4, () => r.line(X(f.x), Y(f.y), X(f.x2), Y(f.y2), f.col, f.w + 3));
+          r.line(X(f.x), Y(f.y), X(f.x2), Y(f.y2), f.col, f.w + 1);
+          r.line(X(f.x), Y(f.y), X(f.x2), Y(f.y2), C.white, 1);
+          break;
+        case 'ring': {
+          const rr = f.r * ZOOM * (1.15 - k * 0.3);
+          if (glow) r.withAlpha(0.3 * k, () => r.circle(X(f.x), Y(f.y), rr, f.col, true));
+          r.circle(X(f.x), Y(f.y), rr, f.col);
+          break;
+        }
+        case 'spark':
+        case 'poof':
+        case 'boom': {
+          const n = FX_FRAMES[f.kind];
+          const fr = Math.min(n - 1, Math.floor((1 - k) * n));
+          drawSprite(g, `${f.kind}@${fr}`, X(f.x), Y(f.y), { scale: Math.max(1, Math.round(f.r)) });
+          break;
+        }
+        case 'arc':
+          for (let a = f.a0; a <= f.a1; a += 0.08) {
+            const rr = f.r * ZOOM * (0.6 + 0.4 * (1 - k));
+            r.rect(X(f.x) + Math.cos(a) * rr, Y(f.y) + Math.sin(a) * rr, 3, 3, f.col);
+            r.rect(X(f.x) + Math.cos(a) * (rr - 3), Y(f.y) + Math.sin(a) * (rr - 3), 2, 2, C.white);
+          }
+          break;
+      }
+    }
+  });
 
   // Liczby obrażeń.
   for (const n of run.dmgNums.items) {
-    if (vis(n.x, n.y)) drawText(g, n.text, X(n.x), Y(n.y) - 6, n.col, { align: 'center', outline: C.black });
+    if (vis(n.x, n.y)) drawLabel(g, n.text, X(n.x), Y(n.y) - 6, n.col, C.black);
   }
 
   if (fancy) g.drawImage(getVignette(), 0, 0);

@@ -3,7 +3,7 @@ import { SpatialHash } from '../core/spatial';
 import { rng } from '../core/rng';
 import { sfx } from '../core/audio';
 import type { Input } from '../core/input';
-import type { AimMode } from '../core/save';
+import type { AimMode, PlayerFx } from '../core/save';
 import { VIEW_W, VIEW_H } from '../core/renderer';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
@@ -17,7 +17,7 @@ import { SRC_ELEMENT, ELEM, type Element } from '../data/elements';
 import type { MetaBonus } from '../data/meta';
 import { CARD_BY_ID, type CardSource, type HookName, type CardHooks, type Tag } from '../data/cards';
 import { SYNERGIES, VERSATILITY, tagPoints, tierOf, type SynergyTier } from '../data/synergies';
-import { equippedSupers, salvageValue, salvageShards, slotKind, rollItem, BASE_BY_ID, type Item, type SlotId, type LootSource } from '../data/items';
+import { equippedSupers, salvageGold, salvageShards, slotKind, rollItem, BASE_BY_ID, type Item, type SlotId, type LootSource } from '../data/items';
 import {
   SLOT, SLOT_COUNT, type Stats, type Player, type Enemy, type Projectile, type EnemyBullet, type Gem, type Pickup,
   type Particle, type DmgNum, type Zone, type Fx, type WeaponInst, type PassiveInst, type AbilityInst, type PickupKind,
@@ -43,6 +43,12 @@ export const DEFAULT_STATS: Stats = {
 
 /** Numer progu synergii na banerze. */
 const ROMAN_TIER = ['', 'I', 'II', 'III', 'IV'];
+
+/**
+ * Źródła zadające procent HP wroga — pomijane w pomiarze siły buildu (inaczej mocniejsi wrogowie podbijaliby DPS),
+ * razem z obrażeniami wywołanymi przez ich trafienia (hooki onHit); takie trafienia nie nakładają żywiołów.
+ */
+const PCT_SOURCES = new Set(['Egzekucja', 'Ognista dusza', 'Wybuchowe zgony', 'Synergia: Ogień', 'Supernowa']);
 
 export interface DamageOpts {
   /** Kierunek odrzutu (nie musi być znormalizowany) i jego siła. */
@@ -127,6 +133,8 @@ export interface RunSnapshot {
   stage?: { time: number; kills: number; eliteT: number; nextEvent: number; bossHpFrac: number; nextBossAt?: number };
   /** Mapa i pozycja Ekspedycji. */
   expedition?: ExpeditionState;
+  /** Średni DPS (siła buildu, BAL.power) — żeby po wczytaniu wrogowie nie byli na chwilę za słabi. */
+  dpsEma?: number;
 }
 
 /**
@@ -196,6 +204,10 @@ export class Run {
   /** Zaplanowane akcje (opóźnione efekty kart). */
   private timers: { t: number; fn: () => void }[] = [];
   private explosionsThisStep = 0;
+  /** Środki wybuchów narysowanych w tym kroku (scalanie efektów bliskich wybuchów) i cząsteczki dodane w tym kroku. */
+  private boomSpots: number[] = [];
+  private particlesThisStep = 0;
+  private sparksThisStep = 0;
   /** Ile tarczy za zabójstwa można jeszcze dodać (odnawia się z BAL.killShieldRate). */
   private killShieldBudget = 0;
 
@@ -255,6 +267,8 @@ export class Run {
   shrineT = 0;
   portalT = 0;
   swordRolled = false;
+  /** Czas do możliwego pojawienia się następnego Złotego szlamu. */
+  goldSlimeT = 0;
   /** HP bossa po wznowieniu przerwanego poziomu (ułamek; 1 = pełne). */
   bossHpFrac = 1;
   /** Ekspedycja: mapa aktu i pozycja (null w innych trybach). */
@@ -264,6 +278,12 @@ export class Run {
   boss: Enemy | null = null;
   bossSpawned = false;
   eliteT: number = BAL.eliteEvery;
+  /** Średni DPS gracza (średnia krocząca) i wynikający z niego mnożnik siły wrogów (BAL.power). */
+  dpsEma = 0;
+  powerMul = 1;
+  private dmgStep = 0;
+  /** > 0 w trakcie hooków trafienia procentowego (PCT_SOURCES). */
+  private pctDepth = 0;
   nextEvent = 0;
   spawnAcc = 0;
   private uid = 1;
@@ -287,7 +307,7 @@ export class Run {
   /** Oszczędne efekty (ustawienie): mniej cząsteczek i iskier; render pomija cienie, poświaty i winietę. */
   lowFx = false;
   /** Ukryte pociski gracza (ustawienie): nadal działają, tylko nie są rysowane. */
-  hideProjectiles = false;
+  playerFx: PlayerFx = 'visible';
 
   constructor(heroId: string, readonly mode: Mode, depth = 1, fresh = true) {
     this.hero = HERO_BY_ID[heroId];
@@ -315,7 +335,7 @@ export class Run {
     this.levelKills = 0;
     this.boss = null;
     this.bossSpawned = false;
-    this.eliteT = BAL.eliteEvery * this.levelInfo.eliteMul;
+    this.eliteT = BAL.eliteEvery * this.levelInfo.eliteMul * BAL.eliteGap(this.levelInfo.waveOffset);
     this.nextEvent = 0;
     this.spawnAcc = 0;
     this.outcome = 'none';
@@ -326,6 +346,7 @@ export class Run {
     this.shrineT = BAL.events.shrineEvery * 0.5;
     this.portalT = BAL.events.portalEvery;
     this.swordRolled = false;
+    this.goldSlimeT = BAL.events.goldSlimeGap * 0.5;
     for (const p of [this.enemies, this.projectiles, this.bullets, this.gems, this.pickups, this.particles, this.dmgNums, this.zones, this.fx, this.turrets] as Pool<{ _i: number }>[]) p.clear();
     this.timers = [];
     const p = this.player;
@@ -341,6 +362,21 @@ export class Run {
     if (this.mode === 'endless') return Math.min(1, this.time / this.nextBossAt);
     const o = this.levelInfo.objective;
     return Math.min(1, o.kind === 'survive' ? this.time / o.time : this.levelKills / o.count);
+  }
+
+  /** Czas fal: czas poziomu + przesunięcie głębokości (skład fal, elity, gęstość salw, siła buildu). */
+  waveTime(): number {
+    return this.time + this.levelInfo.waveOffset;
+  }
+
+  /** Średnia krocząca DPS (z obrażeń zadanych w poprzednim kroku) i mnożnik siły wrogów (BAL.power). */
+  private updatePower(dt: number): void {
+    const P = BAL.power;
+    this.dpsEma += (this.dmgStep / dt - this.dpsEma) * Math.min(1, dt / P.emaSec);
+    this.dmgStep = 0;
+    const t = this.waveTime();
+    const base = P.baseHp * BAL.enemyHpMul(this.time) * BAL.depthHpMul(this.depth);
+    this.powerMul = Math.min(P.max, Math.max(1, Math.pow((this.dpsEma * P.ttk(t)) / base, P.exp)));
   }
 
   /** Debug (F4): przyspiesza cel poziomu i czas fal. */
@@ -360,7 +396,11 @@ export class Run {
     this.time += dt;
     this.totalTime += dt;
     this.step++;
+    this.updatePower(dt);
     this.explosionsThisStep = 0;
+    this.boomSpots.length = 0;
+    this.particlesThisStep = 0;
+    this.sparksThisStep = 0;
     if (this.flag('aegis') > 0) this.cardState.aegis = (this.cardState.aegis ?? 0) + dt;
     const shieldRate = this.stats.maxHp * BAL.killShieldRate;
     this.killShieldBudget = Math.min(shieldRate, this.killShieldBudget + shieldRate * dt);
@@ -538,7 +578,7 @@ export class Run {
     this.equipment[slot] = it;
     let gold = 0;
     if (old && this.bag.length < BAL.bagSize) this.bag.push(old);
-    else if (old) { gold = Math.round(salvageValue(old) * this.stats.greed); this.gold += gold; this.shards += salvageShards(old); }
+    else if (old) { gold = salvageGold(old, this.stats.greed); this.gold += gold; this.shards += salvageShards(old); }
     this.onBuildChanged();
     return gold;
   }
@@ -557,7 +597,7 @@ export class Run {
   salvage(it: Item): number {
     for (const s of Object.keys(this.equipment) as SlotId[]) if (this.equipment[s] === it) this.equipment[s] = null;
     this.bag = this.bag.filter((b) => b !== it);
-    const g = Math.round(salvageValue(it) * this.stats.greed);
+    const g = salvageGold(it, this.stats.greed);
     this.shards += salvageShards(it);
     this.gold += g;
     this.onBuildChanged();
@@ -604,9 +644,16 @@ export class Run {
     if (z) z.tick = 20;
   }
 
-  /** Wybuch: obrażenia (stałe albo liczone per wróg) z odrzutem od środka + efekty. */
+  /**
+   * Wybuch: obrażenia (stałe albo liczone per wróg) z odrzutem od środka + efekty.
+   * Efekty wybuchów blisko już narysowanego w tym kroku (albo ponad limit na krok) są pomijane — obrażenia zawsze działają.
+   */
   explode(x: number, y: number, r: number, dmg: number | ((e: Enemy) => number), src: string, col: number, knock = 3): void {
     this.enemiesInCircle(x, y, r, (e) => this.damageEnemy(e, typeof dmg === 'number' ? dmg : dmg(e), src, { kx: e.x - x, ky: e.y - y, knock }));
+    const spots = this.boomSpots, near = BAL.fx.boomMerge * BAL.fx.boomMerge;
+    if (spots.length >= BAL.fx.boomsPerStep * 2) return;
+    for (let i = 0; i < spots.length; i += 2) if ((spots[i] - x) ** 2 + (spots[i + 1] - y) ** 2 < near) return;
+    spots.push(x, y);
     const f = this.addFx('ring', x, y, col, 0.25);
     if (f) f.r = r;
     this.boomFx(x, y, r);
@@ -669,6 +716,7 @@ export class Run {
     for (const k in itemMul) s[k as keyof Stats] *= itemMul[k as keyof Stats]!;
     for (const k in this.meta.mul) s[k as keyof Stats] *= this.meta.mul[k as keyof Stats]!;
     for (const t of this.synEffects) for (const k in t.mul ?? {}) s[k as keyof Stats] *= t.mul![k as keyof Stats]!;
+    for (const k in BAL.softCaps) s[k as keyof Stats] = BAL.softCap(s[k as keyof Stats], BAL.softCaps[k as keyof Stats]!);
     s.maxHp = Math.max(1, s.maxHp);
     const oldMax = this.stats.maxHp;
     this.stats = s;
@@ -759,6 +807,8 @@ export class Run {
     e.hp -= dmg;
     e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dmg);
+    const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;
+    if (!pct) this.dmgStep += dmg;
     if (st.lifesteal > 0) this.heal(Math.min(dmg * st.lifesteal, st.maxHp * 0.02));
     if (o.knock) {
       const l = Math.hypot(o.kx ?? 0, o.ky ?? 0) || 1;
@@ -775,15 +825,18 @@ export class Run {
       n.text = fmt(dmg);
       n.col = o.dot ? (src === 'Trucizna' ? C.lime : C.orange) : mult > st.critMult ? C.orange : crit ? C.yellow : C.white;
     }
-    if (!this.lowFx && this.fx.count < 260 && rng.chance(0.5)) {
+    if (!this.lowFx && this.sparksThisStep < BAL.fx.sparksPerStep && rng.chance(0.5)) {
+      this.sparksThisStep++;
       const s = this.addFx('spark', e.x + rng.range(-2, 2), e.y + rng.range(-3, 1), C.white, 0.16);
       if (s) s.r = crit ? 2 : 1;
     }
     if (o.dot) { if (e.hp <= 0 && !e.dead) this.killEnemy(e); return; }
     const el = SRC_ELEMENT[src];
-    if (el) this.applyElement(e, el, dmg);
+    if (el && !pct) this.applyElement(e, el, dmg);
     sfx.play('hit');
+    if (pct) this.pctDepth++;
     this.emit('onHit', e, dmg, crit);
+    if (pct) this.pctDepth--;
     if (e.hp <= 0 && !e.dead) this.killEnemy(e);
   }
 
@@ -817,7 +870,7 @@ export class Run {
     this.levelKills++;
     this.ultCharge += (e.boss ? 30 : e.elite ? 5 : 1) * (1 + this.flag('ultGain'));
     this.burst(e.x, e.y, e.def.color, e.boss ? 60 : e.elite ? 24 : 5, e.boss ? 90 : 50);
-    if (this.fx.count < 320) {
+    if (this.fx.count < BAL.fx.poofCap) {
       const f = this.addFx('poof', e.x, e.y, C.lgray, 0.32);
       if (f) f.r = e.boss ? 3 : e.elite ? 2 : 1;
     }
@@ -1047,6 +1100,8 @@ export class Run {
 
   burst(x: number, y: number, col: number, n: number, speed: number): void {
     if (this.lowFx) n = Math.ceil(n / 3);
+    n = Math.min(n, BAL.fx.particlesPerStep - this.particlesThisStep);
+    this.particlesThisStep += Math.max(0, n);
     for (let i = 0; i < n; i++) {
       const p = this.particles.obtain();
       if (!p) return;
@@ -1106,6 +1161,7 @@ export class Run {
         bossHpFrac: this.boss ? this.boss.hp / this.boss.maxHp : 1, nextBossAt: this.nextBossAt,
       } : undefined,
       expedition: this.expedition ? structuredClone(this.expedition) : undefined,
+      dpsEma: this.dpsEma,
     };
   }
 
@@ -1146,6 +1202,7 @@ export class Run {
     run.shopLevel = s.shopLevel ?? 1;
     run.anvilLevel = s.anvilLevel ?? 1;
     run.expedition = s.expedition ? structuredClone(s.expedition) : null;
+    run.dpsEma = s.dpsEma ?? 0;
     run.startLevel(s.depth);
     // Przerwany poziom: wznowienie od zapisanego postępu (boss, jeśli był, wraca z zapisanym HP).
     if (s.inProgress && s.stage) {

@@ -1,3 +1,5 @@
+import type { Stats } from '../entities/types';
+
 /**
  * Wszystkie wzory balansu w jednym miejscu. Czas `t` w sekundach od startu poziomu.
  * Zmieniając liczby tutaj, tuningujesz całą grę bez dotykania systemów.
@@ -18,11 +20,30 @@ export const BAL = {
   /** XP potrzebne, by z poziomu `lvl` wejść na `lvl+1`. Rośnie kwadratowo, bez sufitu. */
   xpToNext: (lvl: number) => Math.floor(5 + lvl * 5 + lvl * lvl * 0.6),
 
-  // --- skalowanie wrogów (wykładniczo w czasie) ---
+  // --- skalowanie wrogów (wykładniczo w czasie; łagodny start: obrażenia od 60% do pełnych w 1. minucie) ---
   enemyHpMul: (t: number) => Math.pow(1.38, t / 60),
-  enemyDmgMul: (t: number) => Math.pow(1.2, t / 60),
+  enemyDmgMul: (t: number) => Math.pow(1.2, t / 60) * Math.min(1, 0.6 + t / 150),
   /** Docelowa liczba wrogów na mapie; spawner dąży do niej. */
-  targetEnemies: (t: number) => Math.min(1000, 8 + 0.9 * t + 0.004 * t * t),
+  targetEnemies: (t: number) => Math.min(1000, 6 + 0.75 * t + 0.004 * t * t),
+  /** Odstęp elit maleje w późnej grze (czas fal) do 35% wartości bazowej. */
+  eliteGap: (t: number) => Math.max(0.35, 1 - t / 700),
+  /** Gęstość salw wrogów (mnożnik liczby pocisków) rośnie po 4. minucie czasu fal, do +60%. */
+  patternDensity: (t: number) => 1 + Math.min(0.6, Math.max(0, (t - 240) / 600)),
+  /**
+   * Siła buildu: HP wrogów dopasowuje się do średniego DPS gracza (średnia krocząca `emaSec` s), tak by przeciętny wróg
+   * ginął w ok. `ttk(t)` sekundy całego DPS. Tylko w górę (mnożnik ≥ 1), z wykładnikiem `exp` (łagodniej niż 1:1) i limitem `max`.
+   * Obrażenia wrogów rosną z tym mnożnikiem do potęgi `dmgExp` oraz z poziomem postaci (`levelHp`, `levelDmg` na poziom).
+   */
+  power: {
+    emaSec: 15,
+    baseHp: 15,
+    ttk: (t: number) => 0.06 + 0.06 * Math.exp(-t / 240),
+    exp: 0.75,
+    max: 60,
+    dmgExp: 0.2,
+    levelHp: 0.01,
+    levelDmg: 0.012,
+  },
   /** Maks. spawnów na sekundę (żeby fala nie pojawiała się w jednej klatce). */
   spawnRateCap: (t: number) => 4 + t * 0.15,
   eliteHpMul: 20,
@@ -72,6 +93,13 @@ export const BAL = {
   anvil: {
     shardsByRarity: [1, 2, 4, 7, 12],
     upgrade: { gold: 20, shards: 2 },
+    /** Ulepszenie: limit, przyrost każdej wartości (ułamek wartości z łupu, losowy z zakresu), wzrost ceny na ulepszenie. */
+    maxUpgrades: 10,
+    upgradeMin: 0.06,
+    upgradeMax: 0.14,
+    upgradeCostGrowth: 0.35,
+    /** Rozłożenie zwraca taki ułamek złota i odłamków wydanych na przedmiot w kowadle. */
+    salvageRefund: 0.25,
     reroll: { gold: 15, shards: 1 },
     /** Przekucie wszystkich bonusów naraz: suma kosztów pojedynczych × tyle. */
     rerollAllMul: 0.7,
@@ -102,10 +130,23 @@ export const BAL = {
     swordAt: 40, swordChance: 0.4,
     portalEvery: 120, portalChance: 0.6, portalLife: 35,
     dungeonWaves: 3, dungeonWaveSize: 10, arenaR: 150,
-    goldSlimeChance: 0.002, goldSlimeLife: 25, goldSlimeCoins: 30,
+    /** Złoty szlam: szansa przy spawnie, minimalny odstęp (s), najwyżej jeden naraz. */
+    goldSlimeChance: 0.0005, goldSlimeGap: 90, goldSlimeLife: 25, goldSlimeCoins: 30,
   },
   /** Endless: boss co tyle sekund; każdy pokonany boss podnosi głębokość (trudność). */
   endlessBossEvery: 300,
+  /** Premie statystyk przy awansie, gdy wszystko jest rozwinięte (stały przyrost, do wyboru jak zwykłe opcje). */
+  statBoosts: [
+    { stat: 'might', value: 0.04, name: 'Siła', desc: '+4% obrażeń.', icon: 'pi_might' },
+    { stat: 'maxHp', value: 15, name: 'Witalność', desc: '+15 maks. HP.', icon: 'pi_heart' },
+    { stat: 'atkSpeed', value: 0.03, name: 'Zręczność', desc: '+3% szybkości ataku.', icon: 'pi_fury' },
+    { stat: 'armor', value: 1, name: 'Hart', desc: '+1 pancerza.', icon: 'pi_armor' },
+    { stat: 'regen', value: 0.15, name: 'Odnowa', desc: '+0.15 HP na sekundę.', icon: 'pi_herb' },
+    { stat: 'crit', value: 0.02, name: 'Precyzja', desc: '+2% szansy na krytyk.', icon: 'pi_crit' },
+    { stat: 'area', value: 0.03, name: 'Zasięg', desc: 'Ataki i efekty 3% większe.', icon: 'pi_lens' },
+    { stat: 'speedBonus', value: 0.03, name: 'Zwinność', desc: '+3% szybkości ruchu.', icon: 'pi_wings' },
+    { stat: 'cdr', value: 0.02, name: 'Skupienie', desc: 'Umiejętności odnawiają się 2% szybciej.', icon: 'pi_clock' },
+  ] as { stat: keyof Stats; value: number; name: string; desc: string; icon: string }[],
   /** Ekspedycja (data/expedition.ts): 3 akty map z węzłami. */
   expedition: {
     acts: 3,
@@ -151,10 +192,15 @@ export const BAL = {
   prismChance: (depth: number, lvl: number) => Math.min(0.3, 0.03 + 0.03 * (depth - 1) + 0.002 * lvl),
   /** Maks. liczba eksplozji z efektów kart w jednym kroku (chroni przed reakcją łańcuchową). */
   explosionBudget: 12,
+  /** Limity efektów (wydajność przy masowych wybuchach): cząsteczki na krok, efekty wybuchów na krok i odległość scalania, obłoczki śmierci. */
+  fx: { particlesPerStep: 160, sparksPerStep: 12, boomsPerStep: 6, boomMerge: 24, poofCap: 140 },
   bossBaseHp: 3200,
 
   // --- gracz: diminishing returns tam, gdzie wartości ≥100% psułyby grę ---
   /** Pancerz → mnożnik otrzymywanych obrażeń. 25 pancerza = -50%. Nigdy 0. */
+  /** Miękkie limity statystyk procentowych: powyżej progu przyrost maleje (asymptota 2 × próg). */
+  softCaps: { crit: 0.6, lifesteal: 0.1, speedBonus: 0.8 } as Partial<Record<keyof Stats, number>>,
+  softCap: (v: number, knee: number) => (v <= knee ? v : knee + (v - knee) / (1 + (v - knee) / knee)),
   armorMul: (armor: number) => 25 / (25 + Math.max(0, armor)),
   /** Szybkość ataku → mnożnik odstępu między atakami broni. +100% = ataki 2x częściej. */
   attackSpeedMul: (as: number) => 1 / (1 + Math.max(0, as)),

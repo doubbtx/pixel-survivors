@@ -9,7 +9,7 @@ import { CARD_BY_ID } from '../data/cards';
 import { BAL } from '../data/balance';
 import { levelDef, objectiveLabel } from '../data/levels';
 import { Run, type Mode, type RunSnapshot, type SlotMode } from '../game/run';
-import { renderWorld } from '../game/render';
+import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
@@ -75,6 +75,7 @@ export class GameScreen implements Screen {
     this.run.cardBans = new Set(app.save.collection.banned);
     this.run.knownCards = new Set(app.save.collection.seen);
     this.run.applyMeta(metaBonus(app.save.meta), !snapshot);
+    warmFx();
     const hc = mode === 'hardcore';
     const slotted = mode !== 'training';
     // Poddanie z potwierdzeniem tam, gdzie przepada dłuższy postęp (Hardcore, Ekspedycja).
@@ -350,7 +351,7 @@ export class GameScreen implements Screen {
     run.damageNumbers = set.damageNumbers;
     run.healNumbers = set.healNumbers;
     run.lowFx = set.lowFx;
-    run.hideProjectiles = set.hideProjectiles;
+    run.playerFx = set.playerFx;
     if (inp.pressed('debug')) {
       set.debug = !set.debug;
       this.app.persist();

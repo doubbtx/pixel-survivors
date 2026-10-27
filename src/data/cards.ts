@@ -99,8 +99,16 @@ export const CARDS: CardDef[] = [
   { id: 's_leech', name: 'Pijawka', rarity: 'silver', tags: ['Życie'], desc: 'Leczysz się za 1% zadanych obrażeń.', stackable: true, stats: { lifesteal: 0.01 } },
   { id: 's_pockets', name: 'Głębokie kieszenie', rarity: 'silver', tags: ['Szybkość'], desc: '+40% zasięgu przyciągania łupów, +20% złota.', stackable: true, stats: { magnet: 0.4, greed: 0.2 } },
   {
-    id: 's_hunger', name: 'Głód krwi', rarity: 'silver', tags: ['Życie'], desc: 'Każde zabójstwo: +0.1 maks. HP na stałe.', stackable: true,
-    hooks: { onKill: (run, _e, n) => run.addBonus('maxHp', 0.1 * n) },
+    id: 's_hunger', name: 'Głód krwi', rarity: 'silver', tags: ['Życie'], desc: 'Każde zabójstwo: +0.1 maks. HP na stałe (do +100 na kartę).', stackable: true,
+    hooks: {
+      onKill: (run, _e, n) => {
+        const got = run.cardState.hunger ?? 0;
+        const add = Math.min(0.1 * n, 100 * n - got);
+        if (add <= 0) return;
+        run.cardState.hunger = got + add;
+        run.addBonus('maxHp', add);
+      },
+    },
   },
   {
     id: 's_spark', name: 'Iskra', rarity: 'silver', tags: ['Ogień'], desc: 'Każde trafienie: 5% szans na płomienie pod wrogiem.', stackable: true,

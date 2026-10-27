@@ -191,6 +191,15 @@ src/
 - Ewolucje: Słońce (3 dodatkowe wybuchy), Płomienna bariera (tarcza 15% HP), Kataklizm (dwa razy gęstsze meteory). 4 karty bohaterki (Rozżarzenie, Wieczny płomień, Ognisty deszcz, Podwójne echo).
 - Nowy ekran wyboru bohatera: lista po lewej, szczegóły po prawej.
 
+**Etap A: poprawki i balans (0.7)**:
+- Ustawienia → **Ataki gracza: widoczne / przygaszone / ukryte** (pociski, aury, promienie, pioruny, orbity, meteory, miny, wybuchy, błyski trafień). Pociski wrogów, wrogowie i łup zawsze w pełni widoczne. Stare „ukryj pociski” przechodzi w „ukryte”.
+- Broń bazowa nie wraca w ofercie, gdy masz jej ewolucję. Gdy wszystko jest rozwinięte, awans proponuje stałe premie (np. +4% obrażeń, +15 HP, +3% szybkości ataku).
+- Trudność: HP wrogów dopasowuje się do średniego DPS gracza (tylko w górę, maks. x60), HP i obrażenia rosną też z poziomem postaci. W późnej grze częstsze elity, więcej strzelców i gęstsze salwy (do +60% pocisków); łagodniejszy start (obrażenia wrogów od 60%, mniej wrogów w 1. minucie). Symulacja (bot, 15 min): czas zabicia przeciętnego wroga trzyma się ok. 10-20% DPS zamiast spadać do 0,5%.
+- Kowadło: **Ulepsz** do 10 razy, każda wartość rośnie o 6-14% wartości z łupu (liniowo, nigdy w dół); cena rośnie z liczbą ulepszeń. Rozłożenie zwraca dodatkowo 25% złota i odłamków wydanych na przedmiot w kowadle. Miękkie limity: krytyk, kradzież życia, szybkość ruchu.
+- Karta Głód krwi: najwyżej +100 maks. HP na kartę (wcześniej bez limitu). Złoty szlam: rzadziej, co najmniej 90 s odstępu, najwyżej jeden naraz.
+- Wydajność wybuchów: limit cząsteczek i iskier na krok, scalanie efektów bliskich wybuchów, liczby obrażeń z gotowych obrazków, grafika wybuchów budowana przy starcie.
+- Ustawienia (z włączonym debug) → **Podgląd balansu**: HP zbroi z poziomem i po ulepszeniach, skalowanie wrogów w czasie, miękkie limity.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

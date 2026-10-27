@@ -12,6 +12,9 @@ export const WAVES: { from: number; mix: [string, number][] }[] = [
   { from: 120, mix: [['slime', 2], ['bat', 3], ['golem', 1], ['eye', 1.5], ['wisp', 1], ['cultist', 1.2], ['sentinel', 0.15]] },
   { from: 170, mix: [['slime', 2], ['bat', 3], ['golem', 2], ['eye', 1.5], ['wisp', 1], ['cultist', 1.2], ['spinner', 0.2], ['sentinel', 0.25]] },
   { from: 230, mix: [['bat', 3], ['golem', 3], ['eye', 2], ['wisp', 2], ['cultist', 1.5], ['spinner', 0.3], ['sentinel', 0.3]] },
+  // Późna gra: coraz więcej strzelców.
+  { from: 330, mix: [['bat', 2], ['golem', 2.5], ['eye', 3], ['wisp', 2.5], ['cultist', 2.5], ['spinner', 0.5], ['sentinel', 0.5]] },
+  { from: 460, mix: [['bat', 2], ['golem', 2], ['eye', 3], ['wisp', 3], ['cultist', 3], ['spinner', 0.8], ['sentinel', 0.8]] },
 ];
 
 /** Zdarzenia specjalne: pierścień wrogów zamykający się wokół gracza. */
