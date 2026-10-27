@@ -93,6 +93,11 @@ export interface SaveData {
   lastHero: string;
   /** Pakty ryzyka (data/pacts.ts): wybrane na następny run i najwyższy poziom Paktu z pokonanym bossem per bohater. */
   pacts: { chosen: Record<string, number>; best: Record<string, number> };
+  /** Zdobyte osiągnięcia (data/achievements.ts), zabójstwa per wróg (bestiariusz) i wyzwanie dnia. Nowe pola bez migracji. */
+  achievements: string[];
+  bestiary: Record<string, number>;
+  /** Wyzwanie dnia: data, najlepszy czas pokonania bossa (0 = jeszcze nie) i liczba podejść. */
+  daily: { date: string; best: number; tries: number };
 }
 
 type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
@@ -162,6 +167,9 @@ function defaults(): SaveData {
     seenHints: [],
     lastHero: '',
     pacts: { chosen: {}, best: {} },
+    achievements: [],
+    bestiary: {},
+    daily: { date: '', best: 0, tries: 0 },
   };
 }
 
@@ -195,6 +203,9 @@ export function loadSave(): SaveData {
     seenHints: d.seenHints ?? [],
     lastHero: d.lastHero ?? '',
     pacts: { ...base.pacts, ...d.pacts },
+    achievements: d.achievements ?? [],
+    bestiary: { ...d.bestiary },
+    daily: { ...base.daily, ...d.daily },
   };
 }
 

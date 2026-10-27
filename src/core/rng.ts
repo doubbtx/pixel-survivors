@@ -2,6 +2,11 @@
 export class Rng {
   constructor(private s = (Math.random() * 2 ** 32) >>> 0) {}
 
+  /** Nowe ziarno (wyzwanie dnia: ten sam start dla wszystkich). */
+  seed(s: number): void {
+    this.s = s >>> 0;
+  }
+
   next(): number {
     let t = (this.s += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);

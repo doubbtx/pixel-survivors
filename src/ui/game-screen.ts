@@ -13,7 +13,7 @@ import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
-import { Menu, dim, panel } from './widgets';
+import { Menu, dim, panel, inside } from './widgets';
 import { renderHud } from './hud';
 import { LevelUpView } from './levelup';
 import { LootView, InventoryView, drawItemSlot } from './items';
@@ -34,6 +34,12 @@ import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
 import { bonusLines } from '../data/upgrades';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 import { PowerPickView } from './powers';
+import { ACHIEVEMENTS } from '../data/achievements';
+import { BESTIARY_BY_ID, loreBonus, loreMuls } from '../data/bestiary';
+import type { DailyDef } from '../data/daily';
+import { BOSS_POWER_BY_ID } from '../data/enemies';
+import { WEAPON_BY_ID } from '../data/weapons';
+import { SECRET_BY_ID } from '../data/secrets';
 
 type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'pause' | 'cleared' | 'map' | 'end';
 
@@ -79,11 +85,24 @@ export class GameScreen implements Screen {
   private pauseMenu: Menu;
   private clearedMenu: Menu;
   private endMenu: Menu;
+  /** Zakładka ekranu końca: obrażenia, wykres DPS, karta buildu. */
+  private endPage = 0;
 
-  constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot) {
+  constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot, daily?: DailyDef) {
+    // Wyzwanie dnia: to samo ziarno losowania dla wszystkich tego dnia.
+    if (daily) rng.seed(daily.seed);
     this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode);
-    // Nowy run: pakty ryzyka wybrane przed startem (ui/pacts.ts) obowiązują do jego końca.
-    if (!snapshot) this.run.pacts = { ...app.save.pacts.chosen };
+    // Nowy run: pakty ryzyka wybrane przed startem (ui/pacts.ts) obowiązują do jego końca; wyzwanie dnia ma własne.
+    if (!snapshot) this.run.pacts = { ...(daily ? daily.pacts : app.save.pacts.chosen) };
+    if (daily) {
+      this.run.daily = true;
+      const d = app.save.daily;
+      if (d.date !== daily.date) app.save.daily = { date: daily.date, best: 0, tries: 0 };
+      app.save.daily.tries++;
+      app.persist();
+    }
+    this.run.unlocked = new Set(app.save.achievements);
+    this.run.lore = loreMuls(app.save.bestiary);
     this.hints = new Hints(app.save, () => app.persist());
     this.run.cardBans = new Set(app.save.collection.banned);
     this.run.knownCards = new Set(app.save.collection.seen);
@@ -115,7 +134,10 @@ export class GameScreen implements Screen {
       { label: () => `Kowadło (${this.run.shards} odł.)`, act: () => this.openAnvil('cleared') },
       { label: () => 'Zapisz i wyjdź do menu', act: () => app.go(new MainMenu(app)) },
     ], W / 2, 194, 240, 16);
-    this.endMenu = new Menu(hc || mode === 'expedition' ? [
+    this.endMenu = new Menu(daily ? [
+      { label: () => 'Spróbuj ponownie', act: () => app.go(new GameScreen(app, heroId, mode, undefined, daily)) },
+      { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
+    ] : hc || mode === 'expedition' ? [
       { label: () => (hc ? 'Nowa kampania' : 'Nowa ekspedycja'), act: () => app.go(new HeroSelect(app, mode)) },
       { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
     ] : [
@@ -162,6 +184,27 @@ export class GameScreen implements Screen {
     this.run.uniquesFound.clear();
     for (const id of this.run.secretsFound) if (!col.secrets.includes(id)) col.secrets.push(id);
     this.run.secretsFound.clear();
+    // Bestiariusz: zabójstwa per wróg; po przekroczeniu progu bonus działa od razu.
+    const best = this.app.save.bestiary, run = this.run;
+    for (const [id, n] of Object.entries(run.killsById)) {
+      const b = BESTIARY_BY_ID[id], before = best[id] ?? 0;
+      best[id] = before + n;
+      if (b && loreBonus(b, best[id]) > loreBonus(b, before)) {
+        run.lore[id] = 1 + loreBonus(b, best[id]);
+        this.showToast(`Bestiariusz: +${Math.round(loreBonus(b, best[id]) * 100)}% obrażeń przeciw ${b.id === 'boss' ? 'bossom' : 'temu wrogowi'}`);
+      }
+    }
+    run.killsById = {};
+    // Osiągnięcia: odblokowują karty w ofertach od razu, także w tym runie.
+    const got = this.app.save.achievements;
+    for (const a of ACHIEVEMENTS) {
+      if (got.includes(a.id) || !a.check(run, this.app.save)) continue;
+      got.push(a.id);
+      run.unlocked.add(a.id);
+      run.showBanner(`Osiągnięcie: ${a.name}!`);
+      this.showToast(`Nowa karta w ofertach: ${CARD_BY_ID[a.card].name}`);
+      sfx.play('levelup');
+    }
   }
 
   private updateRecords(won: boolean): void {
@@ -233,6 +276,9 @@ export class GameScreen implements Screen {
     }
     this.updateRecords(true);
     if (this.mode === 'training') {
+      // Wyzwanie dnia: najlepszy czas pokonania bossa.
+      const d = this.app.save.daily;
+      if (run.daily && (d.best === 0 || run.time < d.best)) { d.best = run.time; this.showToast('Nowy rekord dnia!'); }
       this.awardEssence();
       this.app.persist();
       this.state = 'end';
@@ -529,6 +575,11 @@ export class GameScreen implements Screen {
         break;
       case 'end':
         this.endMenu.update(inp);
+        if (inp.pressed('inventory') || inp.pressed('left') || inp.pressed('right')) {
+          this.endPage = (this.endPage + (inp.pressed('left') ? 2 : 1)) % 3;
+          sfx.play('select');
+        }
+        END_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, 50 + i * 128, 62, 124, 14)) this.endPage = i; });
         break;
     }
   }
@@ -676,24 +727,95 @@ export class GameScreen implements Screen {
     const stats = `Czas ${fmtTime(run.totalTime)}    Zabójstwa ${fmt(run.kills)}    LV ${run.level}    Złoto ${fmt(run.gold)}    Leczenie ${fmt(run.healed)}${run.pactLevel ? `    Pakt ${run.pactLevel}` : ''}`;
     const modeLine = this.mode === 'hardcore' ? `Hardcore: przepadło wszystko. Dotarłeś do poziomu ${run.depth}.`
       : this.mode === 'endless' ? `Endless: przetrwałeś ${fmtTime(run.totalTime)}, głębia ${run.depth} (rekord ${fmtTime(heroRecord(this.app.save, this.heroId).bestEndless)})`
+      : run.daily ? `Wyzwanie dnia ${this.app.save.daily.date}: ${won ? `boss pokonany w ${fmtTime(run.time)}` : 'boss niepokonany'}, najlepszy czas ${this.app.save.daily.best ? fmtTime(this.app.save.daily.best) : 'brak'}`
       : ex ? `Ekspedycja: akt ${ex.act}/${BAL.expedition.acts}, ukończone węzły ${ex.cleared}${won ? `, esencja x${BAL.expedition.winEssenceMul}` : ''}` : '';
     if (modeLine) drawText(g, modeLine, W / 2, 28, C.orange, { align: 'center', shadow: C.black });
     drawText(g, stats, W / 2, 39, C.white, { align: 'center', shadow: C.black });
     const essence = this.mode === 'expedition' ? `+${fmt(this.essence)} esencji dla: ${run.hero.name}   (Rozwój w menu głównym)` : 'Bez esencji i Rozwoju: rekord uczciwy (esencja tylko w Ekspedycji)';
     drawText(g, essence, W / 2, 50, C.cyan, { align: 'center', shadow: C.black });
-    panel(r, 50, 62, 380, 140);
-    drawText(g, 'Źródło obrażeń', 62, 70, C.lavender);
-    drawText(g, 'Suma', 340, 70, C.lavender, { align: 'right' });
-    drawText(g, 'DPS', 418, 70, C.lavender, { align: 'right' });
-    const rows = [...run.dmgBySource.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+    // Zakładki: obrażenia, wykres DPS, karta buildu (Tab / strzałki / klik).
+    END_TABS.forEach((t, i) => {
+      panel(r, 50 + i * 128, 62, 124, 14, i === this.endPage ? C.gold : C.slate);
+      drawText(g, t, 112 + i * 128, 63, i === this.endPage ? C.white : C.lgray, { align: 'center' });
+    });
+    panel(r, 50, 78, 380, 124);
+    if (this.endPage === 0) this.renderDamage();
+    else if (this.endPage === 1) this.renderDpsGraph();
+    else this.renderBuild();
+    this.endMenu.render(r);
+  }
+
+  /** Ekran końca: obrażenia per źródło (suma, DPS i pasek udziału). */
+  private renderDamage(): void {
+    const r = this.app.r, g = r.g, run = this.run;
+    drawText(g, 'Źródło obrażeń', 62, 84, C.lavender);
+    drawText(g, 'Suma', 340, 84, C.lavender, { align: 'right' });
+    drawText(g, 'DPS', 418, 84, C.lavender, { align: 'right' });
+    const rows = [...run.dmgBySource.entries()].sort((a, b) => b[1] - a[1]).slice(0, 9);
     const total = rows.reduce((sum, x) => sum + x[1], 0) || 1;
     rows.forEach(([name, dmg], i) => {
-      const y = 84 + i * 11;
+      const y = 96 + i * 11;
       r.rect(62, y + 9, Math.round(200 * (dmg / total)), 1, C.dblue);
       drawText(g, name, 62, y, C.white);
       drawText(g, fmt(dmg), 340, y, C.gold, { align: 'right' });
       drawText(g, fmt(dmg / Math.max(1, run.totalTime)), 418, y, C.lgray, { align: 'right' });
     });
-    this.endMenu.render(r);
+  }
+
+  /** Ekran końca: wykres DPS w czasie (pomiar co BAL.dpsEvery s). */
+  private renderDpsGraph(): void {
+    const r = this.app.r, g = r.g, log = this.run.dpsLog;
+    if (log.length < 2) { drawText(g, 'Za krótki run na wykres.', 240, 130, C.dgray, { align: 'center' }); return; }
+    const x0 = 66, x1 = 418, y0 = 96, y1 = 190, max = Math.max(1, ...log);
+    const avg = log.reduce((a, b) => a + b, 0) / log.length;
+    drawText(g, `Najwyżej ${fmt(max)} DPS`, 62, 83, C.gold);
+    drawText(g, `Średnio ${fmt(avg)} DPS`, 418, 83, C.lgray, { align: 'right' });
+    r.rect(x0, y1, x1 - x0, 1, C.slate);
+    r.rect(x0, y0, 1, y1 - y0, C.slate);
+    const ay = y1 - ((y1 - y0) * avg) / max;
+    for (let x = x0; x < x1; x += 4) r.rect(x, ay, 2, 1, C.dgray);
+    const px = (i: number) => x0 + ((x1 - x0) * i) / (log.length - 1), py = (v: number) => y1 - ((y1 - y0) * v) / max;
+    r.withAlpha(0.3, () => { for (let i = 0; i < log.length; i++) r.rect(px(i) - 1, py(log[i]), 2, y1 - py(log[i]), C.dblue); });
+    for (let i = 1; i < log.length; i++) r.line(px(i - 1), py(log[i - 1]), px(i), py(log[i]), C.gold);
+    drawText(g, '0:00', x0, y1 + 2, C.dgray);
+    drawText(g, fmtTime(log.length * BAL.dpsEvery), x1, y1 + 2, C.dgray, { align: 'right' });
+  }
+
+  /** Ekran końca: karta buildu (bohater, bronie, pasywki, przedmioty, karty, sekrety i moc bossa). */
+  private renderBuild(): void {
+    const r = this.app.r, g = r.g, run = this.run;
+    drawSprite(g, `${run.hero.sprite}@0`, 78, 104, { scale: 2 });
+    drawText(g, run.hero.name, 100, 84, run.hero.color, { scale: 2, shadow: C.black });
+    drawText(g, `${run.hero.role}   LV ${run.level}${run.pactLevel ? `   Pakt ${run.pactLevel}` : ''}`, 100, 102, C.lavender);
+    // Przedmioty (8 slotów) po prawej.
+    SLOTS.forEach((sl, i) => drawItemSlot(r, run.equipment[sl.id], 268 + (i % 4) * 38, 84 + Math.floor(i / 4) * 20, 18, false));
+    // Bronie i pasywki z poziomami.
+    let x = 62;
+    for (const w of run.weapons) {
+      drawSprite(g, WEAPON_BY_ID[w.def.id].icon, x + 8, 136);
+      drawText(g, w.def.evolved ? 'E' : String(w.level), x + 17, 136, C.yellow);
+      x += 26;
+    }
+    x += 6;
+    for (const p of run.passives) {
+      drawSprite(g, PASSIVE_BY_ID[p.id].icon, x + 8, 136);
+      drawText(g, String(p.level), x + 17, 136, C.lgray);
+      x += 24;
+    }
+    // Karty (do 2 rzędów).
+    run.cards.slice(0, 40).forEach((c, i) => {
+      const cx = 62 + (i % 20) * 18, cy = 148 + Math.floor(i / 20) * 17;
+      const def = CARD_BY_ID[c.id];
+      drawSprite(g, def.icon!, cx + 8, cy + 8);
+      if (c.stacks > 1) drawText(g, String(c.stacks), cx + 13, cy + 9, C.white, { outline: C.black });
+    });
+    const extra = [
+      ...[...run.secrets].map((id) => SECRET_BY_ID[id]?.name).filter(Boolean),
+      run.power ? `Moc: ${BOSS_POWER_BY_ID[run.power.id].name} ${run.power.level}` : '',
+    ].filter(Boolean).join(', ');
+    if (extra) drawText(g, extra, 62, 186, C.hotpink);
   }
 }
+
+/** Zakładki ekranu końca runu. */
+const END_TABS = ['Obrażenia', 'Wykres DPS', 'Build'];

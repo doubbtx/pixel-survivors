@@ -45,6 +45,10 @@ export const BAL = {
    * souls: zabity wróg bliżej niż `range` daje 1; pełne: sługa za `auto` dusz; R zużywa wszystkie: +`ultDmg` obrażeń sług za duszę,
    *        +1 sługa za każde `ultExtra` dusz.
    */
+  /** Odstęp pomiaru DPS do wykresu na ekranie końca (s). */
+  dpsEvery: 5,
+  /** Bestiariusz (data/bestiary.ts): bonus obrażeń przeciw wrogowi po progach `master` i `legend` zabójstw. */
+  bestiary: { master: 0.05, legend: 0.1 },
   resource: {
     focus: { max: 40, range: 70, gap: 0.15, crit: 0.005, keep: 0.25, hurtLoss: 0.5 },
     fury: { max: 100, meleeR: 52, hit: 1.2, gap: 0.12, hurt: 4, might: 0.4, dr: 0.2, idle: 3, decay: 15 },

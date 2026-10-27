@@ -30,7 +30,7 @@ function place(run: Run, kind: MapObjectKind, minR: number, maxR: number, life: 
 /** Losowanie sekretu mapy co BAL.secretsMap.every s (poza lochem i walką z bossem). */
 export function updateMapSecrets(run: Run, dt: number): void {
   const S = BAL.secretsMap;
-  run.secretT -= dt;
+  run.secretT -= dt * (1 + run.flag('secretRate'));
   if (run.secretT > 0 || run.boss) return;
   run.secretT = S.every;
   const kind = rng.weighted(S.weights);

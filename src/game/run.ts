@@ -169,6 +169,8 @@ export interface RunSnapshot {
   scrolls?: Partial<Record<ScrollId, number>>;
   /** Obudzone sekrety (od 0.15). */
   secrets?: string[];
+  /** DPS co 5 s (wykres na ekranie końca). */
+  dpsLog?: number[];
 }
 
 /**
@@ -278,6 +280,18 @@ export class Run {
   ultCharge = 0;
   ultUses = 0;
   dmgBySource = new Map<string, number>();
+  /** Suma zadanych obrażeń i DPS co BAL.dpsEvery s (wykres na ekranie końca); `dpsMark` = suma przy ostatnim pomiarze. */
+  dmgTotal = 0;
+  dpsLog: number[] = [];
+  dpsMark = 0;
+  /**
+   * Między runami (ustawia ui/game-screen.ts): odblokowane osiągnięcia (karty z `unlock`), mnożniki obrażeń z bestiariusza per wróg,
+   * zabójstwa per wróg do przeniesienia do bestiariusza, wyzwanie dnia.
+   */
+  unlocked = new Set<string>();
+  lore: Record<string, number> = {};
+  killsById: Record<string, number> = {};
+  daily = false;
   /** Leczenie: suma w runie, zebrane od ostatniej liczby nad postacią, poświata paska HP. */
   healed = 0;
   private healAcc = 0;
@@ -512,6 +526,7 @@ export class Run {
     this.time += dt;
     this.totalTime += dt;
     this.step++;
+    if (this.step % Math.round(BAL.dpsEvery * 60) === 0) { this.dpsLog.push((this.dmgTotal - this.dpsMark) / BAL.dpsEvery); this.dpsMark = this.dmgTotal; }
     this.xpPulse = Math.max(0, this.xpPulse - dt);
     this.confusedT = Math.max(0, this.confusedT - dt);
     this.updatePower(dt);
@@ -1017,10 +1032,12 @@ export class Run {
     let brittle = 1;
     if (e.brittle > 0 && !o.dot) { brittle = e.brittle; e.brittle = 0; }
     const big = e.boss || e.elite ? 1 + this.flag('bossDmg') : 1;
-    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * resourceDamageMul(this, src) * (1 - e.dr));
+    const lore = this.lore[e.boss ? 'boss' : e.def.id] ?? 1;
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * resourceDamageMul(this, src) * (1 - e.dr));
     e.hp -= dmg;
     e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dmg);
+    this.dmgTotal += dmg;
     const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;
     if (!pct) this.dmgStep += dmg;
     this.lastHitSrc = src;
@@ -1184,6 +1201,8 @@ export class Run {
     if (this.aug('souls_raise') && (this.lastHitSrc === 'Duszki' || this.lastHitSrc === 'Rój dusz') && rng.chance(BAL.minions.harvestChance)) {
       spawnMinion(this, e.x, e.y, this.cardDamage(BAL.minions.passiveDmg), BAL.minions.passiveLife, false, 'Żniwo');
     }
+    const kid = e.boss ? 'boss' : e.def.id;
+    this.killsById[kid] = (this.killsById[kid] ?? 0) + 1;
     resourceOnKill(this, e);
     taskOnKill(this, e);
     secretsOnKill(this, e);
@@ -1520,6 +1539,7 @@ export class Run {
       mats: { ...this.mats },
       scrolls: { ...this.scrolls },
       secrets: [...this.secrets],
+      dpsLog: [...this.dpsLog],
     };
   }
 
@@ -1552,6 +1572,9 @@ export class Run {
     run.pacts = { ...s.pacts };
     run.mats = { ...run.mats, ...s.mats };
     run.secrets = new Set(s.secrets ?? []);
+    run.dpsLog = s.dpsLog ?? [];
+    for (const v of run.dmgBySource.values()) run.dmgTotal += v;
+    run.dpsMark = run.dmgTotal;
     run.scrolls = { ...run.scrolls, ...s.scrolls };
     run.bossKills = s.bossKills ?? 0;
     // Przedmioty nieznanych typów (np. z nowszej wersji danych) są pomijane.

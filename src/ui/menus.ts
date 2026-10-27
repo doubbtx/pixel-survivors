@@ -20,7 +20,8 @@ import { MetaScreen } from './meta';
 import { BalanceScreen } from './balance';
 import { HelpScreen } from './help';
 import { heroMeta, paragonLevel } from '../data/meta';
-import { pactLevel, pactBadge } from '../data/pacts';
+import { pactLevel, pactBadge, pactDesc, PACT_BY_ID } from '../data/pacts';
+import { dailyOf, todayKey } from '../data/daily';
 import { PactScreen } from './pacts';
 
 const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
@@ -63,12 +64,13 @@ export class MainMenu implements Screen {
       { label: () => 'Ekspedycja (3 akty)', act: () => app.go(new SlotScreen(app, 'expedition')) },
       { label: () => 'Endless (bez końca)', act: () => app.go(new SlotScreen(app, 'endless')) },
       { label: () => 'Trening (jeden poziom)', act: () => app.go(new HeroSelect(app, 'training')) },
+      { label: () => 'Wyzwanie dnia', act: () => app.go(new DailyScreen(app)) },
       { label: () => (app.save.meta.unassigned > 0 ? `Rozwój (${fmt(app.save.meta.unassigned)} do rozdania)` : 'Rozwój bohaterów'), act: () => app.go(new MetaScreen(app, this)) },
-      { label: () => 'Kolekcja kart', act: () => app.go(new CollectionScreen(app, this)) },
+      { label: () => 'Kolekcja i osiągnięcia', act: () => app.go(new CollectionScreen(app, this)) },
       { label: () => 'Rekordy', act: () => app.go(new RecordsScreen(app)) },
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-    ], W / 2, 86, 220, 12);
+    ], W / 2, 84, 220, 11);
     // Nowy gracz (bez żadnego runu i zapisu): kursor od razu na Treningu.
     if (isNewPlayer(app)) this.menu.sel = 3;
   }
@@ -114,12 +116,50 @@ const MENU_DESC = [
   'Wyprawa przez 3 akty map z modyfikatorami. Daje esencję na Rozwój.',
   'Jeden poziom bez końca, boss co 5 minut, coraz trudniej.',
   'Jeden poziom z bossem, bez zapisu. Dobry na naukę bohaterów.',
+  'Codziennie ten sam bohater i pakty dla wszystkich. Pokonaj bossa jak najszybciej.',
   'Drzewka bohaterów kupowane esencją z Ekspedycji.',
-  'Odkryte karty i bany (wykluczenie kart z ofert), odkryte unikaty.',
+  'Karty i bany, unikaty, Księga sekretów, bestiariusz i osiągnięcia.',
   'Najlepsze wyniki bohaterów w każdym trybie.',
   'Sterowanie, zasady, żywioły, synergie, zasoby, moce, tryby.',
   'Dźwięk, celowanie, widoczność efektów, podpowiedzi.',
 ];
+
+/** Wyzwanie dnia: dzisiejszy bohater i pakty, najlepszy czas, start (Enter / klik). */
+export class DailyScreen implements Screen {
+  private readonly def = dailyOf(todayKey());
+
+  constructor(private readonly app: App) {}
+
+  update(): void {
+    const inp = this.app.input;
+    if (inp.pressed('back')) { this.app.go(new MainMenu(this.app)); return; }
+    if (inp.pressed('confirm') || inp.pressed('click')) {
+      sfx.play('levelup');
+      this.app.go(new GameScreen(this.app, this.def.hero, 'training', undefined, this.def));
+    }
+  }
+
+  render(): void {
+    const r = this.app.r, g = r.g, d = this.def, h = HERO_BY_ID[d.hero];
+    r.clear(C.black);
+    drawText(g, 'Wyzwanie dnia', W / 2, 10, C.gold, { align: 'center', scale: 2, outline: C.black });
+    drawText(g, d.date, W / 2, 34, C.lavender, { align: 'center' });
+    panel(r, 60, 50, W - 120, 170, C.gold);
+    drawSprite(g, `${h.sprite}@${animFrame(h.sprite, Math.floor(performance.now() / 16), 0)}`, 100, 86, { scale: 2 });
+    drawText(g, h.name, 130, 66, h.color, { scale: 2, shadow: C.black });
+    drawText(g, `${h.role}: bohater dnia`, 130, 90, C.lavender);
+    drawText(g, 'Pakty dnia:', 80, 120, C.salmon);
+    Object.entries(d.pacts).forEach(([id, lv], i) => {
+      const p = PACT_BY_ID[id];
+      drawText(g, `${p.name} ${lv}: ${pactDesc(p, lv)}`, 92, 133 + i * 12, C.peach);
+    });
+    const s = this.app.save.daily, today = s.date === d.date;
+    drawText(g, 'Cel: pokonaj bossa jak najszybciej. Bez zapisu, bez Rozwoju.', 80, 166, C.lgray);
+    drawText(g, today && s.best ? `Twój najlepszy czas dziś: ${fmtTime(s.best)}` : 'Dziś jeszcze bez wyniku.', 80, 182, today && s.best ? C.yellow : C.dgray);
+    drawText(g, `Podejścia dziś: ${today ? s.tries : 0}`, 80, 196, C.dgray);
+    drawText(g, 'Enter: start    Esc: wstecz', W / 2, H - 20, C.lavender, { align: 'center' });
+  }
+}
 
 /** Nowy gracz: żadnego zakończonego ani trwającego runu. */
 function isNewPlayer(app: App): boolean {

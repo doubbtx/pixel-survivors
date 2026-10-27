@@ -112,6 +112,9 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Ekspedycja: 3 akty map z modyfikatorami (ryzyko za lepsze nagrody), lochy, kapliczki, sklepy.',
       'Rozwój: esencja z Ekspedycji kupuje węzły drzewka bohatera. Różowe klucze zmieniają umiejętności.',
       'Zapis: Hardcore, Endless i Ekspedycja zapisują się same. Wyjście z gry wznawia run.',
+      'Wyzwanie dnia: codziennie ten sam bohater i pakty dla wszystkich. Wynik to czas pokonania bossa.',
+      'Osiągnięcia odblokowują nowe karty w ofertach. Bestiariusz: zabijaj wrogów, by poznać ich opis i zdobyć bonus obrażeń.',
+      'Koniec runu: Tab przełącza obrażenia, wykres DPS w czasie i kartę buildu.',
     ],
   },
 ];

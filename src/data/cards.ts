@@ -45,6 +45,9 @@ import { spawnTurret } from '../systems/turrets';
  *  dashSummon      unik przywołuje ducha-sługę
  *  res.gain / res.power / res.max   zasób bohatera: szybszy przyrost, silniejszy efekt, większa pojemność (systems/resource.ts)
  *  heat.safe / heat.vent            Żar Ignary: przegrzanie nie rani, mocniejszy Wydech żaru
+ *  execHeal / execKeep / stepResetDash   Vesper: Egzekucja leczy za zabitych i zostawia część kombo, Cios z cienia odnawia unik
+ *  guardHeal       Aurel: mocniejsze leczenie z trafień strażników (+ułamek)
+ *  secretRate      częstsze sekrety map (+ułamek)
  * Flagi paktów (data/pacts.ts, na cały run):
  *  bulletSpeed     szybsze pociski wrogów (+ułamek)
  *  eliteMods       dodatkowe cechy elit (liczba)
@@ -92,6 +95,8 @@ export interface CardDef {
   icon?: string;
   /** Karta dostępna tylko dla tego bohatera. */
   hero?: string;
+  /** Karta odblokowywana osiągnięciem (id z data/achievements.ts). */
+  unlock?: string;
   /** Przeklęta: silny bonus z realnym minusem. */
   cursed?: boolean;
   /** Można ją wybrać wielokrotnie (efekty się kumulują). */
@@ -423,6 +428,19 @@ export const CARDS: CardDef[] = [
   { id: 'h_a_judge', name: 'Wyrok', rarity: 'gold', tags: ['Umiejętności'], hero: 'aurel', desc: 'Sąd: +4 cele, +30 obrażeń słupów.', stackable: true, flags: { 'a_judge.count': 4, 'a_judge.damage': 30 } },
   { id: 'h_a_shield', name: 'Tarcza wiary', rarity: 'gold', tags: ['Tarcze', 'Przywołania'], hero: 'aurel', desc: 'Opiekun działa co 4 s zamiast co 6 s, a tarcza może urosnąć o 10% HP więcej.', flags: { 'passive.n': 2, 'passive.shieldCap': 0.1 } },
   { id: 'h_a_saint', name: 'Święty patron', rarity: 'prism', tags: ['Przywołania', 'Życie'], hero: 'aurel', desc: 'Sługi zadają +50% obrażeń, a trafienia strażników leczą 2x mocniej.', flags: { minionDmg: 0.5, guardHeal: 1 } },
+  // Karty z osiągnięć (data/achievements.ts): w ofertach dopiero po zdobyciu osiągnięcia.
+  { id: 'u_trophy', name: 'Trofeum', rarity: 'silver', tags: ['Krytyk'], unlock: 'first_boss', desc: '+10% obrażeń przeciw elitom i bossom.', stackable: true, flags: { bossDmg: 0.1 } },
+  { id: 'u_butcher', name: 'Rzeźnia', rarity: 'gold', tags: ['Krytyk', 'Szybkość'], unlock: 'butcher', desc: '+20% obrażeń i +10% szybkości ataku.', stats: { might: 0.2, atkSpeed: 0.1 } },
+  { id: 'u_mentor', name: 'Nauczyciel', rarity: 'silver', tags: ['Umiejętności'], unlock: 'veteran', desc: '+25% doświadczenia.', stackable: true, stats: { growth: 0.25 } },
+  { id: 'u_map', name: 'Mapa skarbów', rarity: 'silver', tags: ['Szybkość'], unlock: 'seeker', desc: 'Sekrety map pojawiają się 50% częściej.', stackable: true, flags: { secretRate: 0.5 } },
+  { id: 'u_smith', name: 'Kowalski pancerz', rarity: 'gold', tags: ['Tarcze'], unlock: 'smith', desc: '+4 pancerza i +30 maks. HP.', stats: { armor: 4, maxHp: 30 } },
+  { id: 'u_ghost', name: 'Duch', rarity: 'prism', tags: ['Szybkość'], unlock: 'untouchable', desc: '+25% szybkości ruchu, unik odnawia się 30% szybciej.', stats: { speedBonus: 0.25 }, flags: { 'cd.dash': 0.3 } },
+  { id: 'u_banner', name: 'Sztandar drużyny', rarity: 'prism', tags: ['Życie', 'Obszar'], unlock: 'party', desc: '+15% obrażeń, +30 maks. HP, +10% szybkości i obszaru.', stats: { might: 0.15, maxHp: 30, speedBonus: 0.1, area: 0.1 } },
+  { id: 'u_greed', name: 'Chciwość', rarity: 'silver', tags: ['Szybkość'], unlock: 'combo', desc: '+30% złota.', stackable: true, stats: { greed: 0.3 } },
+  { id: 'u_lore', name: 'Wiedza łowcy', rarity: 'gold', tags: ['Krytyk'], unlock: 'scholar', desc: '+5% szansy na krytyk i +25% obrażeń krytycznych.', stats: { crit: 0.05, critMult: 0.25 } },
+  { id: 'u_eternal', name: 'Wieczność', rarity: 'gold', tags: ['Życie'], unlock: 'eternal', desc: '+1 HP na sekundę, leczysz się za 1% zadanych obrażeń.', stats: { regen: 1, lifesteal: 0.01 } },
+  { id: 'u_sun', name: 'Poranne słońce', rarity: 'silver', tags: ['Obszar'], unlock: 'daily', desc: '+15% obszaru.', stackable: true, stats: { area: 0.15 } },
+  { id: 'u_pact', name: 'Krwawy kontrakt', rarity: 'prism', tags: ['Klątwa', 'Krytyk'], unlock: 'gambler', cursed: true, desc: '+35% obrażeń i +20% szybkości ataku, ale wrogowie mają +20% HP.', stats: { might: 0.35, atkSpeed: 0.2 }, flags: { enemyHp: 0.2 } },
   {
     id: 'h_k_inspire', name: 'Natchnienie', rarity: 'prism', tags: ['Umiejętności'], hero: 'kestra', desc: 'Przez 4 s po Deszczu strzał Q i E odnawiają się 3x szybciej.',
     hooks: {
@@ -463,6 +481,8 @@ const CARD_ICONS: Record<string, string> = {
   h_v_step: 'ab_v_step', h_v_streak: 'ab_v_dance', h_v_smoke: 'ab_v_vanish', h_v_exec: 'ab_v_exec', h_v_dance: 'ab_v_dance_evo',
   h_v_blood: 'ab_v_exec_evo', h_v_shadow: 'ab_v_step_evo', h_a_guard: 'ab_a_guard', h_a_faith: 'ab_a_sanct', h_a_step: 'ab_a_step',
   h_a_sanct: 'ab_a_sanct_evo', h_a_judge: 'ab_a_judge', h_a_shield: 'tag:Tarcze', h_a_saint: 'ab_a_guard_evo',
+  u_trophy: 'ui_skull', u_butcher: 'ic_axe_evo', u_mentor: 'gem2', u_map: 'cd_gold', u_smith: 'it_plate', u_ghost: 'pi_wings',
+  u_banner: 'syn_all', u_greed: 'coin', u_lore: 'pi_crit', u_eternal: 'pi_herb', u_sun: 'ic_light_evo', u_pact: 'cd_blood',
 };
 for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;
 
@@ -487,6 +507,7 @@ export function cardPool(run: Run, rarity: Rarity, exclude: string[] = []): Card
   return CARDS.filter((c) =>
     c.rarity === rarity &&
     !run.cardBans.has(c.id) &&
+    (!c.unlock || run.unlocked.has(c.unlock)) &&
     (!c.hero || c.hero === run.hero.id) &&
     (c.stackable || !run.cards.some((x) => x.id === c.id)) &&
     !exclude.includes(c.id));

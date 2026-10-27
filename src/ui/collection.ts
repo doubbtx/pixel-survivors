@@ -12,8 +12,13 @@ import { panel, slot, inside } from './widgets';
 import { UNIQUES, UNIQUE_COLOR, BASE_BY_ID, rollUnique, type Item } from '../data/items';
 import { drawItemCard } from './items';
 import { SECRETS } from '../data/secrets';
+import { BESTIARY, loreBonus } from '../data/bestiary';
+import { ENEMIES } from '../data/enemies';
+import { ACHIEVEMENTS } from '../data/achievements';
+import { CARD_BY_ID } from '../data/cards';
+import { fmt } from '../util/format';
 
-const COLS = 12, TILE = 18, STEP = 19;
+const COLS = 15, TILE = 17, STEP = 18;
 const GRID_X = 12, GRID_Y = 50;
 const CARD_X = 300, CARD_Y = 40;
 const RARITY_ORDER = { silver: 0, gold: 1, prism: 2 } as const;
@@ -21,6 +26,14 @@ const RARITY_ORDER = { silver: 0, gold: 1, prism: 2 } as const;
 /** Unikaty: siatka i przykładowe egzemplarze (poziom 1) do karty przedmiotu. */
 const U_COLS = 5, U_TILE = 28, U_STEP = 32, U_X = 24, U_Y = 56;
 const U_SAMPLES: Item[] = UNIQUES.map((u) => rollUnique(1, u.id));
+
+/** Zakładki w kolejności przełączania (Tab), nazwy i kolory nagłówków. */
+type Tab = 'cards' | 'uniques' | 'secrets' | 'bestiary' | 'achievements';
+const TABS: Tab[] = ['cards', 'uniques', 'secrets', 'bestiary', 'achievements'];
+const TAB_NAME: Record<Tab, string> = { cards: 'Karty', uniques: 'Unikaty', secrets: 'Sekrety', bestiary: 'Bestiariusz', achievements: 'Osiągnięcia' };
+
+/** Bestiariusz: siatka 6 kolumn. */
+const B_COLS = 6, B_TILE = 28, B_STEP = 32, B_X = 18, B_Y = 50;
 
 /** Karty w kolejności: rzadkość, potem karty ogólne przed kartami bohaterów. */
 const ORDERED: CardDef[] = [...CARDS].sort((a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity] || Number(!!a.hero) - Number(!!b.hero));
@@ -32,8 +45,10 @@ const ORDERED: CardDef[] = [...CARDS].sort((a, b) => RARITY_ORDER[a.rarity] - RA
  */
 export class CollectionScreen implements Screen {
   private sel = 0;
-  private tab: 'cards' | 'uniques' | 'secrets' = 'cards';
+  private tab: Tab = 'cards';
   private sSel = 0;
+  private bSel = 0;
+  private aSel = 0;
   private uSel = 0;
   private step = 0;
   private lastMouse = 0;
@@ -72,13 +87,15 @@ export class CollectionScreen implements Screen {
     this.noteT = Math.max(0, this.noteT - dt);
     const inp = this.app.input, n = ORDERED.length;
     if (inp.pressed('back')) { this.app.go(this.back); return; }
-    if (inp.pressed('inventory') || (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, W - 96, 8, 88, 18))) {
-      this.tab = this.tab === 'cards' ? 'uniques' : this.tab === 'uniques' ? 'secrets' : 'cards';
+    if (inp.pressed('inventory') || (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, W - 116, 8, 108, 18))) {
+      this.tab = TABS[(TABS.indexOf(this.tab) + 1) % TABS.length];
       sfx.play('select');
       return;
     }
     if (this.tab === 'uniques') { this.updateUniques(); return; }
     if (this.tab === 'secrets') { this.updateSecrets(); return; }
+    if (this.tab === 'bestiary') { this.updateBestiary(); return; }
+    if (this.tab === 'achievements') { this.updateAchievements(); return; }
     if (inp.pressed('left')) this.sel = (this.sel + n - 1) % n;
     if (inp.pressed('right')) this.sel = (this.sel + 1) % n;
     if (inp.pressed('up')) this.sel = (this.sel + n - COLS) % n;
@@ -117,20 +134,91 @@ export class CollectionScreen implements Screen {
     if (inp.pressed('down')) this.sSel = (this.sSel + 1) % n;
     const m = inp.mouse;
     SECRETS.forEach((_, i) => {
-      if (inside(m.x, m.y, 10, 40 + i * 17, 200, 16) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.sSel = i;
+      if (inside(m.x, m.y, 10, 40 + i * 14, 200, 13) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.sSel = i;
     });
     if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
+  }
+
+  private updateBestiary(): void {
+    const inp = this.app.input, n = BESTIARY.length;
+    if (inp.pressed('left')) this.bSel = (this.bSel + n - 1) % n;
+    if (inp.pressed('right')) this.bSel = (this.bSel + 1) % n;
+    if (inp.pressed('up')) this.bSel = (this.bSel + n - B_COLS) % n;
+    if (inp.pressed('down')) this.bSel = (this.bSel + B_COLS) % n;
+    const m = inp.mouse;
+    BESTIARY.forEach((_, i) => {
+      const x = B_X + (i % B_COLS) * B_STEP, y = B_Y + Math.floor(i / B_COLS) * B_STEP;
+      if (inside(m.x, m.y, x, y, B_TILE, B_TILE) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.bSel = i;
+    });
+    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
+    this.lastMouse = m.lastMove;
+  }
+
+  private updateAchievements(): void {
+    const inp = this.app.input, n = ACHIEVEMENTS.length;
+    if (inp.pressed('up')) this.aSel = (this.aSel + n - 1) % n;
+    if (inp.pressed('down')) this.aSel = (this.aSel + 1) % n;
+    const m = inp.mouse;
+    ACHIEVEMENTS.forEach((_, i) => {
+      if (inside(m.x, m.y, 10, 40 + i * 15, 220, 14) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.aSel = i;
+    });
+    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
+    this.lastMouse = m.lastMove;
+  }
+
+  /** Zakładka Bestiariusz: siatka wrogów (nieznani jako sylwetka), zabójstwa, opis po progu `know` i bonusy progów. */
+  private renderBestiary(): void {
+    const r = this.app.r, g = r.g, kills = this.app.save.bestiary;
+    panel(r, 6, 32, 204, 196, C.slate);
+    drawText(g, `Poznani wrogowie ${BESTIARY.filter((b) => (kills[b.id] ?? 0) >= b.know).length}/${BESTIARY.length}`, B_X, 37, C.lavender);
+    BESTIARY.forEach((b, i) => {
+      const x = B_X + (i % B_COLS) * B_STEP, y = B_Y + Math.floor(i / B_COLS) * B_STEP, n = kills[b.id] ?? 0;
+      slot(r, x, y, B_TILE, loreBonus(b, n) > 0 ? C.gold : n >= b.know ? C.lavender : C.slate);
+      if (n > 0) drawSprite(g, `${b.sprite}@0`, x + B_TILE / 2, y + B_TILE / 2, { scale: b.id === 'boss' ? 0.6 : 1, flash: n < b.know });
+      else drawText(g, '?', x + B_TILE / 2, y + 9, C.dgray, { align: 'center' });
+      if (i === this.bSel) r.frame(x - 2, y - 2, B_TILE + 4, B_TILE + 4, C.white);
+    });
+    const b = BESTIARY[this.bSel], n = kills[b.id] ?? 0, known = n >= b.know;
+    panel(r, 218, 40, W - 228, 186, known ? C.lavender : C.slate);
+    drawText(g, n > 0 ? (b.id === 'boss' ? 'Bossowie' : ENEMIES[b.id].name) : '???', 228, 48, known ? C.white : C.dgray, { scale: 2 });
+    drawText(g, `Zabitych: ${fmt(n)}`, 228, 70, C.lgray);
+    let y = 86;
+    if (known) for (const l of wrapText(b.lore, W - 248)) { drawText(g, l, 228, y, C.white); y += 11; }
+    else drawText(g, `Zabij ${b.know}, żeby poznać opis.`, 228, y, C.dgray);
+    y = 150;
+    for (const [lbl, need, v] of [['Mistrz', b.master, BAL.bestiary.master], ['Legenda', b.legend, BAL.bestiary.legend]] as const) {
+      const ok = n >= need;
+      drawText(g, `${lbl}: ${fmt(need)} zabójstw`, 228, y, ok ? C.gold : C.dgray);
+      drawText(g, `+${Math.round(v * 100)}% obrażeń przeciw ${b.id === 'boss' ? 'bossom' : 'temu wrogowi'}`, 238, y + 11, ok ? C.yellow : C.dgray);
+      y += 26;
+    }
+  }
+
+  /** Zakładka Osiągnięcia: lista (zdobyte zielone) i szczegóły: warunek oraz karta-nagroda. */
+  private renderAchievements(): void {
+    const r = this.app.r, g = r.g, got = this.app.save.achievements;
+    ACHIEVEMENTS.forEach((a, i) => {
+      const y = 40 + i * 15, ok = got.includes(a.id), on = i === this.aSel;
+      panel(r, 10, y, 220, 14, on ? C.lime : C.slate);
+      drawText(g, a.name, 18, y + 1, ok ? C.lime : C.lgray);
+      drawText(g, ok ? 'zdobyte' : '', 224, y + 1, C.lime, { align: 'right' });
+    });
+    const a = ACHIEVEMENTS[this.aSel], ok = got.includes(a.id);
+    drawText(g, a.desc, 240, 44, ok ? C.lime : C.white);
+    drawText(g, ok ? 'Nagroda odblokowana: karta w ofertach' : 'Nagroda: nowa karta w ofertach', 240, 58, ok ? C.lime : C.lavender);
+    drawCard(r, CARD_BY_ID[a.card], 290, 72, false, this.step, 0);
+    drawText(g, `Zdobyte ${ACHIEVEMENTS.filter((x) => got.includes(x.id)).length}/${ACHIEVEMENTS.length}`, 10, 226, C.lavender);
   }
 
   /** Zakładka Sekrety: lista (odkryte z nazwą, nieodkryte jako ???) i szczegóły: zagadka, a po odkryciu efekt. */
   private renderSecrets(): void {
     const r = this.app.r, g = r.g, found = this.col.secrets;
     SECRETS.forEach((s, i) => {
-      const y = 40 + i * 17, known = found.includes(s.id), on = i === this.sSel;
-      panel(r, 10, y, 200, 16, on ? C.hotpink : C.slate);
-      drawText(g, known ? s.name : '???', 18, y + 2, known ? C.white : C.dgray);
-      if (s.hero) drawText(g, HERO_BY_ID[s.hero].name, 204, y + 2, HERO_BY_ID[s.hero].color, { align: 'right' });
+      const y = 40 + i * 14, known = found.includes(s.id), on = i === this.sSel;
+      panel(r, 10, y, 200, 13, on ? C.hotpink : C.slate);
+      drawText(g, known ? s.name : '???', 18, y + 1, known ? C.white : C.dgray);
+      if (s.hero) drawText(g, HERO_BY_ID[s.hero].name, 204, y + 1, HERO_BY_ID[s.hero].color, { align: 'right' });
     });
     const s = SECRETS[this.sSel], known = found.includes(s.id);
     panel(r, 220, 40, W - 230, 186, known ? C.hotpink : C.slate);
@@ -172,8 +260,14 @@ export class CollectionScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g, col = this.col;
     r.clear(C.black);
-    panel(r, W - 96, 8, 88, 18, this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.slate);
-    drawText(g, this.tab === 'cards' ? '[Tab] Unikaty' : this.tab === 'uniques' ? '[Tab] Sekrety' : '[Tab] Karty', W - 52, 11, C.white, { align: 'center' });
+    panel(r, W - 116, 8, 108, 18, this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.slate);
+    drawText(g, `[Tab] ${TAB_NAME[TABS[(TABS.indexOf(this.tab) + 1) % TABS.length]]}`, W - 62, 11, C.white, { align: 'center' });
+    if (this.tab === 'bestiary' || this.tab === 'achievements') {
+      drawText(g, this.tab === 'bestiary' ? 'Bestiariusz' : 'Osiągnięcia', W / 2, 10, this.tab === 'bestiary' ? C.lavender : C.lime, { align: 'center', scale: 2, outline: C.black });
+      drawText(g, '[Esc] wróć', 12, 12, C.lgray);
+      if (this.tab === 'bestiary') this.renderBestiary(); else this.renderAchievements();
+      return;
+    }
     if (this.tab === 'secrets') {
       drawText(g, 'Księga sekretów', W / 2, 10, C.hotpink, { align: 'center', scale: 2, outline: C.black });
       drawText(g, '[Esc] wróć', 12, 12, C.lgray);
@@ -189,7 +283,7 @@ export class CollectionScreen implements Screen {
     drawText(g, 'Kolekcja kart', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
     drawText(g, '[Esc] wróć', 12, 12, C.lgray);
     const found = ORDERED.filter((c) => col.seen.includes(c.id)).length;
-    panel(r, 6, 32, 236, 176, C.slate);
+    panel(r, 6, 32, 282, 176, C.slate);
     drawText(g, `Odkryte ${found}/${ORDERED.length}    bany ${col.banned.length}/${BAL.cardBanSlots}`, GRID_X, 37, C.lavender);
     ORDERED.forEach((c, i) => {
       const [x, y] = this.tilePos(i);
@@ -219,6 +313,7 @@ export class CollectionScreen implements Screen {
     const info = [
       known ? `Wybrana ${col.picks[c.id] ?? 0} razy` : '',
       c.hero ? `Karta bohatera: ${HERO_BY_ID[c.hero].name}` : '',
+      c.unlock && !this.app.save.achievements.includes(c.unlock) ? `Zablokowana: osiągnięcie ${ACHIEVEMENTS.find((x) => x.id === c.unlock)!.name}` : '',
       banned ? 'Zbanowana: nie pojawia się w ofertach' : '',
     ].filter(Boolean);
     info.forEach((l, i) => drawText(g, l, GRID_X, 213 + i * 10, banned && i === info.length - 1 ? C.salmon : C.lgray));
