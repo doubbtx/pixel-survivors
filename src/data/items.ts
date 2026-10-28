@@ -44,10 +44,11 @@ export interface RarityDef {
   weight: number;
 }
 
+/** Jakości od najsłabszej (kolory jak w WoW: szary, zielony, niebieski, fioletowy, pomarańczowy; unikaty złote). */
 export const RARITIES: RarityDef[] = [
   { name: { m: 'Zwykły', f: 'Zwykła', pl: 'Zwykłe' }, color: C.lgray, affixes: 1, power: 1, superChance: 0.01, weight: 60 },
-  { name: { m: 'Magiczny', f: 'Magiczna', pl: 'Magiczne' }, color: C.blue, affixes: 2, power: 1.15, superChance: 0.03, weight: 28 },
-  { name: { m: 'Rzadki', f: 'Rzadka', pl: 'Rzadkie' }, color: C.yellow, affixes: 3, power: 1.3, superChance: 0.08, weight: 9 },
+  { name: { m: 'Magiczny', f: 'Magiczna', pl: 'Magiczne' }, color: C.lime, affixes: 2, power: 1.15, superChance: 0.03, weight: 28 },
+  { name: { m: 'Rzadki', f: 'Rzadka', pl: 'Rzadkie' }, color: C.blue, affixes: 3, power: 1.3, superChance: 0.08, weight: 9 },
   { name: { m: 'Epicki', f: 'Epicka', pl: 'Epickie' }, color: C.pink, affixes: 4, power: 1.5, superChance: 0.2, weight: 2.5 },
   { name: { m: 'Legendarny', f: 'Legendarna', pl: 'Legendarne' }, color: C.orange, affixes: 5, power: 1.8, superChance: 1, weight: 0.5 },
 ];
@@ -325,7 +326,7 @@ export interface UniqueDef {
 }
 
 /** Kolor unikatów (nazwa, ramka, poświata). */
-export const UNIQUE_COLOR = C.tan;
+export const UNIQUE_COLOR = C.gold;
 
 export const UNIQUES: UniqueDef[] = [
   {

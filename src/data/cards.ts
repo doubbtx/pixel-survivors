@@ -110,7 +110,7 @@ export interface CardDef {
 
 export const RARITY: Record<Rarity, { name: string; color: number }> = {
   silver: { name: 'Srebrna', color: C.lgray },
-  gold: { name: 'Złota', color: C.yellow },
+  gold: { name: 'Złota', color: C.gold },
   prism: { name: 'Pryzmatyczna', color: C.pink },
 };
 

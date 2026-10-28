@@ -361,6 +361,9 @@ src/
 - All icons (weapons, passives, items, cards, abilities) use the new smoother style.
 - One interface theme: steel bevelled frames, gold highlight for the selected menu entry, buttons and tabs.
 
+**Rarity in order (0.23.14)**:
+- Quality colours now climb the way most games do: Common grey, Magic green, Rare blue, Epic purple, Legendary orange, and Uniques gold (they used to be beige and looked weaker than Common). Gold cards use the same gold.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

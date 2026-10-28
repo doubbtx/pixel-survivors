@@ -29,7 +29,7 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   const isNew = o.kind === 'weaponNew' || o.kind === 'passiveNew';
   const evolve = o.kind === 'evolve' || o.kind === 'abilityEvolve' || o.kind === 'fusion';
   const augment = o.kind === 'augment';
-  const tagCol = q ? RARITIES[q].color : evolve ? C.yellow : isNew ? C.lime : augment ? C.cyan : C.lavender;
+  const tagCol = q ? RARITIES[q].color : evolve ? C.yellow : isNew ? C.white : augment ? C.cyan : C.lavender;
   drawText(r.g, o.tag, cx, y + 7, tagCol, { align: 'center', shadow: C.black });
   // Znaczek "Polecane" na górnej krawędzi karty (plakietka zamiast napisu nad kartą, który wchodził na wstęgę tytułu).
   if (recommended) {
@@ -38,7 +38,7 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
     r.roundFrame(cx - bw / 2 + 0.5, y - 4.5, bw - 1, 9, 3, C.yellow, 0.75);
     drawText(r.g, 'Polecane', cx, y - 3, C.yellow, { align: 'center', scale: 0.75 });
   }
-  const glow = q ? RARITIES[q].color : evolve ? C.gold : isNew ? C.lime : augment ? C.cyan : C.blue;
+  const glow = q ? RARITIES[q].color : evolve ? C.gold : isNew ? C.lgray : augment ? C.cyan : C.dgray;
   r.withAlpha(0.2, () => r.circle(cx, y + 36, 20, glow, true));
   r.withAlpha(0.6, () => r.circle(cx, y + 36, 16, C.black, true));
   r.circle(cx, y + 36, 17, glow);
