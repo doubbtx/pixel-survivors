@@ -201,7 +201,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   const ex = run.expedition;
   // Poziom (albo akt), dopiski Hardcore i Pakt jeden za drugim.
   let lx = bx + 1;
-  for (const [text, col] of [[ex ? `Akt ${ex.act}, głębia ${run.depth}` : `Poziom ${run.depth}`, hc ? C.orange : C.lgray], [hc ? 'Hardcore' : '', C.salmon], [run.pactLevel ? `Pakt ${run.pactLevel}` : '', C.red]] as const) {
+  for (const [text, col] of [[ex ? `Akt ${ex.act}, głębia ${run.depth}` : run.mode === 'endless' ? `Głębia ${run.depth}` : `Etap ${run.depth}`, hc ? C.orange : C.lgray], [hc ? 'Hardcore' : '', C.salmon], [run.pactLevel ? `Pakt ${run.pactLevel}` : '', C.red]] as const) {
     if (!text) continue;
     drawText(g, text, lx, 37, col, SMALL);
     lx += textWidth(text) * 0.75 + 5;

@@ -31,7 +31,13 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   const augment = o.kind === 'augment';
   const tagCol = q ? RARITIES[q].color : evolve ? C.yellow : isNew ? C.lime : augment ? C.cyan : C.lavender;
   drawText(r.g, o.tag, cx, y + 7, tagCol, { align: 'center', shadow: C.black });
-  if (recommended) drawText(r.g, 'Polecane', cx, y - 11, C.yellow, { align: 'center', outline: C.black });
+  // Znaczek "Polecane" na górnej krawędzi karty (plakietka zamiast napisu nad kartą, który wchodził na wstęgę tytułu).
+  if (recommended) {
+    const bw = textWidth('Polecane') * 0.75 + 10;
+    r.roundRect(cx - bw / 2, y - 5, bw, 10, 3, C.dbrown, C.black);
+    r.roundFrame(cx - bw / 2 + 0.5, y - 4.5, bw - 1, 9, 3, C.yellow, 0.75);
+    drawText(r.g, 'Polecane', cx, y - 3, C.yellow, { align: 'center', scale: 0.75 });
+  }
   const glow = q ? RARITIES[q].color : evolve ? C.gold : isNew ? C.lime : augment ? C.cyan : C.blue;
   r.withAlpha(0.2, () => r.circle(cx, y + 36, 20, glow, true));
   r.withAlpha(0.6, () => r.circle(cx, y + 36, 16, C.black, true));

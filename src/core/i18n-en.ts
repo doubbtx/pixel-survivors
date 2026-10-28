@@ -3,6 +3,19 @@
  * Nowy napis w grze: dopisz tu jego angielską wersję (kolejność `{}` taka sama).
  */
 export const EN: Record<string, string> = {
+  "Etap": "Stage",
+  "Etap {}": "Stage {}",
+  "Głębia {}": "Depth {}",
+  "Czas": "Time",
+  "Poziom postaci": "Character level",
+  "Głębia": "Depth",
+  "Średni DPS": "Average DPS",
+  "Udział": "Share",
+  "Akt": "Act",
+  "Endless: rekord {}": "Endless: best {}",
+  "Ekspedycja: ukończone węzły {}": "Expedition: nodes cleared {}",
+  "Ekspedycja: ukończone węzły {}, esencja x{}": "Expedition: nodes cleared {}, essence x{}",
+  "+{} esencji dla: {} (Rozwój w menu głównym)": "+{} essence for {} (Progression in the main menu)",
   "Statystyki": "Stats",
   "Regeneracja": "Regeneration",
   "Leczenie z obrażeń": "Lifesteal",

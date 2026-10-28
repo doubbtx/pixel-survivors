@@ -1,4 +1,4 @@
-import { W, H, type Renderer } from '../core/renderer';
+import { W, type Renderer } from '../core/renderer';
 import { C } from '../core/palette';
 import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
@@ -38,6 +38,13 @@ export const HINTS = {
 
 export type HintId = keyof typeof HINTS;
 
+/** Ekran, na którym pokazuje się podpowiedź (stan GameScreen); pozostałe dotyczą samej gry ('play'). Inne czekają w kolejce. */
+const HINT_SCREEN: Partial<Record<HintId, string>> = {
+  levelup: 'levelup', augment: 'levelup', fusion: 'levelup', loot: 'loot', unique: 'loot', cards: 'cards',
+  power: 'power', map: 'map', shop: 'shop', anvil: 'anvil',
+};
+const screenOf = (id: HintId) => HINT_SCREEN[id] ?? 'play';
+
 const SHOW = 6;
 
 export class Hints {
@@ -55,23 +62,30 @@ export class Hints {
     this.queue.push(id);
   }
 
-  update(dt: number): void {
+  /** `screen`: bieżący stan ekranu gry; pokazywane są tylko podpowiedzi do niego (inne czekają w kolejce). */
+  update(dt: number, screen: string): void {
+    if (this.cur && screenOf(this.cur) !== screen) {
+      // Podpowiedź nie pasuje do ekranu: wraca na początek kolejki.
+      this.queue.unshift(this.cur);
+      this.cur = null;
+    }
     if (this.cur) { this.t -= dt; if (this.t <= 0) this.cur = null; }
-    if (!this.cur && this.queue.length) {
-      this.cur = this.queue.shift()!;
+    const i = this.queue.findIndex((id) => screenOf(id) === screen);
+    if (!this.cur && i >= 0) {
+      this.cur = this.queue.splice(i, 1)[0];
       this.t = SHOW;
       sfx.play('hover');
     }
   }
 
   /**
-   * Ramka z podpowiedzią: w grze nad dolną krawędzią (między slotami broni a umiejętnościami), w nakładkach przy samym dole,
-   * z `top` u góry (mapa Ekspedycji: dół zajmują szczegóły węzła).
+   * Ramka z podpowiedzią: w grze u góry pod celem poziomu (dół ekranu to pole walki przy postaci), w nakładkach (i na mapie
+   * Ekspedycji) u samej góry, na wstędze tytułu: dół nakładek zajmują przyciski i opisy klawiszy.
    */
-  render(r: Renderer, overlay: boolean, top = false): void {
+  render(r: Renderer, overlay: boolean): void {
     if (!this.cur || !this.save.settings.hints) return;
     const lines = wrapText(HINTS[this.cur], overlay ? 300 : 196);
-    const w = overlay ? 316 : 212, h = 12 + lines.length * 11, x = (W - w) / 2, y = top ? 2 : overlay ? H - h - 2 : H - h - 50;
+    const w = overlay ? 316 : 212, h = 12 + lines.length * 11, x = (W - w) / 2, y = overlay ? 2 : 66;
     const a = Math.min(1, this.t * 3, (SHOW - this.t) * 6);
     r.withAlpha(a, () => {
       panel(r, x, y, w, h, C.cyan);

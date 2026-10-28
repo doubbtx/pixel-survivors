@@ -330,6 +330,11 @@ src/
 **Cleaner pause screen (0.23.5)**:
 - The pause screen no longer shows the HUD and banners underneath. Menu on the left, your character on the right: stats in two columns (unchanged ones dimmed), weapons with level, DPS and share bar, passives with equipment, and cards.
 
+**Cleaner screens (0.23.6)**:
+- The HUD is hidden behind every overlay (level up, loot, equipment...), and tips no longer cover buttons: in game they appear at the top, on overlays over the title, and only the ones about the current screen.
+- End of run: tiles with the key numbers, damage table with share bars and percentages.
+- HUD: synergy badges show the tag name, and "Stage N" replaces "Level N" so it isn't confused with your character level.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

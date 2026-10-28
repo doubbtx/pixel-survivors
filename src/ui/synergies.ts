@@ -43,6 +43,9 @@ export function drawTagIcons(r: Renderer, tags: Tag[], cx: number, y: number): v
  * HUD: synergie z punktami (aktywne i bliskie progu), pod portretem. Kropki = osiągnięte progi.
  * Zwraca wysokość, żeby kolejne elementy (debug) mogły się pod nią zmieścić.
  */
+/** Szerokość plakietki synergii w HUD. */
+const HUD_W = 84;
+
 export function drawSynergyHud(r: Renderer, run: Run, x: number, y: number): number {
   const list = SYNERGIES
     .filter((d) => run.tagPts[d.tag] >= Math.max(2, d.thresholds[0] - 1))
@@ -52,17 +55,20 @@ export function drawSynergyHud(r: Renderer, run: Run, x: number, y: number): num
   let off = 0;
   if (run.versCount >= 2) {
     const vt = run.versTier, goal = VERSATILITY.thresholds[Math.min(vt, VERSATILITY.thresholds.length - 1)];
-    plate(r, x, y, 52, 14);
+    plate(r, x, y, HUD_W, 14);
     drawSprite(r.g, 'syn_all', x + 8, y + 7);
-    drawText(r.g, `${run.versCount}/${goal}`, x + 17, y + 1, vt > 0 ? C.pink : C.lgray, OUT);
+    drawText(r.g, VERSATILITY.name, x + 17, y + 3.5, vt > 0 ? C.pink : C.lgray, { ...OUT, scale: 0.75 });
+    drawText(r.g, `${run.versCount}/${goal}`, x + HUD_W - 4, y + 3.5, vt > 0 ? C.pink : C.lgray, { ...OUT, align: 'right', scale: 0.75 });
     off = 15;
   }
+  // Plakietka: ikona, nazwa tagu, punkty do następnego progu i kreski osiągniętych progów.
   list.forEach((d, i) => {
     const ty = y + off + i * 15, tier = run.synTiers[d.tag] ?? 0;
-    plate(r, x, ty, 52, 14);
+    plate(r, x, ty, HUD_W, 14);
     drawSprite(r.g, `tag:${d.tag}`, x + 8, ty + 7);
-    drawText(r.g, `${run.tagPts[d.tag]}/${nextThreshold(d, tier)}`, x + 17, ty + 1, tier > 0 ? C.yellow : C.lgray, OUT);
-    for (let k = 0; k < d.thresholds.length; k++) r.rect(x + 41 + k * 3, ty + 5, 2, 4, k < tier ? C.gold : C.dgray);
+    drawText(r.g, d.tag, x + 17, ty + 3.5, tier > 0 ? C.yellow : C.lgray, { ...OUT, scale: 0.75 });
+    drawText(r.g, `${run.tagPts[d.tag]}/${nextThreshold(d, tier)}`, x + HUD_W - 13, ty + 3.5, tier > 0 ? C.yellow : C.lgray, { ...OUT, align: 'right', scale: 0.75 });
+    for (let k = 0; k < d.thresholds.length; k++) r.rect(x + HUD_W - 11 + k * 3, ty + 5, 2, 4, k < tier ? C.gold : C.dgray);
   });
   return off + list.length * 15;
 }
