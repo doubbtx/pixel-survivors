@@ -2,7 +2,7 @@ import { W, H, VW, VH, ZOOM, type Renderer } from '../core/renderer';
 import { C, PAL } from '../core/palette';
 import { drawLabel } from '../core/font';
 import { rng } from '../core/rng';
-import { drawSprite, drawShadow, getSprite, TILE, TILE_VARIANTS } from '../gfx/sprites';
+import { drawSprite, drawShadow, getSprite, blit, TILE, TILE_VARIANTS } from '../gfx/sprites';
 import { animFrame } from '../gfx/actors';
 import { FX_FRAMES, ARROW_DIRS, PROP_KINDS } from '../gfx/world';
 import { effectiveStats, orbitRadius, auraRadius } from '../systems/weapons';
@@ -99,7 +99,7 @@ function drawWorld(run: Run, r: Renderer): void {
   for (let ty = ty0; ty <= ty0 + Math.ceil(VH / TILE); ty++) {
     for (let tx = tx0; tx <= tx0 + Math.ceil(VW / TILE); tx++) {
       const h = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
-      g.drawImage(getSprite(`tile${run.levelInfo.biome}_${h % TILE_VARIANTS}`).img, tx * TILE - ox, ty * TILE - oy);
+      blit(g, `tile${run.levelInfo.biome}_${h % TILE_VARIANTS}`, tx * TILE - ox, ty * TILE - oy);
     }
   }
 
@@ -109,7 +109,7 @@ function drawWorld(run: Run, r: Renderer): void {
     for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(VW / TILE); tx++) {
       const h = ((tx * 2654435761) ^ (ty * 40503)) >>> 0;
       if (h % 13 !== 0) continue;
-      g.drawImage(getSprite(`patch${biome}@${(h >>> 9) % 6}`).img, tx * TILE - ox - 8, ty * TILE - oy);
+      blit(g, `patch${biome}@${(h >>> 9) % 6}`, tx * TILE - ox - 8, ty * TILE - oy);
     }
   }
 

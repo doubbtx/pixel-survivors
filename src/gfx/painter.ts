@@ -14,6 +14,23 @@ const LUMA = PAL.map((hex) => {
 });
 const KEEP = new Set<number>([C.black, C.white, C.skin, C.tan, C.peach]);
 
+/** Ciemniejszy i jaśniejszy odcień tego samego koloru w palecie (światło krawędzi i kolorowy obrys w stylu 32-bit). */
+const SHADE: Record<number, [number, number]> = {
+  [C.rust]: [C.dbrown, C.clay], [C.clay]: [C.rust, C.tan], [C.cream]: [C.tan, C.white], [C.tan]: [C.brown, C.cream],
+  [C.brown]: [C.dbrown, C.tan], [C.dbrown]: [C.ddbrown, C.brown], [C.ddbrown]: [C.black, C.dbrown], [C.dred]: [C.ddbrown, C.red],
+  [C.red]: [C.dred, C.salmon], [C.orange]: [C.rust, C.gold], [C.gold]: [C.orange, C.yellow], [C.yellow]: [C.gold, C.white],
+  [C.lime]: [C.green, C.lime], [C.green]: [C.dgreen, C.lime], [C.dgreen]: [C.teal, C.green], [C.teal]: [C.black, C.dgreen],
+  [C.dblue]: [C.navy, C.blue], [C.blue]: [C.dblue, C.cyan], [C.cyan]: [C.blue, C.white], [C.white]: [C.lgray, C.white],
+  [C.lgray]: [C.lavender, C.white], [C.lavender]: [C.dgray, C.lgray], [C.dgray]: [C.slate, C.lavender], [C.slate]: [C.navy, C.dgray],
+  [C.navy]: [C.black, C.slate], [C.black]: [C.black, C.navy], [C.hotpink]: [C.dred, C.salmon], [C.plum]: [C.navy, C.pink],
+  [C.pink]: [C.plum, C.salmon], [C.salmon]: [C.red, C.peach], [C.peach]: [C.skin, C.cream], [C.skin]: [C.brown, C.peach],
+};
+const darker = (c: number) => SHADE[c]?.[0] ?? c;
+const lighter = (c: number) => SHADE[c]?.[1] ?? c;
+
+/** Macierz Bayera 4×4 (progi 0..1): dithering przejść między odcieniami rampy przy res > 1. */
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+
 /**
  * "Malarz" sprite'ów: rysuje indeksami palety na małej siatce, z cieniowaniem rampami (światło z lewej-góry)
  * i automatycznym obrysem. Współrzędne podaje się w jednostkach projektu (w × h); `res` to liczba pikseli
@@ -49,6 +66,18 @@ export class Painter {
     return this;
   }
 
+  /**
+   * Indeks w rampie dla ciągłej wartości `v` (0..n): przy res > 1 przejście między sąsiednimi odcieniami jest
+   * ditherowane (wąski pas wokół granicy), co daje gładkie cieniowanie w stylu 32-bit.
+   */
+  private step(v: number, fx: number, fy: number, n: number): number {
+    const i = Math.floor(v);
+    if (this.res === 1) return i;
+    const frac = v - i;
+    if (frac > 0.65 && i + 1 < n && (frac - 0.65) / 0.35 > BAYER[(fy & 3) * 4 + (fx & 3)]) return i + 1;
+    return i;
+  }
+
   /** Pojedynczy piksel obrazu w punkcie projektu (detale w stylu 32-bit; przy res 1 to samo co px). */
   dot(x: number, y: number, c: number): this {
     this.set(Math.floor(x * this.res), Math.floor(y * this.res), c);
@@ -76,7 +105,7 @@ export class Painter {
         const nz = Math.sqrt(1 - r2);
         const v = nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2];
         const t = Math.min(0.999, Math.max(0, (v + 0.3) / 1.15));
-        this.set(fx, fy, ramp[Math.floor(t * ramp.length)]);
+        this.set(fx, fy, ramp[this.step(t * ramp.length, fx, fy, ramp.length)]);
       }
     }
     return this;
@@ -100,6 +129,13 @@ export class Painter {
       const fx = Math.round((x0 + ((x1 - x0) * i) / n) * r), fy = Math.round((y0 + ((y1 - y0) * i) / n) * r);
       for (let j = 0; j < r; j++) for (let k = 0; k < r; k++) this.set(fx + k, fy + j, c);
     }
+    return this;
+  }
+
+  /** Linia grubości jednego piksela obrazu (cięciwy, szwy, fałdy, krawędzie w stylu 32-bit). */
+  thin(x0: number, y0: number, x1: number, y1: number, c: number): this {
+    const r = this.res, n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1 / r) * r;
+    for (let i = 0; i <= n; i++) this.set(Math.floor((x0 + ((x1 - x0) * i) / n) * r), Math.floor((y0 + ((y1 - y0) * i) / n) * r), c);
     return this;
   }
 
@@ -161,16 +197,42 @@ export class Painter {
     return this;
   }
 
-  /** Dodaje obrys 1 piksel obrazu wokół nieprzezroczystych pikseli (wymaga wolnego marginesu). */
+  /**
+   * Dodaje obrys 1 piksel obrazu wokół nieprzezroczystych pikseli (wymaga wolnego marginesu). Przy res > 1 (styl 32-bit)
+   * najpierw światło krawędzi: brzegi od strony światła (lewa-góra) o odcień jaśniejsze, od cienia (prawa-dół) ciemniejsze,
+   * a obrys ma ciemny odcień koloru obok (przy jasnych kolorach `c`).
+   */
   outline(c: number = C.black): this {
-    const add: number[] = [];
+    const hi = this.res > 1;
+    if (hi) {
+      const src = this.d.slice();
+      const get = (x: number, y: number) => (x >= 0 && y >= 0 && x < this.fw && y < this.fh ? src[y * this.fw + x] : -1);
+      for (let fy = 0; fy < this.fh; fy++) {
+        for (let fx = 0; fx < this.fw; fx++) {
+          const v = src[fy * this.fw + fx];
+          if (v < 0 || v === C.black) continue;
+          if (get(fx - 1, fy) < 0 || get(fx, fy - 1) < 0) this.d[fy * this.fw + fx] = lighter(v);
+          else if (get(fx + 1, fy) < 0 || get(fx, fy + 1) < 0) this.d[fy * this.fw + fx] = darker(v);
+        }
+      }
+    }
+    const add: [number, number][] = [];
     for (let fy = 0; fy < this.fh; fy++) {
       for (let fx = 0; fx < this.fw; fx++) {
         if (this.at(fx, fy) !== -1) continue;
-        if (this.at(fx - 1, fy) >= 0 || this.at(fx + 1, fy) >= 0 || this.at(fx, fy - 1) >= 0 || this.at(fx, fy + 1) >= 0) add.push(fy * this.fw + fx);
+        const n = [this.at(fx - 1, fy), this.at(fx + 1, fy), this.at(fx, fy - 1), this.at(fx, fy + 1)].find((v) => v >= 0);
+        if (n === undefined) continue;
+        let col = c;
+        if (hi) {
+          // Ciemny odcień koloru obok; zbyt jasny (białe, kremowe) zastępuje `c`, żeby sylwetka zawsze odcinała się od tła.
+          col = darker(darker(n));
+          for (let k = 0; k < 3 && LUMA[col] > 0.25; k++) col = darker(col);
+          if (LUMA[col] > 0.25) col = c;
+        }
+        add.push([fy * this.fw + fx, col]);
       }
     }
-    for (const i of add) this.d[i] = c;
+    for (const [i, col] of add) this.d[i] = col;
     return this;
   }
 
@@ -205,4 +267,7 @@ export class Painter {
 
 /** Rozdzielczość obrazów z Painter.canvas() (rozmiar logiczny sprite'a = obraz / res). */
 const RES = new WeakMap<HTMLCanvasElement, number>();
+
+/** Rozdzielczość grafiki świata w stylu 32-bit (piksele obrazu na jednostkę); ikony interfejsu zostają przy 1. */
+export const HI = 2;
 export const canvasRes = (c: HTMLCanvasElement): number => RES.get(c) ?? 1;

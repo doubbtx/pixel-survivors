@@ -3,7 +3,7 @@ import { C, PAL } from '../core/palette';
 import { drawText, wrapText, textWidth } from '../core/font';
 import { sfx } from '../core/audio';
 import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
-import { drawSprite, drawShadow, getSprite, TILE } from '../gfx/sprites';
+import { drawSprite, drawShadow, blit, TILE } from '../gfx/sprites';
 import { animFrame } from '../gfx/actors';
 import { HEROES, HERO_BY_ID, resourceDetails, type HeroDef } from '../data/heroes';
 import { WEAPON_BY_ID } from '../data/weapons';
@@ -60,7 +60,7 @@ function menuBackdrop(app: App, t: number): void {
     g.fill();
   }
   const off = Math.floor(t * 30) % TILE;
-  for (let x = -off; x < W; x += TILE) for (let y = groundY; y < H; y += TILE) g.drawImage(getSprite(`tile0_${((x + off) / TILE + y) % 10}`).img, x, y);
+  for (let x = -off; x < W; x += TILE) for (let y = groundY; y < H; y += TILE) blit(g, `tile0_${((x + off) / TILE + y) % 10}`, x, y);
   r.rect(0, groundY, W, 1, C.black);
   const walk = (name: string, x: number, flip: boolean, k: number) => {
     const y = groundY + 22 + Math.round(Math.abs(Math.sin(t * 8 + k)) * -2);

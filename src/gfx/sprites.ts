@@ -2,7 +2,7 @@ import { C, RAMP, type Ramp } from '../core/palette';
 import { Rng } from '../core/rng';
 import { BIOMES, type Biome } from '../data/levels';
 import { BADGE_BY_ID } from '../data/pacts';
-import { Painter, canvasRes } from './painter';
+import { Painter, canvasRes, HI } from './painter';
 import { ICON_FNS } from './icons';
 import { ACTORS, boss } from './actors';
 import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes, fountain, rune, mural, mushroom, stairs, barrow, grove } from './objects';
@@ -44,120 +44,137 @@ function rotPts(pts: [number, number][], cx: number, cy: number, a: number): [nu
 // ========================= pociski i znajdźki =========================
 
 function orb(size: number, ramp: Ramp, ring: number): Painter {
-  const p = new Painter(size, size);
+  const p = new Painter(size, size, HI);
   const c = size / 2, r = size / 2 - 1;
   p.sphere(c, c, r, r, ramp);
-  p.rect(Math.floor(c) - 1, Math.floor(c) - 1, 2, 2, C.white);
+  // Jasny rdzeń, odblask i cienka obwódka w kolorze rampy (pocisk czytelny w tłumie).
+  p.disc(c - r * 0.25, c - r * 0.25, r * 0.4, ramp[ramp.length - 1]).dot(c - r * 0.45, c - r * 0.5, C.white).dot(c - r * 0.2, c - r * 0.5, C.white);
+  p.ring(c, c, r + 0.1, 0.5, ramp[0]);
   return p.outline(ring);
 }
 
 function star(): Painter {
-  const p = new Painter(11, 11);
-  p.poly(starPts(5.5, 5.5, 5, 5, 2.2), C.gold).poly(starPts(5.5, 5.5, 5, 3, 1.3), C.yellow).px(5, 5, C.white);
+  const p = new Painter(11, 11, HI);
+  p.polyShade(starPts(5.5, 5.5, 5, 5, 2.2), [C.orange, C.gold, C.gold, C.yellow]).poly(starPts(5.5, 5.5, 5, 3, 1.3), C.yellow).disc(5.5, 5.5, 0.8, C.white);
   return p.outline(C.orange);
 }
 
 function blade(): Painter {
-  const p = new Painter(11, 11);
-  p.poly([[5.5, 0.5], [10, 5.5], [5.5, 10.5], [1, 5.5]], C.lavender).poly([[5.5, 1.5], [5.5, 9.5], [2, 5.5]], C.lgray).px(5, 3, C.white);
+  const p = new Painter(11, 11, HI);
+  p.poly([[5.5, 0.5], [10, 5.5], [5.5, 10.5], [1, 5.5]], C.lavender).poly([[5.5, 1.5], [5.5, 9.5], [2, 5.5]], C.lgray);
+  p.thin(5.5, 1, 1.5, 5.5, C.white).thin(5.5, 1, 9.5, 5.5, C.lgray).dot(5.5, 5.5, C.dgray);
   return p.outline(C.slate);
 }
 
 /** Nóż do rzucania (Vesper): czteroramienna gwiazdka ostrzy. */
 function knife(): Painter {
-  const p = new Painter(9, 9);
-  p.poly(starPts(4.5, 4.5, 4, 4.4, 1.4, 0.4), C.lgray).poly(starPts(4.5, 4.5, 4, 2.6, 1, 0.4), C.white).px(4, 4, C.hotpink);
+  const p = new Painter(9, 9, HI);
+  p.poly(starPts(4.5, 4.5, 4, 4.4, 1.4, 0.4), C.lgray).poly(starPts(4.5, 4.5, 4, 2.6, 1, 0.4), C.white).disc(4.5, 4.5, 0.8, C.hotpink).dot(4.2, 4.2, C.white);
   return p.outline(C.slate);
 }
 
 function boomerang(frame: number): Painter {
-  const p = new Painter(13, 13);
+  const p = new Painter(13, 13, HI);
   const shape: [number, number][] = [[1.5, 4], [6.5, 1.5], [11.5, 4], [10.5, 6], [6.5, 4], [2.5, 6.5]];
   p.poly(rotPts(shape, 6.5, 6.5, (frame * Math.PI) / 2), C.clay);
   p.poly(rotPts([[2.5, 4], [6.5, 2.5], [6.5, 3.5]], 6.5, 6.5, (frame * Math.PI) / 2), C.gold);
+  const [[ax, ay], [bx, by]] = rotPts([[4, 4.6], [9, 4.6]], 6.5, 6.5, (frame * Math.PI) / 2);
+  p.thin(ax, ay, bx, by, C.rust); // słoje drewna
   return p.outline(C.dbrown);
 }
 
 function mine(lit: boolean): Painter {
-  const p = new Painter(13, 13);
-  p.px(6, 1, C.lavender).px(6, 11, C.lavender).px(1, 6, C.lavender).px(11, 6, C.lavender);
-  p.sphere(6.5, 6.5, 4, 4, RAMP.night).rect(5, 5, 3, 3, lit ? C.yellow : C.red).px(5, 5, lit ? C.white : C.salmon);
+  const p = new Painter(13, 13, HI);
+  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; p.thin(6.5 + Math.cos(a) * 3.5, 6.5 + Math.sin(a) * 3.5, 6.5 + Math.cos(a) * 5.6, 6.5 + Math.sin(a) * 5.6, k % 2 ? C.dgray : C.lavender); }
+  p.sphere(6.5, 6.5, 4, 4, RAMP.night).ring(6.5, 6.5, 2.6, 0.5, C.slate);
+  p.disc(6.5, 6.5, 1.5, lit ? C.yellow : C.red).dot(6, 6, lit ? C.white : C.salmon).dot(4.5, 4.4, C.lavender);
   return p.outline();
 }
 
 function gem(ramp: Ramp): Painter {
-  const p = new Painter(9, 11);
+  const p = new Painter(9, 11, HI);
   p.poly([[4.5, 0.5], [8.5, 4.5], [4.5, 10.5], [0.5, 4.5]], ramp[1]);
   p.poly([[4.5, 0.5], [4.5, 10.5], [0.5, 4.5]], ramp[2]);
-  p.poly([[4.5, 0.5], [6.5, 3], [4.5, 4.5], [2.5, 3]], ramp[3]).px(3, 3, C.white);
+  p.poly([[4.5, 0.5], [6.5, 3], [4.5, 4.5], [2.5, 3]], ramp[3]);
+  p.thin(0.8, 4.5, 4.5, 4.5, ramp[3]).thin(4.5, 4.5, 4.5, 10, ramp[0]).thin(4.5, 0.8, 1, 4.4, C.white).dot(3, 2.5, C.white).dot(3.5, 2, C.white);
   return p.outline(ramp[0]);
 }
 
 function chest(): Painter {
-  const p = new Painter(19, 16);
+  const p = new Painter(19, 16, HI);
   p.block(1, 6, 17, 9, RAMP.wood).block(1, 1, 17, 6, RAMP.wood);
   p.rect(4, 1, 2, 14, C.gold).rect(13, 1, 2, 14, C.gold).rect(4, 1, 2, 1, C.yellow).rect(13, 1, 2, 1, C.yellow);
   p.rect(8, 5, 3, 4, C.yellow).px(9, 7, C.ddbrown).px(8, 5, C.white);
+  for (const y of [3, 9, 12]) p.thin(1.5, y, 16.5, y, C.dbrown); // deski
+  for (const [x, y] of [[4.5, 2], [5.5, 13.5], [13.5, 2], [14.5, 13.5]] as const) p.dot(x, y, C.white); // nity
+  p.thin(1.5, 6, 17.5, 6, C.ddbrown).dot(9.5, 7.5, C.black);
   return p.outline();
 }
 
 function meat(): Painter {
-  const p = new Painter(15, 13);
+  const p = new Painter(15, 13, HI);
   p.line(1, 10, 5, 7, C.cream).sphere(2, 11, 1.5, 1.5, RAMP.bone).sphere(1.5, 9.5, 1.3, 1.3, RAMP.bone);
   p.sphere(9, 5.5, 5, 4.5, [C.ddbrown, C.dred, C.rust, C.clay]).px(7, 3, C.peach);
   return p.outline();
 }
 
 function magnet(): Painter {
-  const p = new Painter(14, 14);
+  const p = new Painter(14, 14, HI);
   p.rect(2, 3, 3, 8, C.red).rect(9, 3, 3, 8, C.red).rect(2, 9, 10, 3, C.red).rect(3, 4, 1, 6, C.salmon).rect(3, 10, 7, 1, C.salmon);
   p.rect(2, 1, 3, 2, C.lgray).rect(9, 1, 3, 2, C.lgray).px(2, 1, C.white).px(9, 1, C.white);
   return p.outline();
 }
 
 function coin(): Painter {
-  const p = new Painter(9, 9);
-  p.sphere(4.5, 4.5, 3.5, 3.5, RAMP.gold).line(4, 3, 4, 5, C.orange);
+  const p = new Painter(9, 9, HI);
+  p.sphere(4.5, 4.5, 3.5, 3.5, RAMP.gold).ring(4.5, 4.5, 3.5, 0.5, C.orange).thin(4.5, 2.8, 4.5, 6.2, C.orange).dot(3, 2.8, C.white).dot(3.5, 2.5, C.white);
   return p.outline(C.dbrown);
 }
 
 function turret(): Painter {
-  const p = new Painter(15, 16);
+  const p = new Painter(15, 16, HI);
   p.line(3, 14, 5, 10, C.dgray).line(11, 14, 9, 10, C.dgray);
   p.block(3, 8, 8, 4, RAMP.stone).sphere(7, 6, 4, 3.5, RAMP.stone);
   p.rect(9, 5, 4, 2, C.slate).px(12, 5, C.dgray).px(6, 5, C.cyan);
   return p.outline();
 }
 
-/** Kafelek podłoża 32×32 biomu: dithering trzech odcieni, kępki, kamyki z cieniem, akcenty. */
+/**
+ * Kafelek podłoża 32×32 biomu (obraz 64×64): ditherowane plamy ciemniejszego odcienia, drobny szum dwóch odcieni,
+ * kępki źdźbeł z cienkich linii, kamyki z cieniem i kwiatki w kolorze akcentu.
+ */
 function groundTile(b: Biome, v: number): Painter {
-  const p = new Painter(32, 32);
+  const p = new Painter(32, 32, HI);
   const r = new Rng(v * 7919 + 13);
   const [dark, base, light] = b.ground;
   p.rect(0, 0, 32, 32, base);
-  for (let i = 0; i < 2; i++) {
-    const cx = r.int(4, 27), cy = r.int(4, 27), rx = r.int(2, 5), ry = r.int(1, 3);
-    for (let y = cy - ry; y <= cy + ry; y++) {
-      for (let x = cx - rx; x <= cx + rx; x++) {
-        if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1 && (x + y) % 2 === 0) p.px(x, y, dark);
+  // Plamy: szachownica drobnych pikseli wewnątrz elipsy.
+  for (let i = 0; i < 3; i++) {
+    const cx = r.int(4, 27), cy = r.int(4, 27), rx = r.int(2, 6), ry = r.int(1, 3);
+    for (let y = cy - ry; y <= cy + ry; y += 0.5) {
+      for (let x = cx - rx; x <= cx + rx; x += 0.5) {
+        if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1 && (x * 2 + y * 2) % 2 === 0) p.dot(x, y, dark);
       }
     }
   }
-  for (let i = 0; i < 14; i++) p.px(r.int(0, 31), r.int(0, 31), r.chance(0.6) ? dark : light);
-  if (v % 2 === 0) {
-    for (let k = 0; k < 2; k++) {
-      const x = r.int(4, 26), y = r.int(6, 26);
-      p.line(x, y, x - 1, y - 3, b.tuft[0]).line(x + 1, y, x + 1, y - 4, b.tuft[1]).line(x + 2, y, x + 3, y - 2, b.tuft[0]);
-    }
+  // Drobny szum.
+  for (let i = 0; i < 70; i++) p.dot(r.int(0, 63) / 2, r.int(0, 63) / 2, r.chance(0.6) ? dark : light);
+  // Kępki trawy (cienkie źdźbła w dwóch odcieniach).
+  const tufts = v % 2 === 0 ? 4 : 2;
+  for (let k = 0; k < tufts; k++) {
+    const x = r.int(3, 28), y = r.int(5, 29);
+    p.thin(x, y, x - 1, y - 2.5, b.tuft[0]).thin(x + 0.5, y, x + 0.5, y - 3.5, b.tuft[1]).thin(x + 1, y, x + 2, y - 2, b.tuft[0]).thin(x + 1.5, y, x + 2.5, y - 1, b.tuft[1]);
+    p.dot(x + 0.5, y - 3.5, light);
   }
   if (v % 5 === 1) {
     const x = r.int(5, 25), y = r.int(5, 25);
-    p.rect(x - 2, y + 2, 5, 1, dark);
-    p.sphere(x + 0.5, y + 0.5, 2.5, 1.8, b.stone);
+    p.sphere(x + 0.5, y + 2.3, 2.6, 0.8, [dark, dark, dark, dark]);
+    p.sphere(x + 0.5, y + 0.5, 2.5, 1.8, b.stone).dot(x - 0.5, y - 0.3, C.white);
   }
-  if (v % 7 === 2) {
+  if (v % 7 === 2 || v % 7 === 5) {
     const x = r.int(4, 27), y = r.int(4, 27);
-    p.px(x, y, b.accent).px(x + 1, y + 1, b.accent).px(x + 2, y, b.accent).px(x + 1, y, C.white);
+    for (const [dx, dy] of [[-0.5, 0], [0.5, 0], [0, -0.5], [0, 0.5]] as const) p.dot(x + dx, y + dy, b.accent);
+    p.dot(x, y, C.white).thin(x, y + 0.5, x, y + 2, b.tuft[0]);
   }
   return p;
 }
@@ -269,6 +286,12 @@ export interface DrawOpts {
   flash?: boolean;
   scale?: number;
   flipX?: boolean;
+}
+
+/** Rysuje sprite lewym górnym rogiem w (x, y), w rozmiarze logicznym (kafelki podłoża, plamy). */
+export function blit(g: CanvasRenderingContext2D, name: string, x: number, y: number): void {
+  const s = getSprite(name);
+  g.drawImage(s.img, x, y, s.w, s.h);
 }
 
 /** Rysuje sprite wyśrodkowany w (x, y) (piksele ekranu). Skala całkowita, żeby zachować ostre piksele. */

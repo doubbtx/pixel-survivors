@@ -50,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.23.11)
+## Stan (wersja 0.23.12)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -317,6 +317,11 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     obrazu, `dot` = jeden drobny piksel; `canvasRes` + `register` w sprites.ts: rozmiar logiczny = obraz / res. Wszystkie
     postacie (gfx/actors.ts, `HI` = 2) rysowane w 2×, bohaterowie i podstawowi wrogowie z detalami (`Detale 32-bit`).
     Dalej: teren, pociski, efekty, ikony, bossowie w 32-bit.
+  - 0.23.12: grafika 32-bit, etap 2. Painter: dithering przejść w `sphere` (Bayer 4×4), światło krawędzi i ciemny kolorowy
+    obrys w `outline` (tablica `SHADE`: ciemniejszy/jaśniejszy odcień koloru), `thin` (linia 1 piksel obrazu). Wszyscy
+    bohaterowie, wrogowie, przywołańcy i boss przerysowani od nowa (helpery `legs`, `eyeAt`). `HI` w painter.ts: świat,
+    obiekty, pociski, kryształy, skrzynie i efekty w 2×; `blit` dla kafelków; kafelki podłoża z drobnym szumem i źdźbłami.
+    Ikony interfejsu zostają przy res 1.
 
 ## Plan dalej
 

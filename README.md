@@ -352,6 +352,11 @@ src/
 **32-bit graphics, step 1 (0.23.11)**:
 - The world is now drawn at twice the resolution. All heroes, enemies and bosses are rendered with twice the detail: smoother shapes and shading, thinner outlines, plus new details on heroes and common enemies (glints, eye shine, stitching, cracks, wing veins). Terrain, projectiles, effects and icons come next.
 
+**32-bit graphics, step 2 (0.23.12)**:
+- Every hero, enemy, summon and boss redrawn from scratch with far more detail: armour plates and rivets, cloth folds and embroidery, shaded faces with eye shine, feathered wings, finger bones in bat wings, crystal facets, skull markings and more.
+- Smoother dithered shading, rim light on every shape and coloured dark outlines.
+- Ground tiles, decorations, projectiles, crystals, chests, coins and effects are now drawn at double resolution too.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

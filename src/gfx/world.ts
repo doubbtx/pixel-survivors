@@ -1,6 +1,6 @@
 import { C, RAMP } from '../core/palette';
 import { Rng } from '../core/rng';
-import { Painter } from './painter';
+import { Painter, HI } from './painter';
 import type { Biome } from '../data/levels';
 
 /**
@@ -14,7 +14,7 @@ export const PROP_KINDS = 6;
 
 /** Iskra trafienia 11×11: błysk → gwiazdka → rozbiegające się punkty. */
 export function spark(f: number): Painter {
-  const p = new Painter(11, 11);
+  const p = new Painter(11, 11, HI);
   const c = 5;
   if (f === 0) p.rect(c - 1, c - 1, 3, 3, C.white).px(c, c - 2, C.yellow).px(c, c + 2, C.yellow).px(c - 2, c, C.yellow).px(c + 2, c, C.yellow);
   if (f === 1) {
@@ -28,7 +28,7 @@ export function spark(f: number): Painter {
 
 /** Obłok po śmierci wroga 18×18: kłęby rosną i rzedną. */
 export function poof(f: number): Painter {
-  const p = new Painter(18, 18);
+  const p = new Painter(18, 18, HI);
   const r = new Rng(31 + f);
   const grow = 2 + f * 1.4;
   const ramp = f < 2 ? RAMP.bone : f < 4 ? [C.slate, C.dgray, C.lavender, C.lgray] : [C.navy, C.slate, C.dgray, C.lavender];
@@ -43,7 +43,7 @@ export function poof(f: number): Painter {
 
 /** Eksplozja 34×34: błysk, kula ognia, rozpad w dym. */
 export function boom(f: number): Painter {
-  const p = new Painter(34, 34);
+  const p = new Painter(34, 34, HI);
   const r = new Rng(91 + f);
   const c = 17;
   if (f === 0) p.sphere(c, c, 5, 5, [C.gold, C.yellow, C.white, C.white]);
@@ -68,7 +68,7 @@ export function boom(f: number): Painter {
 
 /** Strzała obrócona o k·22.5° (krytyczna ma złoty grot i lotki). */
 export function arrowSprite(k: number, crit: boolean): Painter {
-  const p = new Painter(17, 17);
+  const p = new Painter(17, 17, HI);
   const a = (k * Math.PI * 2) / ARROW_DIRS;
   const cx = 8.5, cy = 8.5, ux = Math.cos(a), uy = Math.sin(a);
   const pt = (d: number): [number, number] => [Math.round(cx + ux * d - 0.5), Math.round(cy + uy * d - 0.5)];
@@ -87,7 +87,7 @@ export function arrowSprite(k: number, crit: boolean): Painter {
  * brzeg z ditheringiem, kilka drobin akcentu. `v` wybiera kształt i odcień.
  */
 export function patch(b: Biome, v: number): Painter {
-  const p = new Painter(48, 32);
+  const p = new Painter(48, 32, HI);
   const r = new Rng(v * 104729 + 7);
   const col = v % 2 ? b.ground[0] : b.ground[2];
   const blobs = Array.from({ length: 4 }, () => [r.range(12, 36), r.range(10, 22), r.range(6, 11), r.range(4, 8)]);
@@ -106,7 +106,7 @@ export function patch(b: Biome, v: number): Painter {
 }
 
 export function prop(biome: number, k: number): Painter {
-  const p = new Painter(22, 22);
+  const p = new Painter(22, 22, HI);
   const kinds: Record<number, ((p: Painter) => void)[]> = {
     0: [
       (q) => { q.sphere(8, 13, 5, 4, RAMP.green).sphere(14, 12, 5, 5, RAMP.green).sphere(11, 9, 4.5, 4, RAMP.green).px(10, 7, C.lime).px(13, 10, C.red).px(8, 12, C.red); },
@@ -156,7 +156,7 @@ export function prop(biome: number, k: number): Painter {
 
 /** Mała czaszka do licznika zabójstw w HUD (11×11). */
 export function uiSkull(): Painter {
-  const p = new Painter(11, 11);
+  const p = new Painter(11, 11, HI);
   p.sphere(5.5, 4.5, 4, 3.6, RAMP.bone).rect(3, 7, 5, 2, C.lgray);
   p.rect(3, 4, 2, 2, C.black).rect(6, 4, 2, 2, C.black).px(5, 6, C.dgray).px(4, 8, C.dgray).px(6, 8, C.dgray);
   return p.outline();
