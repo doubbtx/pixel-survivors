@@ -16,6 +16,8 @@ import { drawElemMark } from '../gfx/elemmark';
 const MARGIN = 40;
 /** Siła wspólnej korekty barwnej sceny (0..1). */
 const GRADE = 0.35;
+/** Odległość pocisku (jednostki świata), od której pokazuje się rdzeń trafienia gracza. */
+const CORE_SHOW = 45;
 const FIRE_COLS = [C.red, C.orange, C.gold, C.yellow, C.orange];
 /** Kolor poświaty pocisku wroga wg sprite'a (domyślnie czerwony). */
 const BULLET_GLOW: Record<string, number> = { eb_orange: C.orange, eb_pink: C.pink, eb_blue: C.blue, eb_cyan: C.cyan };
@@ -477,11 +479,17 @@ function drawWorld(run: Run, r: Renderer): void {
     r.withAlpha(0.22 + 0.12 * Math.sin(run.time * 12), () => r.circle(px, py, 16, C.red, true));
     r.circle(px, py, 15 + Math.round(Math.sin(run.time * 12)), C.salmon);
   }
-  // Znacznik gracza (Ustawienia): pulsujący krąg pod postacią.
+  // Znacznik gracza (Ustawienia): cienka elipsa na ziemi pod stopami (część sceny, nie nakładka).
   if (run.playerMarker && run.outcome !== 'dead') {
-    const pr = 11 + Math.round(Math.sin(run.time * 5));
-    r.circle(px, py + 4, pr + 1, C.black);
-    r.circle(px, py + 4, pr, run.player.hurtCd > 0 ? C.red : C.yellow);
+    const pr = 10 + Math.sin(run.time * 4) * 0.8;
+    g.save();
+    g.globalAlpha *= 0.5;
+    g.strokeStyle = PAL[run.player.hurtCd > 0 ? C.red : C.gold];
+    g.lineWidth = 1;
+    g.beginPath();
+    g.ellipse(px, py + 9, pr, pr * 0.42, 0, 0, Math.PI * 2);
+    g.stroke();
+    g.restore();
   }
   // Gracz (miganie przy nietykalności).
   const blink = (p.hurtCd > 0 || p.iframes > 0) && run.step % 6 < 3;
@@ -491,18 +499,19 @@ function drawWorld(run: Run, r: Renderer): void {
     drawSprite(g, `${run.heroSprite}@${frame}`, px, py, { flash: p.flash > 0, scale, flipX: p.fx < 0 });
   }
   if (p.shield > 0) {
-    r.withAlpha(0.25, () => r.circle(px, py, 12, C.cyan, true));
-    r.circle(px, py, 12, C.cyan);
+    // Tarcza: delikatna poświata wokół postaci zamiast wyraźnej bańki.
+    lit(g, (glow) => glow(px, py, 15, C.cyan, 0.18));
+    r.withAlpha(0.25, () => r.circle(px, py, 12, C.cyan));
   }
-  // Rdzeń trafienia (BAL.playerBulletR) widoczny, gdy w pobliżu lecą pociski — wiadomo, jak blisko można je mijać.
-  if (run.bullets.count > 0 && run.outcome !== 'dead') {
-    r.rect(px - 2, py - 2, 4, 4, C.black);
-    r.rect(px - 1, py - 1, 2, 2, C.white);
+  // Rdzeń trafienia (BAL.playerBulletR) widoczny tylko, gdy pocisk jest blisko — wiadomo, jak blisko można go minąć.
+  if (run.outcome !== 'dead' && run.bullets.items.some((b) => (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < CORE_SHOW * CORE_SHOW)) {
+    r.withAlpha(0.85, () => { r.rect(px - 1.5, py - 1.5, 3, 3, C.black); r.rect(px - 0.5, py - 0.5, 1, 1, C.white); });
   }
-  // Mały pasek HP pod graczem.
-  r.rect(px - 9, py + 12, 18, 4, C.black);
-  r.rect(px - 8, py + 13, Math.round(16 * Math.max(0, p.hp / run.stats.maxHp)), 2, C.red);
-  r.rect(px - 8, py + 13, Math.round(16 * Math.max(0, p.hp / run.stats.maxHp)), 1, C.salmon);
+  // Mały pasek HP pod graczem: tylko gdy jest ranny, cienki i półprzezroczysty.
+  if (p.hp < run.stats.maxHp && run.outcome !== 'dead') r.withAlpha(0.8, () => {
+    r.rect(px - 8, py + 13, 16, 2, C.black);
+    r.rect(px - 8, py + 13, Math.round(16 * Math.max(0, p.hp / run.stats.maxHp)), 1.5, C.red);
+  });
 
   // Ostrza orbity i pociski gracza.
   atk(() => {
@@ -606,7 +615,8 @@ function drawWorld(run: Run, r: Renderer): void {
     g.globalCompositeOperation = 'multiply';
     r.withAlpha(GRADE, () => r.rect(0, 0, Math.ceil(VW), Math.ceil(VH), BIOMES[run.levelInfo.biome].ambient));
     g.globalCompositeOperation = prev;
-    lit(g, (glow) => { glow(px, py, 140, C.peach, 0.2); glow(px, py, 70, C.yellow, 0.1); });
+    // Światło od stóp bohatera: oświetla ziemię i wszystko wokół, a nie rozbiela samej postaci.
+    lit(g, (glow) => { glow(px, py + 10, 150, C.peach, 0.16); glow(px, py + 12, 60, C.yellow, 0.05); });
   }
 
   // Liczby obrażeń.

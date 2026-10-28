@@ -46,6 +46,8 @@ const HINT_SCREEN: Partial<Record<HintId, string>> = {
 const screenOf = (id: HintId) => HINT_SCREEN[id] ?? 'play';
 
 const SHOW = 6;
+/** Wielkość tekstu podpowiedzi (mniejsza niż zwykły tekst: podpowiedź nie może zasłaniać gry). */
+const HINT_SCALE = 0.85;
 
 export class Hints {
   private queue: HintId[] = [];
@@ -84,12 +86,12 @@ export class Hints {
    */
   render(r: Renderer, overlay: boolean): void {
     if (!this.cur || !this.save.settings.hints) return;
-    const lines = wrapText(HINTS[this.cur], overlay ? 300 : 196);
-    const w = overlay ? 316 : 212, h = 12 + lines.length * 11, x = (W - w) / 2, y = overlay ? 2 : 66;
+    const lines = wrapText(HINTS[this.cur], (overlay ? 290 : 180) / HINT_SCALE);
+    const w = overlay ? 302 : 192, h = 9 + lines.length * 9, x = (W - w) / 2, y = overlay ? 3 : 66;
     const a = Math.min(1, this.t * 3, (SHOW - this.t) * 6);
     r.withAlpha(a, () => {
       panel(r, x, y, w, h, C.cyan);
-      lines.forEach((l, i) => drawText(r.g, l, x + 8, y + 6 + i * 11, C.white, { shadow: C.black }));
+      lines.forEach((l, i) => drawText(r.g, l, x + 6, y + 4 + i * 9, C.white, { shadow: C.black, scale: HINT_SCALE }));
     });
   }
 }

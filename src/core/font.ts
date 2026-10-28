@@ -4,12 +4,12 @@ import { tr } from './i18n';
 /**
  * Czcionka gry: gładka, zaokrąglona Nunito (licencja OFL, pakiet @fontsource/nunito, ładowana w main.ts) rysowana wektorowo
  * na buforze K× — ostre krawędzie przy każdej skali okna. Rozmiar dobrany do dawnej czcionki pikselowej: linia 12 px,
- * wersaliki ok. 7 px, linia bazowa 9 px poniżej górnej krawędzi (nad nią miejsce na akcenty wersalików).
+ * wersaliki ok. 6 px, linia bazowa 8,5 px poniżej górnej krawędzi (nad nią miejsce na akcenty wersalików).
  * Większe napisy (scale ≥ 2: tytuły) w grubszej odmianie.
  */
 export const LINE_H = 12;
-const FONT_PX = 9.5;
-const BASELINE = 9;
+const FONT_PX = 8.5;
+const BASELINE = 8.5;
 const FAMILY = '"Nunito", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
 
 const fontOf = (scale: number) => `${scale >= 2 ? 800 : 700} ${FONT_PX * scale}px ${FAMILY}`;
@@ -64,7 +64,7 @@ export function drawText(g: CanvasRenderingContext2D, s: string, x: number, y: n
   if (o.outline !== undefined) {
     g.strokeStyle = PAL[o.outline];
     g.lineJoin = 'round';
-    g.lineWidth = 1.6 * Math.max(1, scale * 0.75);
+    g.lineWidth = Math.max(0.9, 1.3 * scale);
     g.strokeText(s, sx, by);
   }
   if (o.shadow !== undefined) {

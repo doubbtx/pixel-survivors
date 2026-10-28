@@ -373,6 +373,10 @@ src/
 - Characters blend in: outlines use a dark shade of their own colour instead of near-black, softer rim light, soft gradient shadows.
 - Lighter HUD: empty slots are faded, panels are translucent.
 
+**Hero in the scene, tidier text (0.23.17)**:
+- Your hero no longer looks pasted on: a thin ground ellipse instead of the bright ring, the hit core only shows when a bullet is close, the small HP bar only when you are hurt, a soft shield glow, and your light now falls on the ground around you.
+- Smaller, thinner text everywhere; ability keys, slot levels and the resource label fit inside the HUD; banners and tips are much smaller.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

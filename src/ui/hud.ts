@@ -254,14 +254,14 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
 
   // Baner (zapowiedzi, fazy bossa, elity): wstęga z cienkimi złotymi liniami, wsuwa się i znika.
   if (run.bannerT > 0) {
-    const big = run.banner.length <= 26, sc = big ? 2 : 1;
-    const tw = textWidth(run.banner) * sc + 40, th = big ? 22 : 14, by = 68;
+    const big = run.banner.length <= 26, sc = big ? 1.4 : 0.9;
+    const tw = textWidth(run.banner) * sc + 32, th = big ? 17 : 12, by = 68;
     const a = Math.min(1, run.bannerT * 3, (2.5 - run.bannerT) * 6 + 0.2);
     r.withAlpha(a, () => {
       r.withAlpha(0.7, () => r.roundRect(W / 2 - tw / 2, by, tw, th, 4, C.black));
       r.rect(W / 2 - tw / 2 + 6, by, tw - 12, 0.5, C.gold);
       r.rect(W / 2 - tw / 2 + 6, by + th - 0.5, tw - 12, 0.5, C.gold);
-      drawText(g, run.banner, W / 2, by + (big ? 3 : 3), C.yellow, { align: 'center', scale: sc, ...OUT });
+      drawText(g, run.banner, W / 2, by + 1.5, C.yellow, { align: 'center', scale: sc, ...OUT });
     });
   }
 
@@ -276,14 +276,14 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
     const el = WEAPON_ELEMENT[w.def.id];
     if (el && run.elemShapes) drawElemMark(r, el, x + 5, y + 5);
     else if (el) { r.rect(x + 2, y + 2, 4, 4, C.black); r.rect(x + 3, y + 3, 2, 2, ELEMENTS[el].color); }
-    drawText(g, w.def.fused ? '+' : w.def.evolved ? '*' : String(w.level), x + SLOT - 2, y + SLOT - 11, w.def.fused ? C.cyan : w.def.evolved ? C.yellow : C.white, { align: 'right', ...OUT });
+    drawText(g, w.def.fused ? '+' : w.def.evolved ? '*' : String(w.level), x + SLOT - 2.5, y + SLOT - 9, w.def.fused ? C.cyan : w.def.evolved ? C.yellow : C.white, { align: 'right', ...SMALL });
   }
   for (let i = 0; i < BAL.passiveSlots; i++) {
     const pa = run.passives[i], x = 4 + i * (SLOT + 2), y = H - SLOT - 4;
     if (!pa) { r.withAlpha(0.35, () => slot(r, x, y, SLOT)); continue; }
     slot(r, x, y, SLOT);
     drawSprite(g, PASSIVE_BY_ID[pa.id].icon, x + SLOT / 2, y + SLOT / 2);
-    drawText(g, String(pa.level), x + SLOT - 2, y + SLOT - 11, C.white, { align: 'right', ...OUT });
+    drawText(g, String(pa.level), x + SLOT - 2.5, y + SLOT - 9, C.white, { align: 'right', ...SMALL });
   }
   // Moc bossa: gniazdo za bronią, odnowienie od góry, poziom kropkami.
   if (run.power) {
@@ -319,7 +319,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
       drawText(g, a.cd.toFixed(a.cd < 1 ? 1 : 0), x + S / 2, y + 10, C.white, { align: 'center', ...OUT });
     }
     if (isUlt && a.activeT > 0) drawText(g, a.activeT.toFixed(0), x + S / 2, y + 10, C.white, { align: 'center', ...OUT });
-    drawText(g, KEY_LABEL[sl], x + 3, y + S - 12, C.white, OUT);
+    drawText(g, KEY_LABEL[sl], x + 3, y + S - 9.5, C.white, SMALL);
     for (let l = 0; l < a.level && a.def.maxLevel > 1; l++) r.rect(x + 3 + l * 5, y - 4, 4, 2, C.gold);
   });
 
