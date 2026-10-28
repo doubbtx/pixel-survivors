@@ -401,10 +401,78 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   wiersze Szczęście i Karty przy awansie; opis w Pomocy (Rozgrywka).
   - 0.26.1: numer wersji w prawym dolnym rogu menu głównego (`__APP_VERSION__` z package.json przez `define` w vite.config.ts,
     deklaracja w src/env.d.ts) — łatwo sprawdzić, czy przeglądarka wczytała najnowszą grę.
-## Plan dalej
+## Plan dalej (przed wydaniem)
 
-- Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Głowy bossów, Pustka.
-- Pomysły: więcej unikatów i receptur fuzji, kolejne sekrety i osiągnięcia, warianty muzyki dla bossów.
+Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z innej sesji). Plan uzgodniony z autorem; kolejność faz = kolejność wersji.
+
+### Zasady na cały plan
+- Nowe teksty w grze pisane po angielsku, polski jako tłumaczenie (oba języki zawsze kompletne). Język komentarzy w kodzie bez znaczenia.
+- Narzędzia deweloperskie (F3, F4, F6, F7, podgląd balansu) zostają w grze; znikają dopiero w wersji wydawanej (faza 6).
+- Kuźnia bez zmian.
+- Wszystko od razu pod telefon i Steam: pad, różne rozdzielczości, okno i pełny ekran, zapis w jednym pliku (Steam Cloud), osiągnięcia gotowe do przypięcia pod osiągnięcia Steam.
+- Grafika proceduralna (w kodzie); wyjątek: dźwięk może korzystać z plików (faza 5).
+
+### Faza 1: porządki w trybach, język i wersja (v0.27)
+- Usunięcie trybów: Kampania Hardcore, Trening, Szybki run, Głowy bossów i Wyzwanie dnia znikają z menu, kodu, rekordów, pomocy i zapisu. Zostają Ekspedycja i Endless.
+- Rozwój (drzewko bohatera) działa też w Endless, Endless daje esencję (mniej niż Ekspedycja, zależnie od czasu przetrwania). Zmienić opisy „Endless bez Rozwoju”.
+- Sekrety przenoszone, nie usuwane:
+  - Pustka otwiera się w Ekspedycji i w Endless (np. Pakt 5+ albo określony czas);
+  - Asceta: zamiast „2. poziomu kampanii” np. akt 2 albo 10 minut w Endless;
+  - wyczyn Bez skazy: zamiast „3 poziomów Hardcore” wygrana Ekspedycja albo odpowiednik w Endless.
+- Zamienniki osiągnięć przypiętych do usuwanych trybów (np. za Wyzwanie dnia), żeby karty, które odblokowują, dalej były do zdobycia.
+- Kod Konami w menu: usunąć (otwierał Głowy bossów).
+- Tłumaczenie w obie strony: stare teksty PL→EN jak dziś, nowe EN→PL.
+- Migracja zapisu z numerem wersji: zapisy usuniętych trybów bezpiecznie porzucone, cały postęp zostaje.
+- Ekran „What's new” po aktualizacji (numer wersji w menu jest od 0.26.1) (raz, zamykany jednym klawiszem albo dotknięciem).
+
+### Faza 2: samouczek i stopniowe odblokowania (v0.28)
+- Samouczek przy pierwszym uruchomieniu: interaktywny, 2–3 minuty, dopasowany do klawiatury, pada albo dotyku. Kolejno: ruch i automatyczne strzelanie; kryształy i pierwszy awans; Q i E; unik z nietykalnością; ultimate; skrzynia i założenie przedmiotu; mały boss. Potem przejście do pierwszej Ekspedycji. Można pominąć i powtórzyć z Ustawień.
+- Odblokowania (zaakceptowane), każde z banerem „Unlocked: …” i krótką podpowiedzią:
+  - start: Ekspedycja, akt 1, dwóch bohaterów;
+  - pierwszy pokonany boss: kowadło i kuźnia, trudność Magic;
+  - ukończony akt 1: kolejni bohaterowie (za wygrane i osiągnięcia);
+  - pierwsza wygrana Ekspedycja: Endless, Pakty, trudność Rare;
+  - wygrana na Rare: trudność Nightmare;
+  - Kolekcja: zakładki pojawiają się, gdy jest w nich pierwsza rzecz.
+
+### Faza 3: czytelność i dostępność (v0.29)
+- Tekst czytelny na PC i telefonie (czcionka Jersey 10 od 0.25; sprawdzić czytelność na telefonie):
+  - opcja Text size (Normal / Large), domyślnie Large na dotyku;
+  - ważne opisy bez pomniejszonego tekstu, w zamian strony albo przewijanie (Arsenał, szczegóły zasobu, karty, panel mapy);
+  - na małych ekranach interfejs zajmuje więcej miejsca i pokazuje mniej naraz;
+  - przegląd każdego ekranu na zrzutach: PC, telefon 20:9, tablet.
+- Dostępność:
+  - ostrzeżenie dla osób wrażliwych na błyski przy pierwszym uruchomieniu i opcja ograniczenia błysków;
+  - zmiana przypisania klawiszy;
+  - pełne sterowanie padem we wszystkich menu (Steam Deck);
+  - zostają: kształty żywiołów, wyłączanie wstrząsów ekranu, autocelowanie.
+
+### Faza 4: różnorodność i uczucie mocy (v0.30–0.31)
+- Ok. 8 nowych wrogów (1–2 na biom), każdy z innym zachowaniem, zapowiedzią ataku i wpisem w bestiariuszu; grafika od razu w stylu 32-bit (Painter `HI`, detale jak w gfx/actors.ts).
+- Jeden miniboss na biom w stylu Strażnika skarbca, z własnym zestawem losowych ataków (mapy elit i wydarzenie w Endless).
+- Bossowie: 1–2 nowe ataki na fazę i lepsze zapowiedzi.
+- Uczucie mocy: mocniejsze krytyki (dźwięk, błysk, wyróżnione liczby), chwila ewolucji (krótkie zatrzymanie, efekt, baner), wyraźniejsze zabójstwa elit, serie zabójstw i „Lucky find”.
+- Podsumowanie runu z wyróżnieniami: najlepsza broń, rekord DPS, pobite rekordy, najdłuższe kombo.
+
+### Faza 5: dźwięk i muzyka (v0.32)
+- Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
+- Osobny dźwięk dla każdej broni, warianty, żeby się nie powtarzały; motyw menu, każdego biomu i osobne motywy bossów.
+- Miks: ściszanie muzyki przy ważnych dźwiękach, limit dźwięków naraz, osobne suwaki efektów i muzyki.
+- Licencje: plik z listą źródeł i licencji, wpis w napisach końcowych, formaty działające na iPhonie (mp3 lub m4a obok ogg).
+
+### Faza 6: przygotowanie do wydania (v0.33, potem 1.0)
+- Wersja wydawana bez narzędzi deweloperskich (zostają w wersji deweloperskiej).
+- Automatyczny test brakujących tłumaczeń w obie strony (bot przechodzi grę i zgłasza napisy bez wpisu).
+- Pełny test: Ekspedycja, akt 4, długi Endless (30+ min), samouczek.
+- Lokalny dziennik runów (czas, przyczyna śmierci, DPS, wybory) i strojenie balansu na runach autora.
+- Potem opakowanie: najpierw Android, potem iOS, na końcu Steam.
+
+### Otwarte sprawy z ostatnich wersji (do wplecenia w fazy)
+- Grafika 32-bit: obiekty map (kapliczki, portale, totemy, sekrety) i efekty (wybuchy, iskry) bez dorysowanych detali; mniej popularni wrogowie do dopracowania.
+- Nowa broń Aurela (pierścień światła, 0.23.9): siła ustawiona na oko, do zmierzenia botem względem starej.
+- Do decyzji autora: celownik myszy i ramki gniazd umiejętności (czy też je wyciszyć), pulsujące światło dla unikatów (pomarańczowy Legendarny i złoty Unikat są do siebie podobne).
+- Balans: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Pustka; reakcje żywiołów (Przeciążenie, Wybuch toksyn) dominują obrażenia w późnej grze.
+- Pomysły: więcej unikatów i receptur fuzji, kolejne sekrety i osiągnięcia.
 
 ## Testowanie
 
