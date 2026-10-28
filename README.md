@@ -345,6 +345,10 @@ src/
 **Aurel's own weapon (0.23.9)**:
 - Holy Light is no longer a copy of Chain Lightning: a ring of light spreads out from Aurel, hitting and pushing back every enemy it passes. The evolution sends several wide rings one after another.
 
+**Light and polish (0.23.10)**:
+- A warm light around your hero and soft glows on crystals, your projectiles and enemy bullets. Settings → Effects: low turns them off on slower devices.
+- Richer interface: bevelled panels, glossy bars, inset slots and a gold-framed hero card.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

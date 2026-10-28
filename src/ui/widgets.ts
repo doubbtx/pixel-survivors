@@ -15,12 +15,16 @@ export function panel(r: Renderer, x: number, y: number, w: number, h: number, a
   r.roundRect(x + 1, y + 1, w - 2, h - 2, 4, fill, C.black);
   r.roundFrame(x + 0.5, y + 0.5, w - 1, h - 1, 4.5, accent, 1);
   r.withAlpha(0.35, () => r.roundFrame(x + 2, y + 2, w - 4, h - 4, 3, C.white, 0.5));
-  // Romby w rogach.
+  // Faza 32-bit: jasna krawędź u góry, cień u dołu wnętrza.
+  r.withAlpha(0.22, () => r.rect(x + 4, y + 2.5, w - 8, 1, C.white));
+  r.withAlpha(0.45, () => r.rect(x + 4, y + h - 3.5, w - 8, 1, C.black));
+  // Romby w rogach z jasnym środkiem.
   for (const [cx, cy] of [[x + 3, y + 3], [x + w - 3, y + 3], [x + 3, y + h - 3], [x + w - 3, y + h - 3]]) {
     r.g.fillStyle = PAL[accent];
     r.g.beginPath();
-    r.g.moveTo(cx, cy - 1.5); r.g.lineTo(cx + 1.5, cy); r.g.lineTo(cx, cy + 1.5); r.g.lineTo(cx - 1.5, cy);
+    r.g.moveTo(cx, cy - 2); r.g.lineTo(cx + 2, cy); r.g.lineTo(cx, cy + 2); r.g.lineTo(cx - 2, cy);
     r.g.fill();
+    r.rect(cx - 0.5, cy - 0.5, 1, 1, C.white);
   }
 }
 
@@ -91,8 +95,14 @@ export function bar(r: Renderer, x: number, y: number, w: number, h: number, fra
   r.roundRect(x, y, w, h, rad, C.black);
   r.roundRect(x + 1, y + 1, w - 2, h - 2, rad - 0.5, bg, C.black);
   if (f > 0) {
-    r.roundRect(x + 1, y + 1, Math.max(f, Math.min(2, w - 2)), h - 2, rad - 0.5, ramp[3], ramp[1]);
+    const fw = Math.max(f, Math.min(2, w - 2));
+    r.roundRect(x + 1, y + 1, fw, h - 2, rad - 0.5, ramp[3], ramp[1]);
+    // Połysk 32-bit: jasny pas w górnej części wypełnienia i cień w dolnej.
     r.withAlpha(0.55, () => r.rect(x + 2, y + 1.5, Math.max(0, f - 2), 0.5, C.white));
+    if (h >= 5) {
+      r.withAlpha(0.18, () => r.rect(x + 1, y + 1, fw, (h - 2) * 0.4, C.white));
+      r.withAlpha(0.22, () => r.rect(x + 1, y + 1 + (h - 2) * 0.7, fw, (h - 2) * 0.3, C.black));
+    }
   }
   if (w >= 60 && h >= 5) r.withAlpha(0.35, () => { for (let i = 1; i < 10; i++) r.rect(x + 1 + ((w - 2) * i) / 10, y + 1, 0.5, h - 2, C.black); });
 }
@@ -196,10 +206,13 @@ export function slot(r: Renderer, x: number, y: number, s: number, border: numbe
   r.roundRect(x + 1, y + 1, s - 2, s - 2, 2.5, C.slate, C.black);
   r.roundFrame(x + 0.5, y + 0.5, s - 1, s - 1, 3, border, 1);
   r.withAlpha(0.3, () => r.rect(x + 2.5, y + 1.75, s - 5, 0.5, C.white));
+  // Wklęsłe wnętrze: cień przy dolnej krawędzi.
+  r.withAlpha(0.35, () => r.rect(x + 2.5, y + s - 3, s - 5, 1, C.black));
 }
 
 /** Półprzezroczysta zaokrąglona płytka pod tekst HUD (czytelność na ruchliwym tle). */
 export function plate(r: Renderer, x: number, y: number, w: number, h: number): void {
-  r.withAlpha(0.6, () => r.roundRect(x, y, w, h, 3, C.black));
-  r.withAlpha(0.25, () => r.roundFrame(x, y, w, h, 3, C.lavender, 0.5));
+  r.withAlpha(0.7, () => r.roundRect(x, y, w, h, 3, C.navy, C.black));
+  r.withAlpha(0.4, () => r.roundFrame(x, y, w, h, 3, C.lavender, 0.5));
+  r.withAlpha(0.15, () => r.rect(x + 3, y + 1, w - 6, 0.5, C.white));
 }

@@ -1,5 +1,5 @@
 import { W, H, VW, VH, ZOOM, type Renderer } from '../core/renderer';
-import { C } from '../core/palette';
+import { C, PAL } from '../core/palette';
 import { drawLabel } from '../core/font';
 import { rng } from '../core/rng';
 import { drawSprite, drawShadow, getSprite, TILE, TILE_VARIANTS } from '../gfx/sprites';
@@ -18,6 +18,35 @@ const FIRE_COLS = [C.red, C.orange, C.gold, C.yellow, C.orange];
 const BULLET_GLOW: Record<string, number> = { eb_orange: C.orange, eb_pink: C.pink, eb_blue: C.blue, eb_cyan: C.cyan };
 
 let vignette: HTMLCanvasElement | null = null;
+
+/** Miękkie poświaty (radialny gradient koloru palety do przezroczystości), z cache per kolor i promień. */
+const glowCache = new Map<string, HTMLCanvasElement>();
+function glowSprite(col: number, rad: number): HTMLCanvasElement {
+  rad = Math.max(2, Math.round(rad));
+  const key = `${col}|${rad}`;
+  let c = glowCache.get(key);
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = c.height = rad * 2;
+  const g = c.getContext('2d')!, hex = PAL[col];
+  const grad = g.createRadialGradient(rad, rad, 0, rad, rad, rad);
+  grad.addColorStop(0, hex);
+  grad.addColorStop(0.35, `${hex}99`);
+  grad.addColorStop(1, `${hex}00`);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, rad * 2, rad * 2);
+  glowCache.set(key, c);
+  return c;
+}
+
+/** Światło addytywne (tryb 'lighter'): wszystkie poświaty z `fn` rozjaśniają to, co pod nimi. */
+function lit(g: CanvasRenderingContext2D, fn: (glow: (x: number, y: number, rad: number, col: number, a: number) => void) => void): void {
+  const prevOp = g.globalCompositeOperation, prevA = g.globalAlpha;
+  g.globalCompositeOperation = 'lighter';
+  fn((x, y, rad, col, a) => { g.globalAlpha = prevA * a; g.drawImage(glowSprite(col, rad), Math.round(x - rad), Math.round(y - rad)); });
+  g.globalCompositeOperation = prevOp;
+  g.globalAlpha = prevA;
+}
 
 /** Winieta: delikatne przyciemnienie brzegów ekranu (rysowana raz, potem z cache). */
 function getVignette(): HTMLCanvasElement {
@@ -327,6 +356,17 @@ function drawWorld(run: Run, r: Renderer): void {
   }
 
   // Znajdźki.
+  // Światło (pełne efekty): ciepła poświata wokół bohatera i niebieskie poświaty kryształów pod nimi.
+  if (fancy) lit(g, (glow) => {
+    glow(px, py, 120, C.peach, 0.16);
+    glow(px, py, 60, C.yellow, 0.1);
+    let n = 0;
+    for (const gm of run.gems.items) {
+      if (n > 150 || !vis(gm.x, gm.y)) continue;
+      n++;
+      glow(X(gm.x), Y(gm.y), gm.value < 25 ? 9 : 14, C.cyan, 0.35);
+    }
+  });
   for (const gm of run.gems.items) {
     if (!vis(gm.x, gm.y)) continue;
     const tier = gm.value < 5 ? 0 : gm.value < 25 ? 1 : gm.value < 100 ? 2 : 3;
@@ -474,6 +514,15 @@ function drawWorld(run: Run, r: Renderer): void {
         drawSprite(g, w.def.proj ?? 'blade', px + Math.cos(a) * R, py + Math.sin(a) * R, { scale: s.area >= 1.5 ? 2 : 1 });
       }
     }
+    // Poświaty pocisków gracza (pełne efekty, do 200 naraz).
+    if (fancy) lit(g, (glow) => {
+      let n = 0;
+      for (const pr of run.projectiles.items) {
+        if (n > 200 || pr.kind === 'wave' || !vis(pr.x, pr.y)) continue;
+        n++;
+        glow(X(pr.x), Y(pr.y), 10, C.peach, 0.3);
+      }
+    });
     for (const pr of run.projectiles.items) {
       if (!vis(pr.x, pr.y)) continue;
       const x = X(pr.x), y = Y(pr.y);
@@ -500,8 +549,8 @@ function drawWorld(run: Run, r: Renderer): void {
   // Pociski wrogów: najpierw poświaty (jedna zmiana przezroczystości dla wszystkich), potem kule.
   // Przy bardzo dużej liczbie pocisków poświaty są pomijane (wydajność).
   if (fancy && run.bullets.count < 600) {
-    r.withAlpha(0.3, () => {
-      for (const b of run.bullets.items) if (vis(b.x, b.y)) r.circle(X(b.x), Y(b.y), b.radius * ZOOM + 4, BULLET_GLOW[b.sprite] ?? C.red, true);
+    lit(g, (glow) => {
+      for (const b of run.bullets.items) if (vis(b.x, b.y)) glow(X(b.x), Y(b.y), b.radius * ZOOM + 8, BULLET_GLOW[b.sprite] ?? C.red, 0.55);
     });
   }
   // Wyraźne pociski (Ustawienia): ciemna obwódka pod każdym pociskiem.

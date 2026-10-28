@@ -183,8 +183,9 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
 
   // Karta bohatera: portret z poziomem, HP (z tarczą), zasób, poziom kampanii i błogosławieństwa.
   const cw = 174;
-  r.withAlpha(0.65, () => r.roundRect(3, 9, cw, 47, 5, C.black));
-  r.withAlpha(0.35, () => r.roundFrame(3, 9, cw, 47, 5, C.lavender, 0.5));
+  r.withAlpha(0.8, () => r.roundRect(3, 9, cw, 47, 5, C.navy, C.black));
+  r.withAlpha(0.75, () => r.roundFrame(3, 9, cw, 47, 5, C.gold, 0.75));
+  r.withAlpha(0.2, () => r.rect(7, 10.5, cw - 8, 0.5, C.white));
   slot(r, 6, 12, 32, C.gold);
   drawSprite(g, `${run.heroSprite}@0`, 22, 28);
   r.roundRect(8, 39, 28, 9, 4.5, C.dbrown, C.ddbrown);
