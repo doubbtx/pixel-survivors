@@ -2,7 +2,7 @@ import { C, RAMP, type Ramp } from '../core/palette';
 import { Rng } from '../core/rng';
 import { BIOMES, type Biome } from '../data/levels';
 import { BADGE_BY_ID } from '../data/pacts';
-import { Painter } from './painter';
+import { Painter, canvasRes } from './painter';
 import { ICON_FNS } from './icons';
 import { ACTORS, boss } from './actors';
 import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes, fountain, rune, mural, mushroom, stairs, barrow, grove } from './objects';
@@ -195,8 +195,10 @@ function silhouette(src: HTMLCanvasElement): HTMLCanvasElement {
   return c;
 }
 
+/** Rozmiar logiczny sprite'a = obraz / res (postacie 32-bit mają obraz 2× większy, ten sam rozmiar w grze). */
 function register(name: string, img: HTMLCanvasElement): Sprite {
-  const s: Sprite = { img, flash: silhouette(img), w: img.width, h: img.height };
+  const res = canvasRes(img);
+  const s: Sprite = { img, flash: silhouette(img), w: img.width / res, h: img.height / res };
   sprites.set(name, s);
   return s;
 }
@@ -277,10 +279,10 @@ export function drawSprite(g: CanvasRenderingContext2D, name: string, x: number,
   if (o.flipX && !o.flash) {
     if (!s.flip) {
       const c = document.createElement('canvas');
-      c.width = s.w;
-      c.height = s.h;
+      c.width = s.img.width;
+      c.height = s.img.height;
       const cg = c.getContext('2d')!;
-      cg.translate(s.w, 0);
+      cg.translate(s.img.width, 0);
       cg.scale(-1, 1);
       cg.drawImage(s.img, 0, 0);
       s.flip = c;

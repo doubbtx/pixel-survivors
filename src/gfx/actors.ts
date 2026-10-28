@@ -2,6 +2,9 @@ import { C, RAMP } from '../core/palette';
 import type { Biome } from '../data/levels';
 import { Painter } from './painter';
 
+/** Rozdzielczość postaci (piksele obrazu na jednostkę): 2 = styl 32-bit, ten sam rozmiar w grze. */
+const HI = 2;
+
 /**
  * Postacie z klatkami animacji: bohaterowie (chód), wrogowie (pulsowanie, machanie skrzydłami,
  * mruganie, migotanie płomienia, obrót) i boss (oddech, pulsujące kule mocy).
@@ -59,7 +62,7 @@ function starPts(cx: number, cy: number, n: number, ro: number, ri: number, rot:
 const STRIDE = [[0, 3, 0, 3], [-1, 3, 1, 2], [0, 3, 0, 3], [1, 2, -1, 3]];
 
 function kestra(f: number): Painter {
-  const p = new Painter(20, 20);
+  const p = new Painter(20, 20, HI);
   const o = f % 2 === 1 ? -1 : 0; // podskok tułowia w kroku
   const [lx, lh, rx, rh] = STRIDE[f];
   p.rect(7 + lx, 15, 2, lh, C.dbrown).rect(7 + lx, 14 + lh, 2, 1, C.ddbrown);
@@ -74,11 +77,16 @@ function kestra(f: number): Painter {
   p.line(15, 3 + o, 16, 5 + o, C.brown).line(16, 5 + o, 16, 14 + o, C.brown).line(16, 14 + o, 15, 16 + o, C.brown).px(16, 7 + o, C.clay).px(16, 8 + o, C.clay); // łuk
   p.line(15, 4 + o, 15, 15 + o, C.lgray); // cięciwa
   p.px(14, 10 + o, C.tan).px(14, 11 + o, C.skin); // dłoń
+  // Detale 32-bit: blask w oczach, szwy kaptura, lotki strzał w kołczanie, połysk łuku i klamry.
+  p.dot(10.5, 7 + o, C.white).dot(12.5, 7 + o, C.white);
+  p.dot(7, 5 + o, C.lime).dot(7.5, 4.5 + o, C.lime).dot(8, 10.5 + o, C.dgreen).dot(11, 10.5 + o, C.dgreen);
+  p.dot(3.5, 5.5 + o, C.white).dot(4.5, 4.5 + o, C.peach).dot(16.5, 6 + o, C.tan).dot(9.5, 13 + o, C.yellow);
+  p.dot(7.5, 15 + o, C.dgreen).dot(11.5, 15.5 + o, C.dgreen);
   return p.outline();
 }
 
 function borgun(f: number): Painter {
-  const p = new Painter(23, 20);
+  const p = new Painter(23, 20, HI);
   const o = f % 2 === 1 ? -1 : 0;
   const sway = f === 1 ? -1 : f === 3 ? 1 : 0;
   const [lx, lh, rx, rh] = STRIDE[f];
@@ -94,11 +102,17 @@ function borgun(f: number): Painter {
   p.line(17, 4 + o, 17, 18 + o, C.brown).px(17, 5 + o, C.clay); // stylisko
   p.poly([[17, 3 + o], [21, 2 + o], [21, 9 + o], [17, 8 + o]], C.lavender).line(20, 2 + o, 20, 9 + o, C.lgray).line(21, 3 + o, 21, 8 + o, C.white).line(17, 3 + o, 17, 8 + o, C.dgray);
   p.rect(15, 10 + o, 3, 2, C.dgray);
+  // Detale 32-bit: odblask hełmu i napierśnika, nity, żarzący się wizjer, kosmyki brody, błysk ostrza, fałdy peleryny.
+  p.dot(8.5, 4 + o, C.white).dot(9, 4.5 + o, C.white).dot(8, 10 + o, C.white).dot(8.5, 10.5 + o, C.lgray);
+  p.dot(7.5, 12 + o, C.lgray).dot(13.5, 12 + o, C.lgray).dot(12.5, 7.5 + o, C.pink);
+  p.dot(10, 10.5 + o, C.rust).dot(11.5, 10.5 + o, C.rust).dot(12.5, 10 + o, C.clay);
+  p.dot(21.5, 3 + o, C.white).dot(21.5, 5 + o, C.white).dot(10.5, 13 + o, C.yellow);
+  p.dot(5, 12 + o, C.red).dot(4.5, 15, C.red).dot(6, 16.5, C.ddbrown);
   return p.outline();
 }
 
 function ignara(f: number): Painter {
-  const p = new Painter(20, 21);
+  const p = new Painter(20, 21, HI);
   const o = f % 2 === 1 ? -1 : 0;
   const [lx, lh, rx, rh] = STRIDE[f];
   const glow = f % 2 === 0 ? C.yellow : C.gold;
@@ -114,12 +128,17 @@ function ignara(f: number): Painter {
   p.line(16, 5 + o, 16, 18 + o, C.brown).px(16, 9 + o, C.clay); // kostur
   p.disc(16, 3 + o, 2, C.orange).px(16, 3 + o, glow).px(16, 1 + o, C.gold);
   p.px(14, 11 + o, C.tan).px(15, 11 + o, C.skin); // dłoń
+  // Detale 32-bit: blask w oczach, złote hafty szaty, żar kuli kostura, iskry.
+  p.dot(9.5, 8 + o, C.white).dot(11.5, 8 + o, C.white);
+  p.dot(6.5, 14.5 + o, C.gold).dot(12.5, 14.5 + o, C.gold).dot(7.5, 16.5, C.gold).dot(11.5, 16.5, C.gold);
+  p.dot(15.5, 2.5 + o, C.white).dot(17.5, 0.5 + o, f % 2 ? C.yellow : C.orange).dot(14.5, 0.5 + o, f % 2 ? C.orange : C.yellow);
+  p.dot(7.5, 5 + o, C.red);
   return p.outline();
 }
 
 /** Morwen: przywoływaczka w fioletowej szacie z kapturem, kostur z czaszką i zielonym płomieniem duszy. */
 function morwen(f: number): Painter {
-  const p = new Painter(20, 21);
+  const p = new Painter(20, 21, HI);
   const o = f % 2 === 1 ? -1 : 0;
   const [lx, lh, rx, rh] = STRIDE[f];
   p.rect(7 + lx, 16, 2, lh, C.black).rect(10 + rx, 16, 2, rh, C.black);
@@ -133,6 +152,11 @@ function morwen(f: number): Painter {
   p.sphere(16, 3 + o, 2, 2, RAMP.bone).px(15, 3 + o, C.black).px(17, 3 + o, C.black);
   p.px(16, 0 + o, f % 2 ? C.lime : C.green).px(15, 1 + o, C.green).px(17, 1 + o, C.lime); // płomień duszy
   p.px(14, 11 + o, C.lavender).px(15, 11 + o, C.lgray); // dłoń
+  // Detale 32-bit: poświata oczu, oczodoły czaszki, runy na szacie, płomień duszy.
+  p.dot(8.5, 8.5 + o, C.green).dot(11.5, 8.5 + o, C.green).dot(8, 8 + o, C.white).dot(11, 8 + o, C.white);
+  p.dot(15.5, 2.5 + o, C.white).dot(16, 4.5 + o, C.dgray);
+  p.dot(7, 14.5 + o, C.lime).dot(12, 14.5 + o, C.lime).dot(9.5, 15.5 + o, C.lime);
+  p.dot(16.5, -0.5 + o, C.white);
   return p.outline();
 }
 
@@ -140,7 +164,7 @@ function morwen(f: number): Painter {
 function wraithOf(f: number, big: boolean): Painter {
   const s = big ? 1.5 : 1;
   const w = Math.round(14 * s), h = Math.round(16 * s);
-  const p = new Painter(w, h);
+  const p = new Painter(w, h, HI);
   const cx = w / 2, sway = [0, 1, 0, -1][f] * s;
   p.poly([[cx - 4 * s, 7 * s], [cx + 4 * s, 7 * s], [cx + 2 * s + sway, 15 * s], [cx + sway, 12 * s], [cx - 2 * s + sway, 15 * s]], C.lavender);
   p.sphere(cx, 6 * s, 4.5 * s, 4.5 * s, [C.slate, C.lavender, C.lgray, C.white]);
@@ -156,7 +180,7 @@ const wraithbig = (f: number) => wraithOf(f, true);
 
 /** Vesper: zabójczyni w ciemnym kapturze z szalem, maska na twarzy, dwa sztylety. */
 function vesper(f: number): Painter {
-  const p = new Painter(20, 20);
+  const p = new Painter(20, 20, HI);
   const o = f % 2 === 1 ? -1 : 0;
   const [lx, lh, rx, rh] = STRIDE[f];
   const flow = [0, 1, 0, -1][f];
@@ -170,12 +194,17 @@ function vesper(f: number): Painter {
   p.line(3, 12 + o, 4, 9 + o, C.lgray).px(3, 13 + o, C.dbrown); // sztylet w lewej
   p.line(15, 9 + o, 17, 6 + o, C.lgray).px(17, 5 + o, C.white).px(15, 10 + o, C.dbrown); // sztylet w prawej
   p.px(14, 10 + o, C.tan);
+  // Detale 32-bit: blask w oczach, szwy kurtki, połysk ostrzy noży i sztyletów, frędzle szala.
+  p.dot(9.5, 6 + o, C.white).dot(11.5, 6 + o, C.white);
+  p.dot(8, 10.5 + o, C.slate).dot(11, 11 + o, C.slate).dot(9.5, 14.5 + o, C.slate);
+  p.dot(8.5, 13 + o, C.white).dot(11.5, 13 + o, C.white).dot(3.5, 10 + o, C.white).dot(16.5, 6.5 + o, C.white);
+  p.dot(1.5 + flow, 13.5 + o, C.red).dot(2.5 + flow, 13 + o, C.red);
   return p.outline();
 }
 
 /** Aurel: kapłan w białej szacie ze złotą stułą i aureolą, kostur ze słońcem. */
 function aurel(f: number): Painter {
-  const p = new Painter(20, 22);
+  const p = new Painter(20, 22, HI);
   const o = f % 2 === 1 ? -1 : 0;
   const [lx, lh, rx, rh] = STRIDE[f];
   const glow = f % 2 === 0 ? C.yellow : C.white;
@@ -191,6 +220,11 @@ function aurel(f: number): Painter {
   p.line(17, 5 + o, 17, 20 + o, C.brown).px(17, 10 + o, C.clay); // kostur
   p.disc(17, 3 + o, 2, C.gold).px(17, 3 + o, glow).px(15, 3 + o, C.yellow).px(19, 3 + o, C.yellow).px(17, 0 + o, C.yellow);
   p.px(15, 12 + o, C.tan).px(16, 12 + o, C.skin); // dłoń
+  // Detale 32-bit: blask w oczach, złote krzyże na stule, fałdy szaty, promienie słońca kostura, blask aureoli.
+  p.dot(8.5, 8 + o, C.white).dot(11.5, 8 + o, C.white);
+  p.dot(7.5, 15 + o, C.yellow).dot(11.5, 15 + o, C.yellow).dot(7.5, 14.5 + o, C.yellow).dot(11.5, 14.5 + o, C.yellow);
+  p.dot(6, 16.5, C.lgray).dot(13, 16.5, C.lgray).dot(9.5, 17.5, C.lgray);
+  p.dot(15.5, 1.5 + o, C.white).dot(18.5, 1.5 + o, C.white).dot(9.5, 1 + o, C.white);
   return p.outline();
 }
 
@@ -198,7 +232,7 @@ function aurel(f: number): Painter {
 function angelOf(f: number, big: boolean): Painter {
   const s = big ? 1.5 : 1;
   const w = Math.round(16 * s), h = Math.round(16 * s);
-  const p = new Painter(w, h);
+  const p = new Painter(w, h, HI);
   const cx = w / 2, flap = [0, 1, 2, 1][f] * s;
   p.poly([[cx - 2 * s, 6 * s], [cx - 7 * s, 3 * s - flap], [cx - 6 * s, 9 * s], [cx - 2 * s, 10 * s]], C.cream); // skrzydła
   p.poly([[cx + 2 * s, 6 * s], [cx + 7 * s, 3 * s - flap], [cx + 6 * s, 9 * s], [cx + 2 * s, 10 * s]], C.cream);
@@ -214,7 +248,7 @@ const angelbig = (f: number) => angelOf(f, true);
 
 /** Szlam w kolorach rampy (zielony zwykły, złoty — rzadki Złoty szlam). */
 function slimeOf(f: number, ramp: readonly number[], mouth: number): Painter {
-  const p = new Painter(20, 17);
+  const p = new Painter(20, 17, HI);
   const rx = 7 + [0, 0.8, 0, -0.5][f], ry = 5.6 + [0, -0.8, 0, 0.6][f];
   const cy = 15 - ry;
   p.sphere(10, cy, rx, ry, ramp);
@@ -222,6 +256,9 @@ function slimeOf(f: number, ramp: readonly number[], mouth: number): Painter {
   p.px(6, ey - 3, C.white).px(7, ey - 4, C.white).px(7, ey - 3, ramp[3]);
   p.rect(7, ey, 2, 2, C.black).rect(12, ey, 2, 2, C.black).px(7, ey, C.white).px(12, ey, C.white);
   p.rect(9, ey + 3, 3, 1, mouth);
+  // Detale 32-bit: drugi odblask, bąbelki w galarecie, ciemniejsza podstawa.
+  p.dot(8.5, ey - 4.5, C.white).dot(13.5, cy + 1, ramp[3]).dot(14.5, cy + 2.5, ramp[3]).dot(6, cy + 2, ramp[3]);
+  p.dot(7, 14.5, ramp[0]).dot(10, 14.5, ramp[0]).dot(13, 14.5, ramp[0]);
   return p.outline();
 }
 
@@ -229,7 +266,7 @@ const slime = (f: number) => slimeOf(f, [C.dgreen, C.green, C.lime, C.lime], C.t
 const goldslime = (f: number) => slimeOf(f, [C.dbrown, C.orange, C.gold, C.yellow], C.dbrown);
 
 function bat(f: number): Painter {
-  const p = new Painter(23, 17);
+  const p = new Painter(23, 17, HI);
   const lift = [0, -3, 2][f];
   const wing: [number, number][] = [[9, 7], [2, 3 + lift], [3, 7 + lift / 2], [1, 11 + lift], [5, 10], [7, 13]];
   p.poly(wing, C.plum).poly(wing.map(([x, y]) => [22 - x, y] as [number, number]), C.plum);
@@ -238,12 +275,16 @@ function bat(f: number): Painter {
   p.poly([[9, 7 + by], [9, 3 + by], [11, 6 + by]], C.plum).poly([[13, 7 + by], [13, 3 + by], [11, 6 + by]], C.plum); // uszy
   p.sphere(11, 9 + by, 3.5, 3.5, RAMP.purple);
   p.px(10, 9 + by, C.hotpink).px(12, 9 + by, C.hotpink).px(10, 11 + by, C.white).px(12, 11 + by, C.white);
+  // Detale 32-bit: blask oczu, żyłki skrzydeł, futro.
+  p.dot(10, 9 + by, C.white).dot(12, 9 + by, C.white);
+  p.dot(5, 8 + lift / 2, C.pink).dot(17, 8 + lift / 2, C.pink).dot(6.5, 10.5, C.pink).dot(15.5, 10.5, C.pink);
+  p.dot(10, 7.5 + by, C.pink).dot(12, 7.5 + by, C.pink);
   return p.outline();
 }
 
 /** Golem: ciężki chód w 4 klatkach (nogi na zmianę, ramiona w przeciwfazie, tułów podskakuje), mech i świecący rdzeń. */
 function golem(f: number): Painter {
-  const p = new Painter(25, 25);
+  const p = new Painter(25, 25, HI);
   const bob = f % 2 === 1 ? -1 : 0;
   const swing = [0, 1, 0, -1][f];
   const [ll, rl] = [[5, 4], [5, 5], [4, 5], [5, 5]][f];
@@ -259,11 +300,14 @@ function golem(f: number): Painter {
   const core = f % 2 ? [C.cyan, C.white] : [C.blue, C.cyan];
   p.px(12, 12 + bob, core[1]).px(13, 12 + bob, core[0]).px(12, 13 + bob, core[0]).px(13, 13 + bob, C.dblue);
   p.px(10, 2 + bob, C.green).px(11, 2 + bob, C.lime).px(9, 3 + bob, C.green).px(16, 8 + bob, C.green).px(17, 8 + bob, C.lime).px(4, 10 + swing + bob, C.green);
+  // Detale 32-bit: drobne pęknięcia i odpryski, poświata rdzenia i oczu.
+  p.dot(10, 8 + bob, C.slate).dot(10.5, 8.5 + bob, C.slate).dot(16.5, 14 + bob, C.slate).dot(7.5, 9.5 + bob, C.white).dot(3.5, 11 + swing + bob, C.white);
+  p.dot(11.5, 11.5 + bob, C.white).dot(14, 13.5 + bob, C.cyan).dot(11.5, 4.5 + bob, C.yellow).dot(14.5, 4.5 + bob, C.yellow);
   return p.outline();
 }
 
 function eye(f: number): Painter {
-  const p = new Painter(18, 18);
+  const p = new Painter(18, 18, HI);
   p.sphere(9, 9, 7, 7, RAMP.bone);
   p.line(3, 7, 5, 8, C.salmon).line(14, 12, 12, 11, C.salmon).line(5, 13, 6, 11, C.salmon);
   p.sphere(10, 9, 3.5, 3.5, RAMP.blue);
@@ -271,7 +315,7 @@ function eye(f: number): Painter {
   // Powieka (cieniowana jak skóra): f=1 przymknięta do połowy, f=2 zamknięta ze szparą i rzęsami.
   if (f > 0) {
     const edge = f === 1 ? 8 : 10;
-    const lid = new Painter(18, 18).sphere(9, 9, 7, 7, [C.plum, C.pink, C.salmon, C.salmon]);
+    const lid = new Painter(18, 18, HI).sphere(9, 9, 7, 7, [C.plum, C.pink, C.salmon, C.salmon]);
     for (let y = 0; y < edge; y++) for (let x = 0; x < 18; x++) if (lid.get(x, y) >= 0) p.px(x, y, lid.get(x, y));
     for (let x = 0; x < 18; x++) if (lid.get(x, edge) >= 0) p.px(x, edge, C.black);
     if (f === 2) {
@@ -283,7 +327,7 @@ function eye(f: number): Painter {
 }
 
 function wisp(f: number): Painter {
-  const p = new Painter(17, 19);
+  const p = new Painter(17, 19, HI);
   const tip = [0, -1.5, 1.5][f];
   p.poly([[8.5 + tip, 0.5], [3, 11], [14, 11]], C.rust).poly([[8.5 + tip / 2, 3], [5.5, 11], [11.5, 11]], C.orange);
   p.poly([[3, 9], [1, 4 + f], [5, 10]], C.rust).poly([[14, 9], [16, 6 - f], [12, 10]], C.rust);
@@ -294,7 +338,7 @@ function wisp(f: number): Painter {
 }
 
 function spinner(f: number): Painter {
-  const p = new Painter(21, 21);
+  const p = new Painter(21, 21, HI);
   const rot = -Math.PI / 2 + f * (Math.PI / 20);
   p.poly(starPts(10.5, 10.5, 5, 9.5, 4, rot), C.plum).poly(starPts(10.5, 10.5, 5, 7, 3, rot), C.pink);
   p.sphere(10.5, 10.5, 3.6, 3.6, RAMP.purple);
@@ -304,7 +348,7 @@ function spinner(f: number): Painter {
 
 /** Kultysta: zakapturzona postać w niebieskiej szacie, świecące oczy i kula mocy (f=1: rozbłysk, f=2/3: szata faluje). */
 function cultist(f: number): Painter {
-  const p = new Painter(16, 19);
+  const p = new Painter(16, 19, HI);
   const sway = f === 2 ? -1 : f === 3 ? 1 : 0;
   p.polyShade([[8, 1], [13, 7], [14.5 + sway, 18], [1.5 + sway, 18], [3, 7]], RAMP.blue);
   p.line(8, 6, 8 + sway, 17, C.navy).line(3 + sway, 17, 13 + sway, 17, C.dblue);
@@ -314,12 +358,15 @@ function cultist(f: number): Painter {
   const orb = f ? 2.6 : 2;
   p.sphere(8, 12.5, orb, orb, [C.dblue, C.blue, C.cyan, C.white]);
   p.line(4, 11, 6, 12, C.dblue).line(12, 11, 10, 12, C.dblue); // rękawy
+  // Detale 32-bit: blask kuli, runy na szacie, poświata oczu.
+  p.dot(7, 11.5, C.white).dot(5.5, 14.5 + sway / 2, C.cyan).dot(10.5, 14.5 + sway / 2, C.cyan).dot(8, 16, C.cyan);
+  p.dot(6.5, 6.5, C.blue).dot(10.5, 6.5, C.blue);
   return p.outline(C.navy);
 }
 
 /** Strażnik: unoszący się kryształ z okiem; runy krążą wokół (4 klatki), rdzeń pulsuje. */
 function sentinel(f: number): Painter {
-  const p = new Painter(20, 24);
+  const p = new Painter(20, 24, HI);
   const o = f % 2 ? 0 : 1;
   for (let k = 0; k < 3; k++) {
     const a = (k / 3) * Math.PI * 2 + f * (Math.PI / 6);
@@ -335,7 +382,7 @@ function sentinel(f: number): Painter {
 
 /** Mimik: skrzynia z zębami, kłapie (klatka 1 = otwarta paszcza z językiem). */
 function mimic(f: number): Painter {
-  const p = new Painter(20, 18);
+  const p = new Painter(20, 18, HI);
   const open = f === 1 ? 3 : 0;
   p.block(2, 9, 16, 8, RAMP.wood).rect(2, 12, 16, 1, C.gold);
   p.block(2, 3 - open, 16, 6, RAMP.wood).rect(2, 3 - open, 16, 1, C.clay);
@@ -347,7 +394,7 @@ function mimic(f: number): Painter {
 
 /** Biały jeleń: smukła sylwetka z porożem, bieg w 4 klatkach. */
 function stag(f: number): Painter {
-  const p = new Painter(24, 22);
+  const p = new Painter(24, 22, HI);
   const leg = [0, 1, 0, -1][f];
   p.sphere(11, 11, 7, 3.5, RAMP.bone).sphere(18, 7, 2.5, 2.5, RAMP.bone).px(19, 6, C.black);
   p.line(17, 4, 15, 0, C.cream).line(16, 2, 14, 2, C.cream).line(19, 4, 21, 0, C.cream).line(20, 2, 22, 2, C.cream);
@@ -358,7 +405,7 @@ function stag(f: number): Painter {
 
 /** Tarczownik: zbrojny z wielką tarczą z przodu (tarcza rysowana osobno, zgodnie z kierunkiem, w render.ts). */
 function shieldbearer(f: number): Painter {
-  const p = new Painter(18, 20);
+  const p = new Painter(18, 20, HI);
   const s = f === 1 ? 1 : 0;
   p.rect(6, 15, 2, 4 + s, C.dgray).rect(10, 15, 2, 5 - s, C.dgray);
   p.block(4, 7, 10, 9, RAMP.stone).rect(4, 11, 10, 1, C.dbrown);
@@ -369,7 +416,7 @@ function shieldbearer(f: number): Painter {
 
 /** Przywoływacz: szaman w masce z kosturem i kulą, kula pulsuje przed przywołaniem. */
 function summoner(f: number): Painter {
-  const p = new Painter(18, 21);
+  const p = new Painter(18, 21, HI);
   p.polyShade([[9, 3], [14, 9], [15, 20], [3, 20], [4, 9]], RAMP.purple);
   p.sphere(9, 6, 3.5, 3, RAMP.bone).px(8, 6, C.black).px(10, 6, C.black).rect(8, 8, 3, 1, C.dred);
   p.line(15, 4, 15, 20, C.brown).sphere(15, 3, 2 + (f % 2) * 0.6, 2 + (f % 2) * 0.6, [C.dgreen, C.green, C.lime, C.white]);
@@ -378,7 +425,7 @@ function summoner(f: number): Painter {
 
 /** Kamikaze: kulista bomba z lontem i nóżkami (klatki: iskra lontu). */
 function kamikaze(f: number): Painter {
-  const p = new Painter(14, 15);
+  const p = new Painter(14, 15, HI);
   p.sphere(7, 8, 5, 5, RAMP.night).px(5, 6, C.slate).rect(5, 8, 1, 1, C.red).rect(9, 8, 1, 1, C.red);
   p.line(7, 3, 9, 1, C.brown).px(10, 0, f ? C.yellow : C.orange).px(9, 0, f ? C.orange : C.yellow);
   p.px(4, 13, C.dgray).px(10, 13, C.dgray);
@@ -387,7 +434,7 @@ function kamikaze(f: number): Painter {
 
 /** Skoczek: zjawa z rozmytym konturem (4 klatki migotania). */
 function blinker(f: number): Painter {
-  const p = new Painter(16, 18);
+  const p = new Painter(16, 18, HI);
   p.polyShade([[8, 1], [13, 7], [12, 17], [8, 14], [4, 17], [3, 7]], [C.navy, C.dblue, C.cyan, C.white]);
   p.rect(5, 6, 2, 2, C.black).rect(9, 6, 2, 2, C.black).px(5, 6, C.white).px(9, 6, C.white);
   for (let k = 0; k < 3; k++) p.px(2 + ((f + k * 3) % 12), 2 + ((f * 5 + k * 4) % 14), C.cyan);
@@ -396,7 +443,7 @@ function blinker(f: number): Painter {
 
 /** Pajęczarz: pająk z odwłokiem w czaszkę i ośmioma nogami (4 klatki chodu). */
 function weaver(f: number): Painter {
-  const p = new Painter(22, 16);
+  const p = new Painter(22, 16, HI);
   for (let k = 0; k < 4; k++) {
     const o = (k + f) % 2 ? 1 : -1;
     p.line(8, 8, 1 + k, 4 + k * 3 + o, C.dgray).line(14, 8, 21 - k, 4 + k * 3 - o, C.dgray);
@@ -419,7 +466,7 @@ export const ACTORS: Record<string, (f: number) => Painter> = {
 const x0 = (f: number) => (f >> 1) & 1;
 
 export function boss(b: Biome, f: number): Painter {
-  const p = new Painter(37, 38);
+  const p = new Painter(37, 38, HI);
   const robe = b.bossRobe;
   const o = f % 2 ? 0 : 1; // klatki parzyste o piksel niżej — "oddech"
   for (let y = 16; y < 34; y++) {

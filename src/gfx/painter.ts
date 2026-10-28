@@ -15,95 +15,127 @@ const LUMA = PAL.map((hex) => {
 const KEEP = new Set<number>([C.black, C.white, C.skin, C.tan, C.peach]);
 
 /**
- * "Malarz" sprite'ów 16-bit: rysuje indeksami palety na małej siatce, z cieniowaniem rampami
- * (światło z lewej-góry) i automatycznym obrysem. Grafika powstaje w kodzie, ale cały kod
- * gry odwołuje się tylko do nazw sprite'ów, więc podmiana na sprite sheet nie rusza logiki.
+ * "Malarz" sprite'ów: rysuje indeksami palety na małej siatce, z cieniowaniem rampami (światło z lewej-góry)
+ * i automatycznym obrysem. Współrzędne podaje się w jednostkach projektu (w × h); `res` to liczba pikseli
+ * obrazu na jednostkę: przy res 2 (styl 32-bit) kule, wielokąty, dyski, pierścienie i linie liczone są na drobnej
+ * siatce (gładsze kształty, płynniejsze cieniowanie), a obrys i faza mają 1 drobny piksel. `px`/`rect` malują
+ * całą jednostkę, `dot` jeden drobny piksel (detale). Kod gry odwołuje się tylko do nazw sprite'ów.
  */
 export class Painter {
   private readonly d: Int16Array;
+  /** Wymiary siatki obrazu (piksele): w·res × h·res. */
+  private readonly fw: number;
+  private readonly fh: number;
 
-  constructor(readonly w: number, readonly h: number) {
-    this.d = new Int16Array(w * h).fill(-1);
+  constructor(readonly w: number, readonly h: number, readonly res = 1) {
+    this.fw = w * res;
+    this.fh = h * res;
+    this.d = new Int16Array(this.fw * this.fh).fill(-1);
   }
 
+  /** Piksel obrazu (drobny). */
+  private set(fx: number, fy: number, c: number): void {
+    if (fx >= 0 && fy >= 0 && fx < this.fw && fy < this.fh) this.d[fy * this.fw + fx] = c;
+  }
+
+  private at(fx: number, fy: number): number {
+    return fx >= 0 && fy >= 0 && fx < this.fw && fy < this.fh ? this.d[fy * this.fw + fx] : -1;
+  }
+
+  /** Jednostka projektu (res × res pikseli obrazu). */
   px(x: number, y: number, c: number): this {
-    x = Math.floor(x); y = Math.floor(y);
-    if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.d[y * this.w + x] = c;
+    const fx = Math.floor(x * this.res), fy = Math.floor(y * this.res);
+    for (let j = 0; j < this.res; j++) for (let i = 0; i < this.res; i++) this.set(fx + i, fy + j, c);
+    return this;
+  }
+
+  /** Pojedynczy piksel obrazu w punkcie projektu (detale w stylu 32-bit; przy res 1 to samo co px). */
+  dot(x: number, y: number, c: number): this {
+    this.set(Math.floor(x * this.res), Math.floor(y * this.res), c);
     return this;
   }
 
   get(x: number, y: number): number {
-    return x >= 0 && y >= 0 && x < this.w && y < this.h ? this.d[y * this.w + x] : -1;
+    return this.at(Math.floor(x * this.res), Math.floor(y * this.res));
   }
 
   rect(x: number, y: number, w: number, h: number, c: number): this {
-    for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) this.px(xx, yy, c);
+    const r = this.res;
+    for (let fy = Math.floor(y * r); fy < Math.floor((y + h) * r); fy++) for (let fx = Math.floor(x * r); fx < Math.floor((x + w) * r); fx++) this.set(fx, fy, c);
     return this;
   }
 
   /** Elipsa cieniowana jak kula (światło z lewej-góry). `ramp` od cienia do światła. */
   sphere(cx: number, cy: number, rx: number, ry: number, ramp: Ramp): this {
-    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
-      for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
-        const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry;
+    const r = this.res;
+    for (let fy = Math.floor((cy - ry) * r); fy <= Math.ceil((cy + ry) * r); fy++) {
+      for (let fx = Math.floor((cx - rx) * r); fx <= Math.ceil((cx + rx) * r); fx++) {
+        const nx = ((fx + 0.5) / r - cx) / rx, ny = ((fy + 0.5) / r - cy) / ry;
         const r2 = nx * nx + ny * ny;
         if (r2 > 1) continue;
         const nz = Math.sqrt(1 - r2);
         const v = nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2];
         const t = Math.min(0.999, Math.max(0, (v + 0.3) / 1.15));
-        this.px(x, y, ramp[Math.floor(t * ramp.length)]);
+        this.set(fx, fy, ramp[Math.floor(t * ramp.length)]);
       }
     }
     return this;
   }
 
-  /** Blok z fazą: jasna krawędź górna/lewa, ciemna dolna/prawa (metal, kamień, drewno). */
+  /** Blok z fazą: jasna krawędź górna/lewa, ciemna dolna/prawa (metal, kamień, drewno); krawędzie 1 piksel obrazu. */
   block(x: number, y: number, w: number, h: number, ramp: Ramp): this {
+    const e = 1 / this.res;
     this.rect(x, y, w, h, ramp[Math.min(ramp.length - 2, 1)]);
-    this.rect(x, y, w, 1, ramp[ramp.length - 1]);
-    this.rect(x, y, 1, h, ramp[ramp.length - 2]);
-    this.rect(x, y + h - 1, w, 1, ramp[0]);
-    this.rect(x + w - 1, y + 1, 1, h - 1, ramp[0]);
+    this.rect(x, y, w, e, ramp[ramp.length - 1]);
+    this.rect(x, y, e, h, ramp[ramp.length - 2]);
+    this.rect(x, y + h - e, w, e, ramp[0]);
+    this.rect(x + w - e, y + e, e, h - e, ramp[0]);
     return this;
   }
 
+  /** Linia grubości jednej jednostki, krokowana co piksel obrazu (gładsze skosy przy res > 1). */
   line(x0: number, y0: number, x1: number, y1: number, c: number): this {
-    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
-    for (let i = 0; i <= n; i++) this.px(Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), c);
+    const r = this.res, n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1) * r;
+    for (let i = 0; i <= n; i++) {
+      const fx = Math.round((x0 + ((x1 - x0) * i) / n) * r), fy = Math.round((y0 + ((y1 - y0) * i) / n) * r);
+      for (let j = 0; j < r; j++) for (let k = 0; k < r; k++) this.set(fx + k, fy + j, c);
+    }
     return this;
   }
 
-  /** Wypełniony wielokąt (test punktu w środku piksela). */
+  /** Wypełniony wielokąt (test środka piksela obrazu). */
   poly(pts: [number, number][], c: number): this {
-    const ys = pts.map((p) => p[1]);
-    for (let y = Math.floor(Math.min(...ys)); y <= Math.ceil(Math.max(...ys)); y++) {
-      for (let x = 0; x < this.w; x++) {
+    const r = this.res, ys = pts.map((p) => p[1]);
+    for (let fy = Math.floor(Math.min(...ys) * r); fy <= Math.ceil(Math.max(...ys) * r); fy++) {
+      for (let fx = 0; fx < this.fw; fx++) {
         let inside = false;
-        const px = x + 0.5, py = y + 0.5;
+        const px = (fx + 0.5) / r, py = (fy + 0.5) / r;
         for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
           const [xi, yi] = pts[i], [xj, yj] = pts[j];
           if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
         }
-        if (inside) this.px(x, y, c);
+        if (inside) this.set(fx, fy, c);
       }
     }
     return this;
   }
 
   /** Wypełniony dysk jednym kolorem. */
-  disc(cx: number, cy: number, r: number, c: number): this {
-    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
-      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r) this.px(x, y, c);
+  disc(cx: number, cy: number, rad: number, c: number): this {
+    const r = this.res;
+    for (let fy = Math.floor((cy - rad) * r); fy <= Math.ceil((cy + rad) * r); fy++) {
+      for (let fx = Math.floor((cx - rad) * r); fx <= Math.ceil((cx + rad) * r); fx++) if (((fx + 0.5) / r - cx) ** 2 + ((fy + 0.5) / r - cy) ** 2 <= rad * rad) this.set(fx, fy, c);
     }
     return this;
   }
 
-  /** Pierścień o grubości `w`. */
-  ring(cx: number, cy: number, r: number, w: number, c: number): this {
-    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
-      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-        const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
-        if (d <= r && d > r - w) this.px(x, y, c);
+  /** Pierścień o grubości `w` (jednostki projektu). */
+  ring(cx: number, cy: number, rad: number, w: number, c: number): this {
+    const r = this.res;
+    for (let fy = Math.floor((cy - rad) * r); fy <= Math.ceil((cy + rad) * r); fy++) {
+      for (let fx = Math.floor((cx - rad) * r); fx <= Math.ceil((cx + rad) * r); fx++) {
+        const d = Math.hypot((fx + 0.5) / r - cx, (fy + 0.5) / r - cy);
+        if (d <= rad && d > rad - w) this.set(fx, fy, c);
       }
     }
     return this;
@@ -114,28 +146,28 @@ export class Painter {
    * z ciemniejszą krawędzią — szybki sposób na "wypukłe" ikony (tarcza, liść, kropla).
    */
   polyShade(pts: [number, number][], ramp: Ramp): this {
-    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    const r = this.res, xs = pts.map((p) => p[0] * r), ys = pts.map((p) => p[1] * r);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-    const mask = new Painter(this.w, this.h).poly(pts, 0);
-    for (let y = 0; y < this.h; y++) {
-      for (let x = 0; x < this.w; x++) {
-        if (mask.get(x, y) < 0) continue;
-        const edge = mask.get(x + 1, y) < 0 || mask.get(x, y + 1) < 0;
-        const t = 1 - (((x - x0) / Math.max(1, x1 - x0)) * 0.45 + ((y - y0) / Math.max(1, y1 - y0)) * 0.55);
+    const mask = new Painter(this.w, this.h, r).poly(pts, 0);
+    for (let fy = 0; fy < this.fh; fy++) {
+      for (let fx = 0; fx < this.fw; fx++) {
+        if (mask.at(fx, fy) < 0) continue;
+        const edge = mask.at(fx + 1, fy) < 0 || mask.at(fx, fy + 1) < 0;
+        const t = 1 - (((fx - x0) / Math.max(1, x1 - x0)) * 0.45 + ((fy - y0) / Math.max(1, y1 - y0)) * 0.55);
         const i = edge ? 0 : Math.min(ramp.length - 1, 1 + Math.floor(t * (ramp.length - 1)));
-        this.px(x, y, ramp[i]);
+        this.set(fx, fy, ramp[i]);
       }
     }
     return this;
   }
 
-  /** Dodaje obrys 1 px wokół nieprzezroczystych pikseli (wymaga 1 px wolnego marginesu). */
+  /** Dodaje obrys 1 piksel obrazu wokół nieprzezroczystych pikseli (wymaga wolnego marginesu). */
   outline(c: number = C.black): this {
     const add: number[] = [];
-    for (let y = 0; y < this.h; y++) {
-      for (let x = 0; x < this.w; x++) {
-        if (this.get(x, y) !== -1) continue;
-        if (this.get(x - 1, y) >= 0 || this.get(x + 1, y) >= 0 || this.get(x, y - 1) >= 0 || this.get(x, y + 1) >= 0) add.push(y * this.w + x);
+    for (let fy = 0; fy < this.fh; fy++) {
+      for (let fx = 0; fx < this.fw; fx++) {
+        if (this.at(fx, fy) !== -1) continue;
+        if (this.at(fx - 1, fy) >= 0 || this.at(fx + 1, fy) >= 0 || this.at(fx, fy - 1) >= 0 || this.at(fx, fy + 1) >= 0) add.push(fy * this.fw + fx);
       }
     }
     for (const i of add) this.d[i] = c;
@@ -155,16 +187,22 @@ export class Painter {
     return this;
   }
 
+  /** Obraz w pikselach obrazu (w·res × h·res); `canvasRes` zwraca jego `res` (rozmiar logiczny = obraz / res). */
   canvas(): HTMLCanvasElement {
     const c = document.createElement('canvas');
-    c.width = this.w;
-    c.height = this.h;
+    c.width = this.fw;
+    c.height = this.fh;
     const g = c.getContext('2d')!;
     for (let i = 0; i < this.d.length; i++) {
       if (this.d[i] < 0) continue;
       g.fillStyle = PAL[this.d[i]];
-      g.fillRect(i % this.w, Math.floor(i / this.w), 1, 1);
+      g.fillRect(i % this.fw, Math.floor(i / this.fw), 1, 1);
     }
+    RES.set(c, this.res);
     return c;
   }
 }
+
+/** Rozdzielczość obrazów z Painter.canvas() (rozmiar logiczny sprite'a = obraz / res). */
+const RES = new WeakMap<HTMLCanvasElement, number>();
+export const canvasRes = (c: HTMLCanvasElement): number => RES.get(c) ?? 1;

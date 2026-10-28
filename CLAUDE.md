@@ -50,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.23.10)
+## Stan (wersja 0.23.11)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -312,6 +312,11 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     kolor i promień): ciepłe światło wokół bohatera, poświaty kryształów, pocisków gracza i wrogów; wyłączane przez Efekty:
     oszczędne (`lowFx`). UI: faza paneli (jasna góra, cień dołu), połysk i cień pasków, wklęsłe gniazda, plakietki z gradientem,
     karta bohatera w złotej ramce. Koncepcja pełnego 32-bit (makiety) na płótnie Artifact „Pixel Survivors – nowy wygląd”.
+  - 0.23.11: przejście na 32-bit, etap 1. Płótno świata `WORLD_RES` = 2 (core/renderer.ts, transformacja ×2: rysowanie dalej
+    w pikselach logicznych). Painter z `res` (gfx/painter.ts): kształty liczone na drobnej siatce, obrys i faza 1 piksel
+    obrazu, `dot` = jeden drobny piksel; `canvasRes` + `register` w sprites.ts: rozmiar logiczny = obraz / res. Wszystkie
+    postacie (gfx/actors.ts, `HI` = 2) rysowane w 2×, bohaterowie i podstawowi wrogowie z detalami (`Detale 32-bit`).
+    Dalej: teren, pociski, efekty, ikony, bossowie w 32-bit.
 
 ## Plan dalej
 

@@ -349,6 +349,9 @@ src/
 - A warm light around your hero and soft glows on crystals, your projectiles and enemy bullets. Settings → Effects: low turns them off on slower devices.
 - Richer interface: bevelled panels, glossy bars, inset slots and a gold-framed hero card.
 
+**32-bit graphics, step 1 (0.23.11)**:
+- The world is now drawn at twice the resolution. All heroes, enemies and bosses are rendered with twice the detail: smoother shapes and shading, thinner outlines, plus new details on heroes and common enemies (glints, eye shine, stitching, cracks, wing veins). Terrain, projectiles, effects and icons come next.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
