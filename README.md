@@ -7,7 +7,7 @@ Przeglądarkowy survivors-like / bullet hell w stylu 16-bit: Canvas 2D + TypeScr
 - Ekran 480×270 skalowany całkowitoliczbowo (`imageSmoothingEnabled = false`). Świat rysowany w powiększeniu 1,5× (`ZOOM` w `core/renderer.ts`): logika gry działa w jednostkach świata, a sprite'y mają więcej detali niż hitboksy.
 - Paleta ENDESGA 32 z rampami cieniowania (`core/palette.ts`). Półprzezroczystość (cienie, poświaty stref, przyciemnienia) miesza kolory palety, jak „color math” na SNES-ie.
 - Sprite'y generowane w kodzie: `gfx/painter.ts` (cieniowanie rampą ze światłem z lewej-góry, automatyczny obrys), `gfx/actors.ts` (postacie z animacją: chód bohaterów, pulsowanie szlamów, machanie skrzydłami, mruganie, migotanie płomieni, „oddech” bossa), `gfx/icons.ts` (56 ikon 16×16: 20 broni z ewolucjami, 13 pasywek, 8 umiejętności, 4 usługi sklepu, odłamek, 10 tagów kart), `gfx/world.ts` (iskry trafień, obłoki śmierci, eksplozje, strzały w 16 kierunkach, 24 dekoracje terenu — 6 na biom). Gra odwołuje się tylko do nazw sprite'ów (`nazwa@klatka`), więc można je podmienić na sprite sheet bez zmian w logice.
-- Gładka czcionka Nunito (`core/font.ts`, pakiet @fontsource/nunito, licencja OFL) z cieniem albo obrysem.
+- Pikselowa czcionka Pixelify Sans (`core/font.ts`, pakiet @fontsource/pixelify-sans, licencja OFL) z cieniem albo obrysem.
 - Okna z fazowaną ramką i gradientem (dithering), paski z połyskiem, kursor-strzałka w menu, winieta, cienie pod postaciami, poświaty pocisków wrogów.
 - HUD: portret bohatera, gniazda broni i pasywek (puste też widoczne), umiejętności z ikonami, odnowieniem i ładunkiem ultimate, ozdobny pasek bossa; karty z narożnymi klejnotami, poświatą ikony i połyskiem kart pryzmatycznych; gradientowe logo.
 
@@ -381,6 +381,9 @@ src/
 - Everything in the world now uses the same fine pixel grid as the characters: ground patches, bullet outlines, the ground ellipse under the hero, puddles, circles and particles were drawn in big chunky pixels before.
 - Ground spots fade out softly instead of a coarse checkerboard; the crate, boulder, pillar, spikes, flowers, reeds and arrows got fine details matching the heroes.
 - The menu moon is smooth like the hills, and circles in panels (level-up cards) follow the smooth UI frames.
+
+**Pixel font (0.23.19)**:
+- The whole game now uses Pixelify Sans, a pixel font that matches the pixel art (with Polish letters), instead of the smooth rounded Nunito.
 
 ### Jak przetestować
 

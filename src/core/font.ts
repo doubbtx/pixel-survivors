@@ -2,17 +2,17 @@ import { PAL } from './palette';
 import { tr } from './i18n';
 
 /**
- * Czcionka gry: gładka, zaokrąglona Nunito (licencja OFL, pakiet @fontsource/nunito, ładowana w main.ts) rysowana wektorowo
- * na buforze K× — ostre krawędzie przy każdej skali okna. Rozmiar dobrany do dawnej czcionki pikselowej: linia 12 px,
+ * Czcionka gry: pikselowa Pixelify Sans (licencja OFL, pakiet @fontsource/pixelify-sans, ładowana w main.ts, z polskimi znakami)
+ * rysowana wektorowo na buforze K× — pasuje do pixel artu i jest ostra przy każdej skali okna. Rozmiar dobrany do dawnej czcionki pikselowej: linia 12 px,
  * wersaliki ok. 6 px, linia bazowa 8,5 px poniżej górnej krawędzi (nad nią miejsce na akcenty wersalików).
  * Większe napisy (scale ≥ 2: tytuły) w grubszej odmianie.
  */
 export const LINE_H = 12;
-const FONT_PX = 8.5;
+const FONT_PX = 9;
 const BASELINE = 8.5;
-const FAMILY = '"Nunito", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+const FAMILY = '"Pixelify Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
 
-const fontOf = (scale: number) => `${scale >= 2 ? 800 : 700} ${FONT_PX * scale}px ${FAMILY}`;
+const fontOf = (scale: number) => `${scale >= 2 ? 700 : 500} ${FONT_PX * scale}px ${FAMILY}`;
 
 /** Pomiar szerokości: osobny kontekst i pamięć podręczna (czyszczona po wczytaniu czcionki, `resetFontCache`). */
 const measure = document.createElement('canvas').getContext('2d')!;

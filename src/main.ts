@@ -10,8 +10,8 @@ import { pointer } from './ui/widgets';
 import { setLang } from './core/i18n';
 import { music } from './core/music';
 import { resetFontCache } from './core/font';
-import '@fontsource/nunito/700.css';
-import '@fontsource/nunito/800.css';
+import '@fontsource/pixelify-sans/500.css';
+import '@fontsource/pixelify-sans/700.css';
 
 /**
  * Punkt wejścia: tworzy renderer, wejście i zapis, a potem kręci pętlę ze stałym krokiem.
@@ -29,7 +29,7 @@ renderer.setWorldRes(save.settings.lowFx ? 2 : 3);
 setLang(save.settings.lang);
 // Czcionka: wymuszenie wczytania (płótno samo jej nie zażąda), potem nowe pomiary szerokości napisów.
 const SAMPLE = 'Aa ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ';
-Promise.all([document.fonts.load('700 10px Nunito', SAMPLE), document.fonts.load('800 20px Nunito', SAMPLE)]).then(resetFontCache, () => undefined);
+Promise.all([document.fonts.load('500 10px "Pixelify Sans"', SAMPLE), document.fonts.load('700 20px "Pixelify Sans"', SAMPLE)]).then(resetFontCache, () => undefined);
 
 // AudioContext wymaga gestu użytkownika.
 const unlock = () => sfx.unlock();

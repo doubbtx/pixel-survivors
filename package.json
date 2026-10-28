@@ -1,7 +1,7 @@
 {
   "name": "pixel-survivors",
   "private": true,
-  "version": "0.23.18",
+  "version": "0.23.19",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,6 +14,6 @@
     "vite": "^6.0.0"
   },
   "dependencies": {
-    "@fontsource/nunito": "^5.3.0"
+    "@fontsource/pixelify-sans": "^5.3.0"
   }
 }

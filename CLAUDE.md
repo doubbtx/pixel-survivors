@@ -50,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.23.18)
+## Stan (wersja 0.23.19)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -343,6 +343,8 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     dekoracje i efekty w world.ts używają `spot`/`stroke` zamiast `px`/`line`. Plamy podłoża i kafelków bez grubej szachownicy,
     przerysowane osłony terenu, kolce, kwiaty, strzały; cząsteczki 2/3 rozmiaru; gładki księżyc w menu.
 
+  - 0.23.19: czcionka pikselowa Pixelify Sans (@fontsource/pixelify-sans 500/700, OFL, z polskimi znakami) zamiast Nunito;
+    core/font.ts: `FONT_PX` 9, waga 500 (tytuły `scale` ≥ 2: 700). Układ ekranów bez zmian, napisy się mieszczą.
 ## Plan dalej
 
 - Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Głowy bossów, Pustka.
