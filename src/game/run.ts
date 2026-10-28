@@ -1129,16 +1129,16 @@ export class Run {
     const loyal = this.loyal && src === this.weapons[0].def.name ? Math.pow(1 + BAL.loyal.dmg, this.loyal) : 1;
     const resist = this.resistOf(e) !== undefined && damageElement(src, this.augElem) === this.resistOf(e) ? BAL.bossResist.mul : 1;
     const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * loyal * resourceDamageMul(this, src) * (1 - e.dr));
-    // Statystyki i siła gracza liczą tylko zadane obrażenia (bez nadwyżki ponad HP wroga).
+    // Statystyki (tabela obrażeń, DPS) liczą tylko zadane obrażenia; siła gracza (trudność) i kradzież życia całe trafienie.
     const dealt = Math.min(dmg, Math.max(0, e.hp));
     e.hp -= dmg;
     e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;
-    if (!pct) this.dmgStep += dealt;
+    if (!pct) this.dmgStep += dmg;
     this.lastHitSrc = src;
-    if (st.lifesteal > 0) this.heal(Math.min(dealt * st.lifesteal, st.maxHp * 0.02));
+    if (st.lifesteal > 0) this.heal(Math.min(dmg * st.lifesteal, st.maxHp * 0.02));
     if (o.knock) {
       const l = Math.hypot(o.kx ?? 0, o.ky ?? 0) || 1;
       const f = o.knock * 25 * (1 - e.def.knockResist);

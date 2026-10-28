@@ -339,6 +339,9 @@ src/
 - End of run: the DPS chart and Build tabs react to clicks on the buttons themselves.
 - Progression in English no longer shows Polish words ("Keystone", "damage taken").
 
+**Difficulty restored (0.23.8)**:
+- Enemy health follows your full damage again (including overkill), as before 0.23.3. The game had become too easy; the poison fix stays.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
