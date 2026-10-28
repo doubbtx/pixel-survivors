@@ -2,11 +2,14 @@ import { W, H, VW, VH, ZOOM, type Renderer } from '../core/renderer';
 import { C, PAL } from '../core/palette';
 import { drawLabel } from '../core/font';
 import { rng } from '../core/rng';
-import { drawSprite, drawShadow, getSprite } from '../gfx/sprites';
-import { CHUNK, groundChunk, groundBase, groundFrame } from '../gfx/ground';
+import { drawSprite, drawShadow, getSprite, queueWarm, warmStep } from '../gfx/sprites';
+import { ANIM } from '../gfx/actors';
+import { ENEMIES } from '../data/enemies';
+import { LANDMARK_KINDS } from '../gfx/landmarks';
+import { CHUNK, groundChunk, groundBase, groundFrame, groundReady } from '../gfx/ground';
 import { drawScenery } from './scenery';
 import { animFrame } from '../gfx/actors';
-import { FX_FRAMES, ARROW_DIRS } from '../gfx/world';
+import { FX_FRAMES, ARROW_DIRS, PROP_KINDS } from '../gfx/world';
 import { effectiveStats, orbitRadius, auraRadius } from '../systems/weapons';
 import { itemColor } from '../data/items';
 import { BAL } from '../data/balance';
@@ -18,6 +21,10 @@ import { drawElemMark } from '../gfx/elemmark';
 const MARGIN = 40;
 /** Siła wspólnej korekty barwnej sceny (0..1). */
 const GRADE = 0.35;
+/** Czas (ms) na budowanie podłoża w jednej klatce (gfx/ground.ts). */
+const GROUND_BUDGET = 3;
+/** Czas (ms) na wstępne budowanie sprite'ów w jednej klatce. */
+const WARM_BUDGET = 2;
 /** Odległość pocisku (jednostki świata), od której pokazuje się rdzeń trafienia gracza. */
 const CORE_SHOW = 45;
 const FIRE_COLS = [C.red, C.orange, C.gold, C.yellow, C.orange];
@@ -80,6 +87,20 @@ export function warmFx(): void {
   for (const [kind, n] of Object.entries(FX_FRAMES)) for (let f = 0; f < n; f++) getSprite(`${kind}@${f}`);
 }
 
+/** Biom, dla którego zlecono już wstępne budowanie grafik. */
+let warmedBiome = -1;
+
+/** Zleca zbudowanie z wyprzedzeniem dekoracji i kompozycji biomu oraz wszystkich klatek wrogów i bohatera. */
+function queueBiomeWarm(run: Run, biome: number): void {
+  const names: string[] = [];
+  for (let k = 0; k < PROP_KINDS; k++) names.push(`prop${biome}@${k}`);
+  for (let k = 0; k < LANDMARK_KINDS; k++) names.push(`lm${biome}@${k}`);
+  for (const sprite of new Set([...Object.values(ENEMIES).map((e) => e.sprite), run.heroSprite.split('~')[0]])) {
+    for (const f of new Set(ANIM[sprite]?.seq ?? [0])) names.push(`${sprite}@${f}`);
+  }
+  queueWarm(names);
+}
+
 export function renderWorld(run: Run, r: Renderer): void {
   r.beginWorld();
   drawWorld(run, r);
@@ -103,15 +124,25 @@ function drawWorld(run: Run, r: Renderer): void {
 
   // Podłoże: kompozycja trawy, ziemi, ścieżek i posadzek ruin (gfx/ground.ts) w kawałkach z pamięci podręcznej.
   const biome = run.levelInfo.biome, B = BIOMES[biome], seed = run.depth * 7919 + biome * 101 + 17;
-  groundFrame();
   const res = r.worldDensity();
-  for (let cy = Math.floor(oy / CHUNK); cy * CHUNK < oy + VH; cy++) {
-    for (let cx = Math.floor(ox / CHUNK); cx * CHUNK < ox + VW; cx++) {
+  const c0 = Math.floor(ox / CHUNK), c1 = Math.floor((ox + VW) / CHUNK), r0 = Math.floor(oy / CHUNK), r1 = Math.floor((oy + VH) / CHUNK);
+  // Budżet budowania: kilka ms na klatkę; na starcie poziomu (nic gotowego na ekranie) budujemy od razu wszystko widoczne.
+  let ready = false;
+  for (let cy = r0; cy <= r1 && !ready; cy++) for (let cx = c0; cx <= c1; cx++) if (groundReady(seed, cx, cy, res)) { ready = true; break; }
+  groundFrame(ready ? GROUND_BUDGET : 1000);
+  for (let cy = r0; cy <= r1; cy++) {
+    for (let cx = c0; cx <= c1; cx++) {
       const chunk = groundChunk(B, seed, cx, cy, res);
       if (chunk) g.drawImage(chunk, cx * CHUNK - ox, cy * CHUNK - oy, CHUNK, CHUNK);
       else { g.fillStyle = groundBase(B); g.fillRect(cx * CHUNK - ox, cy * CHUNK - oy, CHUNK, CHUNK); }
     }
   }
+  // Z wyprzedzeniem: pierścień kawałków tuż poza ekranem (z resztą budżetu), żeby przy chodzeniu były już gotowe.
+  for (let cy = r0 - 1; cy <= r1 + 1; cy++) for (let cx = c0 - 1; cx <= c1 + 1; cx++) {
+    if (cy < r0 || cy > r1 || cx < c0 || cx > c1) groundChunk(B, seed, cx, cy, res, true);
+  }
+  if (warmedBiome !== biome) { warmedBiome = biome; queueBiomeWarm(run, biome); }
+  warmStep(WARM_BUDGET);
   drawScenery(g, ox, oy, biome, seed);
 
   // Teren: kałuże bagna i lodu (pod wszystkim, co stoi na ziemi).

@@ -26,29 +26,27 @@ function landmarkIn(cx: number, cy: number, seed: number): { x: number; y: numbe
   };
 }
 
-export function drawScenery(g: CanvasRenderingContext2D, ox: number, oy: number, biome: number, seed: number): void {
-  const M = 70;
-  // Kompozycje (pod skupiskami).
-  const lms: { x: number; y: number }[] = [];
-  for (let cy = Math.floor((oy - M) / LM_CELL); cy * LM_CELL < oy + VH + M; cy++) {
-    for (let cx = Math.floor((ox - M) / LM_CELL); cx * LM_CELL < ox + VW + M; cx++) {
-      const lm = landmarkIn(cx, cy, seed);
-      if (!lm) continue;
-      lms.push(lm);
-      const name = `lm${biome}@${lm.kind}`, s = getSprite(name);
-      const sx = lm.x - ox, sy = lm.y - oy;
-      if (sx < -s.w || sx > VW + s.w || sy < -s.h || sy > VH + s.h) continue;
-      drawShadow(g, sx, sy - 2, s.w * 0.9);
-      drawSprite(g, name, sx, sy - s.h / 2);
+interface Prop { x: number; y: number; k: number }
+const clusters = new Map<string, Prop[]>();
+const NONE: Prop[] = [];
+
+/** Dekoracje skupiska w komórce (z pamięci podręcznej: pola powierzchni liczone tylko raz). */
+function clusterIn(cx: number, cy: number, seed: number): Prop[] {
+  const key = `${seed}|${cx},${cy}`;
+  let list = clusters.get(key);
+  if (list) return list;
+  list = NONE;
+  if (cellRand(cx, cy, seed, 10) <= CL_CHANCE) {
+    const bx = cx * CL_CELL + 30 + cellRand(cx, cy, seed, 11) * (CL_CELL - 60), by = cy * CL_CELL + 30 + cellRand(cx, cy, seed, 12) * (CL_CELL - 60);
+    // Bez skupisk tuż przy kompozycjach (sprawdzane w sąsiednich komórkach kompozycji).
+    const lx = Math.floor(bx / LM_CELL), ly = Math.floor(by / LM_CELL);
+    let near = false;
+    for (let j = ly - 1; j <= ly + 1 && !near; j++) for (let i = lx - 1; i <= lx + 1; i++) {
+      const l = landmarkIn(i, j, seed);
+      if (l && (l.x - bx) ** 2 + (l.y - by) ** 2 < 70 * 70) { near = true; break; }
     }
-  }
-  // Skupiska roślin i kamieni, sortowane po wysokości (bliższe zasłaniają dalsze).
-  const props: { x: number; y: number; k: number }[] = [];
-  for (let cy = Math.floor((oy - M) / CL_CELL); cy * CL_CELL < oy + VH + M; cy++) {
-    for (let cx = Math.floor((ox - M) / CL_CELL); cx * CL_CELL < ox + VW + M; cx++) {
-      if (cellRand(cx, cy, seed, 10) > CL_CHANCE) continue;
-      const bx = cx * CL_CELL + 30 + cellRand(cx, cy, seed, 11) * (CL_CELL - 60), by = cy * CL_CELL + 30 + cellRand(cx, cy, seed, 12) * (CL_CELL - 60);
-      if (lms.some((l) => (l.x - bx) ** 2 + (l.y - by) ** 2 < 70 * 70)) continue;
+    if (!near) {
+      list = [];
       const recipe = RECIPES[Math.floor(cellRand(cx, cy, seed, 13) * RECIPES.length)];
       const n = 3 + Math.floor(cellRand(cx, cy, seed, 14) * 4);
       for (let i = 0; i < n; i++) {
@@ -56,9 +54,33 @@ export function drawScenery(g: CanvasRenderingContext2D, ox: number, oy: number,
         const x = bx + Math.cos(a) * d, y = by + Math.sin(a) * d * 0.7, k = recipe[i % recipe.length] % PROP_KINDS;
         const surf = surfaceAt(x, y, seed);
         if (surf === 'path' || (surf === 'paving' && !ON_PAVING.has(k))) continue;
-        props.push({ x, y, k });
+        list.push({ x, y, k });
       }
     }
+  }
+  clusters.set(key, list);
+  if (clusters.size > 600) clusters.delete(clusters.keys().next().value!);
+  return list;
+}
+
+export function drawScenery(g: CanvasRenderingContext2D, ox: number, oy: number, biome: number, seed: number): void {
+  const M = 70;
+  // Kompozycje (pod skupiskami).
+  for (let cy = Math.floor((oy - M) / LM_CELL); cy * LM_CELL < oy + VH + M; cy++) {
+    for (let cx = Math.floor((ox - M) / LM_CELL); cx * LM_CELL < ox + VW + M; cx++) {
+      const lm = landmarkIn(cx, cy, seed);
+      if (!lm) continue;
+      const name = `lm${biome}@${lm.kind}`, s = getSprite(name);
+      const sx = lm.x - ox, sy = lm.y - oy;
+      if (sx < -s.w || sx > VW + s.w || sy < -s.h || sy > VH + s.h) continue;
+      drawShadow(g, sx, sy - 2, s.w * 0.9);
+      drawSprite(g, name, sx, sy - s.h / 2);
+    }
+  }
+  // Skupiska roślin i kamieni (liczone raz na komórkę), sortowane po wysokości (bliższe zasłaniają dalsze).
+  const props: Prop[] = [];
+  for (let cy = Math.floor((oy - M) / CL_CELL); cy * CL_CELL < oy + VH + M; cy++) {
+    for (let cx = Math.floor((ox - M) / CL_CELL); cx * CL_CELL < ox + VW + M; cx++) props.push(...clusterIn(cx, cy, seed));
   }
   props.sort((a, b) => a.y - b.y);
   for (const p of props) {

@@ -392,6 +392,9 @@ src/
 - The ground is no longer a green carpet: grass, patches of earth, trodden paths and old stone floors, plants and rocks in natural clusters, and ruins (a broken gate, an obelisk, a camp, low walls, fallen columns). Decoration has no collision.
 - Clearer combat: enemy bullets have a bright core and a short trail, the shield is one ring, killed enemies fade out, normal damage numbers are smaller and crits stand out.
 
+**Smoother (0.24.1)**:
+- Fixed regular stutter while walking: new ground pieces are now built a little at a time and ahead of the camera, and enemy and decoration graphics are prepared in the background instead of on first sight.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

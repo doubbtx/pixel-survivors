@@ -50,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `theme.ts` (wspólny styl: kolory akcentów, odstępy, rozmiary HUD, `tile`, `meter`, `iconSlot`, `cornerTag`, `label`), `widgets.ts` (panel, dim, bar, Menu, slot — w stylu z theme.ts), `hud.ts` (tylko rysowanie + stan animacji `HudAnim`), `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.24.0)
+## Stan (wersja 0.24.1)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -367,6 +367,11 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     krytyki większe z wyskokiem (`DmgNum.big`, `drawLabel(..., scale)`), bez nakładania (`Run.numberNear`), puls poświaty
     kryształów i pierścień przy zebraniu.
 
+  - 0.24.1: płynność. Kawałki podłoża budują się po trochu (`Job`: pola na siatce co `FS` = 2 px, potem wiersze pikseli,
+    na końcu źdźbła) w budżecie `GROUND_BUDGET` ms na klatkę, z wyprzedzeniem (pierścień tuż poza ekranem, `prefetch`);
+    tylko na starcie poziomu (nic gotowego na ekranie) budżet jest duży. Skupiska dekoracji liczone raz na komórkę
+    (`clusters` w game/scenery.ts). Sprite'y biomu, kompozycji, wszystkich wrogów i bohatera budowane z wyprzedzeniem
+    (`queueWarm` / `warmStep`, `WARM_BUDGET` ms na klatkę). Wcześniej nowy kawałek terenu kosztował 30–110 ms w jednej klatce.
 ## Plan dalej
 
 - Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Głowy bossów, Pustka.

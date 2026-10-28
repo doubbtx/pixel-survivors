@@ -279,6 +279,19 @@ export function getSprite(name: string): Sprite {
   return sprites.get(name) ?? register(name, build(name));
 }
 
+/** Kolejka sprite'ów do zbudowania z wyprzedzeniem (po trochu w każdej klatce), żeby pierwsze pojawienie się nie przycinało gry. */
+const warmQueue: string[] = [];
+
+export function queueWarm(names: string[]): void {
+  for (const n of names) if (!sprites.has(n) && !warmQueue.includes(n)) warmQueue.push(n);
+}
+
+/** Buduje sprite'y z kolejki, dopóki nie minie `budgetMs`. */
+export function warmStep(budgetMs: number): void {
+  const end = performance.now() + budgetMs;
+  while (warmQueue.length && performance.now() < end) getSprite(warmQueue.shift()!);
+}
+
 export interface DrawOpts {
   flash?: boolean;
   scale?: number;

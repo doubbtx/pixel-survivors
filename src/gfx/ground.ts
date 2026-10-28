@@ -5,14 +5,13 @@ import type { Biome } from '../data/levels';
  * Podłoże poziomu jako kompozycja kilku powierzchni zamiast powtarzanych kafelków: trawa w dwóch spokojnych odcieniach,
  * płaty ziemi, wydeptane ścieżki i kamienne posadzki ruin z mchem w szczelinach. Pola (szum wartości, fbm) liczone są
  * w pikselach logicznych świata, krawędzie powierzchni rozpuszcza dithering Bayera na drobnych pikselach płótna świata.
- * Kawałki CHUNK × CHUNK pikseli logicznych powstają leniwie (limit na klatkę) i trafiają do pamięci podręcznej.
+ * Kawałki CHUNK × CHUNK pikseli logicznych budują się po trochu w limicie czasu na klatkę (także z wyprzedzeniem, tuż
+ * poza ekranem) i trafiają do pamięci podręcznej.
  * Funkcje `surfaceAt` / `clusterAt` dają rozmieszczenie skupisk dekoracji i ruin (game/render.ts) — czysto wizualnie,
  * bez kolizji.
  */
 export const CHUNK = 192;
-/** Ile kawałków wolno zbudować w jednej klatce (reszta dostaje tymczasowo jednolity kolor). */
-const BUILD_PER_FRAME = 3;
-const CACHE_MAX = 28;
+const CACHE_MAX = 40;
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
 
@@ -83,24 +82,65 @@ function rgb(col: number): [number, number, number] {
 }
 
 const cache = new Map<string, HTMLCanvasElement>();
-let builtThisFrame = 0;
+/** Krok siatki pól (piksele logiczne): pola są gładkie, drobne piksele interpolują je dwuliniowo. */
+const FS = 2;
+const FN = CHUNK / FS + 1;
 
-/** Nowa klatka: zeruje limit budowania kawałków. */
-export function groundFrame(): void {
-  builtThisFrame = 0;
+/** Kawałek w budowie: pola liczone wierszami, potem wiersze drobnych pikseli, na końcu źdźbła — po trochu w każdej klatce. */
+interface Job {
+  b: Biome;
+  seed: number;
+  wx: number;
+  wy: number;
+  res: number;
+  /** Pola: ton trawy, ziemia, ścieżka, posadzka, mech. */
+  F: Float32Array[];
+  fRow: number;
+  img: ImageData;
+  row: number;
+}
+const jobs = new Map<string, Job>();
+let budgetEnd = 0;
+
+/**
+ * Nowa klatka: czas (ms), jaki wolno w niej przeznaczyć na budowanie podłoża. Mały budżet rozkłada koszt na wiele klatek
+ * (bez przycinek przy chodzeniu); duży — gdy na ekranie nie ma jeszcze żadnego gotowego kawałka (start poziomu).
+ */
+export function groundFrame(budgetMs: number): void {
+  budgetEnd = performance.now() + budgetMs;
 }
 
-/** Kawałek podłoża (CHUNK × CHUNK pikseli logicznych w rozdzielczości `res`) albo null, gdy limit klatki wyczerpany. */
-export function groundChunk(b: Biome, seed: number, cx: number, cy: number, res: number): HTMLCanvasElement | null {
+/** Czy kawałek jest gotowy (bez budowania). */
+export function groundReady(seed: number, cx: number, cy: number, res: number): boolean {
+  return cache.has(`${seed}|${res}|${cx},${cy}`);
+}
+
+/**
+ * Kawałek podłoża (CHUNK × CHUNK pikseli logicznych w rozdzielczości `res`) albo null, gdy jeszcze się buduje.
+ * Kolejne wywołania dokładają pracy w ramach budżetu klatki (`groundFrame`); `prefetch` = kawałek tuż poza ekranem.
+ */
+export function groundChunk(b: Biome, seed: number, cx: number, cy: number, res: number, prefetch = false): HTMLCanvasElement | null {
   const key = `${seed}|${res}|${cx},${cy}`;
   const hit = cache.get(key);
-  if (hit) { cache.delete(key); cache.set(key, hit); return hit; }
-  if (builtThisFrame >= BUILD_PER_FRAME) return null;
-  builtThisFrame++;
-  const c = buildChunk(b, seed, cx * CHUNK, cy * CHUNK, res);
-  cache.set(key, c);
+  if (hit) {
+    if (!prefetch) { cache.delete(key); cache.set(key, hit); }
+    return hit;
+  }
+  if (performance.now() >= budgetEnd) return null;
+  let job = jobs.get(key);
+  if (!job) {
+    const size = CHUNK * res;
+    job = { b, seed, wx: cx * CHUNK, wy: cy * CHUNK, res, F: Array.from({ length: 5 }, () => new Float32Array(FN * FN)), fRow: 0, img: new ImageData(size, size), row: 0 };
+    jobs.set(key, job);
+  }
+  const done = work(job);
+  if (!done) return null;
+  jobs.delete(key);
+  cache.set(key, done);
   if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!);
-  return c;
+  // Porzucone budowy (np. po zmianie poziomu) nie rosną bez końca.
+  if (jobs.size > 24) jobs.delete(jobs.keys().next().value!);
+  return done;
 }
 
 /** Kolor zastępczy dla kawałka, który jeszcze się nie zbudował. */
@@ -108,27 +148,42 @@ export function groundBase(b: Biome): string {
   return PAL[b.ground[1]];
 }
 
-function buildChunk(b: Biome, seed: number, wx: number, wy: number, res: number): HTMLCanvasElement {
-  const N = CHUNK + 1, size = CHUNK * res;
-  // Pola na siatce pikseli logicznych (z zapasem 1), drobne piksele interpolują je dwuliniowo.
-  const F = { tone: new Float32Array(N * N), dirt: new Float32Array(N * N), path: new Float32Array(N * N), pave: new Float32Array(N * N), moss: new Float32Array(N * N) };
-  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-    const f = fields(wx + i, wy + j, seed), k = j * N + i;
-    F.tone[k] = f.tone; F.dirt[k] = f.dirt; F.path[k] = f.path; F.pave[k] = f.pave; F.moss[k] = f.moss;
+/** Interpolacja dwuliniowa pola w komórce `k` siatki z wagami rogów. */
+function bl(a: Float32Array, k: number, w00: number, w10: number, w01: number, w11: number): number {
+  return a[k] * w00 + a[k + 1] * w10 + a[k + FN] * w01 + a[k + FN + 1] * w11;
+}
+
+/** Dokłada pracy przy kawałku, dopóki starcza budżetu klatki; zwraca gotowe płótno albo null. */
+function work(job: Job): HTMLCanvasElement | null {
+  const { b, seed, wx, wy, res, F } = job, size = CHUNK * res;
+  while (job.fRow < FN) {
+    const j = job.fRow++;
+    for (let i = 0; i < FN; i++) {
+      const f = fields(wx + i * FS, wy + j * FS, seed), k = j * FN + i;
+      F[0][k] = f.tone; F[1][k] = f.dirt; F[2][k] = f.path; F[3][k] = f.pave; F[4][k] = f.moss;
+    }
+    if (performance.now() >= budgetEnd) return null;
   }
-  const lerp = (a: Float32Array, x: number, y: number) => {
-    const xi = Math.min(N - 2, Math.floor(x)), yi = Math.min(N - 2, Math.floor(y)), xf = x - xi, yf = y - yi, k = yi * N + xi;
-    return a[k] + (a[k + 1] - a[k]) * xf + (a[k + N] - a[k]) * yf + (a[k] - a[k + 1] - a[k + N] + a[k + N + 1]) * xf * yf;
-  };
+  const [T, D, Pa, Pv, Mo] = F;
   const [gDark, gBase, gLight] = b.ground.map(rgb);
   // Ziemia i kamień zmieszane z trawą: stonowane, żeby nie konkurowały z pociskami i wrogami.
   const [dDark, dBase, dLight] = b.dirt.map((c) => mix(rgb(c), gBase, 0.35));
   const pv = b.paving.map((c) => mix(rgb(c), gBase, 0.18)), mortar = pv[0], moss = rgb(b.tuft[0]);
-  const img = new ImageData(size, size), px = img.data;
-  for (let fy = 0; fy < size; fy++) {
+  const px = job.img.data;
+  // Kolumny drobnych pikseli → indeks i ułamek siatki pól (te same w każdym wierszu).
+  const cxi = new Int32Array(size), cxf = new Float32Array(size);
+  for (let fx = 0; fx < size; fx++) {
+    const gx = (fx + 0.5) / res / FS, xi = Math.min(FN - 2, Math.floor(gx));
+    cxi[fx] = xi; cxf[fx] = gx - xi;
+  }
+  while (job.row < size) {
+    const fy = job.row++;
+    const ly = (fy + 0.5) / res, gy = ly / FS, yi = Math.min(FN - 2, Math.floor(gy)), yf = gy - yi;
     for (let fx = 0; fx < size; fx++) {
-      const lx = (fx + 0.5) / res, ly = (fy + 0.5) / res, th = BAYER[(fy & 3) * 4 + (fx & 3)];
-      const tone = lerp(F.tone, lx, ly), dirt = lerp(F.dirt, lx, ly), path = Math.abs(lerp(F.path, lx, ly) - 0.5), pave = lerp(F.pave, lx, ly);
+      const k = yi * FN + cxi[fx], xf = cxf[fx];
+      const w00 = (1 - xf) * (1 - yf), w10 = xf * (1 - yf), w01 = (1 - xf) * yf, w11 = xf * yf;
+      const th = BAYER[(fy & 3) * 4 + (fx & 3)];
+      const tone = bl(T, k, w00, w10, w01, w11), dirt = bl(D, k, w00, w10, w01, w11), path = Math.abs(bl(Pa, k, w00, w10, w01, w11) - 0.5), pave = bl(Pv, k, w00, w10, w01, w11);
       let c = gBase;
       // Trawa: dwa spokojne odcienie dużymi płatami (bez drobnego szumu).
       if (tone < 0.42 && (0.42 - tone) / 0.06 > th) c = gDark;
@@ -138,14 +193,13 @@ function buildChunk(b: Biome, seed: number, wx: number, wy: number, res: number)
       // Wydeptana ścieżka: jasny środek, ciemniejszy brzeg.
       if (path < PATH) c = path < PATH * 0.55 ? dLight : dBase;
       else if (path < PATH * 1.4 && (PATH * 1.4 - path) / (PATH * 0.4) > th) c = dBase;
-      // Posadzka ruin: płyty 10×7 w przesuniętych rzędach, fugi, brakujące płyty na brzegu, mech w szczelinach.
+      // Posadzka ruin: płyty w przesuniętych rzędach, fugi, brakujące płyty na brzegu, mech w szczelinach.
       if (pave > PAVE - 0.02) {
-        const gx = wx + lx, gy = wy + ly, row = Math.floor(gy / STONE_H), sx = gx + (row % 2) * (STONE_W / 2), col = Math.floor(sx / STONE_W);
-        const stone = hash(col, row, seed + 23);
-        const edgeOk = pave > PAVE + 0.02 || stone > 0.45 + (PAVE + 0.02 - pave) * 12;
-        if (edgeOk) {
-          const ux = sx - col * STONE_W, uy = gy - row * STONE_H;
-          if (ux < 0.6 || uy < 0.6) c = lerp(F.moss, lx, ly) > 0.6 ? moss : mortar;
+        const gx = wx + (fx + 0.5) / res, gyy = wy + ly, prow = Math.floor(gyy / STONE_H), sx = gx + (prow % 2) * (STONE_W / 2), col = Math.floor(sx / STONE_W);
+        const stone = hash(col, prow, seed + 23);
+        if (pave > PAVE + 0.02 || stone > 0.45 + (PAVE + 0.02 - pave) * 12) {
+          const ux = sx - col * STONE_W, uy = gyy - prow * STONE_H;
+          if (ux < 0.6 || uy < 0.6) c = bl(Mo, k, w00, w10, w01, w11) > 0.6 ? moss : mortar;
           else {
             c = pv[1 + (stone > 0.7 ? 1 : 0)];
             if (uy < 1 && ux > 1) c = pv[3];
@@ -155,22 +209,24 @@ function buildChunk(b: Biome, seed: number, wx: number, wy: number, res: number)
           }
         }
       }
-      const k = (fy * size + fx) * 4;
-      px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2]; px[k + 3] = 255;
+      const o = (fy * size + fx) * 4;
+      px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255;
     }
+    if ((fy & 7) === 7 && performance.now() >= budgetEnd) return null;
   }
-  // Rzadkie źdźbła i kamyki (spokojnie, w skupiskach): tylko na trawie.
+  // Rzadkie źdźbła i kamyki (spokojnie, w skupiskach): tylko na trawie (pola z siatki, bez ponownego liczenia szumu).
   const cv = document.createElement('canvas');
   cv.width = cv.height = size;
   const g = cv.getContext('2d')!;
-  g.putImageData(img, 0, 0);
+  g.putImageData(job.img, 0, 0);
   g.scale(res, res);
   const step = 6;
   for (let j = 0; j < CHUNK; j += step) for (let i = 0; i < CHUNK; i += step) {
     const x = wx + i, y = wy + j, r = hash(Math.floor(x / step), Math.floor(y / step), seed + 31);
     const dense = noise(x / 40, y / 40, seed + 37);
     if (r > 0.25 + (1 - dense) * 0.9) continue;
-    if (surfaceAt(x, y, seed) !== 'grass') continue;
+    const k = Math.round(j / FS) * FN + Math.round(i / FS);
+    if (D[k] > DIRT || Pv[k] > PAVE || Math.abs(Pa[k] - 0.5) < PATH * 1.4) continue;
     const ox = i + hash(i, j, seed + 41) * step, oy = j + hash(j, i, seed + 43) * step;
     if (r < 0.03) {
       g.fillStyle = PAL[b.stone[1]]; g.fillRect(ox, oy, 2, 1.34);
