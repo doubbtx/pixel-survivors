@@ -214,7 +214,7 @@ export function slot(r: Renderer, x: number, y: number, s: number, border: numbe
 
 /** Półprzezroczysta zaokrąglona płytka pod tekst HUD (czytelność na ruchliwym tle). */
 export function plate(r: Renderer, x: number, y: number, w: number, h: number): void {
-  r.withAlpha(0.7, () => r.roundRect(x, y, w, h, 3, C.navy, C.black));
-  r.withAlpha(0.4, () => r.roundFrame(x, y, w, h, 3, C.lavender, 0.5));
+  r.withAlpha(0.5, () => r.roundRect(x, y, w, h, 3, C.navy, C.black));
+  r.withAlpha(0.25, () => r.roundFrame(x, y, w, h, 3, C.lavender, 0.5));
   r.withAlpha(0.15, () => r.rect(x + 3, y + 1, w - 6, 0.5, C.white));
 }

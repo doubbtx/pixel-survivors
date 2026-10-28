@@ -199,7 +199,7 @@ export class Painter {
 
   /**
    * Dodaje obrys 1 piksel obrazu wokół nieprzezroczystych pikseli (wymaga wolnego marginesu). Przy res > 1 (styl 32-bit)
-   * najpierw światło krawędzi: brzegi od strony światła (lewa-góra) o odcień jaśniejsze, od cienia (prawa-dół) ciemniejsze,
+   * najpierw światło krawędzi: górny brzeg o odcień jaśniejszy, od cienia (prawa-dół) ciemniejsze,
    * a obrys ma ciemny odcień koloru obok (przy jasnych kolorach `c`).
    */
   outline(c: number = C.black): this {
@@ -211,7 +211,7 @@ export class Painter {
         for (let fx = 0; fx < this.fw; fx++) {
           const v = src[fy * this.fw + fx];
           if (v < 0 || v === C.black) continue;
-          if (get(fx - 1, fy) < 0 || get(fx, fy - 1) < 0) this.d[fy * this.fw + fx] = lighter(v);
+          if (get(fx, fy - 1) < 0) this.d[fy * this.fw + fx] = lighter(v);
           else if (get(fx + 1, fy) < 0 || get(fx, fy + 1) < 0) this.d[fy * this.fw + fx] = darker(v);
         }
       }
@@ -224,10 +224,10 @@ export class Painter {
         if (n === undefined) continue;
         let col = c;
         if (hi) {
-          // Ciemny odcień koloru obok; zbyt jasny (białe, kremowe) zastępuje `c`, żeby sylwetka zawsze odcinała się od tła.
+          // Ciemny odcień koloru obok (sylwetka wtopiona w scenę, nie naklejona); bardzo jasne kolory o krok ciemniej.
           col = darker(darker(n));
-          for (let k = 0; k < 3 && LUMA[col] > 0.25; k++) col = darker(col);
-          if (LUMA[col] > 0.25) col = c;
+          if (LUMA[col] > 0.45) col = darker(col);
+          if (LUMA[col] > 0.6) col = c;
         }
         add.push([fy * this.fw + fx, col]);
       }

@@ -183,8 +183,8 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
 
   // Karta bohatera: portret z poziomem, HP (z tarczą), zasób, poziom kampanii i błogosławieństwa.
   const cw = 174;
-  r.withAlpha(0.8, () => r.roundRect(3, 9, cw, 47, 5, C.navy, C.black));
-  r.withAlpha(0.75, () => r.roundFrame(3, 9, cw, 47, 5, C.gold, 0.75));
+  r.withAlpha(0.55, () => r.roundRect(3, 9, cw, 47, 5, C.navy, C.black));
+  r.withAlpha(0.4, () => r.roundFrame(3, 9, cw, 47, 5, C.gold, 0.75));
   r.withAlpha(0.2, () => r.rect(7, 10.5, cw - 8, 0.5, C.white));
   slot(r, 6, 12, 32, C.gold);
   drawSprite(g, `${run.heroSprite}@0`, 22, 28);
@@ -212,7 +212,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   const synH = drawSynergyHud(r, run, 4, 60);
 
   // Czas na płytce + cel poziomu albo pasek bossa.
-  r.withAlpha(0.65, () => r.roundRect(W / 2 - 36, 8, 72, 22, 5, C.black));
+  r.withAlpha(0.45, () => r.roundRect(W / 2 - 36, 8, 72, 22, 5, C.black));
   r.withAlpha(0.35, () => r.roundFrame(W / 2 - 36, 8, 72, 22, 5, C.lavender, 0.5));
   drawText(g, fmtTime(run.time), W / 2, 11, C.white, { align: 'center', scale: 2, ...OUT });
   let py = 49;
@@ -268,8 +268,9 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   // Gniazda broni (górny rząd) i pasywek (dolny rząd); puste gniazda też widać.
   for (let i = 0; i < BAL.weaponSlots; i++) {
     const w = run.weapons[i], x = 4 + i * (SLOT + 2), y = H - 2 * SLOT - 6;
-    slot(r, x, y, SLOT, w?.def.fused ? C.cyan : w?.def.evolved ? C.gold : C.slate);
-    if (!w) continue;
+    // Puste gniazda przygaszone: widać miejsce, ale nie zasłaniają gry.
+    if (!w) { r.withAlpha(0.35, () => slot(r, x, y, SLOT)); continue; }
+    slot(r, x, y, SLOT, w.def.fused ? C.cyan : w.def.evolved ? C.gold : C.slate);
     drawSprite(g, w.def.icon, x + SLOT / 2, y + SLOT / 2);
     // Żywioł broni: kolorowa kropka w lewym górnym rogu gniazda.
     const el = WEAPON_ELEMENT[w.def.id];
@@ -279,8 +280,8 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
   }
   for (let i = 0; i < BAL.passiveSlots; i++) {
     const pa = run.passives[i], x = 4 + i * (SLOT + 2), y = H - SLOT - 4;
+    if (!pa) { r.withAlpha(0.35, () => slot(r, x, y, SLOT)); continue; }
     slot(r, x, y, SLOT);
-    if (!pa) continue;
     drawSprite(g, PASSIVE_BY_ID[pa.id].icon, x + SLOT / 2, y + SLOT / 2);
     drawText(g, String(pa.level), x + SLOT - 2, y + SLOT - 11, C.white, { align: 'right', ...OUT });
   }

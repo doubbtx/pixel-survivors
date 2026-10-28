@@ -8,11 +8,14 @@ import { FX_FRAMES, ARROW_DIRS, PROP_KINDS } from '../gfx/world';
 import { effectiveStats, orbitRadius, auraRadius } from '../systems/weapons';
 import { itemColor } from '../data/items';
 import { BAL } from '../data/balance';
+import { BIOMES } from '../data/levels';
 import type { Run } from './run';
 import { taskTarget } from '../systems/tasks';
 import { drawElemMark } from '../gfx/elemmark';
 
 const MARGIN = 40;
+/** Siła wspólnej korekty barwnej sceny (0..1). */
+const GRADE = 0.35;
 const FIRE_COLS = [C.red, C.orange, C.gold, C.yellow, C.orange];
 /** Kolor poświaty pocisku wroga wg sprite'a (domyślnie czerwony). */
 const BULLET_GLOW: Record<string, number> = { eb_orange: C.orange, eb_pink: C.pink, eb_blue: C.blue, eb_cyan: C.cyan };
@@ -356,10 +359,8 @@ function drawWorld(run: Run, r: Renderer): void {
   }
 
   // Znajdźki.
-  // Światło (pełne efekty): ciepła poświata wokół bohatera i niebieskie poświaty kryształów pod nimi.
+  // Poświaty kryształów pod nimi (pełne efekty).
   if (fancy) lit(g, (glow) => {
-    glow(px, py, 120, C.peach, 0.16);
-    glow(px, py, 60, C.yellow, 0.1);
     let n = 0;
     for (const gm of run.gems.items) {
       if (n > 150 || !vis(gm.x, gm.y)) continue;
@@ -597,6 +598,16 @@ function drawWorld(run: Run, r: Renderer): void {
       }
     }
   });
+
+  // Wspólne światło sceny (pełne efekty): korekta barwna biomu mnoży całą scenę (ziemia, postacie, pociski razem),
+  // potem ciepłe światło bohatera rozjaśnia okolicę. Napisy i znaczniki rysowane później zostają czyste.
+  if (fancy) {
+    const prev = g.globalCompositeOperation;
+    g.globalCompositeOperation = 'multiply';
+    r.withAlpha(GRADE, () => r.rect(0, 0, Math.ceil(VW), Math.ceil(VH), BIOMES[run.levelInfo.biome].ambient));
+    g.globalCompositeOperation = prev;
+    lit(g, (glow) => { glow(px, py, 140, C.peach, 0.2); glow(px, py, 70, C.yellow, 0.1); });
+  }
 
   // Liczby obrażeń.
   for (const n of run.dmgNums.items) {

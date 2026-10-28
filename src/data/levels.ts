@@ -16,18 +16,20 @@ export interface Biome {
   stone: Ramp;
   /** Akcent (kwiaty, iskry, kryształki). */
   accent: number;
+  /** Kolor światła otoczenia: wspólna korekta barwna całej sceny (game/render.ts, mnożenie). */
+  ambient: number;
   /** Rampa szaty bossa tego biomu. */
   bossRobe: Ramp;
   bossName: string;
 }
 
 export const BIOMES: Biome[] = [
-  { name: 'Mroczna łąka', ground: [C.teal, C.dgreen, C.green], tuft: [C.teal, C.green], stone: RAMP.stone, accent: C.yellow, bossRobe: RAMP.purple, bossName: 'Władca Otchłani' },
-  { name: 'Nocne bagno', ground: [C.black, C.teal, C.dgreen], tuft: [C.dgreen, C.green], stone: RAMP.night, accent: C.cyan, bossRobe: RAMP.green, bossName: 'Królowa Bagien' },
-  { name: 'Spalone pustkowie', ground: [C.dbrown, C.brown, C.clay], tuft: [C.ddbrown, C.dbrown], stone: RAMP.wood, accent: C.orange, bossRobe: RAMP.red, bossName: 'Żar Pustkowia' },
-  { name: 'Otchłań', ground: [C.black, C.navy, C.slate], tuft: [C.plum, C.pink], stone: RAMP.night, accent: C.pink, bossRobe: RAMP.blue, bossName: 'Oko Pustki' },
+  { name: 'Mroczna łąka', ground: [C.teal, C.dgreen, C.green], tuft: [C.teal, C.green], stone: RAMP.stone, accent: C.yellow, ambient: C.slate, bossRobe: RAMP.purple, bossName: 'Władca Otchłani' },
+  { name: 'Nocne bagno', ground: [C.black, C.teal, C.dgreen], tuft: [C.dgreen, C.green], stone: RAMP.night, accent: C.cyan, ambient: C.teal, bossRobe: RAMP.green, bossName: 'Królowa Bagien' },
+  { name: 'Spalone pustkowie', ground: [C.dbrown, C.brown, C.clay], tuft: [C.ddbrown, C.dbrown], stone: RAMP.wood, accent: C.orange, ambient: C.rust, bossRobe: RAMP.red, bossName: 'Żar Pustkowia' },
+  { name: 'Otchłań', ground: [C.black, C.navy, C.slate], tuft: [C.plum, C.pink], stone: RAMP.night, accent: C.pink, ambient: C.plum, bossRobe: RAMP.blue, bossName: 'Oko Pustki' },
   // Sekretny biom (VOID_BIOME): poza cyklem kampanii.
-  { name: 'Pustka', ground: [C.black, C.black, C.navy], tuft: [C.plum, C.hotpink], stone: RAMP.night, accent: C.white, bossRobe: [C.black, C.plum, C.hotpink, C.white], bossName: 'Serce Pustki' },
+  { name: 'Pustka', ground: [C.black, C.black, C.navy], tuft: [C.plum, C.hotpink], stone: RAMP.night, accent: C.white, ambient: C.navy, bossRobe: [C.black, C.plum, C.hotpink, C.white], bossName: 'Serce Pustki' },
 ];
 
 /** Biomy kampanii powtarzają się co BIOME_CYCLE poziomów; Pustka (VOID_BIOME) jest sekretna. */

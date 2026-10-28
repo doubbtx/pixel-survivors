@@ -368,6 +368,11 @@ src/
 - New smooth, rounded font (Nunito) across the whole game instead of the blocky pixel font.
 - Heroes, enemies, skills, icons and the world are drawn at triple resolution: finer pixels, smoother curves and shading. Settings → Effects: low keeps the world at double resolution for slower devices.
 
+**One scene, not stickers (0.23.16)**:
+- Shared lighting: the whole world (ground, heroes, enemies, projectiles) gets one colour grade per biome, and your hero carries a warm light, so everything belongs to the same scene.
+- Characters blend in: outlines use a dark shade of their own colour instead of near-black, softer rim light, soft gradient shadows.
+- Lighter HUD: empty slots are faded, panels are translucent.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

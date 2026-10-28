@@ -322,18 +322,20 @@ export function drawShadow(g: CanvasRenderingContext2D, x: number, y: number, w:
   w = Math.max(4, Math.round(w));
   let c = shadows.get(w);
   if (!c) {
+    // Miękki cień: radialny gradient w spłaszczonej elipsie (obraz 4×, rysowany w rozmiarze logicznym).
     const h = Math.max(2, Math.round(w * 0.35));
-    const p = new Painter(w, h);
-    for (let yy = 0; yy < h; yy++) {
-      for (let xx = 0; xx < w; xx++) {
-        if (((xx + 0.5 - w / 2) / (w / 2)) ** 2 + ((yy + 0.5 - h / 2) / (h / 2)) ** 2 <= 1) p.px(xx, yy, C.black);
-      }
-    }
-    c = p.canvas();
+    c = document.createElement('canvas');
+    c.width = w * 4; c.height = h * 4;
+    const cg = c.getContext('2d')!;
+    cg.scale(1, h / w);
+    const grad = cg.createRadialGradient(w * 2, w * 2, 0, w * 2, w * 2, w * 2);
+    grad.addColorStop(0, 'rgba(10,8,20,0.75)');
+    grad.addColorStop(0.6, 'rgba(10,8,20,0.45)');
+    grad.addColorStop(1, 'rgba(10,8,20,0)');
+    cg.fillStyle = grad;
+    cg.fillRect(0, 0, w * 4, w * 4);
     shadows.set(w, c);
   }
-  const prev = g.globalAlpha;
-  g.globalAlpha = prev * 0.35;
-  g.drawImage(c, Math.round(x - c.width / 2), Math.round(y - c.height / 2));
-  g.globalAlpha = prev;
+  const sw = c.width / 4, sh = c.height / 4;
+  g.drawImage(c, x - sw / 2, y - sh / 2, sw, sh);
 }
