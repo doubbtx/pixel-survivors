@@ -12,7 +12,7 @@ import { WEAPON_BY_ID } from '../data/weapons';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { levelDef, BIOME_CYCLE, VOID_BIOME, type LevelDef } from '../data/levels';
 import type { FeatId } from '../data/feats';
-import { resetLevelFeats, featsOnBoss, featsOnKill } from '../systems/feats';
+import { resetLevelFeats, featsOnBoss, featsOnKill, featsOnWin } from '../systems/feats';
 import { nodeLevel, EX_BLESSINGS, type ExpeditionState } from '../data/expedition';
 import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
 import type { WeaponBonus } from '../data/upgrades';
@@ -99,13 +99,12 @@ export interface ProjectileSpec {
 }
 
 /**
- * Tryb gry: Hardcore (kampania z pełną utratą przy śmierci), trening (jeden poziom, bez zapisu),
- * Endless (jeden poziom bez końca, boss co BAL.endlessBossEvery s, każdy boss podnosi głębokość)
+ * Tryb gry: Endless (jeden poziom bez końca, boss co BAL.endlessBossEvery s, każdy boss podnosi głębokość)
  * albo Ekspedycja (3 akty map z węzłami, data/expedition.ts).
  */
-export type Mode = 'hardcore' | 'training' | 'endless' | 'expedition';
-/** Tryby z własnym slotem zapisu (core/save.ts): wyjście z gry wznawia run. */
-export type SlotMode = Exclude<Mode, 'training'>;
+export type Mode = 'endless' | 'expedition';
+/** Tryby z własnym slotem zapisu (core/save.ts): wyjście z gry wznawia run (wszystkie tryby). */
+export type SlotMode = Mode;
 /** Wynik bieżącego poziomu: 'victory' = boss pokonany, poziom ukończony. */
 export type Outcome = 'none' | 'dead' | 'victory';
 
@@ -292,7 +291,7 @@ export class Run {
   dpsMark = 0;
   /**
    * Między runami (ustawia ui/game-screen.ts): odblokowane osiągnięcia (karty z `unlock`), mnożniki obrażeń z bestiariusza per wróg,
-   * zabójstwa per wróg do przeniesienia do bestiariusza, wyzwanie dnia.
+   * zabójstwa per wróg do przeniesienia do bestiariusza.
    */
   unlocked = new Set<string>();
   /** Skórka bohatera (id odznaki Paktu, '' = zwykły wygląd) i nazwa sprite'a postaci. */
@@ -300,8 +299,6 @@ export class Run {
   get heroSprite(): string {
     return this.skin ? `${this.hero.sprite}~${this.skin}` : this.hero.sprite;
   }
-  /** Tryb Głowy bossów (sekret: kod Konami w menu): bossowie biomów po kolei, na końcu Serce Pustki. */
-  rush = false;
   /**
    * Wyczyny (systems/feats.ts): liczniki poziomu (trafienia, uniki, Q/E, start, Rzeź i Mistrz kombo zdobyte, elity), czasy zabójstw do Rzezi,
    * trafienia w całym runie, passa poziomów bez trafienia, wyczyny runu i nowe do przeniesienia do zapisu, wyczyny ostatniego bossa,
@@ -315,11 +312,8 @@ export class Run {
   featsNew: FeatId[] = [];
   featsLevel: FeatId[] = [];
   lastHurtAt = -999;
-  /** Szybki run: BAL.quick.levels krótkich poziomów z bossami jeden po drugim w tym samym świecie. */
-  quick = false;
   lore: Record<string, number> = {};
   killsById: Record<string, number> = {};
-  daily = false;
   /** Leczenie: suma w runie, zebrane od ostatniej liczby nad postacią, poświata paska HP. */
   healed = 0;
   private healAcc = 0;
@@ -477,8 +471,6 @@ export class Run {
   startLevel(depth: number): void {
     this.depth = depth;
     this.levelInfo = this.levelFor(depth);
-    // Głowy bossów: krótka rozgrzewka przed pierwszym bossem; Szybki run: krótki cel.
-    if (this.rush || this.quick) this.levelInfo = { ...this.levelInfo, objective: { kind: 'survive', time: this.rush ? BAL.rush.warmup : BAL.quick.levelTime } };
     this.shop = null;
     this.time = 0;
     this.levelKills = 0;
@@ -534,12 +526,13 @@ export class Run {
   }
 
   /**
-   * Definicja poziomu: węzeł Ekspedycji albo poziom kampanii. Po pełnym cyklu biomów z Paktem BAL.voidPact+ pierwszy poziom
-   * nowego cyklu zamienia się w sekretny biom Pustka.
+   * Definicja poziomu: węzeł Ekspedycji albo głębia Endless. W Endless po pełnym cyklu biomów pierwsza głębia nowego cyklu
+   * zamienia się w sekretny biom Pustka, gdy Pakt ma BAL.voidPact+ albo run trwa co najmniej BAL.voidEndlessTime.
    */
   levelFor(depth: number): LevelDef {
     if (this.expedition) return nodeLevel(this.expedition);
-    return levelDef(depth, this.pactLevel >= BAL.voidPact && depth > BIOME_CYCLE && (depth - 1) % BIOME_CYCLE === 0);
+    const open = this.pactLevel >= BAL.voidPact || this.totalTime >= BAL.voidEndlessTime;
+    return levelDef(depth, open && depth > BIOME_CYCLE && (depth - 1) % BIOME_CYCLE === 0);
   }
 
   /** Postęp celu poziomu 0..1. Po jego osiągnięciu pojawia się boss. */
@@ -687,10 +680,6 @@ export class Run {
     for (const [k, v] of Object.entries(this.levelInfo?.flags ?? {})) this.flags[k] = (this.flags[k] ?? 0) + v;
     // Tryb łatwy (Ustawienia): wrogowie zadają mniej obrażeń i mają mniej HP.
     if (this.easy) { this.flags.enemyDmg = (this.flags.enemyDmg ?? 0) - BAL.easy.dmg; this.flags.enemyHp = (this.flags.enemyHp ?? 0) - BAL.easy.hp; }
-    // Głowy bossów: bossowie słabsi (krótsze walki jedna po drugiej).
-    if (this.rush) this.flags.bossHp = (this.flags.bossHp ?? 0) + BAL.rush.bossHp;
-    // Szybki run: więcej doświadczenia i złota.
-    if (this.quick) { this.flags.mapXp = (this.flags.mapXp ?? 0) + BAL.quick.xp; this.flags.mapGold = (this.flags.mapGold ?? 0) + BAL.quick.gold; }
     for (const [k, v] of Object.entries(eventFlags(this))) this.flags[k] = (this.flags[k] ?? 0) + v;
     for (const p of PACTS) {
       const lvl = Math.min(p.max, this.pacts[p.id] ?? 0);
@@ -1369,23 +1358,9 @@ export class Run {
       return;
     }
     this.featsLevel = featsOnBoss(this, bossAge);
-    // Głowy bossów (następny boss po krótkiej przerwie, piąty to Serce Pustki, kilka awansów) i Szybki run (następny poziom):
-    // świat zostaje, zmienia się biom i cel, leczenie.
-    if (this.rush ? this.depth <= BIOME_CYCLE : this.quick && this.depth < BAL.quick.levels) {
-      this.collectAll();
-      this.heal(this.stats.maxHp * BAL.rush.heal);
-      if (this.rush) for (let i = 0; i < BAL.rush.levels; i++) this.addXp(this.xpNext - this.xp);
-      this.depth++;
-      const next = this.rush ? levelDef(this.depth, this.depth > BIOME_CYCLE) : this.levelFor(this.depth);
-      this.levelInfo = { ...next, objective: { kind: 'survive', time: this.time + (this.rush ? BAL.rush.gap : BAL.quick.levelTime) } };
-      this.bossSpawned = false;
-      this.onBuildChanged();
-      this.showBanner(this.rush ? `Głowa ${this.depth - 1}/${BIOME_CYCLE + 1}! Następny: ${next.bossName}` : `Poziom ${this.depth}/${BAL.quick.levels}: ${next.name}`);
-      sfx.play('explode');
-      return;
-    }
     // Endless: gra toczy się dalej — kolejna głębokość (silniejsi wrogowie, następny biom) i boss za BAL.endlessBossEvery.
     if (this.mode === 'endless') {
+      featsOnWin(this);
       this.collectAll();
       this.bossSpawned = false;
       this.nextBossAt = this.time + BAL.endlessBossEvery;

@@ -2,7 +2,7 @@
 export class Rng {
   constructor(private s = (Math.random() * 2 ** 32) >>> 0) {}
 
-  /** Nowe ziarno (wyzwanie dnia: ten sam start dla wszystkich). */
+  /** Nowe ziarno. */
   seed(s: number): void {
     this.s = s >>> 0;
   }

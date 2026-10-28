@@ -59,9 +59,12 @@ export class Input {
   private touchHeld = new Map<number, Action>();
   /** Okno straciło fokus od ostatniego kroku (dla auto-pauzy); czyszczone jak zbocza. */
   focusLost = false;
+  /** Dowolny klawisz (także bez przypisanej akcji) naciśnięty od ostatniego kroku. */
+  private anyKey = false;
 
   constructor(renderer: Renderer, canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
+      if (!e.repeat) this.anyKey = true;
       const acts = KEYMAP[e.code];
       if (!acts) return;
       e.preventDefault();
@@ -130,6 +133,11 @@ export class Input {
     return this.pressedSet.has(a);
   }
 
+  /** Cokolwiek naciśnięte w tym kroku (klawisz, przycisk pada, klik albo dotknięcie). */
+  anyPressed(): boolean {
+    return this.anyKey || this.pressedSet.size > 0;
+  }
+
   /** Wektor ruchu z klawiatury lub gałki, długość ≤ 1. */
   move(): { x: number; y: number } {
     let x = (this.isDown('right') ? 1 : 0) - (this.isDown('left') ? 1 : 0);
@@ -170,6 +178,7 @@ export class Input {
   /** Czyści zbocza po kroku symulacji, który je obsłużył. */
   endStep(): void {
     this.pressedSet.clear();
+    this.anyKey = false;
     this.focusLost = false;
   }
 

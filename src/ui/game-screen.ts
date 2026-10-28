@@ -7,8 +7,7 @@ import { drawSprite } from '../gfx/sprites';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { CARD_BY_ID } from '../data/cards';
 import { BAL } from '../data/balance';
-import { levelDef, objectiveLabel, BIOME_CYCLE } from '../data/levels';
-import { Run, type Mode, type RunSnapshot, type SlotMode } from '../game/run';
+import { Run, type Mode, type RunSnapshot } from '../game/run';
 import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
@@ -27,7 +26,7 @@ import { SynergyView } from './synergies';
 import { BuildView } from './build';
 import { AnvilView } from './anvil';
 import { rollShop } from '../data/shop';
-import { metaBonus, runEssence, heroMeta, heroTree, NO_META } from '../data/meta';
+import { metaBonus, runEssence, heroMeta, heroTree } from '../data/meta';
 import { rollItem } from '../data/items';
 import { NODE_INFO, EX_BLESSINGS, advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth } from '../data/expedition';
 import { rng } from '../core/rng';
@@ -45,12 +44,11 @@ import { heroSkins } from '../data/pacts';
 import { FEAT_BY_ID } from '../data/feats';
 import { featsOnWin } from '../systems/feats';
 import { BESTIARY_BY_ID, loreBonus, loreMuls } from '../data/bestiary';
-import type { DailyDef } from '../data/daily';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { WEAPON_BY_ID, maxLevel } from '../data/weapons';
 import { SECRET_BY_ID } from '../data/secrets';
 
-type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'build' | 'pause' | 'cleared' | 'map' | 'end';
+type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'build' | 'pause' | 'map' | 'end';
 
 /** Krótka blokada wejścia po otwarciu nakładki — żeby wciśnięty akurat klawisz nie wybrał karty. */
 const OVERLAY_DELAY = 0.3;
@@ -60,9 +58,8 @@ const PAUSE_TABS = ['Postać', 'Umiejętności'];
 
 /**
  * Ekran rozgrywki: run + nakładki (awans, karta, skrzynia, pauza, ukończenie poziomu, mapa Ekspedycji, koniec runu).
- * Trening: jeden poziom bez zapisu. Hardcore: poziomy po kolei, sklep między nimi. Endless: jeden poziom bez końca.
- * Ekspedycja: mapa węzłów (walki, sklepy, kowadła, obozy, skarby) przez 3 akty.
- * Tryby poza treningiem mają własny slot zapisu: wyjście z gry wznawia run, śmierć albo poddanie kasuje slot.
+ * Endless: jeden poziom bez końca. Ekspedycja: mapa węzłów (walki, sklepy, kowadła, obozy, skarby) przez 3 akty.
+ * Każdy tryb ma własny slot zapisu: wyjście z gry wznawia run, śmierć albo poddanie kasuje slot.
  */
 export class GameScreen implements Screen {
   private run: Run;
@@ -84,12 +81,10 @@ export class GameScreen implements Screen {
   private anvil: AnvilView | null = null;
   private map: ExpeditionMapView | null = null;
   /** Stan, do którego wraca kowadło (ekran ukończenia, sklep albo mapa). */
-  private anvilReturn: State = 'cleared';
+  private anvilReturn: State = 'map';
   /** Stan po zamknięciu sklepu (ekran ukończenia albo mapa) i po nakładkach nagród i pauzie (gra albo mapa). */
-  private shopReturn: State = 'cleared';
   private overlayReturn: State = 'play';
   /** Wczytany zapis między poziomami: run stoi już na następnym poziomie, który jeszcze się nie zaczął. */
-  private resumed = false;
   /** Esencja zdobyta w tym runie (ekran końca). */
   private essence = 0;
   /** Stan, do którego wraca ekran ekwipunku (gra albo pauza). */
@@ -102,32 +97,14 @@ export class GameScreen implements Screen {
   /** Czy ultimate był gotowy w poprzedniej klatce (komunikat „R gotowe!” przy zmianie). */
   private ultReady = false;
   private pauseMenu: Menu;
-  private clearedMenu: Menu;
   private endMenu: Menu;
   /** Zakładka ekranu końca: obrażenia, wykres DPS, karta buildu. */
   private endPage = 0;
 
-  constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot, opts: GameOpts = {}) {
-    const { daily, rush, quick } = opts;
-    // Wyzwanie dnia: to samo ziarno losowania dla wszystkich tego dnia.
-    if (daily) rng.seed(daily.seed);
+  constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot) {
     this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode);
-    // Nowy run: pakty ryzyka wybrane przed startem (ui/pacts.ts) obowiązują do jego końca; wyzwanie dnia ma własne.
-    if (!snapshot) this.run.pacts = { ...(daily ? daily.pacts : app.save.pacts.chosen) };
-    if (daily) {
-      this.run.daily = true;
-      const d = app.save.daily;
-      if (d.date !== daily.date) app.save.daily = { date: daily.date, best: 0, tries: 0 };
-      app.save.daily.tries++;
-      app.persist();
-    }
-    // Głowy bossów: poziom od nowa z krótką rozgrzewką i kilka awansów na start.
-    if (rush) {
-      this.run.rush = true;
-      this.run.startLevel(1);
-      for (let i = 0; i < BAL.rush.startLevels; i++) this.run.addXp(this.run.xpNext - this.run.xp);
-    }
-    if (quick) { this.run.quick = true; this.run.startLevel(1); }
+    // Nowy run: pakty ryzyka wybrane przed startem (ui/pacts.ts) obowiązują do jego końca.
+    if (!snapshot) this.run.pacts = { ...app.save.pacts.chosen };
     this.run.unlocked = new Set(app.save.achievements);
     // Skórka za odznakę Paktu (tylko jeśli nadal zdobyta).
     const skin = app.save.skins[heroId] ?? '';
@@ -136,13 +113,9 @@ export class GameScreen implements Screen {
     this.hints = new Hints(app.save, () => app.persist());
     this.run.cardBans = new Set(app.save.collection.banned);
     this.run.knownCards = new Set(app.save.collection.seen);
-    // Rozwój działa tylko w Ekspedycji (Hardcore i Endless bez meta-bonusów).
-    this.run.applyMeta(mode === 'expedition' ? metaBonus(heroMeta(app.save.meta, heroId), heroTree(heroId)) : NO_META, !snapshot);
+    // Rozwój bohatera działa w obu trybach (Ekspedycja i Endless).
+    this.run.applyMeta(metaBonus(heroMeta(app.save.meta, heroId), heroTree(heroId)), !snapshot);
     warmFx();
-    const hc = mode === 'hardcore';
-    const slotted = mode !== 'training';
-    // Poddanie z potwierdzeniem tam, gdzie przepada dłuższy postęp (Hardcore, Ekspedycja).
-    const confirm = hc || mode === 'expedition';
     this.pauseMenu = new Menu([
       { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
       { label: () => 'Ekwipunek', act: () => this.openInventory('pause') },
@@ -150,34 +123,19 @@ export class GameScreen implements Screen {
       { label: () => 'Synergie', act: () => { this.synergies = new SynergyView(this.run); this.state = 'synergies'; this.delay = 0.1; } },
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-      ...(slotted ? [{ label: () => 'Zapisz i wyjdź', act: () => { this.saveSlot(this.overlayReturn === 'play'); app.go(new MainMenu(app)); } }] : []),
+      { label: () => 'Zapisz i wyjdź', act: () => { this.saveSlot(this.overlayReturn === 'play'); app.go(new MainMenu(app)); } },
       {
-        label: () => (confirm ? (this.confirmQuit ? 'Na pewno? Run przepadnie' : 'Poddaj run') : 'Zakończ run'),
+        // Poddanie z potwierdzeniem: przepada cały run.
+        label: () => (this.confirmQuit ? 'Na pewno? Run przepadnie' : 'Poddaj run'),
         act: () => {
-          if (confirm && !this.confirmQuit) { this.confirmQuit = true; return; }
+          if (!this.confirmQuit) { this.confirmQuit = true; return; }
           this.onRunOver();
         },
       },
     ], PL + PLW / 2, 52, PLW - 16, 17);
-    this.clearedMenu = new Menu([
-      { label: () => `Dalej: poziom ${this.run.depth + 1}`, act: () => this.nextLevel() },
-      { label: () => `Sklep (${fmt(this.run.gold)} zł)`, act: () => this.openShop('cleared') },
-      { label: () => `Kowadło (${this.run.shards} odł.)`, act: () => this.openAnvil('cleared') },
-      { label: () => 'Zapisz i wyjdź do menu', act: () => app.go(new MainMenu(app)) },
-    ], W / 2, 194, 240, 16);
-    this.endMenu = new Menu(daily || rush || quick ? [
-      { label: () => 'Spróbuj ponownie', act: () => app.go(new GameScreen(app, heroId, mode, undefined, opts)) },
-      { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
-    ] : mode === 'expedition' ? [
+    this.endMenu = new Menu([
       { label: () => `Rozwój: ${HERO_BY_ID[heroId].name}`, act: () => app.go(new MetaScreen(app, new MainMenu(app), heroId)) },
-      { label: () => 'Nowa ekspedycja', act: () => app.go(new HeroSelect(app, mode)) },
-      { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
-    ] : hc ? [
-      { label: () => 'Nowa kampania', act: () => app.go(new HeroSelect(app, mode)) },
-      { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
-    ] : [
-      { label: () => 'Zagraj ponownie', act: () => app.go(new GameScreen(app, heroId, mode)) },
-      { label: () => 'Wybór bohatera', act: () => app.go(new HeroSelect(app, mode)) },
+      { label: () => (mode === 'expedition' ? 'Nowa ekspedycja' : 'New Endless run'), act: () => app.go(new HeroSelect(app, mode)) },
       { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
     ], W / 2, 216, 200, 15);
     if (mode === 'expedition' && !snapshot) {
@@ -187,25 +145,18 @@ export class GameScreen implements Screen {
       // Zapis z mapy: sklep, w którym gracz wyszedł, albo mapa.
       if (this.run.shop) this.openShop('map');
       else this.openMap();
-    } else if (hc && snapshot && !snapshot.inProgress) {
-      this.resumed = true;
-      if (this.run.shop) this.openShop('cleared');
-      else this.beginLevel();
-    } else if (slotted) {
+    } else {
       this.saveSlot(true);
     }
   }
 
   /**
-   * Zapis slotu trybu. `inProgress` = trwa poziom (wznowienie od zapisanego postępu);
-   * inaczej Hardcore zapisuje następny poziom, a Ekspedycja pozycję na mapie.
+   * Zapis slotu trybu. `inProgress` = trwa poziom (wznowienie od zapisanego postępu); inaczej Ekspedycja zapisuje pozycję na mapie.
    */
   private saveSlot(inProgress: boolean): void {
-    if (this.mode === 'training') return;
     const run = this.run;
     this.syncCollection();
-    const next = inProgress || this.resumed || this.mode !== 'hardcore' ? run.depth : run.depth + 1;
-    this.app.save.slots[this.mode as SlotMode] = run.toSnapshot(next, inProgress);
+    this.app.save.slots[this.mode] = run.toSnapshot(run.depth, inProgress);
     this.app.persist();
   }
 
@@ -245,7 +196,7 @@ export class GameScreen implements Screen {
     }
   }
 
-  private updateRecords(won: boolean): void {
+  private updateRecords(): void {
     const run = this.run;
     this.syncCollection();
     const rec = heroRecord(this.app.save, this.heroId);
@@ -255,17 +206,18 @@ export class GameScreen implements Screen {
     // Odznaki Paktu: najwyższy poziom Paktu, z którym bohater pokonał bossa.
     const pacts = this.app.save.pacts.best;
     if (run.bossKills > 0 && !run.easy) pacts[this.heroId] = Math.max(pacts[this.heroId] ?? 0, run.pactLevel);
-    if (this.mode === 'hardcore') rec.bestDepth = Math.max(rec.bestDepth, run.depth);
-    else if (this.mode === 'endless') rec.bestEndless = Math.max(rec.bestEndless, run.totalTime);
-    else if (this.mode === 'expedition') rec.bestExpedition = Math.max(rec.bestExpedition, run.expedition!.cleared);
-    else { rec.runs++; if (won) rec.wins++; }
+    if (this.mode === 'endless') rec.bestEndless = Math.max(rec.bestEndless, run.totalTime);
+    else rec.bestExpedition = Math.max(rec.bestExpedition, run.expedition!.cleared);
   }
 
-  /** Esencja za zakończoną Ekspedycję (Rozwój bohatera) — dodawana do zapisu, pokazywana na ekranie końca. Inne tryby jej nie dają. */
+  /**
+   * Esencja za zakończony run (Rozwój bohatera) — dodawana do zapisu, pokazywana na ekranie końca. Endless daje mniej niż
+   * Ekspedycja (BAL.meta.endlessEssenceMul), zależnie od czasu przetrwania, głębi, zabójstw i poziomu postaci.
+   */
   private awardEssence(mul = 1): void {
-    if (this.mode !== 'expedition') return;
     const h = heroMeta(this.app.save.meta, this.heroId);
     const ex = this.run.expedition;
+    if (this.mode === 'endless') mul *= BAL.meta.endlessEssenceMul;
     // Modyfikatory ukończonych map podnoszą esencję (BAL.expedition.rewardEssence na punkt nagrody).
     const mapMul = 1 + (ex?.bonus ?? 0) * BAL.expedition.rewardEssence / 100;
     this.essence = runEssence(this.run, ex?.cleared ?? 0, this.run.essenceMul * mul * mapMul);
@@ -273,9 +225,9 @@ export class GameScreen implements Screen {
     h.total += this.essence;
   }
 
-  /** Śmierć albo poddanie: slot trybu czyszczony (Hardcore: wpis do tablicy). Esencja zostaje. */
+  /** Śmierć albo poddanie: slot trybu czyszczony. Esencja zostaje. */
   private onRunOver(): void {
-    this.updateRecords(false);
+    this.updateRecords();
     this.awardEssence();
     this.endSlot();
     this.app.persist();
@@ -284,13 +236,10 @@ export class GameScreen implements Screen {
 
   private endSlot(): void {
     const run = this.run;
-    if (this.mode !== 'training') endSlotRun(this.app.save, this.mode, { hero: this.heroId, depth: run.depth, totalTime: run.totalTime, kills: run.kills, level: run.level, expedition: run.expedition ?? undefined });
+    endSlotRun(this.app.save, this.mode, { hero: this.heroId, depth: run.depth, totalTime: run.totalTime, kills: run.kills, level: run.level, expedition: run.expedition ?? undefined });
   }
 
-  /**
-   * Poziom ukończony. Trening kończy się zwycięstwem; Hardcore zapisuje postęp i proponuje kolejny poziom;
-   * Ekspedycja wraca na mapę (po bossie: następny akt albo koniec wyprawy).
-   */
+  /** Poziom (mapa) Ekspedycji ukończony: powrót na mapę (po bossie: następny akt albo koniec wyprawy). Endless nie kończy poziomów. */
   private onLevelCleared(): void {
     const run = this.run;
     if (this.mode === 'expedition') {
@@ -299,8 +248,9 @@ export class GameScreen implements Screen {
       ex.bonus += mapReward(m);
       if (m.kind === 'secret' && !ex.voidKey) { ex.voidKey = true; this.showToast('Klucz Pustki! Po ostatnim akcie otworzy się akt 4'); }
       if (ex.blessing && --ex.blessing.maps <= 0) ex.blessing = null;
-      this.updateRecords(true);
+      this.updateRecords();
       if (m.kind === 'boss') {
+        featsOnWin(run);
         if (!advanceAct(ex)) { this.onExpeditionWon(); return; }
         run.heal(run.stats.maxHp * BAL.levelClearHeal);
         this.showToast(`${ex.act > BAL.expedition.acts ? 'Sekretny akt 4: Pustka' : `Akt ${ex.act}`}! +${Math.round(BAL.levelClearHeal * 100)}% HP`);
@@ -313,24 +263,6 @@ export class GameScreen implements Screen {
       this.openPending();
       return;
     }
-    // Bez skazy: wygrany run (tryby treningowe) albo 3 poziomy Hardcore bez trafienia.
-    if (this.mode === 'training' || (this.mode === 'hardcore' && run.depth >= 3)) featsOnWin(run);
-    this.updateRecords(true);
-    if (this.mode === 'training') {
-      // Wyzwanie dnia: najlepszy czas pokonania bossa.
-      const d = this.app.save.daily;
-      if (run.daily && (d.best === 0 || run.time < d.best)) { d.best = run.time; this.showToast('Nowy rekord dnia!'); }
-      const s = this.app.save;
-      if (run.rush && (s.rushBest === 0 || run.time < s.rushBest)) s.rushBest = run.time;
-      this.awardEssence();
-      this.app.persist();
-      this.state = 'end';
-      return;
-    }
-    run.shop = rollShop(run, run.depth + 1);
-    this.saveSlot(false);
-    this.state = 'cleared';
-    this.clearedMenu.sel = 0;
   }
 
   /** Ostatni boss pokonany: wyprawa ukończona — rekord, więcej esencji, slot czyszczony. */
@@ -408,22 +340,6 @@ export class GameScreen implements Screen {
     }
   }
 
-  private nextLevel(): void {
-    this.run.startLevel(this.run.depth + 1);
-    this.beginLevel();
-  }
-
-  /** Start poziomu po przerwie: leczenie i zapis "w trakcie" (od teraz wyjście z gry = utrata runu). */
-  private beginLevel(): void {
-    const run = this.run;
-    run.heal(run.stats.maxHp * BAL.levelClearHeal);
-    run.shop = null;
-    this.resumed = false;
-    this.saveSlot(true);
-    this.state = 'play';
-    sfx.play('levelup');
-  }
-
   private openAnvil(from: State): void {
     this.hints.show('anvil');
     this.anvil = new AnvilView(this.run, () => this.saveSlot(false));
@@ -434,9 +350,8 @@ export class GameScreen implements Screen {
 
   private openShop(from: State): void {
     this.hints.show('shop');
-    const label = from === 'map' ? 'Do mapy' : this.resumed ? 'Do walki' : 'Wróć';
+    const label = from === 'map' ? 'Do mapy' : 'Wróć';
     this.shop = new ShopView(this.run, () => this.saveSlot(false), label);
-    this.shopReturn = from;
     this.state = 'shop';
     this.delay = 0.1;
   }
@@ -616,9 +531,7 @@ export class GameScreen implements Screen {
         const act = this.shop!.update(inp, dt);
         if (act === 'inventory') this.openInventory('shop');
         else if (act === 'anvil') this.openAnvil('shop');
-        else if (act === 'close' && this.shopReturn === 'map') { this.run.shop = null; this.openMap(); }
-        else if (act === 'close' && this.resumed) this.beginLevel();
-        else if (act === 'close') { this.state = 'cleared'; this.delay = 0.1; }
+        else if (act === 'close') { this.run.shop = null; this.openMap(); }
         break;
       }
       case 'map': {
@@ -635,9 +548,6 @@ export class GameScreen implements Screen {
         PAUSE_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.pauseTab(i))) { this.pausePage = i; sfx.play('select'); } });
         this.pauseMenu.update(inp);
         break;
-      case 'cleared':
-        this.clearedMenu.update(inp);
-        break;
       case 'end':
         this.endMenu.update(inp);
         if (inp.pressed('inventory') || inp.pressed('left') || inp.pressed('right')) {
@@ -653,7 +563,7 @@ export class GameScreen implements Screen {
     const r = this.app.r;
     const run = this.run;
     renderWorld(run, r);
-    const between = this.state === 'cleared' || this.state === 'shop' || this.state === 'anvil' || this.state === 'map' || this.overlayReturn === 'map'
+    const between = this.state === 'shop' || this.state === 'anvil' || this.state === 'map' || this.overlayReturn === 'map'
       || (this.state === 'inventory' && (this.invReturn === 'shop' || this.invReturn === 'map'));
     // HUD tylko w trakcie gry: nakładki (pauza, awans, łup, ekwipunek...) zasłaniają go w całości.
     if (this.state === 'play' && !between) renderHud(run, r, this.app.loop, this.diag, this.app.save.settings.debug, this.app.save.settings.minimap, this.app.input);
@@ -695,9 +605,6 @@ export class GameScreen implements Screen {
       case 'pause':
         this.renderPause();
         break;
-      case 'cleared':
-        this.renderCleared();
-        break;
       case 'end':
         this.renderEnd();
         break;
@@ -719,8 +626,8 @@ export class GameScreen implements Screen {
     drawText(g, where, PL + PLW / 2, 37, C.lgray, { align: 'center', scale: 0.75 });
     if (run.pactLevel) drawText(g, `Pakt ${run.pactLevel}`, PL + PLW / 2, 45, C.red, { align: 'center', scale: 0.75 });
     this.pauseMenu.render(r);
-    if (this.mode === 'hardcore' || this.mode === 'expedition') {
-      const warn = `${this.mode === 'hardcore' ? 'Hardcore' : 'Ekspedycja'}: poddanie oznacza utratę wszystkiego`;
+    {
+      const warn = `${this.mode === 'expedition' ? 'Ekspedycja' : 'Endless'}: giving up ends the run (essence stays)`;
       wrapText(warn, (PLW - 16) / 0.75).forEach((l, i) => drawText(g, l, PL + PLW / 2, H - 34 + i * 9, C.salmon, { align: 'center', scale: 0.75 }));
     }
 
@@ -817,31 +724,6 @@ export class GameScreen implements Screen {
     }
   }
 
-  private renderCleared(): void {
-    const r = this.app.r, g = r.g, run = this.run;
-    dim(r);
-    drawText(g, `Poziom ${run.depth} ukończony!`, W / 2, 16, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    drawText(g, run.levelInfo.name, W / 2, 44, C.lgray, { align: 'center', shadow: C.black });
-    const next = levelDef(run.depth + 1);
-    panel(r, 80, 62, 320, 128);
-    const rows: [string, string][] = [
-      ['Czas poziomu', fmtTime(run.time)],
-      ['Zabójstwa na poziomie', fmt(run.levelKills)],
-      ['Łączny czas', fmtTime(run.totalTime)],
-      ['Poziom postaci / karty', `${run.level} / ${run.cards.reduce((n, c) => n + c.stacks, 0)}`],
-      ['Złoto', fmt(run.gold)],
-    ];
-    rows.forEach(([k, v], i) => {
-      drawText(g, k, 94, 72 + i * 12, C.lgray);
-      drawText(g, v, 386, 72 + i * 12, C.white, { align: 'right' });
-    });
-    if (run.featsLevel.length) drawText(g, `Wyczyny: ${run.featsLevel.map((id) => FEAT_BY_ID[id].name).join(', ')}`, 94, 128, C.gold);
-    drawText(g, `Dalej: ${next.name}`, 94, 140, C.white);
-    drawText(g, `Cel: ${objectiveLabel(next.objective)}, potem ${next.bossName}`, 94, 152, C.lavender);
-    drawText(g, `Postęp zapisany. Na start +${Math.round(BAL.levelClearHeal * 100)}% HP.`, 94, 166, C.dgray);
-    this.clearedMenu.render(r);
-  }
-
   /** Góra i wysokość panelu zakładek na ekranie końca (zależą od liczby linii informacji). */
   private endY = 98;
   private endH = END_BOTTOM - 98;
@@ -878,17 +760,13 @@ export class GameScreen implements Screen {
       drawText(g, k, x + tw / 2, 41, C.lgray, { align: 'center', scale: 0.75 });
       drawText(g, v, x + tw / 2, 50, col, { align: 'center', shadow: C.black });
     });
-    const modeLine = this.mode === 'hardcore' ? `Hardcore: przepadło wszystko. Dotarłeś do poziomu ${run.depth}.`
-      : this.mode === 'endless' ? `Endless: rekord ${fmtTime(heroRecord(this.app.save, this.heroId).bestEndless)}`
-      : run.quick ? `Szybki run: ${won ? 'wszystkie poziomy ukończone' : `poziom ${run.depth}/${BAL.quick.levels}`}`
-      : run.rush ? `Głowy bossów: ${won ? `wszystkie w ${fmtTime(run.time)}` : `zdobyte głowy ${run.bossKills}/${BIOME_CYCLE + 1}`}, rekord ${this.app.save.rushBest ? fmtTime(this.app.save.rushBest) : 'brak'}`
-      : run.daily ? `Wyzwanie dnia ${this.app.save.daily.date}: ${won ? `boss pokonany w ${fmtTime(run.time)}` : 'boss niepokonany'}, najlepszy czas ${this.app.save.daily.best ? fmtTime(this.app.save.daily.best) : 'brak'}`
-      : ex ? `Ekspedycja: ukończone węzły ${ex.cleared}${won ? `, esencja x${BAL.expedition.winEssenceMul}` : ''}` : '';
-    // Poza Ekspedycją zamiast informacji o esencji: wyczyny runu (jeśli są).
+    const modeLine = this.mode === 'endless' ? `Endless: rekord ${fmtTime(heroRecord(this.app.save, this.heroId).bestEndless)}`
+      : `Ekspedycja: ukończone węzły ${ex!.cleared}${won ? `, esencja x${BAL.expedition.winEssenceMul}` : ''}`;
+    // Esencja za run (oba tryby) i wyczyny runu (jeśli są).
     const feats = [...new Set(run.featsRun)].map((id) => FEAT_BY_ID[id].name).join(', ');
-    const essence = this.mode === 'expedition' ? `+${fmt(this.essence)} esencji dla: ${run.hero.name} (Rozwój w menu głównym)`
-      : feats ? `Wyczyny: ${feats}` : '';
-    const info = [modeLine && [modeLine, C.orange], essence && [essence, this.mode === 'expedition' ? C.cyan : C.gold]].filter(Boolean) as [string, number][];
+    const essence = `+${fmt(this.essence)} esencji dla: ${run.hero.name} (Rozwój w menu głównym)`;
+    const info: [string, number][] = [[modeLine, C.orange], [essence, C.cyan]];
+    if (feats) info.push([`Wyczyny: ${feats}`, C.gold]);
     info.forEach(([t, col], i) => drawText(g, t, W / 2, 69 + i * 10, col, { align: 'center', shadow: C.black }));
     // Panel zakładek zaczyna się tuż pod liniami informacji (bez pustego pasa, gdy ich nie ma).
     this.endY = 88 + info.length * 10;
@@ -981,13 +859,6 @@ export class GameScreen implements Screen {
     ].filter(Boolean).join(', ');
     if (extra) drawText(g, extra, x0, this.endY + this.endH - 11, C.hotpink, { scale: 0.75 });
   }
-}
-
-/** Opcje nowego runu (tryb 'training'): wyzwanie dnia (bohater, pakty, ziarno), Głowy bossów albo Szybki run. */
-export interface GameOpts {
-  daily?: DailyDef;
-  rush?: boolean;
-  quick?: boolean;
 }
 
 /** Zakładki ekranu końca runu i panel pod nimi. */

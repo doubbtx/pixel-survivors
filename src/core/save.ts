@@ -8,31 +8,17 @@ import type { MetaState } from '../data/meta';
  * która przekształca dane do wersji o 1 wyższej. Ładowanie aplikuje migracje po kolei.
  */
 const KEY = 'pixel-survivors-save';
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export interface HeroRecord {
   bestTime: number;
   bestKills: number;
   bestLevel: number;
-  /** Najdalszy poziom kampanii Hardcore. */
-  bestDepth: number;
   /** Najdłużej przetrwany czas w trybie Endless (s). */
   bestEndless: number;
   /** Ekspedycja: najwięcej ukończonych węzłów i liczba ukończonych wypraw. */
   bestExpedition: number;
   expeditionWins: number;
-  wins: number;
-  runs: number;
-}
-
-/** Wpis tablicy rekordów Hardcore. */
-export interface HardcoreEntry {
-  hero: string;
-  depth: number;
-  time: number;
-  kills: number;
-  level: number;
-  date: string;
 }
 
 /**
@@ -99,8 +85,6 @@ export interface SaveData {
   records: Record<string, HeroRecord>;
   /** Sloty zapisu per tryb: trwający run (między poziomami albo w trakcie poziomu). */
   slots: Record<SlotMode, RunSnapshot | null>;
-  /** Tablica rekordów Hardcore. */
-  board: HardcoreEntry[];
   /** Komunikat do pokazania w menu przy następnym uruchomieniu (np. przerwany run). */
   notice: string;
   collection: CardCollection;
@@ -113,14 +97,13 @@ export interface SaveData {
   exTier: number;
   /** Pakty ryzyka (data/pacts.ts): wybrane na następny run i najwyższy poziom Paktu z pokonanym bossem per bohater. */
   pacts: { chosen: Record<string, number>; best: Record<string, number> };
-  /** Zdobyte osiągnięcia (data/achievements.ts), zabójstwa per wróg (bestiariusz) i wyzwanie dnia. Nowe pola bez migracji. */
+  /** Zdobyte osiągnięcia (data/achievements.ts) i zabójstwa per wróg (bestiariusz). Nowe pola bez migracji. */
   achievements: string[];
   bestiary: Record<string, number>;
-  /** Wyzwanie dnia: data, najlepszy czas pokonania bossa (0 = jeszcze nie) i liczba podejść. */
-  daily: { date: string; best: number; tries: number };
-  /** Głowy bossów (sekretny tryb): najlepszy czas zdobycia wszystkich głów (0 = jeszcze nie). Skórki bohaterów (odznaki Paktu). */
-  rushBest: number;
+  /** Skórki bohaterów (odznaki Paktu). */
   skins: Record<string, string>;
+  /** Wersja gry, której ekran „What's new” gracz już widział ('' = nowa gra, bez ekranu). */
+  seenVersion: string;
   /** Wyczyny (data/feats.ts): ile razy zdobyty każdy. */
   feats: Record<string, number>;
 }
@@ -174,6 +157,21 @@ const MIGRATIONS: Record<number, Migration> = {
   },
   // 6 → 7: pakty ryzyka (wybrane na kolejne runy i najwyższy poziom z pokonanym bossem per bohater).
   6: (old) => ({ ...old, version: 7, pacts: { chosen: {}, best: {} } }),
+  // 7 → 8 (0.27): zostają tylko Ekspedycja i Endless. Zapisy usuniętych trybów (Hardcore, wyzwanie dnia, Głowy bossów)
+  // i ich rekordy są porzucane; reszta postępu (Rozwój, kolekcja, osiągnięcia, bestiariusz, pakty) zostaje.
+  7: (old) => {
+    const { board: _b, daily: _d, rushBest: _r, ...rest } = old;
+    const slots = (old.slots ?? {}) as Record<string, unknown>;
+    const records = (old.records ?? {}) as Record<string, Record<string, unknown>>;
+    for (const r of Object.values(records)) { delete r.bestDepth; delete r.wins; delete r.runs; }
+    const hadHardcore = !!slots.hardcore;
+    return {
+      ...rest, version: 8, records, slots: { endless: slots.endless ?? null, expedition: slots.expedition ?? null },
+      // Gracz z wcześniejszych wersji zobaczy ekran nowości (poprzednia wersja ≠ bieżąca).
+      seenVersion: '0.26',
+      notice: hadHardcore ? 'Hardcore mode was removed. Your progress, unlocks and Progression stay.' : old.notice,
+    };
+  },
 };
 
 function defaults(): SaveData {
@@ -184,8 +182,7 @@ function defaults(): SaveData {
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
       playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en' },
     records: {},
-    slots: { hardcore: null, endless: null, expedition: null },
-    board: [],
+    slots: { endless: null, expedition: null },
     notice: '',
     collection: { seen: [], picks: {}, banned: [], uniques: [], secrets: [] },
     meta: { heroes: {}, unassigned: 0 },
@@ -195,9 +192,8 @@ function defaults(): SaveData {
     pacts: { chosen: {}, best: {} },
     achievements: [],
     bestiary: {},
-    daily: { date: '', best: 0, tries: 0 },
-    rushBest: 0,
     skins: {},
+    seenVersion: '',
     feats: {},
   };
 }
@@ -224,8 +220,7 @@ export function loadSave(): SaveData {
     version: SAVE_VERSION,
     settings: settingsOf(base.settings, d.settings),
     records: { ...d.records },
-    slots: { ...base.slots, ...d.slots },
-    board: d.board ?? [],
+    slots: { endless: d.slots?.endless ?? null, expedition: d.slots?.expedition ?? null },
     notice: d.notice ?? '',
     collection: { ...base.collection, ...d.collection },
     meta: { ...base.meta, ...d.meta },
@@ -235,9 +230,8 @@ export function loadSave(): SaveData {
     pacts: { ...base.pacts, ...d.pacts },
     achievements: d.achievements ?? [],
     bestiary: { ...d.bestiary },
-    daily: { ...base.daily, ...d.daily },
-    rushBest: d.rushBest ?? 0,
     skins: { ...d.skins },
+    seenVersion: d.seenVersion ?? '',
     feats: { ...d.feats },
   };
 }
@@ -257,12 +251,5 @@ export function writeSave(d: SaveData): void {
 }
 
 export function heroRecord(d: SaveData, heroId: string): HeroRecord {
-  return (d.records[heroId] ??= { bestTime: 0, bestKills: 0, bestLevel: 0, bestDepth: 0, bestEndless: 0, bestExpedition: 0, expeditionWins: 0, wins: 0, runs: 0 });
-}
-
-/** Dodaje wynik do tablicy Hardcore (top 10: najdalszy poziom, potem krótszy czas). */
-export function addHardcoreEntry(d: SaveData, e: HardcoreEntry): void {
-  d.board.push(e);
-  d.board.sort((a, b) => b.depth - a.depth || a.time - b.time);
-  d.board.length = Math.min(d.board.length, 10);
+  return (d.records[heroId] ??= { bestTime: 0, bestKills: 0, bestLevel: 0, bestEndless: 0, bestExpedition: 0, expeditionWins: 0 });
 }

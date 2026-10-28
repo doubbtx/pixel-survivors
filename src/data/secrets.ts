@@ -78,10 +78,10 @@ export const SECRETS: SecretDef[] = [
     stats: { might: 0.3, crit: 0.1 },
   },
   {
-    id: 'ascetic', name: 'Asceta', riddle: 'Silny bez niczego. Drugi poziom kampanii, dwudziesty postaci, gołe ręce.',
-    hint: 'Na 2. poziomie kampanii (lub dalej) dojdź do 20. poziomu postaci bez żadnego przedmiotu.', while: true,
+    id: 'ascetic', name: 'Asceta', riddle: 'Strong with nothing. The second act or ten endless minutes, the twentieth level, bare hands.',
+    hint: 'In act 2 of an Expedition or after 10 minutes of Endless, reach character level 20 without any item.', while: true,
     desc: 'Dopóki nie nosisz żadnego przedmiotu: +60% obrażeń, +5 pancerza, +2 HP/s.',
-    check: (run) => run.level >= 20 && run.depth >= 2 && Object.values(run.equipment).every((it) => !it),
+    check: (run) => run.level >= 20 && (run.expedition ? run.expedition.act >= 2 : run.totalTime >= 600) && Object.values(run.equipment).every((it) => !it),
     stats: { might: 0.6, armor: 5, regen: 2 },
   },
   {

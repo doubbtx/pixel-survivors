@@ -60,8 +60,8 @@ export interface LevelDef {
 const ROMAN = ['', '', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];
 
 /**
- * Poziom kampanii. `isVoid`: sekretny biom Pustka zamiast zwykłego (Run.levelFor: po pełnym cyklu biomów z Paktem 5+,
- * w trybie Głowy bossów jako ostatni boss) — bez leczenia, podwójny łup i złoto.
+ * Poziom (głębia). `isVoid`: sekretny biom Pustka zamiast zwykłego (Run.levelFor: w Endless po pełnym cyklu biomów
+ * z Paktem 5+ albo po długim przetrwaniu) — bez leczenia, podwójny łup i złoto.
  */
 export function levelDef(depth: number, isVoid = false): LevelDef {
   const biome = isVoid ? VOID_BIOME : (depth - 1) % BIOME_CYCLE;

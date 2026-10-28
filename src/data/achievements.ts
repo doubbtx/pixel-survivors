@@ -27,9 +27,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'combo', name: 'Kombinator', desc: 'Kombo 200 zabójstw bez oberwania.', card: 'u_greed', check: (run) => run.combo >= 200 },
   { id: 'scholar', name: 'Badacz', desc: 'Poznaj każdego wroga w bestiariuszu.', card: 'u_lore', check: (_r, save) => BESTIARY.every((b) => (save.bestiary[b.id] ?? 0) >= b.know) },
   { id: 'eternal', name: 'Nieśmiertelny', desc: 'Przetrwaj 15 minut w trybie Endless.', card: 'u_eternal', check: (run) => run.mode === 'endless' && run.totalTime >= 900 },
-  { id: 'daily', name: 'Codzienność', desc: 'Ukończ wyzwanie dnia.', card: 'u_sun', check: (run) => run.daily && run.bossKills >= 1 },
+  // Dawniej „Codzienność” (wyzwanie dnia, usunięte w 0.27): to samo id, żeby zdobyte osiągnięcie i karta zostały w zapisie.
+  { id: 'daily', name: 'Wayfarer', desc: 'Finish act 1 of an Expedition.', card: 'u_sun', check: (run) => (run.expedition?.act ?? 1) >= 2 },
   { id: 'flawless_level', name: 'Nietykalny', desc: 'Wyczyn Nietykalny: poziom z bossem bez trafienia.', card: 'u_ward', check: (run) => run.featsRun.includes('untouched') },
-  { id: 'flawless_run', name: 'Bez skazy', desc: 'Wyczyn Bez skazy: wygrany run bez jednego trafienia.', card: 'u_halo', check: (run) => run.featsRun.includes('flawless') },
+  { id: 'flawless_run', name: 'Bez skazy', desc: 'Flawless feat: an act boss or Endless boss without a single hit in the run.', card: 'u_halo', check: (run) => run.featsRun.includes('flawless') },
   { id: 'feat_hunter', name: 'Łowca wyczynów', desc: 'Zdobądź 6 różnych wyczynów (Kolekcja, Wyczyny).', card: 'u_medal', check: (_r, save) => Object.keys(save.feats).length >= 6 },
   { id: 'gambler', name: 'Ryzykant', desc: 'Pokonaj bossa z Paktem 5 lub wyżej.', card: 'u_pact', check: (run) => run.pactLevel >= 5 && run.bossKills >= 1 },
 ];

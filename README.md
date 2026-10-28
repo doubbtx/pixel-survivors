@@ -417,23 +417,32 @@ src/
 **Version number (0.26.1)**:
 - The main menu shows the game version in the bottom-right corner, so you can check that the browser loaded the latest build.
 
+**Two modes, both ways translation, What's new (0.27.0)**:
+- Only Expedition and Endless stay. Hardcore campaign, Training, Quick run, Boss rush (Konami code) and the Daily challenge are removed from the menu, code, records, help and save.
+- Progression (hero trees) works in Endless too; Endless gives essence (×0.6 of the Expedition formula, which grows with time survived).
+- Moved secrets: the Void opens in Endless with Pact 5+ or after 20 minutes; Ascetic needs act 2 of an Expedition or 10 minutes of Endless; the Flawless feat is an Expedition act boss or the first Endless boss without a hit all run.
+- The Daily achievement became **Wayfarer** (finish act 1 of an Expedition) — same id, so earned achievements and the Morning Sun card stay.
+- Save version 8: removed modes' data is dropped safely, records, collection and Progression stay; a note in the menu says when a Hardcore run was removed.
+- **What's new** screen after an update (once, any key or tap closes it). New players don't see it.
+- Translation works both ways: old Polish texts → English as before, new texts are written in English with Polish in `core/i18n-pl.ts`.
+
 ### Jak przetestować
 
-1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
+1. `npm run dev` → Endless → Nowy run → bohater (albo Ekspedycja → Nowa ekspedycja).
 2. F3 włącza licznik FPS i liczby encji; F4 przyspiesza cel poziomu (+30 s albo +60 zabójstw), więc szybko dojdziesz do bossa; F6 daje natychmiastowy awans — co 5. awans pojawia się wybór karty.
-3. Po bossie: nagrody (skrzynia, awanse, karta) → ekran „Poziom ukończony” → Dalej albo Zapisz i wyjdź. W menu Hardcore pojawi się Kontynuuj.
-4. Sklep: na ekranie „Poziom ukończony” wybierz Sklep; kup coś, wyjdź „Zapisz i wyjdź”, przeładuj stronę i Kontynuuj — sklep wraca w tym samym stanie.
-5. Przeładuj stronę w trakcie poziomu Hardcore i wybierz Kontynuuj: poziom wznowi się z zapisanym czasem i zabójstwami.
+3. Po bossie Ekspedycji: nagrody (skrzynia, awanse, karta) → mapa. Esc na mapie → Zapisz i wyjdź; w menu Ekspedycji pojawi się Kontynuuj.
+4. Sklep: węzeł sklepu na mapie Ekspedycji; kup coś, wyjdź „Zapisz i wyjdź”, przeładuj stronę i Kontynuuj — sklep wraca w tym samym stanie.
+5. Przeładuj stronę w trakcie runu Endless i wybierz Kontynuuj: run wznowi się z zapisanym czasem i zabójstwami. Poddanie w pauzie daje esencję (ekran końca).
 6. Ewolucja: rozwiń broń do poziomu 8, weź pasywkę z jej opisu (np. Magiczny pocisk + Moc), a kolejny awans zaproponuje ewolucję.
 7. Przedmioty: włącz debug (F3) i wciśnij F7 kilka razy — każde to łup bossa. Załóż coś, potem I/Tab otwiera ekwipunek; najedź na przedmiot w plecaku, żeby zobaczyć porównanie. Pauza pokazuje założone przedmioty.
 8. Ekspedycja: menu → Ekspedycja → Nowa ekspedycja → bohater. Na mapie strzałki/mysz wybierają węzeł, Enter/klik wchodzi. W walce F3 + F4 szybko kończy cel. Esc na mapie → „Zapisz i wyjdź”, przeładuj stronę → Kontynuuj wraca na mapę (albo do przerwanej walki / otwartego sklepu).
-9. Zasoby: Trening dowolnym bohaterem — pasek pod HP (Kestra: strzelaj z dystansu; Borgun: walcz wręcz; Ignara: Q/E, potem Spacja przy żarze 40+; Morwen: zabijaj blisko, potem R; Vesper: trafiaj bez obrywania, potem E; Aurel: Q i E, zabijaj blisko, potem R).
+9. Zasoby: Endless dowolnym bohaterem — pasek pod HP (Kestra: strzelaj z dystansu; Borgun: walcz wręcz; Ignara: Q/E, potem Spacja przy żarze 40+; Morwen: zabijaj blisko, potem R; Vesper: trafiaj bez obrywania, potem E; Aurel: Q i E, zabijaj blisko, potem R).
 10. Zadania: po ok. 40 s pojawia się turkusowy kamień (znacznik na krawędzi ekranu) — dotknij go, panel po prawej pokazuje postęp i czas.
 11. Moce bossów i unikaty: F3 + F4 kilka razy → boss → po nagrodach ekran „Moc bossa”. F7 daje łup bossa (12% na unikat); odkryte unikaty: Kolekcja → Tab.
 12. Fuzje: F6 do maks. poziomu dwóch broni z receptury (np. Strzała + Meteor u Kestry) — awans zaproponuje „Fuzja”.
-13. Pakty: wybór bohatera → Tab, ustaw poziomy strzałkami; poziom Paktu widać w HUD. Teren: bagno w biomie 2, lód w biomie 4 (Hardcore: poziomy 2 i 4), arena zwęża się przy bossie.
-14. Kuźnia: Hardcore → po bossie Kowadło (albo węzeł kowadła w Ekspedycji, daje też materiały) → przedmiot → „Kuźnia”. Klawisze 1-4: zwoje i ryzyko, Enter: kuj.
-15. 0.15: Kowadło → B (warsztat); Kolekcja → Tab (sekrety, bestiariusz, osiągnięcia); menu → Wyzwanie dnia / Szybki run; Ustawienia → Muzyka, Trudność, Kształty żywiołów.
+13. Pakty: wybór bohatera → Tab, ustaw poziomy strzałkami; poziom Paktu widać w HUD. Teren: bagno w biomie 2, lód w biomie 4 (Endless: kolejne biomy po bossach), arena zwęża się przy bossie.
+14. Kuźnia: węzeł kowadła w Ekspedycji (daje też materiały) → przedmiot → „Kuźnia”. Klawisze 1-4: zwoje i ryzyko, Enter: kuj.
+15. 0.15: Kowadło → B (warsztat); Kolekcja → Tab (sekrety, bestiariusz, osiągnięcia); Ustawienia → Muzyka, Trudność, Kształty żywiołów.
 16. Wydajność: przy ~1000 wrogach symulacja zajmuje <1 ms na krok, render ~10 ms na klatkę w stylu 16-bit z cieniami, dekoracjami i efektami (Chromium headless, bez GPU — na zwykłej karcie graficznej szybciej).
 
 ## Kolejne etapy

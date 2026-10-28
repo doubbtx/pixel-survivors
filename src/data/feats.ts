@@ -25,7 +25,7 @@ export const FEATS: FeatDef[] = [
   { id: 'massacre', name: 'Rzeź', desc: '250 zabójstw w 30 sekund (raz na poziom).', reward: 'Natychmiastowy awans i złoto.' },
   { id: 'combo', name: 'Mistrz kombo', desc: 'Kombo 300 zabójstw bez trafienia (raz na poziom).', reward: 'Karta jak po bossie.' },
   { id: 'elites', name: 'Łowca elit', desc: '5 elit na jednym poziomie.', reward: 'Zwój kowalski i skrzynia elity.' },
-  { id: 'flawless', name: 'Bez skazy', desc: 'Wygrany run (albo 3 poziomy Hardcore) bez trafienia.', reward: 'Osiągnięcie i karta Nimb.' },
+  { id: 'flawless', name: 'Bez skazy', desc: 'An Expedition act boss or the first Endless boss without taking a hit all run.', reward: 'Osiągnięcie i karta Nimb.' },
 ];
 
 export const FEAT_BY_ID: Record<string, FeatDef> = Object.fromEntries(FEATS.map((f) => [f.id, f]));

@@ -7,7 +7,6 @@ import { drawSprite, drawShadow, blit, TILE } from '../gfx/sprites';
 import { animFrame } from '../gfx/actors';
 import { HEROES, HERO_BY_ID, resourceDetails, type HeroDef } from '../data/heroes';
 import { WEAPON_BY_ID } from '../data/weapons';
-import { levelDef, objectiveLabel } from '../data/levels';
 import { BAL } from '../data/balance';
 import { endSlotRun } from '../game/campaign';
 import type { Mode, RunSnapshot, SlotMode } from '../game/run';
@@ -16,16 +15,14 @@ import type { App, Screen } from './app';
 import { Menu, panel, inside, slot, button, hovered, type MenuItem } from './widgets';
 import { drawSkills } from './skills';
 import { setLang, type Lang } from '../core/i18n';
-import type { Action } from '../core/input';
 import { music, MENU_MOOD } from '../core/music';
-import { GameScreen, type GameOpts } from './game-screen';
+import { GameScreen } from './game-screen';
 import { CollectionScreen } from './collection';
 import { MetaScreen } from './meta';
 import { BalanceScreen } from './balance';
 import { HelpScreen } from './help';
 import { heroMeta, paragonLevel } from '../data/meta';
-import { pactLevel, pactBadge, pactDesc, heroSkins, BADGE_BY_ID, PACT_BY_ID } from '../data/pacts';
-import { dailyOf, todayKey } from '../data/daily';
+import { pactLevel, pactBadge, heroSkins, BADGE_BY_ID } from '../data/pacts';
 import { PactScreen } from './pacts';
 
 const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
@@ -84,40 +81,25 @@ function menuBackdrop(app: App, t: number): void {
   PARADE.forEach((name, i) => walk(name, lead - 166 - i * 28, false, i + 6));
 }
 
-/**
- * Kod Konami (góra, góra, dół, dół, lewo, prawo, lewo, prawo, B, A): na klawiaturze B to banish, a A to lewo (stąd drugi wariant),
- * na padzie B to E, a A to confirm. Otwiera sekretny tryb Głowy bossów.
- */
-const KONAMI = ['UUDDLRLRBA', 'UUDDLRLRBL'];
-const KONAMI_KEYS: [Action, string][] = [['up', 'U'], ['down', 'D'], ['left', 'L'], ['right', 'R'], ['banish', 'B'], ['e', 'B'], ['confirm', 'A']];
-
 export class MainMenu implements Screen {
   private t = 0;
   private menu: Menu;
-  private konami = '';
 
   constructor(private readonly app: App) {
     this.menu = new Menu([
-      { label: () => 'Kampania Hardcore', act: () => app.go(new SlotScreen(app, 'hardcore')) },
       { label: () => 'Ekspedycja (3 akty)', act: () => app.go(new SlotScreen(app, 'expedition')) },
       { label: () => 'Endless (bez końca)', act: () => app.go(new SlotScreen(app, 'endless')) },
-      { label: () => 'Trening (jeden poziom)', act: () => app.go(new HeroSelect(app, 'training')) },
-      { label: () => 'Szybki run (3 poziomy, ok. 10 min)', act: () => app.go(new HeroSelect(app, 'training', { quick: true })) },
-      { label: () => 'Wyzwanie dnia', act: () => app.go(new DailyScreen(app)) },
       { label: () => (app.save.meta.unassigned > 0 ? `Rozwój (${fmt(app.save.meta.unassigned)} do rozdania)` : 'Rozwój bohaterów'), act: () => app.go(new MetaScreen(app, this)) },
       { label: () => 'Kolekcja i osiągnięcia', act: () => app.go(new CollectionScreen(app, this)) },
       { label: () => 'Rekordy', act: () => app.go(new RecordsScreen(app)) },
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-    ], MENU_X + MENU_W / 2, 64, MENU_W - 12, 11, { 6: 11, 9: 11 });
+    ], MENU_X + MENU_W / 2, 68, MENU_W - 12, 16, { 2: 12, 5: 12 });
     music.setMood(MENU_MOOD);
-    // Nowy gracz (bez żadnego runu i zapisu): kursor od razu na Treningu.
-    if (isNewPlayer(app)) this.menu.sel = 3;
   }
 
   update(dt: number): void {
     this.t += dt;
-    if (this.checkKonami()) return;
     const before = this.menu.sel;
     this.menu.update(this.app.input);
     // Komunikat (np. o przerwanym runie) znika po pierwszej interakcji.
@@ -125,19 +107,6 @@ export class MainMenu implements Screen {
       this.app.save.notice = '';
       this.app.persist();
     }
-  }
-
-  /** Bufor ostatnich wciśnięć; po pełnym kodzie wybór bohatera do trybu Głowy bossów. */
-  private checkKonami(): boolean {
-    const inp = this.app.input;
-    const hit = KONAMI_KEYS.find(([a]) => inp.pressed(a));
-    if (!hit) return false;
-    this.konami = (this.konami + hit[1]).slice(-KONAMI[0].length);
-    if (!KONAMI.includes(this.konami)) return false;
-    this.konami = '';
-    sfx.play('boss');
-    this.app.go(new HeroSelect(this.app, 'training', { rush: true }));
-    return true;
   }
 
   render(): void {
@@ -164,13 +133,13 @@ export class MainMenu implements Screen {
       r.withAlpha(0.4, () => r.rect(MENU_X + 10 + textWidth(name) * 0.75 + 4, y + 3.5, MENU_W - 30 - textWidth(name) * 0.75, 0.5, C.gold));
     });
     m.render(r);
-    // Prawy panel: ikona, nazwa i opis zaznaczonej pozycji; nowemu graczowi Trening jest polecany.
+    // Prawy panel: ikona, nazwa i opis zaznaczonej pozycji; nowemu graczowi Ekspedycja jest polecana.
     const dx = MENU_X + MENU_W + 10, dw = W - dx - 18;
     panel(r, dx, 48, dw, 112, C.lavender);
     slot(r, dx + 10, 58, 28, C.gold);
     drawSprite(g, MENU_ICON[m.sel], dx + 24, 72);
     drawText(g, m.items[m.sel].label(), dx + 46, 60, C.yellow, { shadow: C.black });
-    const tip = isNewPlayer(this.app) && m.sel === 3;
+    const tip = isNewPlayer(this.app) && m.sel === 0;
     if (tip) drawText(g, 'Polecane na start!', dx + 46, 72, C.lime, { shadow: C.black });
     let ly = 94;
     for (const l of wrapText(MENU_DESC[m.sel] ?? '', dw - 22)) { drawText(g, l, dx + 11, ly, C.lgray); ly += 11; }
@@ -183,101 +152,51 @@ export class MainMenu implements Screen {
     }
   }
 
-  /** Dodatkowe informacje w panelu opisu: zapisany run, rekordy, bohater dnia, postęp kolekcji. */
+  /** Dodatkowe informacje w panelu opisu: zapisany run, esencja do rozdania, postęp kolekcji. */
   private info(sel: number): [string, number][] {
     const s = this.app.save;
-    const slotMode = (['hardcore', 'expedition', 'endless'] as const)[sel];
+    const slotMode = (['expedition', 'endless'] as const)[sel];
     if (slotMode) {
       const snap = s.slots[slotMode];
       return snap ? [[`Zapisany run: ${HERO_BY_ID[snap.hero]?.name ?? snap.hero}, LV ${snap.level}`, C.lime], ...slotLines(slotMode, snap).slice(0, 1).map((l): [string, number] => [l, C.lgray])] : [['Brak zapisanego runu.', C.dgray]];
     }
-    if (sel === 3 || sel === 4) {
-      const recs = Object.values(s.records);
-      return [[`Wygrane treningi: ${recs.reduce((n, r) => n + r.wins, 0)} / ${recs.reduce((n, r) => n + r.runs, 0)}`, C.lgray]];
-    }
-    if (sel === 5) {
-      const d = dailyOf(todayKey()), today = s.daily.date === d.date;
-      return [[`Bohater dnia: ${HERO_BY_ID[d.hero].name}`, HERO_BY_ID[d.hero].color], [today && s.daily.best ? `Twój czas dziś: ${fmtTime(s.daily.best)}` : 'Dziś jeszcze bez wyniku.', C.lgray]];
-    }
-    if (sel === 6) return [[s.meta.unassigned > 0 ? `Esencja do rozdania: ${fmt(s.meta.unassigned)}` : 'Esencję zdobywasz w Ekspedycji.', C.cyan]];
-    if (sel === 7) return [[`Karty ${s.collection.seen.length}, sekrety ${s.collection.secrets.length}, osiągnięcia ${s.achievements.length}`, C.lgray]];
+    if (sel === 2) return [[s.meta.unassigned > 0 ? `Esencja do rozdania: ${fmt(s.meta.unassigned)}` : 'You earn essence in Expeditions and in Endless.', C.cyan]];
+    if (sel === 3) return [[`Karty ${s.collection.seen.length}, sekrety ${s.collection.secrets.length}, osiągnięcia ${s.achievements.length}`, C.lgray]];
     return [];
   }
 }
 
 /** Menu główne: lewy panel z pozycjami (grupy: od indeksu) i ikony pozycji w panelu opisu. */
 const MENU_X = 18, MENU_W = 196;
-const MENU_GROUPS: [string, number][] = [['GRAJ', 0], ['POSTĘP', 6], ['INNE', 9]];
-const MENU_ICON = ['ui_skull', 'ex_boss', 'ic_orbit_evo', 'ab_k_volley', 'pi_clock', 'ex_shrine', 'syn_all', 'ex_chest', 'cd_gold', 'tag:Umiejętności', 'ex_anvil'];
+const MENU_GROUPS: [string, number][] = [['GRAJ', 0], ['POSTĘP', 2], ['INNE', 5]];
+const MENU_ICON = ['ex_boss', 'ic_orbit_evo', 'syn_all', 'ex_chest', 'cd_gold', 'tag:Umiejętności', 'ex_anvil'];
 
 /** Opisy pozycji menu głównego (kolejność jak w menu). */
 const MENU_DESC = [
-  'Poziomy po kolei z bossami i sklepem. Śmierć kasuje cały run.',
-  'Wyprawa przez 3 akty map z modyfikatorami. Daje esencję na Rozwój.',
-  'Jeden poziom bez końca, boss co 5 minut, coraz trudniej.',
-  'Jeden poziom z bossem, bez zapisu. Dobry na naukę bohaterów.',
-  'Trzy krótkie poziomy z bossami jeden po drugim, więcej XP i złota. Na jedną przerwę.',
-  'Codziennie ten sam bohater i pakty dla wszystkich. Pokonaj bossa jak najszybciej.',
-  'Drzewka bohaterów kupowane esencją z Ekspedycji.',
+  'Expedition across 3 acts of maps with modifiers, dungeons, shops and bosses. The most essence for Progression.',
+  'One endless level, a boss every few minutes, harder and harder. Essence depends on how long you survive.',
+  'Hero trees bought with essence from Expeditions and Endless.',
   'Karty i bany, unikaty, Księga sekretów, bestiariusz i osiągnięcia.',
   'Najlepsze wyniki bohaterów w każdym trybie.',
   'Sterowanie, zasady, żywioły, synergie, zasoby, moce, tryby.',
   'Dźwięk, celowanie, widoczność efektów, podpowiedzi.',
 ];
 
-/** Wyzwanie dnia: dzisiejszy bohater i pakty, najlepszy czas, start (Enter / klik). */
-export class DailyScreen implements Screen {
-  private readonly def = dailyOf(todayKey());
-
-  constructor(private readonly app: App) {}
-
-  update(): void {
-    const inp = this.app.input;
-    if (inp.pressed('back')) { this.app.go(new MainMenu(this.app)); return; }
-    if (inp.pressed('confirm') || inp.pressed('click')) {
-      sfx.play('levelup');
-      this.app.go(new GameScreen(this.app, this.def.hero, 'training', undefined, { daily: this.def }));
-    }
-  }
-
-  render(): void {
-    const r = this.app.r, g = r.g, d = this.def, h = HERO_BY_ID[d.hero];
-    r.clear(C.black);
-    drawText(g, 'Wyzwanie dnia', W / 2, 10, C.gold, { align: 'center', scale: 2, outline: C.black });
-    drawText(g, d.date, W / 2, 34, C.lavender, { align: 'center' });
-    panel(r, 60, 50, W - 120, 170, C.gold);
-    drawSprite(g, `${h.sprite}@${animFrame(h.sprite, Math.floor(performance.now() / 16), 0)}`, 100, 86, { scale: 2 });
-    drawText(g, h.name, 130, 66, h.color, { scale: 2, shadow: C.black });
-    drawText(g, `${h.role}: bohater dnia`, 130, 90, C.lavender);
-    drawText(g, 'Pakty dnia:', 80, 120, C.salmon);
-    Object.entries(d.pacts).forEach(([id, lv], i) => {
-      const p = PACT_BY_ID[id];
-      drawText(g, `${p.name} ${lv}: ${pactDesc(p, lv)}`, 92, 133 + i * 12, C.peach);
-    });
-    const s = this.app.save.daily, today = s.date === d.date;
-    drawText(g, 'Cel: pokonaj bossa jak najszybciej. Bez zapisu, bez Rozwoju.', 80, 166, C.lgray);
-    drawText(g, today && s.best ? `Twój najlepszy czas dziś: ${fmtTime(s.best)}` : 'Dziś jeszcze bez wyniku.', 80, 182, today && s.best ? C.yellow : C.dgray);
-    drawText(g, `Podejścia dziś: ${today ? s.tries : 0}`, 80, 196, C.dgray);
-    drawText(g, 'Enter: start    Esc: wstecz', W / 2, H - 20, C.lavender, { align: 'center' });
-  }
-}
-
 /** Nowy gracz: żadnego zakończonego ani trwającego runu. */
 function isNewPlayer(app: App): boolean {
   const s = app.save;
-  return Object.values(s.records).every((r) => r.runs === 0 && r.bestTime === 0) && !Object.values(s.slots).some(Boolean);
+  return Object.values(s.records).every((r) => r.bestTime === 0) && !Object.values(s.slots).some(Boolean);
 }
 
-const SLOT_TITLE: Record<SlotMode, string> = { hardcore: 'Kampania Hardcore', expedition: 'Ekspedycja', endless: 'Endless' };
-const SLOT_COLOR: Record<SlotMode, number> = { hardcore: C.salmon, expedition: C.lime, endless: C.pink };
-const SLOT_NEW: Record<SlotMode, string> = { hardcore: 'Nowa kampania', expedition: 'Nowa ekspedycja', endless: 'Nowy run' };
+const SLOT_TITLE: Record<SlotMode, string> = { expedition: 'Ekspedycja', endless: 'Endless' };
+const SLOT_COLOR: Record<SlotMode, number> = { expedition: C.lime, endless: C.pink };
+const SLOT_NEW: Record<SlotMode, string> = { expedition: 'Nowa ekspedycja', endless: 'Nowy run' };
 const SLOT_RULES: Record<SlotMode, string> = {
-  hardcore: 'Poziomy po kolei: cel, potem boss. Po zwycięstwie zachowujesz wszystko i idziesz dalej. Śmierć lub poddanie kasuje cały postęp. Wyjście z gry zapisuje run.',
-  expedition: `Wyprawa przez ${BAL.expedition.acts} akty. Wybierasz drogę przez mapy z modyfikatorami (ryzyko za więcej łupu), lochy, kapliczki, sklepy, kowadła i obozy. Na końcu aktu boss. Tylko tu działa Rozwój i zdobywasz esencję.`,
-  endless: 'Jeden poziom bez końca: boss co kilka minut, potem silniejsi wrogowie i następny biom. Wyjście z gry zapisuje run, śmierć go kończy.',
+  expedition: `An expedition across ${BAL.expedition.acts} acts. Pick your path through maps with modifiers (risk for more loot), dungeons, shrines, shops, anvils and camps. A boss ends every act. The most essence for Progression.`,
+  endless: 'One endless level: a boss every few minutes, then stronger enemies and the next biome. Quitting the game saves the run, death ends it. Essence for Progression depends on how long you survive.',
 };
 
-/** Slot trybu (Hardcore, Ekspedycja, Endless): kontynuacja zapisanego runu, porzucenie albo nowy run + rekordy. */
+/** Slot trybu (Ekspedycja, Endless): kontynuacja zapisanego runu, porzucenie albo nowy run + rekordy. */
 export class SlotScreen implements Screen {
   private menu: Menu;
   private confirmAbandon = false;
@@ -328,21 +247,12 @@ export class SlotScreen implements Screen {
       wrapText(SLOT_RULES[this.mode], 200).forEach((l, i) => drawText(g, l, 24, 52 + i * 13, C.lgray));
     }
     this.menu.render(r);
-    if (this.mode === 'hardcore') renderBoard(this.app, 246, 40, 224, 8);
-    else renderHeroBests(this.app, this.mode, 246, 40, 224);
+    renderHeroBests(this.app, this.mode, 246, 40, 224);
   }
 }
 
 /** Opis zapisanego runu w slocie (pierwsza linia wyróżniona). */
 function slotLines(mode: SlotMode, s: RunSnapshot): string[] {
-  if (mode === 'hardcore') {
-    const next = levelDef(s.depth);
-    return [
-      s.inProgress ? `W trakcie poziomu ${s.depth} (${fmtTime(s.stage?.time ?? 0)})` : `Następny poziom: ${s.depth}`,
-      next.name,
-      `Cel: ${objectiveLabel(next.objective)}`,
-    ];
-  }
   if (mode === 'endless') return [`Głębia ${s.depth}, czas poziomu ${fmtTime(s.stage?.time ?? 0)}`];
   const ex = s.expedition;
   return [
@@ -352,7 +262,7 @@ function slotLines(mode: SlotMode, s: RunSnapshot): string[] {
   ];
 }
 
-/** Rekordy bohaterów w trybie bez tablicy (Endless: najdłuższy czas, Ekspedycja: węzły i ukończone wyprawy). */
+/** Rekordy bohaterów w trybie (Endless: najdłuższy czas, Ekspedycja: węzły i ukończone wyprawy). */
 function renderHeroBests(app: App, mode: SlotMode, x: number, y: number, w: number): void {
   const r = app.r, g = r.g;
   panel(r, x, y, w, 26 + HEROES.length * 13, C.gold);
@@ -363,23 +273,6 @@ function renderHeroBests(app: App, mode: SlotMode, x: number, y: number, w: numb
     drawText(g, h.name, x + 12, yy, h.color);
     const v = mode === 'endless' ? fmtTime(rec.bestEndless) : `węzły ${rec.bestExpedition}   ukończone ${rec.expeditionWins}`;
     drawText(g, v, x + w - 12, yy, C.white, { align: 'right' });
-  });
-}
-
-/** Tablica rekordów Hardcore (najdalszy poziom, potem czas). */
-function renderBoard(app: App, x: number, y: number, w: number, rows: number): void {
-  const r = app.r, g = r.g;
-  panel(r, x, y, w, 26 + rows * 13, C.gold);
-  drawText(g, 'Rekordy Hardcore', x + 12, y + 8, C.yellow, { shadow: C.black });
-  const board = app.save.board;
-  if (board.length === 0) drawText(g, 'Brak wpisów', x + 12, y + 24, C.dgray);
-  board.slice(0, rows).forEach((e, i) => {
-    const h = HERO_BY_ID[e.hero];
-    const yy = y + 24 + i * 13;
-    drawText(g, `${i + 1}.`, x + 12, yy, C.lavender);
-    drawText(g, h?.name ?? e.hero, x + 28, yy, h?.color ?? C.white);
-    drawText(g, `poziom ${e.depth}`, x + w - 60, yy, C.white, { align: 'right' });
-    drawText(g, fmtTime(e.time), x + w - 12, yy, C.lgray, { align: 'right' });
   });
 }
 
@@ -402,7 +295,7 @@ export class HeroSelect implements Screen {
   /** Górna krawędź siatki umiejętności na stronie ogólnej (klik otwiera stronę umiejętności). */
   private skillsAt = -99;
 
-  constructor(private readonly app: App, private readonly mode: Mode, private readonly opts: GameOpts = {}) {
+  constructor(private readonly app: App, private readonly mode: Mode) {
     // Kursor na ostatnio wybranym bohaterze.
     this.sel = Math.max(0, HEROES.findIndex((h) => h.id === app.save.lastHero));
   }
@@ -411,7 +304,7 @@ export class HeroSelect implements Screen {
     sfx.play('levelup');
     this.app.save.lastHero = HEROES[this.sel].id;
     this.app.persist();
-    this.app.go(new GameScreen(this.app, HEROES[this.sel].id, this.mode, undefined, this.opts));
+    this.app.go(new GameScreen(this.app, HEROES[this.sel].id, this.mode));
   }
 
   update(): void {
@@ -421,7 +314,7 @@ export class HeroSelect implements Screen {
     if (inp.pressed('down')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
     if (inp.pressed('left') || inp.pressed('right')) { this.page = (this.page + (inp.pressed('left') ? TABS.length - 1 : 1)) % TABS.length; sfx.play('select'); }
     if (inp.pressed('confirm')) this.start();
-    if (inp.pressed('back')) this.app.go(this.mode === 'training' ? new MainMenu(this.app) : new SlotScreen(this.app, this.mode));
+    if (inp.pressed('back')) this.app.go(new SlotScreen(this.app, this.mode));
     if (inp.pressed('inventory')) { this.app.go(new PactScreen(this.app, this)); return; }
     if (inp.pressed('skip')) this.cycleSkin();
     if (inp.pressed('click')) {
@@ -431,7 +324,7 @@ export class HeroSelect implements Screen {
       if (this.page === 0 && inside(x, y, this.moreAt[0], this.moreAt[1] - 1, MORE_W, 14)) { this.page = 2; sfx.play('select'); return; }
       if (this.page === 0 && inside(x, y, DET_X + 8, this.skillsAt, DET_W - 16, 40)) { this.page = 1; sfx.play('select'); return; }
       if (inside(x, y, W - 12 - START_W, BTN_Y, START_W, BTN_H)) { this.start(); return; }
-      if (inside(x, y, LIST_X, BTN_Y, BACK_W, BTN_H)) { this.app.go(this.mode === 'training' ? new MainMenu(this.app) : new SlotScreen(this.app, this.mode)); return; }
+      if (inside(x, y, LIST_X, BTN_Y, BACK_W, BTN_H)) { this.app.go(new SlotScreen(this.app, this.mode)); return; }
       HEROES.forEach((_, i) => {
         if (!inside(x, y, LIST_X, TOP + i * ROW_H, LIST_W, ROW_H - 4)) return;
         if (this.sel === i) this.start();
@@ -470,9 +363,7 @@ export class HeroSelect implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     const m = this.mode;
-    const o = this.opts;
-    const title = `${o.rush ? 'Głowy bossów' : o.quick ? 'Szybki run' : m === 'training' ? 'Trening' : SLOT_TITLE[m].split(' ').pop()}: wybierz bohatera`;
-    drawText(g, title, W / 2, 10, o.rush ? C.hotpink : o.quick ? C.cyan : m === 'training' ? C.yellow : SLOT_COLOR[m], { align: 'center', scale: 2, outline: C.black });
+    drawText(g, `${SLOT_TITLE[m]}: wybierz bohatera`, W / 2, 10, SLOT_COLOR[m], { align: 'center', scale: 2, outline: C.black });
     // Lista bohaterów.
     HEROES.forEach((h, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel;
@@ -504,11 +395,9 @@ export class HeroSelect implements Screen {
     else if (this.page === 1) drawSkills(r, h.abilities.map((a) => ({ def: a, cd: a.slot === 'ult' ? 'ładowane zabójstwami' : `odnowienie ${a.cooldown} s`, evo: false })), x + 12, y + 66, DET_W - 24);
     else this.renderResource(h, x, y);
     const rec = heroRecord(this.app.save, h.id);
-    const best = m === 'hardcore' ? `Najdalej: poziom ${rec.bestDepth}`
-      : m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}`
-      : m === 'endless' ? `Rekord: ${fmtTime(rec.bestEndless)}` : `Rekord: ${fmtTime(rec.bestTime)}   wygrane: ${rec.wins}`;
+    const best = m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}` : `Rekord: ${fmtTime(rec.bestEndless)}`;
     drawText(g, best, x + 12, y + DET_H - 14, C.dgray);
-    if (m === 'expedition') {
+    {
       const hm = heroMeta(this.app.save.meta, h.id);
       drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
     }
@@ -537,7 +426,7 @@ export class HeroSelect implements Screen {
     // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa (klik: strona z opisami).
     this.skillsAt = ly;
     if (hovered(x + 8, ly, DET_W - 16, 40)) r.withAlpha(0.15, () => r.roundRect(x + 8, ly - 2, DET_W - 16, 42, 2, C.white));
-    drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 32, C.dgray, { align: 'right', scale: 0.75 });
+    drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 41, C.dgray, { align: 'right', scale: 0.75 });
     h.abilities.forEach((a, i) => {
       const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
       const ax = x + 12 + (i % 2) * 140, ay = ly + Math.floor(i / 2) * 20;
@@ -583,14 +472,14 @@ export class RecordsScreen implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     drawText(g, 'Rekordy', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    renderBoard(this.app, 120, 30, 240, 8);
-    panel(r, 20, 168, 440, 98, C.slate);
-    const cols = [30, 84, 136, 192, 240, 290, 340, 408];
-    ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Hardcore', 'Endless', 'Ekspedycja', 'Trening'].forEach((s, i) => drawText(g, s, cols[i], 175, C.lavender));
+    panel(r, 30, 40, 420, 30 + HEROES.length * 16, C.slate);
+    const cols = [42, 110, 176, 242, 300, 370];
+    ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Endless', 'Ekspedycja'].forEach((s, i) => drawText(g, s, cols[i], 48, C.lavender));
+    drawText(g, 'Expedition: most maps (expeditions won)', W / 2, 54 + HEROES.length * 16 + 26, C.dgray, { align: 'center', scale: 0.75 });
     HEROES.forEach((h, i) => {
       const rec = heroRecord(this.app.save, h.id);
-      const y = 189 + i * 12;
-      [h.name, fmtTime(rec.bestTime), fmt(rec.bestKills), String(rec.bestLevel), `poz. ${rec.bestDepth}`, fmtTime(rec.bestEndless), `${rec.bestExpedition} (${rec.expeditionWins})`, `${rec.wins}/${rec.runs}`]
+      const y = 64 + i * 16;
+      [h.name, fmtTime(rec.bestTime), fmt(rec.bestKills), String(rec.bestLevel), fmtTime(rec.bestEndless), `${rec.bestExpedition} (${rec.expeditionWins})`]
         .forEach((s, j) => drawText(g, s, cols[j], y, j === 0 ? h.color : C.white));
     });
   }

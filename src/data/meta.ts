@@ -2,8 +2,8 @@ import type { Stats } from '../entities/types';
 import { BAL } from './balance';
 
 /**
- * Meta-progresja (tylko Ekspedycja): każdy bohater ma własne drzewko, esencję, Paragon i prestiż.
- * Esencję zdobywa bohater, który kończy Ekspedycję (także po śmierci). Hardcore i Endless są „czyste” — bez meta-bonusów.
+ * Meta-progresja (Ekspedycja i Endless): każdy bohater ma własne drzewko, esencję, Paragon i prestiż.
+ * Esencję zdobywa bohater na koniec runu (także po śmierci); w Endless mniej, zależnie od czasu przetrwania.
  *
  * Drzewko bohatera: 4 gałęzie tematyczne + wspólna gałąź Wyprawa (zasoby na start, mnożnik esencji).
  * Kolejność w gałęzi = wymagania (węzeł wymaga poprzedniego na poziomie 1+). Ostatni węzeł gałęzi tematycznej
@@ -267,9 +267,6 @@ export interface MetaBonus {
   start: Partial<Record<StartRes, number>>;
   essenceMul: number;
 }
-
-/** Bez meta-bonusów (Hardcore, Endless, Trening). */
-export const NO_META: MetaBonus = { stats: {}, mul: {}, flags: {}, start: {}, essenceMul: 1 };
 
 export function metaBonus(h: HeroMeta, tree: MetaNode[]): MetaBonus {
   const b: MetaBonus = { stats: {}, mul: {}, flags: {}, start: {}, essenceMul: 1 + BAL.meta.prestigeEssence * h.prestige };

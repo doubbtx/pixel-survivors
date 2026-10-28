@@ -188,7 +188,7 @@ export class MetaScreen implements Screen {
     if (meta.unassigned > 0) {
       button(r, W / 2 - 80, BTN_Y, 160, 16, `[B] Przydziel ${fmt(meta.unassigned)} esencji`, { accent: C.cyan, pulse: true });
     } else {
-      drawText(g, 'Esencja: koniec każdej Ekspedycji', W / 2, BTN_Y + 2, C.dgray, { align: 'center' });
+      drawText(g, 'Essence: end of every Expedition and Endless run', W / 2, BTN_Y + 2, C.dgray, { align: 'center' });
     }
     const canPrestige = spentEssence(h, tree) >= BAL.meta.prestigeCost;
     button(r, W - 128, BTN_Y, 120, 16, this.confirmPrestige ? 'Na pewno? [X]' : '[X] Prestiż', { active: this.confirmPrestige, accent: this.confirmPrestige ? C.red : C.pink, col: canPrestige ? undefined : C.dgray });

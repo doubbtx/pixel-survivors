@@ -75,7 +75,7 @@ export function featsOnKill(run: Run, e: Enemy): void {
   run.showBanner('Wyczyn: Rzeź!');
 }
 
-/** Wygrany run bez trafienia (ui/game-screen.ts przy zwycięstwie). */
+/** Bez skazy: boss aktu Ekspedycji albo boss Endless pokonany bez jednego trafienia w całym runie. */
 export function featsOnWin(run: Run): void {
   if (run.runHits === 0 && !run.featsRun.includes('flawless')) {
     award(run, 'flawless');

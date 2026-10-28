@@ -53,13 +53,14 @@ export const BAL = {
    * souls: zabity wróg bliżej niż `range` daje 1; pełne: sługa za `auto` dusz; R zużywa wszystkie: +`ultDmg` obrażeń sług za duszę,
    *        +1 sługa za każde `ultExtra` dusz.
    */
-  /** Tryb łatwy (Ustawienia): o tyle mniej obrażeń i HP wrogów. Szybki run: liczba poziomów, czas celu poziomu (s), bonus XP i złota. */
+  /** Tryb łatwy (Ustawienia): o tyle mniej obrażeń i HP wrogów. */
   easy: { dmg: 0.4, hp: 0.25 },
-  quick: { levels: 3, levelTime: 150, xp: 0.6, gold: 0.5 },
-  /** Sekretny biom Pustka: minimalny poziom Paktu (data/levels.ts, Run.levelFor). */
+  /**
+   * Sekretny biom Pustka w Endless (Run.levelFor): po pełnym cyklu biomów, gdy Pakt ma co najmniej `voidPact`
+   * albo run trwa co najmniej `voidEndlessTime` s. W Ekspedycji Pustkę otwiera Klucz Pustki (akt 4).
+   */
   voidPact: 5,
-  /** Głowy bossów: rozgrzewka przed 1. bossem i przerwa między bossami (s), leczenie po bossie, awanse po bossie i na start, HP bossów (flaga bossHp). */
-  rush: { warmup: 20, gap: 15, heal: 0.3, levels: 3, startLevels: 8, bossHp: -0.4 },
+  voidEndlessTime: 1200,
   /** Muzyka (core/music.ts): tylu wrogów naraz daje pełną intensywność walki (bez bossa). */
   musicCrowd: 140,
   /**
@@ -220,7 +221,7 @@ export const BAL = {
   luckCards: { gold: 0.3, prism: 1 },
   bagSize: 24,
 
-  // --- sklep między poziomami (Hardcore) ---
+  // --- sklep (węzły sklepu Ekspedycji) ---
   /** Mnożnik cen sklepu z głębokością (jak wartość rozkładania przedmiotów — liniowo). */
   shopScale: (depth: number) => 1 + 0.5 * (depth - 1),
   shopItems: 4,
@@ -282,6 +283,8 @@ export const BAL = {
     essencePerLevel: 1.5,
     /** Esencja za każdą ukończoną mapę Ekspedycji. */
     essencePerMap: 8,
+    /** Endless: esencja z tego samego wzoru (głębia, czas, zabójstwa, poziom postaci) × tyle — mniej niż Ekspedycja. */
+    endlessEssenceMul: 0.6,
     /** Paragon: poziom = sqrt(cała esencja / dzielnik); każdy poziom daje tyle obrażeń i maks. HP. */
     paragonDiv: 40,
     paragonPct: 0.01,

@@ -1,4 +1,5 @@
 import { EN } from './i18n-en';
+import { PL } from './i18n-pl';
 
 /**
  * Język gry. Teksty w kodzie są po polsku; przy angielskim core/font.ts tłumaczy każdy rysowany napis (`tr`):
@@ -7,6 +8,8 @@ import { EN } from './i18n-en';
  *  3. podział na kawałki po separatorach (`SEPS`, od podwójnych spacji do przecinków) i tłumaczenie każdego,
  *  4. słowo po słowie, gdy każde słowo jest w słowniku (nazwy przedmiotów: przymiotnik + typ + "of X").
  * Wyniki trafiają do pamięci podręcznej (czyszczonej po CACHE_MAX wpisach).
+ * Od 0.27 nowe napisy pisane są po angielsku: słownik `core/i18n-pl.ts` (EN → PL, dokładnie i wzorce `{}`) tłumaczy je
+ * na polski, a w trybie angielskim zostają bez zmian.
  */
 export type Lang = 'en' | 'pl';
 
@@ -36,6 +39,33 @@ for (const [k, v] of Object.entries(EN)) {
   PATTERNS.push({ re, out: v, lit: lit.length });
 }
 PATTERNS.sort((a, b) => b.lit - a.lit);
+
+/** Słownik EN → PL dla nowych napisów: dokładnie i wzorce (`lits` = kawałki klucza między `{}`). */
+const PL_EXACT = new Map<string, string>();
+const PL_PATTERNS: { re: RegExp; out: string; lits: string[] }[] = [];
+for (const [k, v] of Object.entries(PL)) {
+  if (!k.includes('{}')) { PL_EXACT.set(k, v); continue; }
+  const lits = k.split('{}');
+  PL_PATTERNS.push({ re: new RegExp(`^${lits.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(.*?)')}$`, 's'), out: v, lits });
+}
+PL_PATTERNS.sort((a, b) => b.lits.join('').length - a.lits.join('').length);
+
+/**
+ * Napis ze słownika EN → PL: po polsku albo (w trybie angielskim) bez zmian. Wstawki tłumaczone osobno, bo mogą
+ * pochodzić z polskiego kodu (nazwy bohaterów, liczby). `undefined`, gdy napisu nie ma w słowniku.
+ */
+function english(s: string): string | undefined {
+  const hit = PL_EXACT.get(s);
+  if (hit !== undefined) return lang === 'pl' ? hit : s;
+  for (const p of PL_PATTERNS) {
+    const m = p.re.exec(s);
+    if (!m) continue;
+    const ins = m.slice(1).map((x) => tr(x));
+    if (lang === 'pl') { let i = 0; return p.out.replace(/\{\}/g, () => ins[i++]); }
+    return p.lits.map((l, i) => l + (ins[i] ?? '')).join('');
+  }
+  return undefined;
+}
 
 const LETTER = /[A-Za-ząćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
 /** Separatory od najmocniejszego: kawałki tłumaczone osobno, zdania zostają w całości jak najdłużej. */
@@ -120,13 +150,13 @@ function translate(s: string, depth: number): string {
   return s;
 }
 
-/** Napis w bieżącym języku (polski bez zmian). */
+/** Napis w bieżącym języku: nowe angielskie przez słownik EN → PL, stare polskie przez słownik PL → EN. */
 export function tr(s: string): string {
-  if (lang === 'pl' || !s) return s;
+  if (!s) return s;
   let t = cache.get(s);
   if (t === undefined) {
     if (cache.size > CACHE_MAX) cache.clear();
-    t = translate(s, 0);
+    t = english(s) ?? (lang === 'pl' ? s : translate(s, 0));
     cache.set(s, t);
   }
   return t;

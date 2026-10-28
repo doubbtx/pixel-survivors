@@ -6,6 +6,7 @@ import { sfx } from './core/audio';
 import { loadSave, writeSave } from './core/save';
 import type { App, Screen } from './ui/app';
 import { MainMenu, toggleFullscreen } from './ui/menus';
+import { WhatsNewScreen, pendingNews } from './ui/whats-new';
 import { pointer } from './ui/widgets';
 import { setLang } from './core/i18n';
 import { music } from './core/music';
@@ -52,7 +53,8 @@ const app: App = {
     music.setVolume(save.settings.music);
   },
 };
-screen = new MainMenu(app);
+// Po aktualizacji najpierw nowości (raz), potem menu.
+screen = pendingNews(app) ? new WhatsNewScreen(app) : new MainMenu(app);
 
 app.loop = startLoop(
   (dt) => {

@@ -10,9 +10,10 @@ kartami-augmentami i ekwipunkiem z jakościami. Teksty w kodzie po polsku, gra d
 - Kolory tylko przez nazwy `C.*` z `core/palette.ts` (paleta ENDESGA 32), nigdy liczby indeksów.
 - Czcionka pikselowa nie ma znaku "—" (em-dash) ani egzotycznych symboli — w tekstach widocznych w grze używaj "-" / ",".
 - Wszystkie liczby balansu w `data/balance.ts` (`BAL`).
-- Język: napisy w kodzie piszemy po polsku, `core/font.ts` tłumaczy każdy rysowany tekst przez `tr` (`core/i18n.ts`).
-  Każdy nowy napis widoczny w grze musi mieć wpis w `core/i18n-en.ts` (wstawki jako `{}`, ta sama kolejność);
-  części składane z kawałków tłumaczą się osobno, więc wystarczy wpis dla każdego kawałka.
+- Język: `core/font.ts` tłumaczy każdy rysowany tekst przez `tr` (`core/i18n.ts`). Od 0.27 nowe napisy piszemy po angielsku
+  i dopisujemy polską wersję w `core/i18n-pl.ts` (wstawki jako `{}`, ta sama kolejność). Stare polskie napisy tłumaczy
+  `core/i18n-en.ts`; zmieniając taki napis, przepisz go po angielsku i przenieś do `i18n-pl.ts`.
+  Części składane z kawałków tłumaczą się osobno, więc wystarczy wpis dla każdego kawałka.
 - Styl grafiki: 16-bit, wszystko rysowane proceduralnie w kodzie (bez plików graficznych).
 - Po zmianach: `npx tsc --noEmit` musi przejść.
 
@@ -29,14 +30,14 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 
 - `core/` — pętla, renderer (W/H/ZOOM, `rect`, `circle`, `withAlpha`), input (akcje abstrakcyjne: klawiatura, pad, mysz/dotyk),
   font (`drawText`, `wrapText`, LINE_H 12, polskie znaki), paleta (`C`, `RAMP`), audio (Web Audio, `sfx.play`), `music.ts` (muzyka proceduralna,
-  `music.setMood`), rng (`rng.seed` dla wyzwania dnia), save.
+  `music.setMood`), rng, save (`SAVE_VERSION`, `MIGRATIONS`, `seenVersion`), i18n (`tr`: PL → EN przez `i18n-en.ts`, EN → PL przez `i18n-pl.ts`).
 - `gfx/` — `painter.ts` (sphere, polyShade, block, ring, disc, outline), `sprites.ts` (rejestr po nazwie, `drawSprite`),
   `icons.ts` (ikony 16×16: `ic_<broń>`, `pi_<pasywka>`, `ab_<umiejętność>`, `tag:<Tag>`, `bp_<moc bossa>`; `fu:<A>:<B>` = ikona hybrydy złożona w sprites.ts), `items.ts` (`it_<przedmiot>`),
   `hero-icons.ts` (ikony Vesper i Aurela), `elemmark.ts` (kształty żywiołów dla daltonistów), `actors.ts` (animowane postacie, `name@klatka`, skórki `name~odznaka@klatka` przez `Painter.recolor`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów), `ground.ts` (podłoże z pól szumu w kawałkach `CHUNK`: trawa, ziemia, ścieżki, posadzki; `surfaceAt`), `landmarks.ts` (brama, obelisk, obozowisko, ruiny, kolumny), `objects.ts` (kapliczki, portale, kamień zadania, totem, teren: `tcover@v`, `tbarrel`, `tspikes@0/1`).
 - `data/` — `balance.ts`, `weapons.ts` (z ewolucjami, hybrydy i `FUSIONS`), `passives.ts`, `enemies.ts` (Volley: kształt i ruch salw, `BOSS_POWERS`), `waves.ts`, `heroes.ts`,
   `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `upgrades.ts` (jakość ulepszeń broni, `WeaponBonus`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (~115 kart: stats/mul/flags/hooks, `unlock` = karta z osiągnięcia; lista flag w komentarzu pliku),
   `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, unikaty `UNIQUES`, rollItem, rollUnique, porównania), `tasks.ts` (zadania), `pacts.ts` (pakty ryzyka, odznaki i skórki), `forge.ts` (Kuźnia: materiały, zwoje, `FORGE_STEPS`, progi, `AWAKENINGS`, warsztat `CRAFTS`),
-  `secrets.ts` (Księga sekretów), `achievements.ts`, `bestiary.ts`, `daily.ts` (wyzwanie dnia z daty).
+  `secrets.ts` (Księga sekretów), `achievements.ts`, `bestiary.ts`.
 - `entities/` — typy encji.
 - `systems/` — gracz, bronie, umiejętności, spawner, wrogowie + boss, pociski, strefy, znajdźki, awans (levelup), wieżyczki, sługi (`minions.ts`),
   `resource.ts` (zasób bohatera), `tasks.ts` (zadania w trakcie poziomu), `secrets.ts` (budzenie sekretów), `mapsecrets.ts` (sekrety map),
@@ -46,11 +47,11 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `hurtPlayer`, `recomputeStats` (bohater + pasywki + karty + ekwipunek), `indexEffects` (flagi i hooki z kart i super-bonusów),
   `emit` hooków (onHit, onKill, onAbilityCast, onDash, onDamageTaken, onLevelUp, onTick), ekwipunek (`equip`, `unequip`,
   `salvage`, `slotFor`), `toSnapshot`/`fromSnapshot`.
-- `game/` — też `render.ts` (świat), `scenery.ts` (skupiska dekoracji i kompozycje ruin, bez kolizji), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy, tablica Hardcore).
+- `game/` — też `render.ts` (świat), `scenery.ts` (skupiska dekoracji i kompozycje ruin, bez kolizji), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy).
 - `ui/` — `theme.ts` (wspólny styl: kolory akcentów, odstępy, rozmiary HUD, `tile`, `meter`, `iconSlot`, `cornerTag`, `label`), `widgets.ts` (panel, dim, bar, Menu, slot — w stylu z theme.ts), `hud.ts` (tylko rysowanie + stan animacji `HudAnim`), `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
-  `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `skills.ts` (`drawSkills`: opisy umiejętności na wyborze bohatera i w pauzie), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts` — zakładki Ogólne/Umiejętności/Zasób, przyciski Wstecz i Start, `DailyScreen`, kod Konami w `MainMenu`).
+  `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/map/end; `saveSlot`, `overlayReturn`), `skills.ts` (`drawSkills`: opisy umiejętności na wyborze bohatera i w pauzie), `menus.ts` (`MainMenu`, `SlotScreen` per tryb: Ekspedycja i Endless, `HeroSelect` — zakładki Ogólne/Umiejętności/Zasób, przyciski Wstecz i Start, `RecordsScreen`), `whats-new.ts` (ekran nowości po aktualizacji: `NOTES`, `pendingNews`).
 
-## Stan (wersja 0.26.1)
+## Stan (wersja 0.27.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -401,6 +402,15 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   wiersze Szczęście i Karty przy awansie; opis w Pomocy (Rozgrywka).
   - 0.26.1: numer wersji w prawym dolnym rogu menu głównego (`__APP_VERSION__` z package.json przez `define` w vite.config.ts,
     deklaracja w src/env.d.ts) — łatwo sprawdzić, czy przeglądarka wczytała najnowszą grę.
+- Etap 0.27 (faza 1 planu): tryby tylko `'endless' | 'expedition'` (`Mode` = `SlotMode`). Usunięte: Hardcore (tablica `board`,
+  stan `cleared`, `nextLevel`), Trening, Szybki run (`BAL.quick`), Głowy bossów (`BAL.rush`, `rushBest`, kod Konami), Wyzwanie dnia
+  (`data/daily.ts`, `save.daily`). `HeroRecord`: bestTime/bestKills/bestLevel/bestEndless/bestExpedition/expeditionWins.
+  Zapis v8 (migracja 7 → 8 porzuca dane usuniętych trybów, `notice` gdy był slot Hardcore, `seenVersion: '0.26'`).
+  Endless: meta-bonusy Rozwoju i esencja × `BAL.meta.endlessEssenceMul` (0.6); Pustka w Endless przy Pakcie `BAL.voidPact`+ albo po
+  `BAL.voidEndlessTime` (1200 s). Bez skazy (`featsOnWin`): boss aktu albo boss Endless przy `runHits === 0`. Asceta: akt 2 albo 600 s Endless.
+  Osiągnięcie `daily` → Wayfarer (akt 1 Ekspedycji, to samo id). i18n w obie strony: `core/i18n-pl.ts` (EN → PL, dokładnie i wzorce `{}`);
+  napis ze słownika PL w trybie angielskim zostaje bez zmian, wstawki tłumaczone osobno. Ekran What's new (`ui/whats-new.ts`):
+  raz po zmianie major.minor (`seenVersion`), nowa gra oznacza wersję od razu; zamyka go dowolny klawisz (`Input.anyPressed`), klik albo dotyk.
 ## Plan dalej (przed wydaniem)
 
 Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z innej sesji). Plan uzgodniony z autorem; kolejność faz = kolejność wersji.
@@ -412,7 +422,7 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - Wszystko od razu pod telefon i Steam: pad, różne rozdzielczości, okno i pełny ekran, zapis w jednym pliku (Steam Cloud), osiągnięcia gotowe do przypięcia pod osiągnięcia Steam.
 - Grafika proceduralna (w kodzie); wyjątek: dźwięk może korzystać z plików (faza 5).
 
-### Faza 1: porządki w trybach, język i wersja (v0.27)
+### Faza 1: porządki w trybach, język i wersja (v0.27) — GOTOWE (0.27.0)
 - Usunięcie trybów: Kampania Hardcore, Trening, Szybki run, Głowy bossów i Wyzwanie dnia znikają z menu, kodu, rekordów, pomocy i zapisu. Zostają Ekspedycja i Endless.
 - Rozwój (drzewko bohatera) działa też w Endless, Endless daje esencję (mniej niż Ekspedycja, zależnie od czasu przetrwania). Zmienić opisy „Endless bez Rozwoju”.
 - Sekrety przenoszone, nie usuwane:
@@ -479,6 +489,6 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - `npm run dev`, w grze F3 = debug, F4 = przyspiesz cel poziomu, F6 = awans, F7 = łup bossa (12% szans na unikat).
 - Bez UI: moduły z serwera Vite w Playwright (`await import('/src/game/run.ts')`, `new Run(...)`, `run.update(1/60, wejście)`) —
   szybki test systemów (zasoby, zadania, moce, fuzje: `generateOptions`/`applyOption`, teren: `run.terrain`).
-- Sklep bez grania do bossa: wstrzyknij w localStorage zapis w `slots.hardcore` z `inProgress: false` i polem `shop`, potem Kontynuuj.
+- Sklep bez grania: zapis w `slots.expedition` z otwartym węzłem sklepu (pole `shop`), potem Kontynuuj.
 - Ekspedycja: zapis w `slots.expedition` z polem `expedition` (np. `path` przed bossem) pozwala od razu testować bossa i przejście aktu.
 - Szczegóły sterowania i dodawania zawartości: README.md.
