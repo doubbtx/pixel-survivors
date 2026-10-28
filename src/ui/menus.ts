@@ -23,6 +23,7 @@ import { BalanceScreen } from './balance';
 import { HelpScreen } from './help';
 import { heroMeta, paragonLevel } from '../data/meta';
 import { pactLevel, pactBadge, heroSkins, BADGE_BY_ID } from '../data/pacts';
+import { UNLOCK_BY_ID, heroUnlocked, unlocked } from '../data/unlocks';
 import { PactScreen } from './pacts';
 
 const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
@@ -88,7 +89,7 @@ export class MainMenu implements Screen {
   constructor(private readonly app: App) {
     this.menu = new Menu([
       { label: () => 'Ekspedycja (3 akty)', act: () => app.go(new SlotScreen(app, 'expedition')) },
-      { label: () => 'Endless (bez końca)', act: () => app.go(new SlotScreen(app, 'endless')) },
+      { label: () => (unlocked(app.save, 'endless') ? 'Endless (bez końca)' : 'Endless (locked)'), act: () => (unlocked(app.save, 'endless') ? app.go(new SlotScreen(app, 'endless')) : sfx.play('hurt')) },
       { label: () => (app.save.meta.unassigned > 0 ? `Rozwój (${fmt(app.save.meta.unassigned)} do rozdania)` : 'Rozwój bohaterów'), act: () => app.go(new MetaScreen(app, this)) },
       { label: () => 'Kolekcja i osiągnięcia', act: () => app.go(new CollectionScreen(app, this)) },
       { label: () => 'Rekordy', act: () => app.go(new RecordsScreen(app)) },
@@ -142,7 +143,8 @@ export class MainMenu implements Screen {
     const tip = isNewPlayer(this.app) && m.sel === 0;
     if (tip) drawText(g, 'Polecane na start!', dx + 46, 72, C.lime, { shadow: C.black });
     let ly = 94;
-    for (const l of wrapText(MENU_DESC[m.sel] ?? '', dw - 22)) { drawText(g, l, dx + 11, ly, C.lgray); ly += 11; }
+    const desc = m.sel === 1 && !unlocked(this.app.save, 'endless') ? `Locked. ${UNLOCK_BY_ID.endless.how}` : MENU_DESC[m.sel] ?? '';
+    for (const l of wrapText(desc, dw - 22)) { drawText(g, l, dx + 11, ly, C.lgray); ly += 11; }
     ly += 4;
     for (const [l, col] of this.info(m.sel)) { drawText(g, l, dx + 11, ly, col, { scale: 0.75 }); ly += 9; }
     drawText(g, 'Strzałki / mysz: wybór   Enter: wejdź   F: pełny ekran', dx + dw / 2, 148, C.dgray, { align: 'center', scale: 0.75 });
@@ -156,6 +158,7 @@ export class MainMenu implements Screen {
   private info(sel: number): [string, number][] {
     const s = this.app.save;
     const slotMode = (['expedition', 'endless'] as const)[sel];
+    if (slotMode === 'endless' && !unlocked(s, 'endless')) return [];
     if (slotMode) {
       const snap = s.slots[slotMode];
       return snap ? [[`Zapisany run: ${HERO_BY_ID[snap.hero]?.name ?? snap.hero}, LV ${snap.level}`, C.lime], ...slotLines(slotMode, snap).slice(0, 1).map((l): [string, number] => [l, C.lgray])] : [['Brak zapisanego runu.', C.dgray]];
@@ -301,6 +304,7 @@ export class HeroSelect implements Screen {
   }
 
   private start(): void {
+    if (!heroUnlocked(this.app.save, HEROES[this.sel].id)) { sfx.play('hurt'); return; }
     sfx.play('levelup');
     this.app.save.lastHero = HEROES[this.sel].id;
     this.app.persist();
@@ -315,11 +319,11 @@ export class HeroSelect implements Screen {
     if (inp.pressed('left') || inp.pressed('right')) { this.page = (this.page + (inp.pressed('left') ? TABS.length - 1 : 1)) % TABS.length; sfx.play('select'); }
     if (inp.pressed('confirm')) this.start();
     if (inp.pressed('back')) this.app.go(new SlotScreen(this.app, this.mode));
-    if (inp.pressed('inventory')) { this.app.go(new PactScreen(this.app, this)); return; }
+    if (inp.pressed('inventory') && unlocked(this.app.save, 'pacts')) { this.app.go(new PactScreen(this.app, this)); return; }
     if (inp.pressed('skip')) this.cycleSkin();
     if (inp.pressed('click')) {
       const { x, y } = inp.mouse;
-      if (inside(x, y, LIST_X, this.pactY(), LIST_W, 18)) { this.app.go(new PactScreen(this.app, this)); return; }
+      if (inside(x, y, LIST_X, this.pactY(), LIST_W, 18) && unlocked(this.app.save, 'pacts')) { this.app.go(new PactScreen(this.app, this)); return; }
       for (let i = 0; i < TABS.length; i++) if (inside(x, y, this.tabX(i), TAB_Y, TAB_W, 13)) { this.page = i; sfx.play('select'); return; }
       if (this.page === 0 && inside(x, y, this.moreAt[0], this.moreAt[1] - 1, MORE_W, 14)) { this.page = 2; sfx.play('select'); return; }
       if (this.page === 0 && inside(x, y, DET_X + 8, this.skillsAt, DET_W - 16, 40)) { this.page = 1; sfx.play('select'); return; }
@@ -368,16 +372,19 @@ export class HeroSelect implements Screen {
     HEROES.forEach((h, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel;
       panel(r, LIST_X, y, LIST_W, ROW_H - 4, on ? C.gold : hovered(LIST_X, y, LIST_W, ROW_H - 4) ? C.lavender : C.slate);
-      const spr = this.spriteOf(h.id);
-      drawSprite(g, `${spr}@${on ? animFrame(spr, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 14);
-      drawText(g, h.name, LIST_X + 34, y + 3, h.color, { shadow: C.black });
-      drawText(g, h.role, LIST_X + 34, y + 15, C.lavender);
+      const spr = this.spriteOf(h.id), open = heroUnlocked(this.app.save, h.id);
+      // Zablokowany bohater: przygaszony, zamiast roli warunek odblokowania.
+      r.withAlpha(open ? 1 : 0.3, () => drawSprite(g, `${spr}@${on && open ? animFrame(spr, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 14));
+      drawText(g, h.name, LIST_X + 34, y + 3, open ? h.color : C.dgray, { shadow: C.black });
+      if (open) drawText(g, h.role, LIST_X + 34, y + 15, C.lavender);
+      else drawText(g, UNLOCK_BY_ID[`hero:${h.id}`]?.how ?? '', LIST_X + 34, y + 16, C.dgray, { scale: 0.75 });
       // Odznaka Paktu: najwyższy poziom Paktu z pokonanym bossem.
       const best = this.app.save.pacts.best[h.id] ?? 0, badge = pactBadge(best);
       if (badge) drawText(g, `${badge.name} ${best}`, LIST_X + LIST_W - 6, y + 3, badge.color, { align: 'right' });
     });
     const pl = pactLevel(this.app.save.pacts.chosen);
-    button(r, LIST_X, this.pactY(), LIST_W, 18, pl ? `Pakty: poziom ${pl} [Tab]` : 'Pakty ryzyka [Tab]', { accent: C.salmon, col: pl ? C.salmon : undefined });
+    if (unlocked(this.app.save, 'pacts')) button(r, LIST_X, this.pactY(), LIST_W, 18, pl ? `Pakty: poziom ${pl} [Tab]` : 'Pakty ryzyka [Tab]', { accent: C.salmon, col: pl ? C.salmon : undefined });
+    else button(r, LIST_X, this.pactY(), LIST_W, 18, 'Risk Pacts (locked)', { col: C.dgray });
     // Szczegóły zaznaczonego.
     const h = HEROES[this.sel], x = DET_X, y = TOP;
     panel(r, x, y, DET_W, DET_H, C.gold);
@@ -403,7 +410,8 @@ export class HeroSelect implements Screen {
     }
     // Przyciski: Wstecz i Start (myszą lub klawiszami Esc / Enter).
     button(r, LIST_X, BTN_Y, BACK_W, BTN_H, 'Wstecz [Esc]');
-    button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, `Start: ${h.name} [Enter]`, { accent: C.gold, col: C.yellow, pulse: true });
+    if (heroUnlocked(this.app.save, h.id)) button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, `Start: ${h.name} [Enter]`, { accent: C.gold, col: C.yellow, pulse: true });
+    else button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, 'Locked', { col: C.dgray });
     drawText(g, 'Góra/dół: bohater    Lewo/prawo: zakładki', (LIST_X + BACK_W + W - 12 - START_W) / 2, BTN_Y + 2, C.dgray, { align: 'center', scale: 0.75 });
   }
 
@@ -553,6 +561,7 @@ export class SettingsScreen implements Screen {
         sw('Pauza po wyjściu z okna', () => yes(s.autoPause), toggle('autoPause'), 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.'),
         sw('Podpowiedzi', () => yes(s.hints), toggle('hints'), 'Krótkie wskazówki przy pierwszym spotkaniu z mechaniką (awans, skrzynie, elity, reakcje...).'),
         [{ label: () => (app.save.seenHints.length ? 'Pokaż podpowiedzi od nowa' : 'Podpowiedzi: wszystkie przed tobą'), act: () => { app.save.seenHints = []; app.persist(); } }, () => 'Kolejna gra pokaże wszystkie podpowiedzi jeszcze raz.'],
+        [{ label: () => 'Replay tutorial', act: () => app.go(new GameScreen(app, 'kestra', 'endless', undefined, true)) }, () => 'Play the short tutorial again (2-3 minutes): movement, abilities, dodging, loot and a boss.'],
       ],
       [
         opt('Głośność', () => `${Math.round(s.volume * 100)}%`, (d) => step('volume', d * 0.1), () => 'Strzałki w lewo/prawo zmieniają wartość.'),

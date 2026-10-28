@@ -380,6 +380,8 @@ export class Run {
   mapObjects: MapObject[] = [];
   buffs: Buff[] = [];
   dungeon: Dungeon | null = null;
+  /** Samouczek (game/tutorial.ts): bez zwykłych fal, wydarzeń, zadań i obiektów mapy — wrogów wystawia skrypt. */
+  scripted = false;
   shrineT = 0;
   portalT = 0;
   swordRolled = false;
@@ -592,10 +594,9 @@ export class Run {
     this.rebuildHash();
     updatePlayer(this, input, dt);
     updateTerrain(this, dt);
-    updateEvents(this, dt);
-    updateTasks(this, dt);
+    if (!this.scripted) { updateEvents(this, dt); updateTasks(this, dt); }
     updateSecrets(this);
-    updateLevelEvents(this, dt);
+    if (!this.scripted) updateLevelEvents(this, dt);
     updateAbilities(this, input, dt);
     updateResource(this, dt);
     updateWeapons(this, dt);

@@ -133,6 +133,17 @@ export class Input {
     return this.pressedSet.has(a);
   }
 
+  /** Bot testowy (src/dev/bot.ts): naciśnięcie akcji w tym kroku. */
+  botPress(a: Action): void {
+    this.pressedSet.add(a);
+  }
+
+  /** Bot testowy: ruch w tym kroku (jak gałka pada; wołane po pollGamepads). */
+  botMove(x: number, y: number): void {
+    this.padMove.x = x;
+    this.padMove.y = y;
+  }
+
   /** Cokolwiek naciśnięte w tym kroku (klawisz, przycisk pada, klik albo dotknięcie). */
   anyPressed(): boolean {
     return this.anyKey || this.pressedSet.size > 0;

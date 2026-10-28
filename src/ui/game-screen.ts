@@ -40,6 +40,8 @@ import { MetaScreen } from './meta';
 import { HERO_BY_ID } from '../data/heroes';
 import { PowerPickView } from './powers';
 import { ACHIEVEMENTS } from '../data/achievements';
+import { Tutorial } from '../game/tutorial';
+import { grantUnlocks, maxTier, unlocked, type UnlockCtx, type UnlockDef } from '../data/unlocks';
 import { heroSkins } from '../data/pacts';
 import { FEAT_BY_ID } from '../data/feats';
 import { featsOnWin } from '../systems/feats';
@@ -96,27 +98,41 @@ export class GameScreen implements Screen {
   private hints: Hints;
   /** Czy ultimate był gotowy w poprzedniej klatce (komunikat „R gotowe!” przy zmianie). */
   private ultReady = false;
+  /** Odblokowania zdobyte w tym runie (banery po kolei, lista na ekranie końca) i licznik bossów do wykrycia nowego. */
+  private unlockQueue: UnlockDef[] = [];
+  private unlockedRun: UnlockDef[] = [];
+  private bossSeen = 0;
   private pauseMenu: Menu;
   private endMenu: Menu;
   /** Zakładka ekranu końca: obrażenia, wykres DPS, karta buildu. */
   private endPage = 0;
 
-  constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot) {
+  /** Samouczek (game/tutorial.ts): bez zapisu, rekordów, esencji i odblokowań; gracz nie może zginąć. */
+  private readonly tut: Tutorial | null;
+
+  constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot, tutorial = false) {
     this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode);
+    this.tut = tutorial ? new Tutorial() : null;
+    this.run.scripted = tutorial;
     // Nowy run: pakty ryzyka wybrane przed startem (ui/pacts.ts) obowiązują do jego końca.
-    if (!snapshot) this.run.pacts = { ...app.save.pacts.chosen };
+    if (!snapshot && !tutorial && unlocked(app.save, 'pacts')) this.run.pacts = { ...app.save.pacts.chosen };
     this.run.unlocked = new Set(app.save.achievements);
     // Skórka za odznakę Paktu (tylko jeśli nadal zdobyta).
     const skin = app.save.skins[heroId] ?? '';
     this.run.skin = heroSkins(app.save.pacts.best[heroId] ?? 0).some((b) => b.id === skin) ? skin : '';
     this.run.lore = loreMuls(app.save.bestiary);
+    this.bossSeen = this.run.bossKills;
     this.hints = new Hints(app.save, () => app.persist());
     this.run.cardBans = new Set(app.save.collection.banned);
     this.run.knownCards = new Set(app.save.collection.seen);
     // Rozwój bohatera działa w obu trybach (Ekspedycja i Endless).
     this.run.applyMeta(metaBonus(heroMeta(app.save.meta, heroId), heroTree(heroId)), !snapshot);
     warmFx();
-    this.pauseMenu = new Menu([
+    this.pauseMenu = tutorial ? new Menu([
+      { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
+      { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
+      { label: () => 'Skip tutorial', act: () => this.endTutorial() },
+    ], PL + PLW / 2, 60, PLW - 14) : new Menu([
       { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
       { label: () => 'Ekwipunek', act: () => this.openInventory('pause') },
       { label: () => 'Bronie i pasywki [C]', act: () => this.openBuild('pause') },
@@ -139,7 +155,7 @@ export class GameScreen implements Screen {
       { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
     ], W / 2, 216, 200, 15);
     if (mode === 'expedition' && !snapshot) {
-      this.run.expedition = newExpedition(app.save.exTier);
+      this.run.expedition = newExpedition(app.save.exTier, maxTier(app.save), !unlocked(app.save, 'forge'));
       this.openMap();
     } else if (mode === 'expedition' && !snapshot!.inProgress) {
       // Zapis z mapy: sklep, w którym gracz wyszedł, albo mapa.
@@ -154,6 +170,7 @@ export class GameScreen implements Screen {
    * Zapis slotu trybu. `inProgress` = trwa poziom (wznowienie od zapisanego postępu); inaczej Ekspedycja zapisuje pozycję na mapie.
    */
   private saveSlot(inProgress: boolean): void {
+    if (this.tut) return;
     const run = this.run;
     this.syncCollection();
     this.app.save.slots[this.mode] = run.toSnapshot(run.depth, inProgress);
@@ -181,6 +198,8 @@ export class GameScreen implements Screen {
       }
     }
     run.killsById = {};
+    // Samouczek nie daje wyczynów ani osiągnięć (te odblokowują bohaterów).
+    if (this.tut) { run.featsNew = []; return; }
     // Wyczyny: liczniki w zapisie.
     for (const id of run.featsNew) this.app.save.feats[id] = (this.app.save.feats[id] ?? 0) + 1;
     run.featsNew = [];
@@ -228,6 +247,7 @@ export class GameScreen implements Screen {
   /** Śmierć albo poddanie: slot trybu czyszczony. Esencja zostaje. */
   private onRunOver(): void {
     this.updateRecords();
+    this.unlock({});
     this.awardEssence();
     this.endSlot();
     this.app.persist();
@@ -251,6 +271,7 @@ export class GameScreen implements Screen {
       this.updateRecords();
       if (m.kind === 'boss') {
         featsOnWin(run);
+        this.unlock({ boss: true, acts: ex.act });
         if (!advanceAct(ex)) { this.onExpeditionWon(); return; }
         run.heal(run.stats.maxHp * BAL.levelClearHeal);
         this.showToast(`${ex.act > BAL.expedition.acts ? 'Sekretny akt 4: Pustka' : `Akt ${ex.act}`}! +${Math.round(BAL.levelClearHeal * 100)}% HP`);
@@ -268,6 +289,7 @@ export class GameScreen implements Screen {
   /** Ostatni boss pokonany: wyprawa ukończona — rekord, więcej esencji, slot czyszczony. */
   private onExpeditionWon(): void {
     heroRecord(this.app.save, this.heroId).expeditionWins++;
+    this.unlock({ boss: true, acts: this.run.expedition!.act, won: true });
     const X = BAL.expedition;
     this.awardEssence(X.winEssenceMul * (this.run.expedition!.act > X.acts ? X.voidEssenceMul : 1));
     this.endSlot();
@@ -275,9 +297,62 @@ export class GameScreen implements Screen {
     this.state = 'end';
   }
 
-  private showToast(text: string): void {
+  private showToast(text: string, t = 2.5): void {
     this.toast = text;
-    this.toastT = 2.5;
+    this.toastT = t;
+  }
+
+  /** Nowe odblokowania (data/unlocks.ts): zapis, komunikat w menu głównym, banery w grze po kolei. */
+  private unlock(c: Partial<UnlockCtx>): void {
+    const s = this.app.save, ex = this.run.expedition;
+    if (this.tut) return;
+    const fresh = grantUnlocks(s, { boss: false, acts: 0, won: false, tier: ex?.tier ?? 0, ...c });
+    if (!fresh.length) return;
+    const last = fresh[fresh.length - 1];
+    s.notice = `Unlocked: ${last.name}. ${last.hint}`;
+    this.app.persist();
+    this.unlockQueue.push(...fresh);
+    this.unlockedRun.push(...fresh);
+    // Trwająca wyprawa korzysta od razu (kowadła od następnego aktu, trudność od teraz).
+    if (ex) { ex.maxTier = maxTier(s); ex.noForge = !unlocked(s, 'forge'); }
+  }
+
+  /** Samouczek: krok po kroku; gracz nie ginie (wskrzeszenie z pełnym życiem); na końcu Enter / klik → pierwsza Ekspedycja. */
+  private updateTutorial(dt: number): void {
+    const run = this.run, tut = this.tut!, inp = this.app.input;
+    if (run.outcome === 'dead') { run.outcome = 'none'; run.player.hp = run.stats.maxHp; run.player.iframes = 2; }
+    tut.update(run, dt);
+    if (tut.finished && tut.t > 1 && (inp.pressed('confirm') || inp.pressed('click'))) this.endTutorial();
+    if (tut.finished) tut.t += dt;
+  }
+
+  /** Panel samouczka pod licznikiem czasu: krok, tytuł, opis dla urządzenia gracza; na końcu przejście dalej. */
+  private renderTutorial(): void {
+    const r = this.app.r, g = r.g, tut = this.tut!, { title, body } = tut.text(this.app.input);
+    const w = 220, x = W / 2 - w / 2, y = 44, lines = wrapText(body, w - 16);
+    const h = 22 + lines.length * 11 + (tut.finished ? 12 : 0);
+    panel(r, x, y, w, h, C.gold);
+    drawText(g, title, x + 8, y + 5, C.yellow, { shadow: C.black });
+    drawText(g, tut.finished ? '' : `${Math.min(tut.step + 1, tut.total)}/${tut.total}`, x + w - 8, y + 6, C.lavender, { align: 'right', scale: 0.75 });
+    lines.forEach((l, i) => drawText(g, l, x + 8, y + 18 + i * 11, C.white));
+    if (tut.finished) drawText(g, this.app.input.lastDevice === 'touch' ? 'Tap to continue' : 'Enter: continue', W / 2, y + h - 11, C.lime, { align: 'center', scale: 0.75 });
+    else drawText(g, 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.dgray, { align: 'right', scale: 0.75 });
+  }
+
+  /** Koniec albo pominięcie samouczka: zapis i wybór bohatera do pierwszej Ekspedycji. */
+  private endTutorial(): void {
+    this.app.save.tutorialDone = true;
+    this.app.persist();
+    this.app.go(new HeroSelect(this.app, 'expedition'));
+  }
+
+  /** Kolejny baner odblokowania, gdy poprzedni komunikat zniknął. */
+  private showUnlocks(): void {
+    if (!this.unlockQueue.length || this.toastT > 0) return;
+    const u = this.unlockQueue.shift()!;
+    this.run.showBanner(`Unlocked: ${u.name}`);
+    this.showToast(`Unlocked: ${u.name}. ${u.hint}`, 4);
+    sfx.play('levelup');
   }
 
   /** Mapa Ekspedycji między węzłami (zapis pozycji). */
@@ -379,6 +454,7 @@ export class GameScreen implements Screen {
 
   /** Podpowiedzi i komunikaty zależne od sytuacji w grze (każda podpowiedź raz; skan wrogów co pół sekundy). */
   private gameplayHints(): void {
+    if (this.tut) return;
     const run = this.run, h = this.hints;
     if (run.time > 0.5) h.show('move');
     if (run.time > 4 && run.gems.count > 0) h.show('gems');
@@ -467,6 +543,9 @@ export class GameScreen implements Screen {
         if (run.hitstop > 0 && !set.hitstop) run.hitstop = 0;
         if (run.hitstop > 0) { run.hitstop -= dt; break; }
         this.gameplayHints();
+        if (this.tut) this.updateTutorial(dt);
+        if (run.bossKills > this.bossSeen) { this.bossSeen = run.bossKills; this.unlock({ boss: true }); }
+        this.showUnlocks();
         if (this.app.save.settings.debug) {
           if (inp.pressed('debugTime')) run.debugAdvance();
           if (inp.pressed('debugLevel')) run.addXp(run.xpNext - run.xp);
@@ -530,12 +609,13 @@ export class GameScreen implements Screen {
       case 'shop': {
         const act = this.shop!.update(inp, dt);
         if (act === 'inventory') this.openInventory('shop');
-        else if (act === 'anvil') this.openAnvil('shop');
+        else if (act === 'anvil' && !this.run.expedition?.noForge) this.openAnvil('shop');
         else if (act === 'close') { this.run.shop = null; this.openMap(); }
         break;
       }
       case 'map': {
         this.toastT = Math.max(0, this.toastT - dt);
+        this.showUnlocks();
         const act = this.map!.update(inp);
         if (act === 'menu') this.openPause();
         else if (act === 'inventory') this.openInventory('map');
@@ -567,6 +647,7 @@ export class GameScreen implements Screen {
       || (this.state === 'inventory' && (this.invReturn === 'shop' || this.invReturn === 'map'));
     // HUD tylko w trakcie gry: nakładki (pauza, awans, łup, ekwipunek...) zasłaniają go w całości.
     if (this.state === 'play' && !between) renderHud(run, r, this.app.loop, this.diag, this.app.save.settings.debug, this.app.save.settings.minimap, this.app.input);
+    if (this.state === 'play' && this.tut) this.renderTutorial();
     switch (this.state) {
       case 'levelup':
         this.levelUp!.render(r);
@@ -767,6 +848,7 @@ export class GameScreen implements Screen {
     const essence = `+${fmt(this.essence)} esencji dla: ${run.hero.name} (Rozwój w menu głównym)`;
     const info: [string, number][] = [[modeLine, C.orange], [essence, C.cyan]];
     if (feats) info.push([`Wyczyny: ${feats}`, C.gold]);
+    if (this.unlockedRun.length) info.push([`Unlocked: ${this.unlockedRun.map((u) => u.name).join(', ')}`, C.lime]);
     info.forEach(([t, col], i) => drawText(g, t, W / 2, 69 + i * 10, col, { align: 'center', shadow: C.black }));
     // Panel zakładek zaczyna się tuż pod liniami informacji (bez pustego pasa, gdy ich nie ma).
     this.endY = 88 + info.length * 10;

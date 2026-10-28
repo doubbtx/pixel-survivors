@@ -91,7 +91,7 @@ export function currentMix(t: number): [string, number][] {
  */
 export function updateSpawner(run: Run, dt: number): void {
   // W lochu wrogów wystawia systems/events.ts (fale), zwykła mapa czeka.
-  if (run.dungeon) return;
+  if (run.dungeon || run.scripted) return;
   const t = run.time;
   const waveT = t + run.levelInfo.waveOffset;
 

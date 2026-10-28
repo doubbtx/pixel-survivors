@@ -426,6 +426,13 @@ src/
 - **What's new** screen after an update (once, any key or tap closes it). New players don't see it.
 - Translation works both ways: old Polish texts → English as before, new texts are written in English with Polish in `core/i18n-pl.ts`.
 
+**Tutorial and gradual unlocks (0.28.0)**:
+- A new game starts with a short interactive tutorial (Kestra, 8 steps: move, auto attack, crystals and level up, Q and E, dodge, ultimate, chest and item, small boss), with texts for keyboard, gamepad and touch. Skip it from the pause menu, replay it in Settings → General.
+- Gradual unlocks with an "Unlocked: …" banner and a short tip: start with the Expedition, Kestra and Borgun; the first boss unlocks the Anvil and Forge and the Magic difficulty; act 1 → Ignara, act 2 → Morwen; an Expedition win → Endless, Risk Pacts and Rare; 4 achievements → Vesper; 2 wins → Aurel; a win on Rare → Nightmare.
+- Locked things show how to get them (main menu, hero select, map difficulty buttons). Collection tabs appear once they have something in them.
+- Existing saves keep everything unlocked and skip the tutorial (save version 9).
+- Test bot (dev server only): `node scripts/bot.cjs bot=endless|expedition|tutorial ...` plays the game by itself and reports errors, slow steps and missing translations.
+
 ### Jak przetestować
 
 1. `npm run dev` → Endless → Nowy run → bohater (albo Ekspedycja → Nowa ekspedycja).

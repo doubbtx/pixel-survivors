@@ -189,7 +189,7 @@ export class ShopView {
     const rp = refreshPrice(shop);
     btn(14, 62, `Odśwież ${rp}`, run.gold >= rp ? C.yellow : C.red);
     btn(80, 62, 'Ekwipunek', C.lgray);
-    btn(146, 58, 'Kowadło', C.orange);
+    btn(146, 58, 'Kowadło', this.run.expedition?.noForge ? C.dgray : C.orange);
     btn(208, 58, this.exitLabel, C.white);
     if (this.noteT > 0) drawText(g, this.note, W / 2, H - 13, this.noteBad ? C.salmon : C.lime, { align: 'center', outline: C.black });
   }

@@ -50,8 +50,10 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/` — też `render.ts` (świat), `scenery.ts` (skupiska dekoracji i kompozycje ruin, bez kolizji), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy).
 - `ui/` — `theme.ts` (wspólny styl: kolory akcentów, odstępy, rozmiary HUD, `tile`, `meter`, `iconSlot`, `cornerTag`, `label`), `widgets.ts` (panel, dim, bar, Menu, slot — w stylu z theme.ts), `hud.ts` (tylko rysowanie + stan animacji `HudAnim`), `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/map/end; `saveSlot`, `overlayReturn`), `skills.ts` (`drawSkills`: opisy umiejętności na wyborze bohatera i w pauzie), `menus.ts` (`MainMenu`, `SlotScreen` per tryb: Ekspedycja i Endless, `HeroSelect` — zakładki Ogólne/Umiejętności/Zasób, przyciski Wstecz i Start, `RecordsScreen`), `whats-new.ts` (ekran nowości po aktualizacji: `NOTES`, `pendingNews`).
+- `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
+  `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.27.0)
+## Stan (wersja 0.28.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -411,6 +413,22 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   Osiągnięcie `daily` → Wayfarer (akt 1 Ekspedycji, to samo id). i18n w obie strony: `core/i18n-pl.ts` (EN → PL, dokładnie i wzorce `{}`);
   napis ze słownika PL w trybie angielskim zostaje bez zmian, wstawki tłumaczone osobno. Ekran What's new (`ui/whats-new.ts`):
   raz po zmianie major.minor (`seenVersion`), nowa gra oznacza wersję od razu; zamyka go dowolny klawisz (`Input.anyPressed`), klik albo dotyk.
+- Etap 0.28 (faza 2 planu): samouczek i stopniowe odblokowania. Zapis v9: `unlocks` (id z data/unlocks.ts) i `tutorialDone`;
+  migracja 8 → 9 daje wszystko graczowi, który już grał (rekord czasu albo osiągnięcie), nowy zapis zaczyna od zera.
+  Odblokowania: start Kestra i Borgun + Ekspedycja na trudności Zwykłej; pierwszy boss → `forge` (kowadła na mapie, przycisk w sklepie;
+  bez niego `rollActMap(..., noForge)` zamienia kowadła na obozy) i `tier1`; akt 1 → Ignara, akt 2 → Morwen; wygrana Ekspedycja →
+  `endless`, `pacts`, `tier2`; 4 osiągnięcia → Vesper; 2 wygrane → Aurel; wygrana na Rzadkiej → `tier3`. `ExpeditionState.maxTier`
+  i `noForge` przenoszą stan do wyprawy (aktualizowane od razu po odblokowaniu). `GameScreen.unlock` (po bossie: wzrost `run.bossKills`,
+  po akcie, po wygranej, po końcu runu): zapis, `save.notice`, baner i podpowiedź po kolei, lista na ekranie końca.
+  Zablokowane: Endless w menu (opis z warunkiem), bohaterowie na wyborze (przygaszeni, warunek zamiast roli, przycisk Locked),
+  Pakty, poziomy trudności na mapie (locked). Kolekcja: zakładki Unikaty, Sekrety, Bestiariusz, Osiągnięcia, Wyczyny od pierwszej rzeczy.
+  Samouczek (`GameScreen(..., tutorial = true)`, Kestra w trybie endless): `run.scripted` wyłącza spawner, wydarzenia, zadania
+  i wydarzenia poziomu; 8 kroków (ruch, atak, awans, Q/E, unik, R, skrzynia, mały boss), teksty dla klawiatury, pada i dotyku
+  (`input.lastDevice`); bez zapisu slotu, esencji, rekordów i odblokowań; śmierć = wskrzeszenie. Pauza: Wznów, Ustawienia, Skip tutorial.
+  Koniec/pominięcie → `tutorialDone` i wybór bohatera Ekspedycji. Pierwsze uruchomienie (`!tutorialDone`) zaczyna od samouczka;
+  powtórka: Ustawienia → Ogólne → Replay tutorial. HUD w samouczku bez licznika bossa.
+  Bot testowy: `?bot=endless|expedition|tutorial` (src/dev/bot.ts, tylko `import.meta.env.DEV`), `scripts/bot.cjs` / `npm run bot`.
+  Tłumaczenie: zdania tłumaczone też osobno (kandydat obok podziału na separatorach), lista „A, B” we wstawce wzorca EN → PL.
 ## Plan dalej (przed wydaniem)
 
 Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z innej sesji). Plan uzgodniony z autorem; kolejność faz = kolejność wersji.
@@ -435,7 +453,7 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - Migracja zapisu z numerem wersji: zapisy usuniętych trybów bezpiecznie porzucone, cały postęp zostaje.
 - Ekran „What's new” po aktualizacji (numer wersji w menu jest od 0.26.1) (raz, zamykany jednym klawiszem albo dotknięciem).
 
-### Faza 2: samouczek i stopniowe odblokowania (v0.28)
+### Faza 2: samouczek i stopniowe odblokowania (v0.28) — GOTOWE (0.28.0)
 - Samouczek przy pierwszym uruchomieniu: interaktywny, 2–3 minuty, dopasowany do klawiatury, pada albo dotyku. Kolejno: ruch i automatyczne strzelanie; kryształy i pierwszy awans; Q i E; unik z nietykalnością; ultimate; skrzynia i założenie przedmiotu; mały boss. Potem przejście do pierwszej Ekspedycji. Można pominąć i powtórzyć z Ustawień.
 - Odblokowania (zaakceptowane), każde z banerem „Unlocked: …” i krótką podpowiedzią:
   - start: Ekspedycja, akt 1, dwóch bohaterów;
@@ -486,6 +504,12 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 
 ## Testowanie
 
+- Bot testowy (najpierw `npm run dev`): `node scripts/bot.cjs bot=endless runs=6 time=240 turbo=6` (wszyscy bohaterowie),
+  `bot=expedition hero=borgun runs=1 time=5400 turbo=8 god=1 fresh=1` (cała wyprawa jako nowy gracz, lista odblokowań w raporcie),
+  `bot=tutorial turbo=2` (samouczek), `lang=pl` (braki tłumaczeń po polsku), `shots=N` (zrzuty co N s do /tmp/bot-shots).
+  Raport: runy, błędy, braki tłumaczeń (`missing`), najwolniejszy krok, odwiedzone stany. Kod 1 przy błędach albo brakach.
+  W trakcie testu nie zmieniaj plików src (HMR przeładuje stronę i przerwie bota).
+- Stan gry w konsoli przeglądarki (serwer deweloperski): `__screen()` (bieżący ekran, `.run`, `.state`).
 - `npm run dev`, w grze F3 = debug, F4 = przyspiesz cel poziomu, F6 = awans, F7 = łup bossa (12% szans na unikat).
 - Bez UI: moduły z serwera Vite w Playwright (`await import('/src/game/run.ts')`, `new Run(...)`, `run.update(1/60, wejście)`) —
   szybki test systemów (zasoby, zadania, moce, fuzje: `generateOptions`/`applyOption`, teren: `run.terrain`).

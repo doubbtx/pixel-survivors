@@ -73,6 +73,16 @@ export class CollectionScreen implements Screen {
 
   constructor(private readonly app: App, private readonly back: Screen) {}
 
+  /** Zakładki widoczne dla gracza: karty i arsenał zawsze, reszta od pierwszej zdobytej rzeczy. */
+  private tabs(): Tab[] {
+    const s = this.app.save, col = s.collection;
+    const has: Record<Tab, boolean> = {
+      cards: true, arsenal: true, uniques: col.uniques.length > 0, secrets: col.secrets.length > 0,
+      bestiary: Object.keys(s.bestiary).length > 0, achievements: s.achievements.length > 0, feats: Object.keys(s.feats).length > 0,
+    };
+    return TABS.filter((t) => has[t]);
+  }
+
   private get col() {
     return this.app.save.collection;
   }
@@ -104,7 +114,8 @@ export class CollectionScreen implements Screen {
     const inp = this.app.input, n = ORDERED.length;
     if (inp.pressed('back')) { this.app.go(this.back); return; }
     if (inp.pressed('inventory') || (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, W - 116, 8, 108, 18))) {
-      this.tab = TABS[(TABS.indexOf(this.tab) + 1) % TABS.length];
+      const tabs = this.tabs();
+      this.tab = tabs[(tabs.indexOf(this.tab) + 1) % tabs.length];
       sfx.play('select');
       return;
     }
@@ -372,7 +383,7 @@ export class CollectionScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g, col = this.col;
     r.clear(C.black);
-    button(r, W - 116, 8, 108, 18, `[Tab] ${TAB_NAME[TABS[(TABS.indexOf(this.tab) + 1) % TABS.length]]} >`, { pulse: true, accent: this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.gold });
+    button(r, W - 116, 8, 108, 18, `[Tab] ${TAB_NAME[this.tabs()[(this.tabs().indexOf(this.tab) + 1) % this.tabs().length]]} >`, { pulse: true, accent: this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.gold });
     if (this.tab === 'bestiary' || this.tab === 'achievements' || this.tab === 'feats') {
       const head = { bestiary: ['Bestiariusz', C.lavender], achievements: ['Osiągnięcia', C.lime], feats: ['Wyczyny', C.gold] }[this.tab] as [string, number];
       drawText(g, head[0], W / 2, 10, head[1], { align: 'center', scale: 2, outline: C.black });

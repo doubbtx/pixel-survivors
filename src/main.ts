@@ -7,6 +7,7 @@ import { loadSave, writeSave } from './core/save';
 import type { App, Screen } from './ui/app';
 import { MainMenu, toggleFullscreen } from './ui/menus';
 import { WhatsNewScreen, pendingNews } from './ui/whats-new';
+import { GameScreen } from './ui/game-screen';
 import { pointer } from './ui/widgets';
 import { setLang } from './core/i18n';
 import { music } from './core/music';
@@ -53,19 +54,32 @@ const app: App = {
     music.setVolume(save.settings.music);
   },
 };
+// Bot testowy (tylko serwer deweloperski, `?bot=endless|expedition|tutorial`): src/dev/bot.ts.
+const botParams = new URLSearchParams(location.search);
 // Po aktualizacji najpierw nowości (raz), potem menu.
-screen = pendingNews(app) ? new WhatsNewScreen(app) : new MainMenu(app);
+// Nowa gra zaczyna się od samouczka (do pominięcia w pauzie; powtórka w Ustawieniach).
+screen = !save.tutorialDone && !botParams.has('bot') ? new GameScreen(app, 'kestra', 'endless', undefined, true)
+  : pendingNews(app) ? new WhatsNewScreen(app) : new MainMenu(app);
 
+const bot = import.meta.env.DEV && botParams.has('bot') ? new (await import('./dev/bot')).Bot(app, botParams) : null;
+
+// Podgląd stanu w konsoli i w testach (tylko serwer deweloperski): window.__screen().
+if (import.meta.env.DEV) (window as unknown as { __screen: () => Screen }).__screen = () => screen;
+
+const step = (dt: number) => {
+  input.pollGamepads();
+  fadeT = Math.max(0, fadeT - dt);
+  // Pełny ekran: F na każdym ekranie.
+  if (input.pressed('fullscreen')) toggleFullscreen();
+  const t0 = bot ? performance.now() : 0;
+  bot?.tick(screen, dt);
+  screen.update(dt);
+  bot?.stepTime(performance.now() - t0);
+  music.update(dt);
+  input.endStep();
+};
 app.loop = startLoop(
-  (dt) => {
-    input.pollGamepads();
-    fadeT = Math.max(0, fadeT - dt);
-    // Pełny ekran: F na każdym ekranie.
-    if (input.pressed('fullscreen')) toggleFullscreen();
-    screen.update(dt);
-    music.update(dt);
-    input.endStep();
-  },
+  (dt) => { for (let i = bot?.turbo ?? 1; i > 0; i--) step(dt); },
   () => {
     // Podświetlenia pod myszą tylko przy myszy (dotyk i pad nie mają kursora).
     const mouse = input.lastDevice === 'kbm' && input.mouse.lastMove > 0;

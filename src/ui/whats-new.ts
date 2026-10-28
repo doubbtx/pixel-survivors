@@ -18,6 +18,15 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.28',
+    lines: [
+      'New players start with a short interactive tutorial (skip it in the pause menu, replay it in Settings).',
+      'Gradual unlocks: new players begin with the Expedition and two heroes. Bosses, acts and wins unlock the Anvil, heroes, Endless, Pacts and harder map difficulties.',
+      'Your current save keeps everything unlocked.',
+      'Collection tabs appear once they have something in them.',
+    ],
+  },
+  {
     version: '0.27',
     lines: [
       'Two modes stay: Expedition and Endless. Hardcore, Training, Quick run, Boss rush and the Daily challenge are gone.',

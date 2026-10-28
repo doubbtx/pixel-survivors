@@ -1,6 +1,7 @@
 import type { Lang } from './i18n';
 import type { RunSnapshot, SlotMode } from '../game/run';
 import type { MetaState } from '../data/meta';
+import { ALL_UNLOCKS } from '../data/unlocks';
 
 /**
  * Zapis w localStorage z wersjonowaniem.
@@ -8,7 +9,7 @@ import type { MetaState } from '../data/meta';
  * która przekształca dane do wersji o 1 wyższej. Ładowanie aplikuje migracje po kolei.
  */
 const KEY = 'pixel-survivors-save';
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export interface HeroRecord {
   bestTime: number;
@@ -106,6 +107,10 @@ export interface SaveData {
   seenVersion: string;
   /** Wyczyny (data/feats.ts): ile razy zdobyty każdy. */
   feats: Record<string, number>;
+  /** Odblokowania (data/unlocks.ts): bohaterowie, tryby, trudności, kuźnia. */
+  unlocks: string[];
+  /** Samouczek ukończony albo pominięty (nowa gra zaczyna od niego). */
+  tutorialDone: boolean;
 }
 
 type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
@@ -172,6 +177,12 @@ const MIGRATIONS: Record<number, Migration> = {
       notice: hadHardcore ? 'Hardcore mode was removed. Your progress, unlocks and Progression stay.' : old.notice,
     };
   },
+  // 8 → 9 (0.28): stopniowe odblokowania. Gracz, który już grał, dostaje wszystko; nowy zapis zaczyna od zera.
+  8: (old) => {
+    const records = Object.values((old.records ?? {}) as Record<string, { bestTime?: number }>);
+    const played = records.some((r) => (r.bestTime ?? 0) > 0) || ((old.achievements as unknown[] | undefined)?.length ?? 0) > 0;
+    return { ...old, version: 9, unlocks: played ? [...ALL_UNLOCKS] : [], tutorialDone: played };
+  },
 };
 
 function defaults(): SaveData {
@@ -195,6 +206,8 @@ function defaults(): SaveData {
     skins: {},
     seenVersion: '',
     feats: {},
+    unlocks: [],
+    tutorialDone: false,
   };
 }
 
@@ -233,6 +246,8 @@ export function loadSave(): SaveData {
     skins: { ...d.skins },
     seenVersion: d.seenVersion ?? '',
     feats: { ...d.feats },
+    unlocks: d.unlocks ?? [],
+    tutorialDone: d.tutorialDone ?? false,
   };
 }
 

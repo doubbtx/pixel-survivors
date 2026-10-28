@@ -1,13 +1,14 @@
 {
   "name": "pixel-survivors",
   "private": true,
-  "version": "0.27.0",
+  "version": "0.28.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bot": "node scripts/bot.cjs"
   },
   "devDependencies": {
     "typescript": "^5.6.0",

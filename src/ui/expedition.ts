@@ -249,7 +249,15 @@ export class ExpeditionMapView {
       if (m.tiers) {
         drawText(g, 'Trudność [1-4]', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
         m.tiers.forEach((t, i) => {
-          const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i], hot = hovered(bx, by, TIER_W, 11);
+          const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i];
+          // Poziom jeszcze niezdobyty (data/unlocks.ts): przygaszony, z opisem, jak go odblokować.
+          if (i > (this.run.expedition!.maxTier ?? 3)) {
+            r.withAlpha(0.5, () => r.roundRect(bx, by, TIER_W, 11, UI.radius, C.black));
+            drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 2, C.dgray, { align: 'center', ...SMALL });
+            drawText(g, 'locked', bx + TIER_W / 2, by + 13, C.dgray, { align: 'center', ...SMALL });
+            return;
+          }
+          const hot = hovered(bx, by, TIER_W, 11);
           r.roundRect(bx, by, TIER_W, 11, UI.radius, on ? C.navy : hot ? C.slate : C.black);
           r.roundFrame(bx, by, TIER_W, 11, UI.radius, on || hot ? rr.color : C.slate, on ? 1 : 0.5);
           drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 2, on || hot ? rr.color : C.dgray, { align: 'center', ...SMALL });

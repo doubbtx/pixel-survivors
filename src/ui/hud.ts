@@ -288,7 +288,7 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): void {
     y += 15;
     const res = run.resistOf(b);
     if (res) { drawText(g, `Odporny na: ${ELEMENTS[res].name}`, cx, y - 1, ELEMENTS[res].color, { align: 'center', ...SMALL }); y += 8; }
-  } else if (!run.bossSpawned) {
+  } else if (!run.bossSpawned && !run.scripted) {
     const o = run.levelInfo.objective, bw = 92;
     const kills = !run.dungeon && run.mode !== 'endless' && o.kind === 'kills';
     const text = run.dungeon ? `Loch: fala ${run.dungeon.wave}/${BAL.events.dungeonWaves}${run.dungeon.cleared ? ', oczyszczony' : ''}`

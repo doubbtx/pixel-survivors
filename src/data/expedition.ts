@@ -138,6 +138,9 @@ export interface ExpeditionState {
   voidKey?: boolean;
   /** Poziom trudności map (MAP_RARITY) wybrany przez gracza; obowiązuje dla kolejnych map do zmiany. */
   tier?: number;
+  /** Odblokowania (data/unlocks.ts) przeniesione do wyprawy: najwyższy dostępny poziom trudności i brak kowadła/kuźni. */
+  maxTier?: number;
+  noForge?: boolean;
 }
 
 /** Mapa z walką: nazwa z biomu, poziom trudności wybrany przez gracza, modyfikatory i bonus. */
@@ -158,7 +161,7 @@ function rollMapNode(kind: NodeKind, act: number, tier: number, used: Set<string
 
 /** Wybór poziomu trudności wyprawy: obowiązuje dla wszystkich jeszcze nieodwiedzonych map (także w kolejnych aktach). */
 export function chooseTier(ex: ExpeditionState, tier: number): boolean {
-  if (tier < 0 || tier >= MAP_RARITY.length || (ex.tier ?? 0) === tier) return false;
+  if (tier < 0 || tier >= MAP_RARITY.length || tier > (ex.maxTier ?? MAP_RARITY.length - 1) || (ex.tier ?? 0) === tier) return false;
   ex.tier = tier;
   for (const row of ex.map.slice(exRow(ex) + 1)) {
     for (const m of row) {
@@ -171,7 +174,7 @@ export function chooseTier(ex: ExpeditionState, tier: number): boolean {
 }
 
 /** Losuje mapę aktu: pierwszy rząd to walki, w środku mieszanka, ostatni rząd przed bossem gwarantuje obóz lub sklep. */
-export function rollActMap(act: number, tier: number): (MapNode | null)[][] {
+export function rollActMap(act: number, tier: number, noForge = false): (MapNode | null)[][] {
   const X = BAL.expedition;
   const used = new Set<string>();
   const map: (MapNode | null)[][] = [];
@@ -181,7 +184,9 @@ export function rollActMap(act: number, tier: number): (MapNode | null)[][] {
     for (let lane = 0; lane < X.lanes; lane++) {
       // Środkowe kolumny zawsze istnieją (spójność ścieżek), skrajne czasem znikają.
       if ((lane === 0 || lane === X.lanes - 1) && rng.chance(X.emptyChance)) { kinds.push(null); continue; }
-      kinds.push(row === 0 ? 'fight' : rng.weighted(X.weights));
+      const k: NodeKind = row === 0 ? 'fight' : rng.weighted(X.weights);
+      // Kowadło jeszcze niezdobyte (pierwszy boss): zamiast niego obóz.
+      kinds.push(noForge && k === 'anvil' ? 'rest' : k);
     }
     if (row === X.rows - 2 && !kinds.some((k) => k === 'rest' || k === 'shop')) kinds[mid] = rng.chance(0.5) ? 'rest' : 'shop';
     map.push(kinds.map((k) => (!k ? null : isCombat(k) ? rollMapNode(k, act, tier, used) : { kind: k })));
@@ -197,8 +202,9 @@ export function rollActMap(act: number, tier: number): (MapNode | null)[][] {
   return map;
 }
 
-export function newExpedition(tier: number): ExpeditionState {
-  return { act: 1, map: rollActMap(1, tier), path: [], cleared: 0, bonus: 0, blessing: null, tier };
+export function newExpedition(tier: number, maxTier = MAP_RARITY.length - 1, noForge = false): ExpeditionState {
+  tier = Math.min(tier, maxTier);
+  return { act: 1, map: rollActMap(1, tier, noForge), path: [], cleared: 0, bonus: 0, blessing: null, tier, maxTier, noForge };
 }
 
 /** Bieżący rząd (-1 = w tym akcie nie wybrano jeszcze węzła). */
@@ -227,7 +233,7 @@ export const currentNode = (ex: ExpeditionState): NodeKind | null => currentMap(
 export function advanceAct(ex: ExpeditionState): boolean {
   if (ex.act > BAL.expedition.acts || (ex.act === BAL.expedition.acts && !ex.voidKey)) return false;
   ex.act++;
-  ex.map = rollActMap(ex.act, ex.tier ?? 0);
+  ex.map = rollActMap(ex.act, ex.tier ?? 0, ex.noForge);
   ex.path = [];
   return true;
 }

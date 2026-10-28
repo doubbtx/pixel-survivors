@@ -60,7 +60,8 @@ function english(s: string): string | undefined {
   for (const p of PL_PATTERNS) {
     const m = p.re.exec(s);
     if (!m) continue;
-    const ins = m.slice(1).map((x) => tr(x));
+    // Wstawka-lista („A, B”): każdy element osobno, gdy całość nie ma tłumaczenia.
+    const ins = m.slice(1).map((x) => { const t = tr(x); return t === x && x.includes(', ') ? x.split(', ').map(tr).join(', ') : t; });
     if (lang === 'pl') { let i = 0; return p.out.replace(/\{\}/g, () => ins[i++]); }
     return p.lits.map((l, i) => l + (ins[i] ?? '')).join('');
   }
@@ -116,6 +117,12 @@ function translate(s: string, depth: number): string {
       const bare = translate(core.slice(0, -1), depth + 1);
       if (bare !== core.slice(0, -1)) cands.push(bare + punct);
     }
+    // Zdania osobno (opis + „Żywioł: …” + „Zostają: …”): kandydat obok podziału na separatorach niżej.
+    const sents = core.split(/(?<=[.!?])( )/);
+    if (sents.length > 1) {
+      const t = sents.map((x, i) => (i % 2 ? x : translate(x, depth + 1))).join('');
+      if (t !== core) cands.push(t);
+    }
     // Podział na kawałki: pierwszy poziom separatorów, który coś zmienia — w całości i tylko na pierwszym
     // separatorze ("3: Trafienia: 4% szans..." = próg + opis z dwukropkiem).
     for (const sep of SEPS) {
@@ -150,6 +157,14 @@ function translate(s: string, depth: number): string {
   return s;
 }
 
+/** Diagnostyka (bot testowy, tylko wersja deweloperska): napisy bez tłumaczenia w bieżącym języku. */
+export const trMisses = new Set<string>();
+const EN_WORDS = /\b(the|and|your|with|you|of|for|is|are|when|each|every)\b/i;
+function checkMiss(s: string, t: string): void {
+  if (trMisses.size > 500) return;
+  if (lang === 'en' ? /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(t) : t === s && !/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(t) && EN_WORDS.test(t)) trMisses.add(`${lang}: ${s}`);
+}
+
 /** Napis w bieżącym języku: nowe angielskie przez słownik EN → PL, stare polskie przez słownik PL → EN. */
 export function tr(s: string): string {
   if (!s) return s;
@@ -157,6 +172,7 @@ export function tr(s: string): string {
   if (t === undefined) {
     if (cache.size > CACHE_MAX) cache.clear();
     t = english(s) ?? (lang === 'pl' ? s : translate(s, 0));
+    if (import.meta.env.DEV) checkMiss(s, t);
     cache.set(s, t);
   }
   return t;
