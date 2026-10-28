@@ -81,20 +81,20 @@ const LABEL_RES = 4;
 
 /**
  * Napis z obrysem wyśrodkowany w (x, y) z gotowego obrazka — jedno rysowanie zamiast tekstu wektorowego co klatkę.
- * Dla często powtarzanych krótkich napisów (liczby obrażeń); pamięć podręczna czyszczona po 500 wpisach.
+ * Dla często powtarzanych krótkich napisów (liczby obrażeń, `scale` dla krytyków); pamięć podręczna czyszczona po 500 wpisach.
  */
-export function drawLabel(g: CanvasRenderingContext2D, s: string, x: number, y: number, col: number, outline: number): void {
+export function drawLabel(g: CanvasRenderingContext2D, s: string, x: number, y: number, col: number, outline: number, scale = 1): void {
   s = tr(s);
-  const key = `${s}|${col}|${outline}`;
+  const key = `${s}|${col}|${outline}|${scale}`;
   let c = labels.get(key);
   if (!c) {
     if (labels.size > 500) labels.clear();
     c = document.createElement('canvas');
-    c.width = Math.ceil((rawWidth(s) + 4) * LABEL_RES);
-    c.height = (LINE_H + 2) * LABEL_RES;
+    c.width = Math.ceil((rawWidth(s, scale) + 4) * LABEL_RES);
+    c.height = Math.ceil((LINE_H * scale + 2) * LABEL_RES);
     const cg = c.getContext('2d')!;
     cg.scale(LABEL_RES, LABEL_RES);
-    drawText(cg, s, 2, 1, col, { outline });
+    drawText(cg, s, 2, 1, col, { outline, scale });
     labels.set(key, c);
   }
   const w = c.width / LABEL_RES, h = c.height / LABEL_RES;

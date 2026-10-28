@@ -213,6 +213,8 @@ export interface DmgNum extends Poolable {
   life: number;
   text: string;
   col: number;
+  /** Trafienie krytyczne: większa liczba z krótkim „wyskokiem”. */
+  big: boolean;
 }
 
 export type ZoneKind = 'meteor' | 'mine' | 'net' | 'rain' | 'beam' | 'fire' | 'curse' | 'holy';
@@ -236,7 +238,7 @@ export interface Zone extends Poolable {
   knock: number;
 }
 
-export type FxKind = 'line' | 'ring' | 'arc' | 'spark' | 'poof' | 'boom';
+export type FxKind = 'line' | 'ring' | 'arc' | 'spark' | 'poof' | 'boom' | 'fade';
 
 /** Krótkotrwałe efekty wizualne bez logiki (błyskawice, fale, cięcia, iskry, obłoki, eksplozje). Dla klatek animacji `r` = skala. */
 export interface Fx extends Poolable {
@@ -252,6 +254,8 @@ export interface Fx extends Poolable {
   max: number;
   col: number;
   w: number;
+  /** 'fade': klatka sprite'a znikającego wroga (a0 = 1, gdy odbity w poziomie). */
+  sprite: string;
 }
 
 export interface WeaponInst {

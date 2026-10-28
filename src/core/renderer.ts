@@ -59,6 +59,11 @@ export class Renderer {
     this.applyZoom();
   }
 
+  /** Piksele płótna świata na piksel logiczny (podłoże budowane w tej rozdzielczości). */
+  worldDensity(): number {
+    return this.worldRes;
+  }
+
   /** Przybliżenie świata (1 = najdalej). */
   setZoom(z: number): void {
     this.zoom = z;

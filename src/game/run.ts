@@ -253,7 +253,7 @@ export class Run {
   readonly gems = new Pool<Gem>(() => ({ _i: -1, x: 0, y: 0, value: 0, flying: false, v: 0 }));
   readonly pickups = new Pool<Pickup>(() => ({ _i: -1, x: 0, y: 0, kind: 'coin', value: 0, flying: false, v: 0, item: null, source: 'drop', mimic: false }), 300);
   readonly particles = new Pool<Particle>(() => ({ _i: -1, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, col: 7, size: 1 }), BAL.particleCap);
-  readonly dmgNums = new Pool<DmgNum>(() => ({ _i: -1, x: 0, y: 0, life: 0, text: '', col: 7 }), BAL.dmgNumberCap);
+  readonly dmgNums = new Pool<DmgNum>(() => ({ _i: -1, x: 0, y: 0, life: 0, text: '', col: 7, big: false }), BAL.dmgNumberCap);
   readonly zones = new Pool<Zone>(newZone, 500);
   readonly fx = new Pool<Fx>(newFx, 400);
   readonly turrets = new Pool<Turret>(() => ({ _i: -1, x: 0, y: 0, life: 0, timer: 0 }), 24);
@@ -875,7 +875,13 @@ export class Run {
   popText(x: number, y: number, text: string, col: number): void {
     const n = this.dmgNums.obtain();
     if (!n) return;
-    n.x = x; n.y = y; n.life = 0.9; n.text = text; n.col = col;
+    n.x = x; n.y = y; n.life = 0.9; n.text = text; n.col = col; n.big = false;
+  }
+
+  /** Czy w pobliżu jest świeża liczba obrażeń (ogranicza nakładanie się liczb w tłumie). */
+  private numberNear(x: number, y: number): boolean {
+    for (const n of this.dmgNums.items) if (n.life > 0.3 && Math.abs(n.x - x) < 8 && Math.abs(n.y - y) < 6) return true;
+    return false;
   }
 
   /**
@@ -1147,11 +1153,13 @@ export class Run {
     }
     if (o.stun) e.stunT = Math.max(e.stunT, o.stun);
     // Czytelność w tłumie: przy wielu wrogach liczby tylko dla krytyków.
-    const n = this.damageNumbers && (crit || this.enemies.count < BAL.juice.numbersCritOnly) ? this.dmgNums.obtain() : null;
+    // Zwykłe liczby nie nakładają się: przy świeżej liczbie tuż obok nowa jest pomijana (krytyki zawsze widać).
+    const n = this.damageNumbers && (crit || (this.enemies.count < BAL.juice.numbersCritOnly && !this.numberNear(e.x, e.y - e.radius))) ? this.dmgNums.obtain() : null;
     if (n) {
       n.x = e.x + rng.range(-3, 3);
       n.y = e.y - e.radius - 2;
-      n.life = 0.6;
+      n.life = crit ? 0.7 : 0.5;
+      n.big = crit;
       n.text = fmt(dmg);
       n.col = REACTION_COL[src] ?? (o.dot ? (src === 'Trucizna' ? C.lime : C.orange) : mult > st.critMult ? C.orange : crit ? C.yellow : C.white);
     }
@@ -1283,6 +1291,9 @@ export class Run {
     if (this.fx.count < BAL.fx.poofCap) {
       const f = this.addFx('poof', e.x, e.y, C.lgray, 0.32);
       if (f) f.r = e.boss ? 3 : e.elite ? 2 : 1;
+      // Znikanie: sylwetka wroga blednie i lekko unosi się (krótko, tylko przy wolnym miejscu na efekty).
+      const d = e.boss ? null : this.addFx('fade', e.x, e.y, C.white, 0.22);
+      if (d) { d.sprite = `${e.sprite}@0`; d.r = e.scale; d.a0 = e.x > this.player.x ? 1 : 0; }
     }
     if (e.boss || e.elite) this.boomFx(e.x, e.y, e.boss ? 40 : 20);
     this.spawnGem(e.x, e.y, e.xp);
@@ -1458,7 +1469,7 @@ export class Run {
     this.addShake(1.5);
     sfx.play('hurt');
     const n = this.dmgNums.obtain();
-    if (n) { n.x = p.x; n.y = p.y - 8; n.life = 0.7; n.text = fmt(total); n.col = C.red; }
+    if (n) { n.x = p.x; n.y = p.y - 8; n.life = 0.7; n.text = fmt(total); n.col = C.red; n.big = true; }
     if (total >= this.stats.maxHp * BAL.juice.hurtBig) this.freeze(BAL.juice.hitstopHurt);
     resourceOnHurt(this, total);
     if (this.boss) this.cardState.bossHit = 1;
@@ -1627,7 +1638,7 @@ export class Run {
     const f = this.fx.obtain();
     if (!f) return null;
     f.kind = kind; f.x = x; f.y = y; f.x2 = x; f.y2 = y; f.r = 0; f.a0 = 0; f.a1 = 0;
-    f.col = col; f.life = f.max = life; f.w = 1;
+    f.col = col; f.life = f.max = life; f.w = 1; f.sprite = '';
     return f;
   }
 
@@ -1792,5 +1803,5 @@ function newZone(): Zone {
 }
 
 function newFx(): Fx {
-  return { _i: -1, kind: 'ring', x: 0, y: 0, x2: 0, y2: 0, r: 0, a0: 0, a1: 0, life: 0, max: 0, col: 7, w: 1 };
+  return { _i: -1, kind: 'ring', x: 0, y: 0, x2: 0, y2: 0, r: 0, a0: 0, a1: 0, life: 0, max: 0, col: 7, w: 1, sprite: '' };
 }

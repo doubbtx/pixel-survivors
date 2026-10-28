@@ -385,6 +385,13 @@ src/
 **Pixel font (0.23.19)**:
 - The whole game now uses Pixelify Sans, a pixel font that matches the pixel art (with Polish letters), instead of the smooth rounded Nunito.
 
+**Forest ruins and a lighter HUD (0.24.0)**:
+- New HUD: a thin XP bar, a small hero card (portrait, HP with current/max, resource, level, act), synergies as small icons with tooltips, Frenzy and blessings as small timers, one goal bar with a counter under a smaller clock, a combo label that fades in and out, gold and kills in one row with a cleaner minimap, compact inventory, and the Q/E/Space/R bar at the bottom centre with a single "ready" flash.
+- Debug stats are hidden from normal play: F3 (or `) toggles them.
+- Menus and overlays use the same flat panels and thin frames.
+- The ground is no longer a green carpet: grass, patches of earth, trodden paths and old stone floors, plants and rocks in natural clusters, and ruins (a broken gate, an obelisk, a camp, low walls, fallen columns). Decoration has no collision.
+- Clearer combat: enemy bullets have a bright core and a short trail, the shield is one ring, killed enemies fade out, normal damage numbers are smaller and crits stand out.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

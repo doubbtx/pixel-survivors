@@ -10,6 +10,10 @@ export interface Biome {
   name: string;
   /** Podłoże: [cień, baza, rozjaśnienie] — kafelki mieszają je ditheringiem. */
   ground: [number, number, number];
+  /** Płaty ziemi i wydeptane ścieżki: [cień, baza, jasny środek ścieżki]. */
+  dirt: [number, number, number];
+  /** Kamienna posadzka ruin: [fuga, płyta, jaśniejsza płyta, krawędź w świetle]. */
+  paving: [number, number, number, number];
   /** Kępki trawy / porostów: [ciemny, jasny]. */
   tuft: [number, number];
   /** Kamyki: rampa od cienia do światła. */
@@ -24,12 +28,12 @@ export interface Biome {
 }
 
 export const BIOMES: Biome[] = [
-  { name: 'Mroczna łąka', ground: [C.teal, C.dgreen, C.green], tuft: [C.teal, C.green], stone: RAMP.stone, accent: C.yellow, ambient: C.slate, bossRobe: RAMP.purple, bossName: 'Władca Otchłani' },
-  { name: 'Nocne bagno', ground: [C.black, C.teal, C.dgreen], tuft: [C.dgreen, C.green], stone: RAMP.night, accent: C.cyan, ambient: C.teal, bossRobe: RAMP.green, bossName: 'Królowa Bagien' },
-  { name: 'Spalone pustkowie', ground: [C.dbrown, C.brown, C.clay], tuft: [C.ddbrown, C.dbrown], stone: RAMP.wood, accent: C.orange, ambient: C.rust, bossRobe: RAMP.red, bossName: 'Żar Pustkowia' },
-  { name: 'Otchłań', ground: [C.black, C.navy, C.slate], tuft: [C.plum, C.pink], stone: RAMP.night, accent: C.pink, ambient: C.plum, bossRobe: RAMP.blue, bossName: 'Oko Pustki' },
+  { name: 'Mroczna łąka', ground: [C.teal, C.dgreen, C.green], dirt: [C.ddbrown, C.dbrown, C.brown], paving: [C.navy, C.slate, C.dgray, C.lavender], tuft: [C.teal, C.green], stone: RAMP.stone, accent: C.yellow, ambient: C.slate, bossRobe: RAMP.purple, bossName: 'Władca Otchłani' },
+  { name: 'Nocne bagno', ground: [C.black, C.teal, C.dgreen], dirt: [C.black, C.ddbrown, C.dbrown], paving: [C.black, C.navy, C.slate, C.dgray], tuft: [C.dgreen, C.green], stone: RAMP.night, accent: C.cyan, ambient: C.teal, bossRobe: RAMP.green, bossName: 'Królowa Bagien' },
+  { name: 'Spalone pustkowie', ground: [C.dbrown, C.brown, C.clay], dirt: [C.ddbrown, C.dbrown, C.tan], paving: [C.ddbrown, C.dbrown, C.brown, C.tan], tuft: [C.ddbrown, C.dbrown], stone: RAMP.wood, accent: C.orange, ambient: C.rust, bossRobe: RAMP.red, bossName: 'Żar Pustkowia' },
+  { name: 'Otchłań', ground: [C.black, C.navy, C.slate], dirt: [C.black, C.plum, C.dgray], paving: [C.black, C.navy, C.slate, C.dgray], tuft: [C.plum, C.pink], stone: RAMP.night, accent: C.pink, ambient: C.plum, bossRobe: RAMP.blue, bossName: 'Oko Pustki' },
   // Sekretny biom (VOID_BIOME): poza cyklem kampanii.
-  { name: 'Pustka', ground: [C.black, C.black, C.navy], tuft: [C.plum, C.hotpink], stone: RAMP.night, accent: C.white, ambient: C.navy, bossRobe: [C.black, C.plum, C.hotpink, C.white], bossName: 'Serce Pustki' },
+  { name: 'Pustka', ground: [C.black, C.black, C.navy], dirt: [C.black, C.navy, C.plum], paving: [C.black, C.navy, C.plum, C.slate], tuft: [C.plum, C.hotpink], stone: RAMP.night, accent: C.white, ambient: C.navy, bossRobe: [C.black, C.plum, C.hotpink, C.white], bossName: 'Serce Pustki' },
 ];
 
 /** Biomy kampanii powtarzają się co BIOME_CYCLE poziomów; Pustka (VOID_BIOME) jest sekretna. */

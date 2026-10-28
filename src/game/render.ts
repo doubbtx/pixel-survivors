@@ -2,9 +2,11 @@ import { W, H, VW, VH, ZOOM, type Renderer } from '../core/renderer';
 import { C, PAL } from '../core/palette';
 import { drawLabel } from '../core/font';
 import { rng } from '../core/rng';
-import { drawSprite, drawShadow, getSprite, blit, TILE, TILE_VARIANTS } from '../gfx/sprites';
+import { drawSprite, drawShadow, getSprite } from '../gfx/sprites';
+import { CHUNK, groundChunk, groundBase, groundFrame } from '../gfx/ground';
+import { drawScenery } from './scenery';
 import { animFrame } from '../gfx/actors';
-import { FX_FRAMES, ARROW_DIRS, PROP_KINDS } from '../gfx/world';
+import { FX_FRAMES, ARROW_DIRS } from '../gfx/world';
 import { effectiveStats, orbitRadius, auraRadius } from '../systems/weapons';
 import { itemColor } from '../data/items';
 import { BAL } from '../data/balance';
@@ -99,24 +101,18 @@ function drawWorld(run: Run, r: Renderer): void {
   const p = run.player;
   const px = X(p.x), py = Y(p.y);
 
-  // Podłoże z kafelków (wariant z hasha współrzędnych — stabilny przy ruchu kamery).
-  const tx0 = Math.floor(ox / TILE), ty0 = Math.floor(oy / TILE);
-  for (let ty = ty0; ty <= ty0 + Math.ceil(VH / TILE); ty++) {
-    for (let tx = tx0; tx <= tx0 + Math.ceil(VW / TILE); tx++) {
-      const h = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
-      blit(g, `tile${run.levelInfo.biome}_${h % TILE_VARIANTS}`, tx * TILE - ox, ty * TILE - oy);
+  // Podłoże: kompozycja trawy, ziemi, ścieżek i posadzek ruin (gfx/ground.ts) w kawałkach z pamięci podręcznej.
+  const biome = run.levelInfo.biome, B = BIOMES[biome], seed = run.depth * 7919 + biome * 101 + 17;
+  groundFrame();
+  const res = r.worldDensity();
+  for (let cy = Math.floor(oy / CHUNK); cy * CHUNK < oy + VH; cy++) {
+    for (let cx = Math.floor(ox / CHUNK); cx * CHUNK < ox + VW; cx++) {
+      const chunk = groundChunk(B, seed, cx, cy, res);
+      if (chunk) g.drawImage(chunk, cx * CHUNK - ox, cy * CHUNK - oy, CHUNK, CHUNK);
+      else { g.fillStyle = groundBase(B); g.fillRect(cx * CHUNK - ox, cy * CHUNK - oy, CHUNK, CHUNK); }
     }
   }
-
-  // Druga warstwa podłoża: duże plamy (ciemniejsze i jaśniejsze) co kilkanaście kafelków.
-  const biome = run.levelInfo.biome;
-  for (let ty = ty0 - 1; ty <= ty0 + Math.ceil(VH / TILE); ty++) {
-    for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(VW / TILE); tx++) {
-      const h = ((tx * 2654435761) ^ (ty * 40503)) >>> 0;
-      if (h % 13 !== 0) continue;
-      blit(g, `patch${biome}@${(h >>> 9) % 6}`, tx * TILE - ox - 8, ty * TILE - oy);
-    }
-  }
+  drawScenery(g, ox, oy, biome, seed);
 
   // Teren: kałuże bagna i lodu (pod wszystkim, co stoi na ziemi).
   for (const t of run.terrain) {
@@ -134,16 +130,6 @@ function drawWorld(run: Run, r: Renderer): void {
     }
   }
 
-  // Dekoracje terenu: co ~8. kafelek dostaje element z hasha współrzędnych (stabilny przy ruchu kamery).
-  for (let ty = ty0 - 1; ty <= ty0 + Math.ceil(VH / TILE); ty++) {
-    for (let tx = tx0 - 1; tx <= tx0 + Math.ceil(VW / TILE); tx++) {
-      const h = ((tx * 92837111) ^ (ty * 689287499)) >>> 0;
-      if (h % 8 !== 0) continue;
-      const x = tx * TILE - ox + 4 + ((h >>> 8) % 20), y = ty * TILE - oy + 4 + ((h >>> 13) % 20);
-      drawShadow(g, x, y + 8, 16);
-      drawSprite(g, `prop${biome}@${(h >>> 4) % PROP_KINDS}`, x, y);
-    }
-  }
   // Przyciemnienie tła (Ustawienia): podłoże i dekoracje ciemniejsze, wszystko, co żyje, odcina się od nich.
   if (run.bgDim > 0) r.withAlpha(run.bgDim, () => r.rect(0, 0, VW, VH, C.black));
 
@@ -367,7 +353,7 @@ function drawWorld(run: Run, r: Renderer): void {
     for (const gm of run.gems.items) {
       if (n > 150 || !vis(gm.x, gm.y)) continue;
       n++;
-      glow(X(gm.x), Y(gm.y), gm.value < 25 ? 9 : 14, C.cyan, 0.35);
+      glow(X(gm.x), Y(gm.y), gm.value < 25 ? 9 : 14, C.cyan, 0.28 + 0.1 * Math.sin(run.time * 3 + gm.x * 0.07));
     }
   });
   for (const gm of run.gems.items) {
@@ -474,10 +460,9 @@ function drawWorld(run: Run, r: Renderer): void {
     }
   }
 
-  // Szał Borguna: pulsująca czerwona poświata.
+  // Szał Borguna: jeden spokojnie pulsujący czerwony pierścień.
   if (run.rageT > 0 && run.outcome !== 'dead') {
-    r.withAlpha(0.22 + 0.12 * Math.sin(run.time * 12), () => r.circle(px, py, 16, C.red, true));
-    r.circle(px, py, 15 + Math.round(Math.sin(run.time * 12)), C.salmon);
+    r.withAlpha(0.45 + 0.2 * Math.sin(run.time * 8), () => r.circle(px, py, 15, C.red));
   }
   // Znacznik gracza (Ustawienia): cienka elipsa na ziemi pod stopami (część sceny, nie nakładka).
   if (run.playerMarker && run.outcome !== 'dead') {
@@ -492,9 +477,8 @@ function drawWorld(run: Run, r: Renderer): void {
     drawSprite(g, `${run.heroSprite}@${frame}`, px, py, { flash: p.flash > 0, scale, flipX: p.fx < 0 });
   }
   if (p.shield > 0) {
-    // Tarcza: delikatna poświata wokół postaci zamiast wyraźnej bańki.
-    lit(g, (glow) => glow(px, py, 15, C.cyan, 0.18));
-    r.withAlpha(0.25, () => r.circle(px, py, 12, C.cyan));
+    // Tarcza: jeden czytelny pierścień (bez nakładających się poświat).
+    r.withAlpha(0.6, () => r.circle(px, py + 1, 13, C.cyan));
   }
   // Rdzeń trafienia (BAL.playerBulletR) widoczny tylko, gdy pocisk jest blisko — wiadomo, jak blisko można go minąć.
   if (run.outcome !== 'dead' && run.bullets.items.some((b) => (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < CORE_SHOW * CORE_SHOW)) {
@@ -557,10 +541,20 @@ function drawWorld(run: Run, r: Renderer): void {
     });
   }
   // Wyraźne pociski (Ustawienia): ciemna obwódka pod każdym pociskiem.
+  // Krótki ślad za pociskiem (dwa bledsze odbicia wstecz wzdłuż lotu) i jasny rdzeń: wrogie pociski są okrągłe,
+  // ze śladem i rdzeniem, pociski gracza — wydłużone, bez śladu. Przy bardzo wielu pociskach ślad jest pomijany.
+  const trails = run.bullets.count < 700;
   for (const b of run.bullets.items) {
     if (!vis(b.x, b.y)) continue;
-    if (run.bulletOutline) r.circle(X(b.x), Y(b.y), b.radius * ZOOM + 1.5, C.black, true);
-    drawSprite(g, b.sprite, X(b.x), Y(b.y));
+    const bx = X(b.x), by = Y(b.y);
+    if (trails) {
+      const sp = Math.hypot(b.vx, b.vy) || 1, k = Math.min(1, 60 / sp) * 0.045 * ZOOM;
+      r.withAlpha(0.18, () => drawSprite(g, b.sprite, bx - b.vx * k * 2, by - b.vy * k * 2));
+      r.withAlpha(0.38, () => drawSprite(g, b.sprite, bx - b.vx * k, by - b.vy * k));
+    }
+    if (run.bulletOutline) r.circle(bx, by, b.radius * ZOOM + 1.5, C.black, true);
+    drawSprite(g, b.sprite, bx, by);
+    r.rect(bx - 0.67, by - 0.67, 1.34, 1.34, C.white);
   }
 
   // Cząsteczki i efekty (trafienia, wybuchy, błyski) — też ataki gracza.
@@ -591,6 +585,12 @@ function drawWorld(run: Run, r: Renderer): void {
           drawSprite(g, `${f.kind}@${fr}`, X(f.x), Y(f.y), { scale: Math.max(1, Math.round(f.r)) });
           break;
         }
+        case 'fade': {
+          // Znikający wróg: biały błysk sylwetki, potem bladnięcie i lekkie uniesienie.
+          const up = (1 - k) * 4;
+          r.withAlpha(k * 0.8, () => drawSprite(g, f.sprite, X(f.x), Y(f.y) - up, { flash: k > 0.7, scale: Math.max(1, Math.round(f.r)), flipX: f.a0 === 1 }));
+          break;
+        }
         case 'arc':
           for (let a = f.a0; a <= f.a1; a += 0.08) {
             const rr = f.r * ZOOM * (0.6 + 0.4 * (1 - k));
@@ -613,9 +613,11 @@ function drawWorld(run: Run, r: Renderer): void {
     lit(g, (glow) => { glow(px, py + 10, 150, C.peach, 0.16); glow(px, py + 12, 60, C.yellow, 0.05); });
   }
 
-  // Liczby obrażeń.
+  // Zwykłe liczby małe, krytyki większe z krótkim „wyskokiem”; wszystkie blakną pod koniec życia.
   for (const n of run.dmgNums.items) {
-    if (vis(n.x, n.y)) drawLabel(g, n.text, X(n.x), Y(n.y) - 6, n.col, C.black);
+    if (!vis(n.x, n.y)) continue;
+    const pop = n.big && n.life > 0.55 ? 1.25 : 1;
+    r.withAlpha(Math.min(1, n.life * 5), () => drawLabel(g, n.text, X(n.x), Y(n.y) - 6, n.col, C.black, n.big ? pop : 0.75));
   }
 
   // Wydarzenia poziomu: zabarwione niebo i kręgi ostrzegawcze piorunów burzy.

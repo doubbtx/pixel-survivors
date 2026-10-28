@@ -3,31 +3,17 @@ import type { Input } from '../core/input';
 import { C, PAL, type Ramp } from '../core/palette';
 import { drawText, LINE_H } from '../core/font';
 import { sfx } from '../core/audio';
+import { UI, tile } from './theme';
 
 /**
- * Okno: miękki cień, czarne zaokrąglone tło, ramka w kolorze akcentu z cienką jasną linią w środku,
- * wnętrze z gradientem (granat → czerń) i małe romby w rogach. Linie ułamkowe — bufor ma więcej pikseli niż logika.
+ * Okno (wspólny styl z HUD-em, ui/theme.ts): delikatny cień, płaskie grafitowo-granatowe wypełnienie i jedna cienka ramka
+ * w kolorze akcentu. Bez połysku, gradientów i ozdobników w rogach.
  */
-export function panel(r: Renderer, x: number, y: number, w: number, h: number, accent: number = C.dgray, fill: number = C.navy): void {
+export function panel(r: Renderer, x: number, y: number, w: number, h: number, accent: number = UI.border, fill: number = C.navy): void {
   x = Math.round(x); y = Math.round(y);
-  r.withAlpha(0.45, () => r.roundRect(x + 2, y + 3, w, h, 5, C.black));
-  r.roundRect(x, y, w, h, 5, C.black);
-  r.roundRect(x + 1, y + 1, w - 2, h - 2, 4, fill, C.black);
-  // Rama z fazą: kolor akcentu, ciemna linia oddzielająca od wnętrza, delikatny połysk.
-  r.roundFrame(x + 0.5, y + 0.5, w - 1, h - 1, 4.5, accent, 1);
-  r.withAlpha(0.7, () => r.roundFrame(x + 1.5, y + 1.5, w - 3, h - 3, 3.5, C.black, 0.5));
-  r.withAlpha(0.18, () => r.roundFrame(x + 2, y + 2, w - 4, h - 4, 3, C.white, 0.5));
-  // Faza 32-bit: jasna krawędź u góry, cień u dołu wnętrza.
-  r.withAlpha(0.22, () => r.rect(x + 4, y + 2.5, w - 8, 1, C.white));
-  r.withAlpha(0.45, () => r.rect(x + 4, y + h - 3.5, w - 8, 1, C.black));
-  // Romby w rogach z jasnym środkiem.
-  for (const [cx, cy] of [[x + 3, y + 3], [x + w - 3, y + 3], [x + 3, y + h - 3], [x + w - 3, y + h - 3]]) {
-    r.g.fillStyle = PAL[accent];
-    r.g.beginPath();
-    r.g.moveTo(cx, cy - 2); r.g.lineTo(cx + 2, cy); r.g.lineTo(cx, cy + 2); r.g.lineTo(cx - 2, cy);
-    r.g.fill();
-    r.rect(cx - 0.5, cy - 0.5, 1, 1, C.white);
-  }
+  r.withAlpha(0.35, () => r.roundRect(x + 1, y + 2, w, h, UI.radius + 1, C.black));
+  r.withAlpha(0.94, () => r.roundRect(x, y, w, h, UI.radius + 1, fill));
+  r.roundFrame(x, y, w, h, UI.radius + 1, accent, 1);
 }
 
 export function inside(px: number, py: number, x: number, y: number, w: number, h: number): boolean {
@@ -58,16 +44,14 @@ export interface ButtonOpts {
   scale?: number;
 }
 
-/** Przycisk: zaokrąglony, pod myszą jaśniejszy i lekko uniesiony, wybrany wypełniony kolorem akcentu. */
+/** Przycisk: płaski, cienka ramka; pod myszą jaśniejszy, wybrany z ramką w kolorze akcentu. */
 export function button(r: Renderer, x: number, y: number, w: number, h: number, label: string, o: ButtonOpts = {}): void {
-  const hot = hovered(x, y, w, h), acc = o.accent ?? C.gold, lift = hot ? -1 : 0;
-  r.withAlpha(0.45, () => r.roundRect(x + 1, y + 2, w, h, 4, C.black));
-  r.roundRect(x, y + lift, w, h, 4, o.active ? C.dbrown : hot ? C.dgray : C.slate, o.active ? C.ddbrown : C.navy);
-  r.roundFrame(x + 0.5, y + 0.5 + lift, w - 1, h - 1, 3.5, o.active || hot ? acc : C.dgray, o.active ? 1 : 0.75);
-  if (o.pulse && !o.active) r.withAlpha(0.35 + 0.35 * Math.sin(performance.now() / 160), () => r.roundFrame(x - 0.5, y - 0.5 + lift, w + 1, h + 1, 4.5, C.yellow, 1));
-  r.withAlpha(hot || o.active ? 0.5 : 0.2, () => r.rect(x + 3, y + 1 + lift, w - 6, 0.5, C.white));
+  const hot = hovered(x, y, w, h), acc = o.accent ?? C.gold;
+  r.withAlpha(o.active ? 0.95 : 0.85, () => r.roundRect(x, y, w, h, UI.radius, o.active ? C.ddbrown : hot ? C.slate : C.navy));
+  r.roundFrame(x, y, w, h, UI.radius, o.active || hot ? acc : UI.border, o.active ? 1 : UI.line * 1.5);
+  if (o.pulse && !o.active) r.withAlpha(0.35 + 0.35 * Math.sin(performance.now() / 160), () => r.roundFrame(x - 1, y - 1, w + 2, h + 2, UI.radius + 1, C.yellow, 0.75));
   const sc = o.scale ?? 1;
-  drawText(r.g, label, x + w / 2, y + lift + Math.round((h - 11 * sc) / 2), o.col ?? (o.active || hot ? C.yellow : C.white), { align: 'center', shadow: C.black, scale: sc });
+  drawText(r.g, label, x + w / 2, y + Math.round((h - 11 * sc) / 2), o.col ?? (o.active || hot ? C.yellow : C.white), { align: 'center', shadow: C.black, scale: sc });
 }
 
 /** Pulsująca strzałka-trójkąt: w tym kierunku jest więcej treści (`dir` 1 = w prawo, -1 = w lewo). */
@@ -90,23 +74,13 @@ export function dim(r: Renderer): void {
   r.withAlpha(0.6, () => { r.rect(0, 4, W, 0.5, C.gold); r.rect(0, 33.5, W, 0.5, C.gold); });
 }
 
-/** Pasek: zaokrąglona czarna oprawa, wypełnienie z gradientem rampy (światło u góry), połysk i podziałki co 10%. `ramp` od cienia do światła. */
-export function bar(r: Renderer, x: number, y: number, w: number, h: number, frac: number, ramp: Ramp, bg: number = C.ddbrown): void {
-  const rad = Math.min(3, h / 2);
-  const f = (w - 2) * Math.max(0, Math.min(1, frac));
-  r.roundRect(x, y, w, h, rad, C.black);
-  r.roundRect(x + 1, y + 1, w - 2, h - 2, rad - 0.5, bg, C.black);
-  if (f > 0) {
-    const fw = Math.max(f, Math.min(2, w - 2));
-    r.roundRect(x + 1, y + 1, fw, h - 2, rad - 0.5, ramp[3], ramp[1]);
-    // Połysk 32-bit: jasny pas w górnej części wypełnienia i cień w dolnej.
-    r.withAlpha(0.55, () => r.rect(x + 2, y + 1.5, Math.max(0, f - 2), 0.5, C.white));
-    if (h >= 5) {
-      r.withAlpha(0.18, () => r.rect(x + 1, y + 1, fw, (h - 2) * 0.4, C.white));
-      r.withAlpha(0.22, () => r.rect(x + 1, y + 1 + (h - 2) * 0.7, fw, (h - 2) * 0.3, C.black));
-    }
-  }
-  if (w >= 60 && h >= 5) r.withAlpha(0.35, () => { for (let i = 1; i < 10; i++) r.rect(x + 1 + ((w - 2) * i) / 10, y + 1, 0.5, h - 2, C.black); });
+/** Pasek (menu i nakładki): płaski jak w HUD-zie — ciemny tor, wypełnienie jasnym tonem rampy, podziałki co 10% przy długich paskach. */
+export function bar(r: Renderer, x: number, y: number, w: number, h: number, frac: number, ramp: Ramp, bg: number = C.black): void {
+  r.withAlpha(bg === C.black ? UI.trackA : 1, () => r.roundRect(x, y, w, h, Math.min(1.5, h / 2), bg));
+  const f = w * Math.max(0, Math.min(1, frac));
+  if (f > 0) r.roundRect(x, y, Math.max(1, f), h, Math.min(1.5, h / 2), ramp[Math.min(ramp.length - 1, 2)]);
+  r.withAlpha(0.4, () => r.roundFrame(x, y, w, h, Math.min(1.5, h / 2), C.black, UI.line));
+  if (w >= 60 && h >= 5) r.withAlpha(0.3, () => { for (let i = 1; i < 10; i++) r.rect(x + (w * i) / 10, y + 1, 0.5, h - 2, C.black); });
 }
 
 /** Kursor-strzałka menu (lekko kołysze się w poziomie). */
@@ -203,18 +177,12 @@ export class Menu {
 }
 
 /** Gniazdo na ikonę (HUD, pauza): zaokrąglone, czarna oprawa, ramka w kolorze `border`, wnętrze z gradientem i połyskiem. */
-export function slot(r: Renderer, x: number, y: number, s: number, border: number = C.dgray): void {
-  r.roundRect(x, y, s, s, 3, C.black);
-  r.roundRect(x + 1, y + 1, s - 2, s - 2, 2.5, C.slate, C.black);
-  r.roundFrame(x + 0.5, y + 0.5, s - 1, s - 1, 3, border, 1);
-  r.withAlpha(0.3, () => r.rect(x + 2.5, y + 1.75, s - 5, 0.5, C.white));
-  // Wklęsłe wnętrze: cień przy dolnej krawędzi.
-  r.withAlpha(0.35, () => r.rect(x + 2.5, y + s - 3, s - 5, 1, C.black));
+export function slot(r: Renderer, x: number, y: number, s: number, border: number = UI.border): void {
+  r.withAlpha(0.7, () => r.roundRect(x, y, s, s, UI.radius, C.black));
+  r.roundFrame(x, y, s, s, UI.radius, border, UI.line * 1.5);
 }
 
-/** Półprzezroczysta zaokrąglona płytka pod tekst HUD (czytelność na ruchliwym tle). */
+/** Półprzezroczysta płytka pod tekst (czytelność na ruchliwym tle) — ta sama co w HUD-zie. */
 export function plate(r: Renderer, x: number, y: number, w: number, h: number): void {
-  r.withAlpha(0.5, () => r.roundRect(x, y, w, h, 3, C.navy, C.black));
-  r.withAlpha(0.25, () => r.roundFrame(x, y, w, h, 3, C.lavender, 0.5));
-  r.withAlpha(0.15, () => r.rect(x + 3, y + 1, w - 6, 0.5, C.white));
+  tile(r, x, y, w, h);
 }

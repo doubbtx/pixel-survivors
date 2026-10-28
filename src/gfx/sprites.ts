@@ -6,7 +6,8 @@ import { Painter, canvasRes, HI } from './painter';
 import { ICON_FNS } from './icons';
 import { ACTORS, boss } from './actors';
 import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes, fountain, rune, mural, mushroom, stairs, barrow, grove } from './objects';
-import { spark, poof, boom, arrowSprite, prop, patch, uiSkull } from './world';
+import { spark, poof, boom, arrowSprite, prop, uiSkull } from './world';
+import { landmark } from './landmarks';
 
 /**
  * Rejestr sprite'ów 16-bit. Logika gry odwołuje się wyłącznie do NAZW sprite'ów,
@@ -236,7 +237,7 @@ function build(name: string): HTMLCanvasElement {
   if (base === 'boom') return boom(f).canvas();
   if (base === 'arrow' || base === 'arrowc') return arrowSprite(f, base === 'arrowc').canvas();
   if (base.startsWith('prop')) return prop(Number(base.slice(4)), f).canvas();
-  if (base.startsWith('patch')) return patch(BIOMES[Number(base.slice(5))], f).canvas();
+  if (base.startsWith('lm')) return landmark(BIOMES[Number(base.slice(2))], f).canvas();
   if (base.startsWith('shrine')) return shrine(Number(base.slice(6))).canvas();
   if (base === 'portal' || base === 'exitportal') return portal(f, base === 'exitportal').canvas();
   if (base === 'swordstone') return swordStone().canvas();

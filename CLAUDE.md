@@ -32,7 +32,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `music.setMood`), rng (`rng.seed` dla wyzwania dnia), save.
 - `gfx/` — `painter.ts` (sphere, polyShade, block, ring, disc, outline), `sprites.ts` (rejestr po nazwie, `drawSprite`),
   `icons.ts` (ikony 16×16: `ic_<broń>`, `pi_<pasywka>`, `ab_<umiejętność>`, `tag:<Tag>`, `bp_<moc bossa>`; `fu:<A>:<B>` = ikona hybrydy złożona w sprites.ts), `items.ts` (`it_<przedmiot>`),
-  `hero-icons.ts` (ikony Vesper i Aurela), `elemmark.ts` (kształty żywiołów dla daltonistów), `actors.ts` (animowane postacie, `name@klatka`, skórki `name~odznaka@klatka` przez `Painter.recolor`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów), `objects.ts` (kapliczki, portale, kamień zadania, totem, teren: `tcover@v`, `tbarrel`, `tspikes@0/1`).
+  `hero-icons.ts` (ikony Vesper i Aurela), `elemmark.ts` (kształty żywiołów dla daltonistów), `actors.ts` (animowane postacie, `name@klatka`, skórki `name~odznaka@klatka` przez `Painter.recolor`), `world.ts` (efekty spark/poof/boom, strzały, dekoracje biomów), `ground.ts` (podłoże z pól szumu w kawałkach `CHUNK`: trawa, ziemia, ścieżki, posadzki; `surfaceAt`), `landmarks.ts` (brama, obelisk, obozowisko, ruiny, kolumny), `objects.ts` (kapliczki, portale, kamień zadania, totem, teren: `tcover@v`, `tbarrel`, `tspikes@0/1`).
 - `data/` — `balance.ts`, `weapons.ts` (z ewolucjami, hybrydy i `FUSIONS`), `passives.ts`, `enemies.ts` (Volley: kształt i ruch salw, `BOSS_POWERS`), `waves.ts`, `heroes.ts`,
   `levels.ts` (biomy, cele poziomów, `LevelDef.boss`/`eliteMul`), `expedition.ts` (mapy jak w PoE: `MapNode`, `MAP_MODS`, `MAP_BONUSES`, `EX_BLESSINGS`, `levelAt`, `nextLanes`), `augments.ts` (augmenty broni, `weaponBase`), `upgrades.ts` (jakość ulepszeń broni, `WeaponBonus`), `shop.ts` (usługi, eliksiry, ceny, rollShop), `synergies.ts` (tagi wszystkiego, progi synergii), `meta.ts` (drzewka per bohater `HERO_TREES`, klucze, Paragon, prestiż, esencja), `cards.ts` (~115 kart: stats/mul/flags/hooks, `unlock` = karta z osiągnięcia; lista flag w komentarzu pliku),
   `items.ts` (sloty, jakości, typy bazowe, afiksy, super-bonusy, unikaty `UNIQUES`, rollItem, rollUnique, porównania), `tasks.ts` (zadania), `pacts.ts` (pakty ryzyka, odznaki i skórki), `forge.ts` (Kuźnia: materiały, zwoje, `FORGE_STEPS`, progi, `AWAKENINGS`, warsztat `CRAFTS`),
@@ -46,11 +46,11 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `hurtPlayer`, `recomputeStats` (bohater + pasywki + karty + ekwipunek), `indexEffects` (flagi i hooki z kart i super-bonusów),
   `emit` hooków (onHit, onKill, onAbilityCast, onDash, onDamageTaken, onLevelUp, onTick), ekwipunek (`equip`, `unequip`,
   `salvage`, `slotFor`), `toSnapshot`/`fromSnapshot`.
-- `game/` — też `render.ts` (świat), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy, tablica Hardcore).
-- `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
+- `game/` — też `render.ts` (świat), `scenery.ts` (skupiska dekoracji i kompozycje ruin, bez kolizji), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy, tablica Hardcore).
+- `ui/` — `theme.ts` (wspólny styl: kolory akcentów, odstępy, rozmiary HUD, `tile`, `meter`, `iconSlot`, `cornerTag`, `label`), `widgets.ts` (panel, dim, bar, Menu, slot — w stylu z theme.ts), `hud.ts` (tylko rysowanie + stan animacji `HudAnim`), `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.23.19)
+## Stan (wersja 0.24.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -345,6 +345,28 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 
   - 0.23.19: czcionka pikselowa Pixelify Sans (@fontsource/pixelify-sans 500/700, OFL, z polskimi znakami) zamiast Nunito;
     core/font.ts: `FONT_PX` 9, waga 500 (tytuły `scale` ≥ 2: 700). Układ ekranów bez zmian, napisy się mieszczą.
+- Etap 0.24 (przebudowa oprawy: ruiny w lesie, lekki HUD):
+  - HUD (ui/hud.ts + ui/theme.ts): cienki pasek XP (`UI.xpH`), karta bohatera 108×31 (portret, życie z wartością i śladem
+    utraconego życia, zasób, LV, akt/głębia drugorzędnie), pod nią wskaźniki Szału i błogosławieństw z czasem i synergie jako
+    ikony 16 px (punkty w rogu, progi kreskami, opis pod myszą). Środek: zegar, jeden pasek celu z licznikiem („110 / 680”,
+    „Przetrwaj do 03:00”), etykiety wydarzenia i kombo (kombo pojawia się i wygasza). Prawa: zabójstwa i złoto w jednym
+    wierszu, minimapa 70×44 (gracz krzyżykiem, elity/cele/skrzynie kwadratami z obwódką), zadanie. Lewy dół: gniazda 18 px,
+    poziom w rogu (`cornerTag`), puste gniazda bez ramek. Środek dołu: pasek Q/E/Spacja/R (24 px; dotyk: dawne pozycje
+    `abilitySlotPos`), odnowienie przyciemnieniem i licznikiem, jeden rozbłysk gotowości (`READY_FLASH`). Animacje w `HudAnim`
+    (WeakMap per run, czas z `performance.now`, bez wpływu na symulację). Diagnostyka: F3 / ` przełącza `GameScreen.diag`
+    (nie zapisywane); klawisze F4/F6/F7 nadal wymagają `settings.debug` („Tryb debug”).
+  - Okna i przyciski (`widgets.ts`): płaskie wypełnienie, jedna cienka ramka, bez połysku i rombów w rogach; podpowiedzi w grze
+    jako lekka płytka.
+  - Teren: `gfx/ground.ts` buduje podłoże z pól fbm (ton trawy, ziemia `DIRT`, ścieżki `PATH`, posadzka `PAVE` z płytami
+    `STONE_W`×`STONE_H`, mech) w kawałkach `CHUNK` = 192 px logicznych (do `BUILD_PER_FRAME` na klatkę, LRU `CACHE_MAX`),
+    kolory ziemi i kamienia mieszane z trawą (stonowane); `Biome.dirt`, `Biome.paving`. `game/scenery.ts`: kompozycje
+    (`LM_CELL`, `LM_CHANCE`) i skupiska dekoracji (`RECIPES`, nic na ścieżkach). Wszystko bez kolizji. Kafelki `tile<b>_<v>`
+    zostają tylko w tle menu; usunięte plamy `patch`.
+  - Walka: wrogie pociski z jasnym rdzeniem i krótkim śladem (dwa bledsze odbicia, pomijane przy 700+ pociskach), tarcza i Szał
+    jako jeden pierścień, efekt `fade` (sylwetka zabitego wroga blednie i unosi się; `Fx.sprite`), liczby obrażeń: zwykłe 0,75,
+    krytyki większe z wyskokiem (`DmgNum.big`, `drawLabel(..., scale)`), bez nakładania (`Run.numberNear`), puls poświaty
+    kryształów i pierścień przy zebraniu.
+
 ## Plan dalej
 
 - Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Głowy bossów, Pustka.

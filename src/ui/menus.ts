@@ -677,7 +677,7 @@ export class SettingsScreen implements Screen {
         sw('Minimapa', () => yes(s.minimap), toggle('minimap'), 'Mała mapa w prawym górnym rogu: wrogowie, elity, boss i skrzynie.'),
       ],
       [
-        sw('Licznik FPS / debug', () => yes(s.debug), toggle('debug'), 'Licznik klatek i encji; włącza klawisze F4, F6, F7.'),
+        sw('Tryb debug', () => yes(s.debug), toggle('debug'), 'Klawisze testowe F4, F6, F7 i podgląd balansu. Statystyki wydajności w grze: F3.'),
         [{ label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } }, () => 'Wartości do sprawdzenia: HP przedmiotów i ulepszeń, skalowanie wrogów, miękkie limity.'],
       ],
     ];

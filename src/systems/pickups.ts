@@ -33,6 +33,8 @@ export function updatePickups(run: Run, dt: number): void {
     if (g.flying && fly(run, g, dt)) {
       run.addXp(g.value);
       sfx.play('pickup');
+      // Zebranie: błysk paska XP i mały turkusowy pierścień przy bohaterze (najwyżej jeden naraz).
+      if (run.xpPulse < 0.05) { const f = run.addFx('ring', p.x, p.y, C.cyan, 0.18); if (f) f.r = 7; }
       run.xpPulse = 0.15;
       run.burst(p.x, p.y - 4, C.cyan, 1, 30);
       run.gems.release(g);

@@ -4,6 +4,7 @@ import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
 import type { SaveData } from '../core/save';
 import { panel } from './widgets';
+import { tile } from './theme';
 
 /**
  * Podpowiedzi kontekstowe: każda pokazuje się raz (zapis `save.seenHints`), w chwili gdy gracz pierwszy raz
@@ -87,10 +88,12 @@ export class Hints {
   render(r: Renderer, overlay: boolean): void {
     if (!this.cur || !this.save.settings.hints) return;
     const lines = wrapText(HINTS[this.cur], (overlay ? 290 : 180) / HINT_SCALE);
-    const w = overlay ? 302 : 192, h = 9 + lines.length * 9, x = (W - w) / 2, y = overlay ? 3 : 66;
+    const w = overlay ? 302 : 192, h = 9 + lines.length * 9, x = (W - w) / 2, y = overlay ? 3 : 52;
     const a = Math.min(1, this.t * 3, (SHOW - this.t) * 6);
     r.withAlpha(a, () => {
-      panel(r, x, y, w, h, C.cyan);
+      // W grze lekka płytka HUD-u (nie zasłania walki ciężką ramką), w nakładkach pełne okno.
+      if (overlay) panel(r, x, y, w, h, C.cyan);
+      else tile(r, x, y, w, h, C.teal, 0.78);
       lines.forEach((l, i) => drawText(r.g, l, x + 6, y + 4 + i * 9, C.white, { shadow: C.black, scale: HINT_SCALE }));
     });
   }

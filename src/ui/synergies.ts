@@ -1,12 +1,13 @@
 import { W, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText } from '../core/font';
+import { drawText, textWidth } from '../core/font';
 import { drawSprite } from '../gfx/sprites';
 import { SYNERGIES, SYNERGY_BY_TAG, VERSATILITY, tierOf, type SynergyDef } from '../data/synergies';
 import type { Tag } from '../data/cards';
 import type { Run } from '../game/run';
-import { dim, panel, plate, inside } from './widgets';
+import { dim, panel, inside, hovered } from './widgets';
+import { UI, tile, iconSlot, cornerTag } from './theme';
 
 const OUT = { outline: C.black } as const;
 /** Mały tekst progów (ekran synergii). */
@@ -40,37 +41,44 @@ export function drawTagIcons(r: Renderer, tags: Tag[], cx: number, y: number): v
 }
 
 /**
- * HUD: synergie z punktami (aktywne i bliskie progu), pod portretem. Kropki = osiągnięte progi.
- * Zwraca wysokość, żeby kolejne elementy (debug) mogły się pod nią zmieścić.
+ * HUD: synergie jako zwarte ikony (aktywne i bliskie progu) pod kartą bohatera, w rzędach do szerokości `maxW`.
+ * Kreski pod ikoną = osiągnięte progi, liczba w rogu = punkty; nazwa i postęp w podpowiedzi pod myszą.
+ * Zwraca dolną krawędź.
  */
-/** Szerokość plakietki synergii w HUD. */
-const HUD_W = 84;
-
-export function drawSynergyHud(r: Renderer, run: Run, x: number, y: number): number {
+export function drawSynergyHud(r: Renderer, run: Run, x: number, y: number, maxW: number): number {
   const list = SYNERGIES
     .filter((d) => run.tagPts[d.tag] >= Math.max(2, d.thresholds[0] - 1))
     .sort((a, b) => (run.synTiers[b.tag] ?? 0) - (run.synTiers[a.tag] ?? 0) || run.tagPts[b.tag] - run.tagPts[a.tag])
-    .slice(0, 6);
-  // Wszechstronność na górze listy, gdy są już co najmniej 2 aktywne synergie.
-  let off = 0;
+    .slice(0, 8);
+  const chips: { icon: string; name: string; pts: number; goal: number; tier: number; tiers: number; col: number }[] = [];
   if (run.versCount >= 2) {
-    const vt = run.versTier, goal = VERSATILITY.thresholds[Math.min(vt, VERSATILITY.thresholds.length - 1)];
-    plate(r, x, y, HUD_W, 14);
-    drawSprite(r.g, 'syn_all', x + 8, y + 7);
-    drawText(r.g, VERSATILITY.name, x + 17, y + 3.5, vt > 0 ? C.pink : C.lgray, { ...OUT, scale: 0.75 });
-    drawText(r.g, `${run.versCount}/${goal}`, x + HUD_W - 4, y + 3.5, vt > 0 ? C.pink : C.lgray, { ...OUT, align: 'right', scale: 0.75 });
-    off = 15;
+    const vt = run.versTier;
+    chips.push({ icon: 'syn_all', name: VERSATILITY.name, pts: run.versCount, goal: VERSATILITY.thresholds[Math.min(vt, VERSATILITY.thresholds.length - 1)], tier: vt, tiers: VERSATILITY.thresholds.length, col: C.pink });
   }
-  // Plakietka: ikona, nazwa tagu, punkty do następnego progu i kreski osiągniętych progów.
-  list.forEach((d, i) => {
-    const ty = y + off + i * 15, tier = run.synTiers[d.tag] ?? 0;
-    plate(r, x, ty, HUD_W, 14);
-    drawSprite(r.g, `tag:${d.tag}`, x + 8, ty + 7);
-    drawText(r.g, d.tag, x + 17, ty + 3.5, tier > 0 ? C.yellow : C.lgray, { ...OUT, scale: 0.75 });
-    drawText(r.g, `${run.tagPts[d.tag]}/${nextThreshold(d, tier)}`, x + HUD_W - 13, ty + 3.5, tier > 0 ? C.yellow : C.lgray, { ...OUT, align: 'right', scale: 0.75 });
-    for (let k = 0; k < d.thresholds.length; k++) r.rect(x + HUD_W - 11 + k * 3, ty + 5, 2, 4, k < tier ? C.gold : C.dgray);
+  for (const d of list) {
+    const tier = run.synTiers[d.tag] ?? 0;
+    chips.push({ icon: `tag:${d.tag}`, name: d.tag, pts: run.tagPts[d.tag], goal: nextThreshold(d, tier), tier, tiers: d.thresholds.length, col: UI.reward });
+  }
+  if (!chips.length) return y;
+  const S = UI.synIcon + 4, step = S + 1, perRow = Math.max(1, Math.floor((maxW + 1) / step));
+  let tip: (typeof chips)[number] | null = null, tx = 0, ty = 0;
+  chips.forEach((c, i) => {
+    const cx = x + (i % perRow) * step, cy = y + Math.floor(i / perRow) * (step + 2);
+    const on = c.tier > 0;
+    iconSlot(r, cx, cy, S, on ? c.col : undefined, on ? 0.6 : 0.4);
+    r.withAlpha(on ? 1 : 0.55, () => drawSprite(r.g, c.icon, cx + S / 2, cy + S / 2));
+    cornerTag(r, String(c.pts), cx + S, cy + S, on ? C.yellow : UI.text);
+    for (let k = 0; k < c.tiers; k++) r.rect(cx + 1 + k * 3, cy + S + 0.5, 2, 1, k < c.tier ? c.col : C.dgray);
+    if (hovered(cx, cy, S, S)) { tip = c; tx = cx; ty = cy + S + 3; }
   });
-  return off + list.length * 15;
+  if (tip) {
+    const t = tip as (typeof chips)[number], text = `${t.name}: ${t.pts}/${t.goal}`;
+    const w = textWidth(text) * 0.75 + 8;
+    tile(r, tx, ty, w, 9, t.col, 0.85);
+    drawText(r.g, text, tx + 4, ty + 0.5, t.tier > 0 ? C.yellow : UI.text, { scale: 0.75 });
+  }
+  const rows = Math.ceil(chips.length / perRow);
+  return y + rows * (step + 2);
 }
 
 /**

@@ -1,7 +1,6 @@
 import { C, RAMP } from '../core/palette';
 import { Rng } from '../core/rng';
 import { Painter, HI } from './painter';
-import type { Biome } from '../data/levels';
 
 /**
  * Klatki efektów (iskra trafienia, obłok śmierci, eksplozja), strzały w 16 kierunkach
@@ -81,23 +80,6 @@ export function arrowSprite(k: number, crit: boolean): Painter {
 }
 
 /** Dekoracje terenu: 6 rodzajów na biom (krzaki, kamienie, grzyby, trzciny, kaktusy, kości, kryształy…). */
-/**
- * Plama podłoża 48×32 (druga warstwa terenu): nieregularny kształt z ciemniejszego lub jaśniejszego odcienia biomu,
- * brzeg z ditheringiem, kilka drobin akcentu. `v` wybiera kształt i odcień.
- */
-export function patch(b: Biome, v: number): Painter {
-  const p = new Painter(48, 32, HI);
-  const r = new Rng(v * 104729 + 7);
-  const col = v % 2 ? b.ground[0] : b.ground[2];
-  const blobs = Array.from({ length: 4 }, () => [r.range(12, 36), r.range(10, 22), r.range(6, 11), r.range(4, 8)]);
-  p.soft((x, y) => Math.min(...blobs.map(([cx, cy, rx, ry]) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2)), col, 0.45);
-  for (let i = 0; i < 5; i++) {
-    const x = r.int(10, 38), y = r.int(8, 24);
-    if (p.get(x, y) >= 0) p.dot(x, y, i % 2 ? b.tuft[1] : b.accent).dot(x + 1 / HI, y, i % 2 ? b.tuft[1] : b.accent);
-  }
-  return p;
-}
-
 export function prop(biome: number, k: number): Painter {
   const p = new Painter(22, 22, HI);
   const kinds: Record<number, ((p: Painter) => void)[]> = {

@@ -73,6 +73,8 @@ export class GameScreen implements Screen {
   private build: BuildView | null = null;
   /** Stan, do którego wraca podgląd broni i pasywek (gra albo pauza). */
   private buildReturn: State = 'pause';
+  /** Statystyki diagnostyczne w HUD (F3 / `), nie zapisywane. */
+  private diag = false;
   private anvil: AnvilView | null = null;
   private map: ExpeditionMapView | null = null;
   /** Stan, do którego wraca kowadło (ekran ukończenia, sklep albo mapa). */
@@ -525,10 +527,8 @@ export class GameScreen implements Screen {
     run.bulletOutline = set.bulletOutline;
     run.playerMarker = set.playerMarker;
     if (run.easy !== set.easy) { run.easy = set.easy; run.onBuildChanged(); }
-    if (inp.pressed('debug')) {
-      set.debug = !set.debug;
-      this.app.persist();
-    }
+    // Statystyki diagnostyczne (F3 / `): tylko na czas sesji; klawisze testowe nadal wymagają trybu debug w Ustawieniach.
+    if (inp.pressed('debug')) this.diag = !this.diag;
     this.hints.update(dt, this.state);
     // Muzyka: intensywność z liczby wrogów, lochu i wydarzenia; boss na pełno; poza walką ciszej.
     const fight = this.state === 'play' && run.outcome === 'none';
@@ -648,7 +648,7 @@ export class GameScreen implements Screen {
     const between = this.state === 'cleared' || this.state === 'shop' || this.state === 'anvil' || this.state === 'map' || this.overlayReturn === 'map'
       || (this.state === 'inventory' && (this.invReturn === 'shop' || this.invReturn === 'map'));
     // HUD tylko w trakcie gry: nakładki (pauza, awans, łup, ekwipunek...) zasłaniają go w całości.
-    if (this.state === 'play' && !between) renderHud(run, r, this.app.loop, this.app.save.settings.debug, this.app.save.settings.minimap, this.app.input);
+    if (this.state === 'play' && !between) renderHud(run, r, this.app.loop, this.diag, this.app.save.settings.debug, this.app.save.settings.minimap, this.app.input);
     switch (this.state) {
       case 'levelup':
         this.levelUp!.render(r);
