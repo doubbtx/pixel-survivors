@@ -36,7 +36,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   e.shootT = def.shoot ? rng.range(0.5, def.shoot.cooldown) : 0;
   e.shootA = rng.range(0, Math.PI * 2);
   e.age = 0; e.dead = false; e.elite = null; e.boss = false; e.scale = 1;
-  e.dr = 0; e.regen = 0; e.extraRing = false; e.burstLeft = 0; e.burstT = 0; e.touchCd = 0;
+  e.dr = 0; e.regen = 0; e.extraRing = false; e.burstLeft = 0; e.burstT = 0; e.touchCd = 0; e.abilT = 0;
   e.hitStamp.fill(-9999);
   e.phase = 0; e.invuln = 0; e.actT = 3; e.dashT = 0; e.dvx = 0; e.dvy = 0;
 
@@ -48,6 +48,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
       if (left.length) mods.push(rng.pick(left));
     }
     e.elite = mods;
+    e.abilT = rng.range(1.5, BAL.eliteAbility.cdMax);
     e.scale = 2;
     e.radius *= 1.8;
     e.maxHp = e.hp = e.hp * BAL.eliteHpMul;

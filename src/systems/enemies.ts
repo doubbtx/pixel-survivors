@@ -170,33 +170,36 @@ const BOSS_STYLES: BossAttack[] = [
     if (rng.chance(0.3)) for (let i = 0; i < 8; i++) spawnEnemy(run, 'bat', e.x + rng.range(-25, 25), e.y + rng.range(-25, 25));
     return 2.6;
   },
-  // 1 — Królowa Bagien: kwaśny deszcz, szlamy, sieci bagna, kwiaty.
+  // 1 — Królowa Bagien: kwaśny deszcz (część z wyprzedzeniem ruchu gracza), szlamy, sieci bagna, kwiaty.
   (run, e, phase, alt, dmg) => {
     const aim = () => aimAt(run, e);
-    const acid: Volley = { shape: 'fan', count: 5 + phase, speed: 70, spread: 0.22, acc: -20, minV: 30, sprite: 'eb_cyan' };
+    const acid: Volley = { shape: 'fan', count: 6 + phase, speed: 82, spread: 0.2, acc: -20, minV: 34, sprite: 'eb_cyan' };
     if (phase === 0) {
-      if (alt === 0) sequence(run, e, 3, 0.35, () => fireVolley(run, e.x, e.y, acid, aim() + rng.range(-0.3, 0.3), dmg));
-      else for (let i = 0; i < 8; i++) spawnEnemy(run, 'slime', e.x + Math.cos((i * TAU) / 8) * 26, e.y + Math.sin((i * TAU) / 8) * 26);
-      return 3;
+      if (alt === 0) sequence(run, e, 4, 0.3, (k) => fireVolley(run, e.x, e.y, acid, k % 2 ? leadAim(run, e, 82) : aim() + rng.range(-0.3, 0.3), dmg));
+      else {
+        for (let i = 0; i < 8; i++) spawnEnemy(run, 'slime', e.x + Math.cos((i * TAU) / 8) * 26, e.y + Math.sin((i * TAU) / 8) * 26);
+        sequence(run, e, 2, 0.4, () => fireVolley(run, e.x, e.y, acid, leadAim(run, e, 82), dmg));
+      }
+      return 2.3;
     }
     if (phase === 1) {
-      if (alt === 0) sequence(run, e, 3, 0.4, (k) => fireVolley(run, e.x, e.y, { ...B_FLOWER, count: 12 }, k * 0.25, dmg));
+      if (alt === 0) sequence(run, e, 3, 0.35, (k) => fireVolley(run, e.x, e.y, { ...B_FLOWER, count: 14 }, k * 0.25, dmg));
       else {
-        // Bagno: sieci pod graczem i wokół niego (spowalniają).
+        // Bagno: sieci pod graczem i wokół niego (spowalniają), w tym czasie kwas w miejsce, gdzie gracz będzie.
         const p = run.player;
         for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; run.webs.push({ x: p.x + Math.cos(a) * 34 * (i ? 1 : 0), y: p.y + Math.sin(a) * 34 * (i ? 1 : 0), r: 30, t: 4 }); }
-        fireVolley(run, e.x, e.y, acid, aim(), dmg);
+        sequence(run, e, 3, 0.35, () => fireVolley(run, e.x, e.y, acid, leadAim(run, e, 82), dmg));
       }
-      return 3.2;
+      return 2.5;
     }
     if (alt === 0) {
-      fireVolley(run, e.x, e.y, { ...B_MINEFIELD, sprite: 'eb_cyan', count: 24 }, rng.range(0, TAU), dmg);
-      sequence(run, e, 3, 0.5, () => fireVolley(run, e.x, e.y, acid, aim(), dmg));
+      fireVolley(run, e.x, e.y, { ...B_MINEFIELD, sprite: 'eb_cyan', count: 26 }, rng.range(0, TAU), dmg);
+      sequence(run, e, 4, 0.4, (k) => fireVolley(run, e.x, e.y, acid, k % 2 ? leadAim(run, e, 82) : aim(), dmg));
     } else {
-      sequence(run, e, 2, 0.4, () => fireVolley(run, e.x, e.y, { ...B_WAVE, sprite: 'eb_cyan' }, aim(), dmg));
+      sequence(run, e, 3, 0.35, () => fireVolley(run, e.x, e.y, { ...B_WAVE, sprite: 'eb_cyan' }, aim(), dmg));
       for (let i = 0; i < 6; i++) spawnEnemy(run, 'slime', e.x + rng.range(-25, 25), e.y + rng.range(-25, 25));
     }
-    return 2.6;
+    return 2.1;
   },
   // 2 — Żar Pustkowia: ogniste pierścienie, szarże, deszcz żaru, podwójny śrut.
   (run, e, phase, alt, dmg, dx, dy, dist) => {
@@ -300,6 +303,39 @@ function updateWarden(run: Run, e: Enemy, dt: number, dx: number, dy: number, di
   e.actT = rng.range(Wd.actMin, Wd.actMax) * (rage ? Wd.rageMul : 1);
 }
 
+/** Elity bez własnych pocisków walczą wręcz: ich zdolnością jest szarża. */
+const isMeleeElite = (e: Enemy) => !e.def.shoot && e.def.behavior !== 'keep' && e.def.behavior !== 'summoner' && e.def.behavior !== 'weaver';
+
+/** Szarża elity: zapowiedź (miga), pęd w zapamiętanym kierunku, przy lądowaniu pierścień pocisków. */
+function updateEliteCharge(run: Run, e: Enemy, dt: number): void {
+  const A = BAL.eliteAbility, prev = e.dashT;
+  e.dashT -= dt;
+  if (e.dashT < 0.4) { e.x += e.dvx * dt; e.y += e.dvy * dt; } else if (run.step % 4 < 2) e.flash = 2;
+  if (prev > 0 && e.dashT <= 0) fireVolley(run, e.x, e.y, { shape: 'ring', count: A.ring, speed: 65, sprite: 'eb_orange' }, rng.range(0, TAU), e.damage * BAL.bulletDmg);
+}
+
+/**
+ * Zdolność elity co kilka sekund (z zapowiedzią): elity wręcz szarżują, strzelające na zmianę puszczają dwie serie wachlarza
+ * celowane z wyprzedzeniem i pierścień z luką. Dzięki temu elita jest groźna sama, nie tylko w tłumie.
+ */
+function eliteAbility(run: Run, e: Enemy, dt: number, nx: number, ny: number, dist: number): void {
+  const A = BAL.eliteAbility;
+  e.abilT -= dt;
+  if (e.abilT > 0 && e.abilT < A.windup && dist < A.range && run.step % 6 < 3) e.flash = 2;
+  if (e.abilT > 0 || dist > A.range) return;
+  e.abilT = rng.range(A.cdMin, A.cdMax);
+  const dmg = e.damage * BAL.bulletDmg;
+  if (isMeleeElite(e)) {
+    e.dashT = 0.9;
+    e.dvx = nx * A.chargeSpeed;
+    e.dvy = ny * A.chargeSpeed;
+    return;
+  }
+  e.phase = 1 - e.phase;
+  if (e.phase) sequence(run, e, 2, 0.25, () => fireVolley(run, e.x, e.y, { shape: 'fan', count: A.fan, speed: 90, spread: 0.18, sprite: 'eb_red' }, leadAim(run, e, 90), dmg));
+  else fireVolley(run, e.x, e.y, { shape: 'gapRing', count: A.gapRing, gap: 3, speed: 60, sprite: 'eb_orange' }, aimAt(run, e), dmg);
+}
+
 /** Salwa zwykłego wroga wg ShootDef (kąt bazowy zależny od `aim`). */
 function shoot(run: Run, e: Enemy, sh: ShootDef, dmg: number): void {
   const p = run.player;
@@ -359,6 +395,8 @@ export function updateEnemies(run: Run, dt: number): void {
       updateBoss(run, e, dt, dx, dy, dist);
     } else if (e.stunT > 0) {
       e.stunT -= dt;
+    } else if (e.elite && e.dashT > 0 && e.def.behavior !== 'warden') {
+      updateEliteCharge(run, e, dt);
     } else {
       const sp = e.speed * (1 - e.slowF) * dt;
       const nx = dx / dist, ny = dy / dist;
@@ -463,6 +501,7 @@ export function updateEnemies(run: Run, dt: number): void {
           if (e.extraRing && sh) e.shootT = Math.max(sh.cooldown, 1.2);
         }
       }
+      if (e.elite && e.def.behavior !== 'warden' && e.def.behavior !== 'flee') eliteAbility(run, e, dt, nx, ny, dist);
     }
 
     // Odrzut (wygasa wykładniczo).

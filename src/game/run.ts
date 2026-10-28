@@ -1733,7 +1733,7 @@ function newEnemy(): Enemy {
   return {
     _i: -1, uid: 0, def: null!, sprite: '', x: 0, y: 0, kx: 0, ky: 0, hp: 0, maxHp: 0, speed: 0, damage: 0, radius: 4, xp: 0,
     flash: 0, slowT: 0, slowF: 0, stunT: 0, shootT: 0, shootA: 0, age: 0, dead: false, elite: null, boss: false,
-    scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0,
+    scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0, abilT: 0,
     burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, reactT: 0, brittle: 0, hitStamp: new Int32Array(SLOT_COUNT),
     phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0,
   };

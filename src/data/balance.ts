@@ -8,6 +8,12 @@ export const BAL = {
   // --- run ---
   /** Co ile sekund pojawia się elita. */
   eliteEvery: 55,
+  /**
+   * Zdolność elity (systems/enemies.ts eliteAbility): co `cdMin`-`cdMax` s, z zapowiedzią `windup` s, gdy gracz jest bliżej niż `range`.
+   * Elity wręcz: szarża (`chargeSpeed`) i pierścień `ring` pocisków przy lądowaniu; strzelające: na zmianę dwie serie wachlarza
+   * `fan` pocisków z wyprzedzeniem ruchu gracza i pierścień z luką (`gapRing`).
+   */
+  eliteAbility: { cdMin: 2.2, cdMax: 3.2, windup: 0.5, range: 200, chargeSpeed: 210, ring: 12, fan: 6, gapRing: 18 },
   maxEnemies: 1000,
   /** Zasoby wyboru przy level upie na cały run. */
   rerolls: 3,

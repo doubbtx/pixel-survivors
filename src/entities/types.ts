@@ -97,6 +97,8 @@ export interface Enemy extends Poolable {
   burstT: number;
   /** Czas do kolejnego uderzenia wręcz w gracza (BAL.contactCooldown). */
   touchCd: number;
+  /** Elita: czas do zdolności elity (systems/enemies.ts eliteAbility). */
+  abilT: number;
   hitStamp: Int32Array;
   // — stany żywiołów (data/elements.ts) —
   burnT: number;
