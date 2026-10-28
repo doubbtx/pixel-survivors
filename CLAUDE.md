@@ -50,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `theme.ts` (wspólny styl: kolory akcentów, odstępy, rozmiary HUD, `tile`, `meter`, `iconSlot`, `cornerTag`, `label`), `widgets.ts` (panel, dim, bar, Menu, slot — w stylu z theme.ts), `hud.ts` (tylko rysowanie + stan animacji `HudAnim`), `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `skills.ts` (`drawSkills`: opisy umiejętności na wyborze bohatera i w pauzie), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts` — zakładki Ogólne/Umiejętności/Zasób, przyciski Wstecz i Start, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.25.1)
+## Stan (wersja 0.25.2)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -390,6 +390,8 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   - 0.25.1: wydajność okręgów (`Renderer.circle`): promień powyżej `CIRCLE_BITMAP_MAX` (24 px logiczne) rysowany wprost łukiem
     (fale Aurela, aury, strefy, efekty `ring` rosnące co klatkę), mniejsze z bitmap budowanych przez ImageData z limitem
     `CIRCLE_CACHE_MAX`. Wcześniej każdy nowy promień budował bitmapę piksel po pikselu (Aurel: do 367 ms na klatkę).
+  - 0.25.2: mapa Ekspedycji pokazuje „esencja +X%” (= `ex.bonus` × `BAL.expedition.rewardEssence`, z podpowiedzią pod myszą)
+    zamiast mylącego „łup +X%” (`ex.bonus` nie zwiększa łupu, tylko esencję na koniec wyprawy); „mapy N” obok nazwy biomu.
 ## Plan dalej
 
 - Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Głowy bossów, Pustka.

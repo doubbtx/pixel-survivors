@@ -1780,7 +1780,6 @@ export const EN: Record<string, string> = {
   "złoto {}": "gold {}",
   "{}   Klucz Pustki": "{}   Void Key",
   "{}   głębokość {}": "{}   depth {}",
-  "łup +{}%": "loot +{}%",
   "+{} esencji dla: {}   (Rozwój w menu głównym)": "+{} essence for {}   (spend it in Progression, main menu)",
   "+{} więcej": "+{} more",
   "Bestiariusz: +{}% obrażeń przeciw {}": "Bestiary: +{}% damage against {}",
@@ -2328,4 +2327,6 @@ export const EN: Record<string, string> = {
   "Wyrusz [Enter]": "Travel [Enter]",
   "mapy {}": "maps {}",
   "Odblokowanie: {} {}/{}": "Unlock: {} {}/{}",
+  "esencja +{}%": "essence +{}%",
+  "Nagrody za modyfikatory ukończonych map. Na koniec wyprawy dostaniesz tyle więcej esencji do Rozwoju.": "Rewards from the modifiers of maps you finished. At the end of the expedition you get this much more essence for Progression.",
 };

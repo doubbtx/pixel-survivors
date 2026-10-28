@@ -406,6 +406,9 @@ src/
 **Aurel without lag (0.25.1)**:
 - Fixed heavy stutter during Aurel's attacks (and other growing rings, auras and zones): large circles are now drawn directly instead of being rebuilt pixel by pixel every frame.
 
+**Clearer Expedition bonus (0.25.2)**:
+- The Expedition map now shows "essence +X%" (with a tooltip) instead of the misleading "loot +X%": rewards from map modifiers you finished raise the essence you get at the end of the expedition.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

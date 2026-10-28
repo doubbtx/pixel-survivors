@@ -115,18 +115,29 @@ export class ExpeditionMapView {
     // Lewa strona nagłówka: biom aktu i postęp aktów (kropki).
     const biomeId = actBiome(ex.act), biome = BIOMES[biomeId];
     for (let k = 0; k < X.acts; k++) r.roundRect(MAP_X + 2 + k * 8, 10, 6, 6, 1, k < ex.act - 1 ? C.gold : k === ex.act - 1 ? C.yellow : C.slate);
-    drawText(g, ex.voidKey && !secretAct ? `${biome.name}   Klucz Pustki` : biome.name, MAP_X + 4 + X.acts * 8, 6, ex.voidKey ? C.hotpink : C.lavender);
+    const bname = ex.voidKey && !secretAct ? `${biome.name}   Klucz Pustki` : biome.name, bx = MAP_X + 4 + X.acts * 8;
+    drawText(g, bname, bx, 6, ex.voidKey ? C.hotpink : C.lavender);
+    // Ukończone mapy: plakietka obok nazwy biomu.
+    const mt = `mapy ${ex.cleared}`, mw = textWidth(mt) * 0.75 + 8, mx = bx + textWidth(bname) + 5;
+    tile(r, mx, 7, mw, 10, C.lgray);
+    drawText(g, mt, mx + mw / 2, 7.5, C.lgray, { align: 'center', scale: 0.75 });
     // Prawa strona nagłówka: plakietki stanu wyprawy.
     const bless = ex.blessing ? EX_BLESSINGS.find((b) => b.id === ex.blessing!.id) : null;
-    const chips: [string, number][] = [[`HP ${fmt(run.player.hp)}/${fmt(run.stats.maxHp)}`, C.salmon], [`złoto ${fmt(run.gold)}`, C.gold], [`łup +${ex.bonus}%`, C.lime], [`mapy ${ex.cleared}`, C.lgray]];
+    // Esencja: nagrody modyfikatorów ukończonych map zwiększają esencję na koniec wyprawy (BAL.expedition.rewardEssence).
+    const essence = Math.round(ex.bonus * X.rewardEssence);
+    const chips: [string, number, string?][] = [
+      [`HP ${fmt(run.player.hp)}/${fmt(run.stats.maxHp)}`, C.salmon], [`złoto ${fmt(run.gold)}`, C.gold],
+      [`esencja +${essence}%`, C.cyan, 'Nagrody za modyfikatory ukończonych map. Na koniec wyprawy dostaniesz tyle więcej esencji do Rozwoju.'],
+    ];
     if (bless) chips.push([`${bless.name} (${ex.blessing!.maps})`, C.yellow]);
-    let cx = MAP_X + MAP_W;
-    for (const [t, col] of chips) {
+    let cx = MAP_X + MAP_W, tip: { text: string; x: number } | null = null;
+    for (const [t, col, help] of chips) {
       const w = textWidth(t) * 0.75 + 8;
       cx -= w;
       if (cx < W / 2 + 90) break;
       tile(r, cx, 7, w, 10, col);
       drawText(g, t, cx + w / 2, 7.5, col, { align: 'center', scale: 0.75 });
+      if (help && hovered(cx, 7, w, 10)) tip = { text: help, x: cx + w };
       cx -= 3;
     }
 
@@ -150,6 +161,12 @@ export class ExpeditionMapView {
       r.withAlpha(0.8, () => drawSprite(g, info.icon, lx + 5, MAP_Y + 9));
       drawText(g, info.name, lx + 14, MAP_Y + 5, info.color, { scale: 0.75, outline: C.black });
       lx += 19 + textWidth(info.name) * 0.75;
+    }
+    // Podpowiedź plakietki pod myszą (nad legendą mapy).
+    if (tip) {
+      const lines = wrapText(tip.text, 200 / 0.75), tw = 208, tx = Math.min(tip.x, MAP_X + MAP_W) - tw;
+      tile(r, tx, 19, tw, lines.length * 8 + 4, C.cyan, 0.95);
+      lines.forEach((l, i) => drawText(g, l, tx + 4, 20 + i * 8, C.white, { scale: 0.75 }));
     }
 
     const cur = exRow(ex);
