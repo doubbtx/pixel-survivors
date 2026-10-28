@@ -15,7 +15,7 @@ import { C } from '../core/palette';
  *  mines     miny przy graczu; duration = czas życia miny, area × 22 px = promień wybuchu
  *  cleave    cięcie łukiem przed graczem; area × 26 px = zasięg, amount = liczba cięć
  */
-export type WeaponKind = 'bolt' | 'orbit' | 'aura' | 'chain' | 'meteor' | 'boomerang' | 'laser' | 'mines' | 'cleave';
+export type WeaponKind = 'bolt' | 'orbit' | 'aura' | 'chain' | 'meteor' | 'boomerang' | 'laser' | 'mines' | 'cleave' | 'nova';
 
 export interface WeaponStats {
   damage: number;
@@ -200,14 +200,14 @@ export const WEAPONS: WeaponDef[] = [
     levels: [], evolved: true,
   },
   {
-    id: 'light', name: 'Święte światło', desc: 'Promień światła skacze między wrogami.', icon: 'ic_light', kind: 'chain', color: C.yellow, hero: 'aurel',
-    base: S({ damage: 13, cooldown: 1.2, pierce: 2, knock: 0.5 }),
-    levels: [{ damage: 4 }, { pierce: 1 }, { cooldown: -0.15 }, { amount: 1 }, { damage: 6 }, { pierce: 2 }, { amount: 1, damage: 6 }],
+    id: 'light', name: 'Święte światło', desc: 'Z bohatera rozchodzi się pierścień światła, który rani i odpycha każdego wroga na drodze.', icon: 'ic_light', kind: 'nova', color: C.yellow, hero: 'aurel',
+    base: S({ damage: 14, cooldown: 1.5, knock: 2 }),
+    levels: [{ damage: 4 }, { area: 0.15 }, { cooldown: -0.2 }, { amount: 1 }, { damage: 6 }, { area: 0.15 }, { amount: 1, damage: 6 }],
     evolve: { passive: 'herb', into: 'light_evo' },
   },
   {
-    id: 'light_evo', name: 'Promień niebios', desc: 'Słoneczne promienie oślepiają i palą wrogów.', icon: 'ic_light_evo', kind: 'chain', color: C.white, hero: 'aurel',
-    base: S({ damage: 32, cooldown: 0.7, amount: 3, area: 1.4, pierce: 6, knock: 1 }),
+    id: 'light_evo', name: 'Promień niebios', desc: 'Szerokie pierścienie słonecznego światła, jeden po drugim, palą i odpychają wrogów.', icon: 'ic_light_evo', kind: 'nova', color: C.white, hero: 'aurel',
+    base: S({ damage: 34, cooldown: 1, amount: 3, area: 1.6, knock: 3 }),
     levels: [], evolved: true,
   },
 
@@ -319,7 +319,7 @@ export function weaponStatsAt(def: WeaponDef, level: number): WeaponStats {
 
 /** Rzeczownik "sztuki" broni dla opisu +ilości (zależy od wzorca). */
 const AMOUNT_NOUN: Record<WeaponKind, string> = {
-  bolt: 'pocisk', orbit: 'ostrze', aura: 'aura', chain: 'piorun', meteor: 'meteor', boomerang: 'bumerang', laser: 'promień', mines: 'mina', cleave: 'cięcie',
+  bolt: 'pocisk', orbit: 'ostrze', aura: 'aura', chain: 'piorun', meteor: 'meteor', boomerang: 'bumerang', laser: 'promień', mines: 'mina', cleave: 'cięcie', nova: 'pierścień',
 };
 
 const r2 = (v: number) => Math.round(Math.abs(v) * 100) / 100;

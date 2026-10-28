@@ -342,6 +342,9 @@ src/
 **Difficulty restored (0.23.8)**:
 - Enemy health follows your full damage again (including overkill), as before 0.23.3. The game had become too easy; the poison fix stays.
 
+**Aurel's own weapon (0.23.9)**:
+- Holy Light is no longer a copy of Chain Lightning: a ring of light spreads out from Aurel, hitting and pushing back every enemy it passes. The evolution sends several wide rings one after another.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

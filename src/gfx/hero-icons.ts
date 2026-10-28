@@ -35,10 +35,11 @@ export const HERO_ICONS: Record<string, (p: Painter) => void> = {
     }
     p.sphere(8, 8, 2, 2, RAMP.night).px(8, 8, C.hotpink);
   },
+  // Pierścień światła: jasny środek i dwa rozchodzące się kręgi.
   ic_light: (p) => {
-    p.sphere(5, 11, 3, 3, RAMP.gold).px(4, 10, C.white);
-    p.line(7, 9, 10, 6, C.yellow).line(10, 6, 9, 4, C.white).line(9, 4, 14, 2, C.yellow);
-    p.px(13, 7, C.cream).px(12, 12, C.cream);
+    p.ring(8, 8, 7, 1, C.gold).ring(8, 8, 4.6, 1, C.yellow);
+    p.sphere(8, 8, 2.4, 2.4, [C.gold, C.yellow, C.cream, C.white]);
+    p.px(8, 1, C.white).px(15, 8, C.white).px(8, 15, C.white).px(1, 8, C.white);
   },
   ic_light_evo: (p) => {
     p.ring(8, 8, 6.5, 1, C.gold);

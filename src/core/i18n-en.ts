@@ -3,6 +3,7 @@
  * Nowy napis w grze: dopisz tu jego angielską wersję (kolejność `{}` taka sama).
  */
 export const EN: Record<string, string> = {
+  "pierścień": "ring",
   "+{}% otrzymywanych obrażeń": "+{}% damage taken",
   "Klucz": "Keystone",
   "otrzymywanych obrażeń": "damage taken",
@@ -129,7 +130,7 @@ export const EN: Record<string, string> = {
   "Każde trafienie piorunem ogłusza wroga na 0.3 s.": "Every lightning hit stuns the enemy for 0.3 s.",
   "Każde zabójstwo ostrzem powiększa orbitę o 3% (do +60% na poziomie).": "Every blade kill grows the orbit by 3% (up to +60% per level).",
   "Każdy promień tworzy 2 krótsze promienie pod kątem (50% obrażeń).": "Every beam creates 2 shorter beams at an angle (50% damage).",
-  "Każdy trafiony wróg leczy cię o 0.1% maks. HP (do 1% na wyładowanie).": "Each enemy hit heals you for 0.1% max HP (max 1% per discharge).",
+  "Każdy trafiony wróg leczy cię o 0.1% maks. HP (do 1% na pierścień).": "Each enemy hit heals you for 0.1% max HP (max 1% per ring).",
   "Kojące światło": "Soothing Light",
   "Krater": "Crater",
   "Krwawe cięcie": "Bloody Slash",
@@ -1425,7 +1426,7 @@ export const EN: Record<string, string> = {
   "Promień": "Beam",
   "Promień niebios": "Beam of Heaven",
   "Promień słońca": "Sunbeam",
-  "Promień światła skacze między wrogami.": "A beam of light jumps between enemies.",
+  "Z bohatera rozchodzi się pierścień światła, który rani i odpycha każdego wroga na drodze.": "A ring of light spreads out from you, damaging and pushing back every enemy it passes.",
   "Przeszywa wszystkich wrogów w linii.": "Pierces all enemies in a line.",
   "Płonące strzały": "Flaming Arrows",
   "Rani i spowalnia wrogów wokół ciebie.": "Damages and slows enemies around you.",
@@ -1441,7 +1442,7 @@ export const EN: Record<string, string> = {
   "Szybkie strzały przebijające wrogów.": "Fast arrows that pierce enemies.",
   "Słoneczne kule naprowadzane na kolejnych wrogów, porażają.": "Sun orbs that home in on enemy after enemy and shock.",
   "Słoneczne kule przebijające wrogów.": "Sun orbs that pierce enemies.",
-  "Słoneczne promienie oślepiają i palą wrogów.": "Sun rays blind and burn enemies.",
+  "Szerokie pierścienie słonecznego światła, jeden po drugim, palą i odpychają wrogów.": "Wide rings of sunlight, one after another, burn and push back enemies.",
   "Topory lecą przed siebie i wracają, tnąc wszystko po drodze.": "Axes fly forward and come back, cutting everything in their way.",
   "Wachlarz cieni": "Shadow Fan",
   "Wachlarz porażających promieni.": "A fan of shocking beams.",

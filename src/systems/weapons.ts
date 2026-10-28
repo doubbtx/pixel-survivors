@@ -92,6 +92,9 @@ export function shardProjectile(run: Run, x: number, y: number, angle: number, d
   run.spawnProjectile({ x, y, angle, speed: 170, damage, src, sprite, kind: sprite === 'arrow' ? 'arrow' : 'normal', pierce, life: 0.45, radius: 2 });
 }
 
+/** Pierścień światła: promień bazowy, czas rozchodzenia się (s) i liczba kroków. */
+const NOVA_R = 62, NOVA_T = 0.3, NOVA_STEPS = 8;
+
 const BEHAVIORS: Record<WeaponKind, Behavior> = {
   /** Pociski w najbliższych wrogów; nadmiar pocisków rozchodzi się wachlarzem. */
   bolt(run, w, s, dt) {
@@ -184,10 +187,40 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       // Przeładowany łańcuch (augment): wybuch na ostatnim celu.
       if (burst && any) run.explode(fx, fy, 22 * s.area, s.damage * 0.6, w.def.name, w.def.color, 2);
     }
-    // Kojące światło (augment Świętego światła): leczenie za trafionych.
-    if (hit.length && run.augOn(w, 'light_mend')) run.heal(run.stats.maxHp * Math.min(0.01, hit.length * 0.001));
     if (hit.length) sfx.play('zap');
     else w.timer = 0.2;
+  },
+
+  /**
+   * Pierścień światła (Aurel): rozchodzi się z bohatera do promienia NOVA_R × obszar w NOVA_T s, każdego wroga trafia raz
+   * i odpycha od środka. Kolejne pierścienie (ilość) co 0.25 s. Strzela tylko, gdy jakiś wróg jest w zasięgu.
+   */
+  nova(run, w, s, dt) {
+    if (!ready(w, s, dt)) return;
+    const p = run.player, R = NOVA_R * s.area;
+    if (!run.nearestEnemy(p.x, p.y, R)) { w.timer = 0.2; return; }
+    const mend = run.augOn(w, 'light_mend');
+    for (let k = 0; k < Math.max(1, s.amount); k++) {
+      run.schedule(k * 0.25, () => {
+        const x = run.player.x, y = run.player.y, hit = new Set<number>();
+        let healed = 0;
+        for (let i = 1; i <= NOVA_STEPS; i++) {
+          run.schedule((i * NOVA_T) / NOVA_STEPS, () => {
+            const rr = (R * i) / NOVA_STEPS;
+            run.enemiesInCircle(x, y, rr, (e) => {
+              if (hit.has(e.uid)) return;
+              hit.add(e.uid);
+              run.damageEnemy(e, s.damage, w.def.name, { kx: e.x - x, ky: e.y - y, knock: s.knock });
+              // Kojące światło (augment): leczenie za trafionych (do 1% HP na pierścień).
+              if (mend && healed < 10) { healed++; run.heal(run.stats.maxHp * 0.001); }
+            });
+            const f = run.addFx('ring', x, y, i % 2 ? w.def.color : C.white, 0.12);
+            if (f) f.r = rr;
+          });
+        }
+        sfx.play('zap');
+      });
+    }
   },
 
   /** Meteoryty spadają na losowych wrogów w pobliżu (strefa z opóźnieniem). */

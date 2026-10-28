@@ -42,6 +42,7 @@ export const WEAPON_TAGS: Record<WeaponKind, Tag[]> = {
   laser: ['Krytyk', 'Ogień'],
   mines: ['Ogień', 'Przywołania'],
   cleave: ['Obszar', 'Tarcze'],
+  nova: ['Obszar', 'Życie'],
 };
 
 /** Tagi super-bonusów przedmiotów (id z data/items.ts SUPERS). */
