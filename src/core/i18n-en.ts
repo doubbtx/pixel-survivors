@@ -3,6 +3,22 @@
  * Nowy napis w grze: dopisz tu jego angielską wersję (kolejność `{}` taka sama).
  */
 export const EN: Record<string, string> = {
+  "Statystyki": "Stats",
+  "Regeneracja": "Regeneration",
+  "Leczenie z obrażeń": "Lifesteal",
+  "Szybkość ataku": "Attack speed",
+  "Odnowienie": "Cooldown",
+  "Czas działania": "Duration",
+  "Siła żywiołów": "Elemental power",
+  "fuzja": "fusion",
+  "ewolucja": "evolved",
+  "Pasywki i ekwipunek": "Passives and equipment",
+  "Karty ({})": "Cards ({})",
+  "Brak kart": "No cards",
+  "Endless, głębia {}": "Endless, depth {}",
+  "Hardcore: poddanie oznacza utratę wszystkiego": "Hardcore: giving up means losing everything",
+  "Ekspedycja: poddanie oznacza utratę wszystkiego": "Expedition: giving up means losing everything",
+  "poziom postaci {}": "character level {}",
   "Wierność broni": "Weapon Devotion",
   "Wierność broni {}: {} jest mocniejsza!": "Weapon Devotion {}: {} grows stronger!",
   "Tracisz Wierność broni!": "You lose Weapon Devotion!",

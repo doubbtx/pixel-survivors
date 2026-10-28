@@ -50,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.23.4)
+## Stan (wersja 0.23.5)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -296,6 +296,9 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   - 0.23.4: Wierność broni bez limitu: stopień od poziomu 10 co 5 poziomów (`BAL.loyal`, `Run.nextLoyalLevel`), obrażenia
     × 1.35^stopień, szybkość ataku, obszar, pocisk co 2 stopnie, ewolucja bez pasywki. Dobrane symulacją Endless (skrypt
     lone.cjs w scratchpadzie): jedna broń dochodzi do głębi 3 w 13 min, pełny zestaw do głębi 2 w 15 min.
+  - 0.23.5: nowy ekran pauzy (game-screen.ts renderPause): HUD pod spodem ukryty, lewa kolumna z menu i miejscem w runie,
+    prawa z podsumowaniem: statystyki w dwóch kolumnach (bazowe przygaszone), bronie z poziomem, DPS i paskiem udziału,
+    pasywki z ekwipunkiem, karty.
 
 ## Plan dalej
 

@@ -1,6 +1,6 @@
 import { W, H } from '../core/renderer';
-import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { C, RAMP } from '../core/palette';
+import { drawText, wrapText, textWidth } from '../core/font';
 import { sfx } from '../core/audio';
 import { heroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
@@ -13,7 +13,7 @@ import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
-import { button, Menu, dim, panel, inside } from './widgets';
+import { button, Menu, dim, panel, inside, slot, bar } from './widgets';
 import { renderHud } from './hud';
 import { LevelUpView } from './levelup';
 import { LootView, InventoryView, drawItemSlot } from './items';
@@ -33,7 +33,6 @@ import { ExpeditionMapView } from './expedition';
 import { Hints } from './hints';
 import { HelpScreen } from './help';
 import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
-import { bonusLines } from '../data/upgrades';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 import { MetaScreen } from './meta';
 import { HERO_BY_ID } from '../data/heroes';
@@ -45,13 +44,15 @@ import { featsOnWin } from '../systems/feats';
 import { BESTIARY_BY_ID, loreBonus, loreMuls } from '../data/bestiary';
 import type { DailyDef } from '../data/daily';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
-import { WEAPON_BY_ID } from '../data/weapons';
+import { WEAPON_BY_ID, maxLevel } from '../data/weapons';
 import { SECRET_BY_ID } from '../data/secrets';
 
 type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'build' | 'pause' | 'cleared' | 'map' | 'end';
 
 /** Krótka blokada wejścia po otwarciu nakładki — żeby wciśnięty akurat klawisz nie wybrał karty. */
 const OVERLAY_DELAY = 0.3;
+/** Pauza: lewa kolumna z menu (x, szerokość) i drobny tekst podsumowania. */
+const PL = 8, PLW = 150, SMALL_TXT = { scale: 0.75 } as const;
 
 /**
  * Ekran rozgrywki: run + nakładki (awans, karta, skrzynia, pauza, ukończenie poziomu, mapa Ekspedycji, koniec runu).
@@ -149,7 +150,7 @@ export class GameScreen implements Screen {
           this.onRunOver();
         },
       },
-    ], 104, 96, 180, 15);
+    ], PL + PLW / 2, 52, PLW - 16, 17);
     this.clearedMenu = new Menu([
       { label: () => `Dalej: poziom ${this.run.depth + 1}`, act: () => this.nextLevel() },
       { label: () => `Sklep (${fmt(this.run.gold)} zł)`, act: () => this.openShop('cleared') },
@@ -646,7 +647,8 @@ export class GameScreen implements Screen {
     renderWorld(run, r);
     const between = this.state === 'cleared' || this.state === 'shop' || this.state === 'anvil' || this.state === 'map' || this.overlayReturn === 'map'
       || (this.state === 'inventory' && (this.invReturn === 'shop' || this.invReturn === 'map'));
-    if (this.state !== 'end' && !between) renderHud(run, r, this.app.loop, this.app.save.settings.debug, this.app.save.settings.minimap, this.app.input);
+    // Pauza zasłania HUD w całości (bez banerów i nakładki debugowania pod spodem).
+    if (this.state !== 'end' && this.state !== 'pause' && !between) renderHud(run, r, this.app.loop, this.app.save.settings.debug, this.app.save.settings.minimap, this.app.input);
     switch (this.state) {
       case 'levelup':
         this.levelUp!.render(r);
@@ -695,60 +697,89 @@ export class GameScreen implements Screen {
     if (this.state !== 'pause' && this.state !== 'end') this.hints.render(r, this.state !== 'play', this.state === 'map');
   }
 
+  /**
+   * Pauza: po lewej menu z miejscem w runie, po prawej podsumowanie postaci — statystyki w dwóch kolumnach
+   * (wartości domyślne przygaszone), bronie z poziomem i DPS, pasywki z ekwipunkiem i karty. HUD pod spodem ukryty.
+   */
   private renderPause(): void {
-    const r = this.app.r, g = r.g, run = this.run, s = run.stats;
-    dim(r);
-    drawText(g, 'Pauza', 104, 64, C.yellow, { align: 'center', scale: 3, outline: C.black });
-    if (this.mode === 'hardcore' || this.mode === 'expedition') {
-      drawText(g, `${this.mode === 'hardcore' ? 'Hardcore' : 'Ekspedycja'}: poddanie`, 104, 234, C.salmon, { align: 'center', shadow: C.black });
-      drawText(g, 'oznacza utratę wszystkiego', 104, 246, C.salmon, { align: 'center', shadow: C.black });
-    }
+    const r = this.app.r, g = r.g, run = this.run, s = run.stats, ex = run.expedition;
+    r.withAlpha(0.78, () => r.rect(0, 0, W, H, C.black));
+    // Lewa kolumna: tytuł, miejsce w runie, menu, ostrzeżenie o poddaniu.
+    panel(r, PL, 8, PLW, H - 16);
+    drawText(g, 'Pauza', PL + PLW / 2, 15, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    const where = [ex ? `Akt ${ex.act}, głębia ${run.depth}` : this.mode === 'endless' ? `Endless, głębia ${run.depth}` : `Poziom ${run.depth}`, fmtTime(run.totalTime)].join('   ');
+    drawText(g, where, PL + PLW / 2, 37, C.lgray, { align: 'center', scale: 0.75 });
+    if (run.pactLevel) drawText(g, `Pakt ${run.pactLevel}`, PL + PLW / 2, 45, C.red, { align: 'center', scale: 0.75 });
     this.pauseMenu.render(r);
-    const px = 208, pw = W - px - 8;
+    if (this.mode === 'hardcore' || this.mode === 'expedition') {
+      const warn = `${this.mode === 'hardcore' ? 'Hardcore' : 'Ekspedycja'}: poddanie oznacza utratę wszystkiego`;
+      wrapText(warn, (PLW - 16) / 0.75).forEach((l, i) => drawText(g, l, PL + PLW / 2, H - 34 + i * 9, C.salmon, { align: 'center', scale: 0.75 }));
+    }
+
+    // Prawa kolumna: postać.
+    const px = PL + PLW + 6, pw = W - px - 8, x0 = px + 10, colW = (pw - 20) / 2;
     panel(r, px, 8, pw, H - 16);
-    // DPS: średnie obrażenia na sekundę w tym runie (łącznie i dla każdej broni).
     const time = Math.max(1, run.totalTime);
     let totalDmg = 0;
     for (const v of run.dmgBySource.values()) totalDmg += v;
-    drawText(g, `${run.hero.name}   LV ${run.level}   poziom ${run.depth}`, px + 10, 14, run.hero.color, { shadow: C.black });
-    drawText(g, `DPS ${fmt(totalDmg / time)}`, px + pw - 10, 14, C.gold, { align: 'right', shadow: C.black });
-    const lines = [
-      `HP ${fmt(s.maxHp)}   regeneracja ${s.regen.toFixed(1)}/s   pancerz ${fmt(s.armor)}`,
-      `obrażenia x${s.might.toFixed(2)}   obszar x${s.area.toFixed(2)}   czas działania x${s.duration.toFixed(2)}`,
-      `krytyk ${Math.round(s.crit * 100)}% (x${s.critMult.toFixed(1)})   leczenie z obrażeń ${Math.round(s.lifesteal * 100)}%`,
-      `szybkość ataku +${Math.round(s.atkSpeed * 100)}%   odnowienie -${Math.round(s.cdr * 100)}%   pociski +${s.amount}`,
+    drawText(g, run.hero.name, x0, 15, run.hero.color, { shadow: C.black });
+    drawText(g, `poziom postaci ${run.level}`, x0 + textWidth(run.hero.name) + 6, 15, C.lgray);
+    drawText(g, `DPS ${fmt(totalDmg / time)}`, px + pw - 10, 15, C.gold, { align: 'right', shadow: C.black });
+    const head = (t: string, y: number) => { drawText(g, t, x0, y, C.lavender); r.withAlpha(0.4, () => r.rect(x0 + textWidth(t) + 4, y + 5, pw - 24 - textWidth(t), 0.5, C.lavender)); };
+
+    // Statystyki: etykieta po lewej, wartość po prawej; wartość bazowa przygaszona.
+    head('Statystyki', 29);
+    const pct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`;
+    const stats: [string, string, boolean][] = [
+      ['HP', fmt(s.maxHp), true], ['Pancerz', fmt(s.armor), s.armor > 0],
+      ['Regeneracja', `${s.regen.toFixed(1)}/s`, s.regen > 0], ['Leczenie z obrażeń', `${Math.round(s.lifesteal * 100)}%`, s.lifesteal > 0],
+      ['Obrażenia', `x${s.might.toFixed(2)}`, s.might !== 1], ['Krytyk', `${Math.round(s.crit * 100)}% (x${s.critMult.toFixed(1)})`, true],
+      ['Szybkość ataku', pct(s.atkSpeed), s.atkSpeed !== 0], ['Odnowienie', pct(-s.cdr), s.cdr !== 0],
+      ['Obszar', `x${s.area.toFixed(2)}`, s.area !== 1], ['Pociski', `+${s.amount}`, s.amount > 0],
+      ['Czas działania', `x${s.duration.toFixed(2)}`, s.duration !== 1], ['Siła żywiołów', pct(s.elemPower), s.elemPower !== 0],
     ];
-    lines.forEach((l, i) => drawText(g, l, px + 10, 30 + i * 11, C.lgray));
-    // Bronie z poziomem i DPS pod ikoną, pasywki w drugim rzędzie.
+    stats.forEach(([k, v, on], i) => {
+      const cx = x0 + (i % 2) * (colW + 8), y = 41 + Math.floor(i / 2) * 9;
+      drawText(g, k, cx, y, on ? C.lgray : C.dgray, SMALL_TXT);
+      drawText(g, v, cx + colW - 8, y, on ? C.white : C.dgray, { align: 'right', ...SMALL_TXT });
+    });
+
+    // Bronie: ikona, nazwa, poziom, DPS i udział w obrażeniach.
+    head('Bronie', 98);
+    const best = Math.max(1, ...run.weapons.map((w) => run.dmgBySource.get(w.def.name) ?? 0));
     run.weapons.forEach((w, i) => {
-      const x = px + 10 + i * 42, y = 76;
-      drawSprite(g, w.def.icon, x + 7, y + 7);
-      drawText(g, w.def.evolved ? '*' : String(w.level), x + 16, y + 6, C.white, { align: 'right', outline: C.black });
-      drawText(g, fmt((run.dmgBySource.get(w.def.name) ?? 0) / time), x + 7, y + 16, C.gold, { align: 'center' });
-      // Augmenty broni: turkusowe kropki nad ikoną.
+      const cx = x0 + (i % 2) * (colW + 8), y = 110 + Math.floor(i / 2) * 20;
+      slot(r, cx, y, 18, w.def.evolved ? C.gold : C.slate);
+      drawSprite(g, w.def.icon, cx + 9, y + 9);
       const augs = run.augments.filter((id) => augmentWorks(AUGMENT_BY_ID[id], w.def)).length;
-      for (let k = 0; k < augs; k++) r.rect(x + k * 4, y - 3, 3, 2, C.cyan);
-      // Zebrane bonusy jakości ulepszeń (najwyżej 2 linie, reszta jako +N).
-      const lines = bonusLines(w.bonus, true);
-      lines.slice(0, 2).forEach((l, k) => drawText(g, l, x - 1, y + 26 + k * 9, C.lgray));
-      if (lines.length > 2) drawText(g, `+${lines.length - 2}`, x - 1, y + 44, C.dgray);
+      for (let k = 0; k < augs; k++) r.rect(cx + 2 + k * 4, y - 2, 3, 2, C.cyan);
+      drawText(g, w.def.name, cx + 22, y + 1, w.def.color, SMALL_TXT);
+      drawText(g, w.def.fused ? 'fuzja' : w.def.evolved ? 'ewolucja' : `poz. ${w.level}/${maxLevel(w.def)}`, cx + 22, y + 10, C.dgray, SMALL_TXT);
+      const dmg = run.dmgBySource.get(w.def.name) ?? 0;
+      drawText(g, fmt(dmg / time), cx + colW - 8, y + 1, C.gold, { align: 'right', ...SMALL_TXT });
+      bar(r, cx + colW - 40, y + 11, 32, 4, dmg / best, RAMP.gold);
     });
-    drawText(g, 'DPS', px + pw - 10, 92, C.dgray, { align: 'right' });
+
+    // Pasywki i ekwipunek w jednym rzędzie.
+    head('Pasywki i ekwipunek', 172);
     run.passives.forEach((p, i) => {
-      const x = px + 10 + i * 19, y = 128;
-      drawSprite(g, PASSIVE_BY_ID[p.id].icon, x + 7, y + 7);
-      drawText(g, String(p.level), x + 16, y + 6, C.white, { align: 'right', outline: C.black });
+      const x = x0 + i * 19;
+      slot(r, x, 184, 18);
+      drawSprite(g, PASSIVE_BY_ID[p.id].icon, x + 9, 193);
+      drawText(g, String(p.level), x + 17, 192, C.white, { align: 'right', outline: C.black, scale: 0.75 });
     });
-    // Założony ekwipunek (szczegóły: ekran Ekwipunek).
-    SLOTS.forEach((s, i) => drawItemSlot(r, run.equipment[s.id], px + 10 + i * 21, 148, 20, false));
-    drawText(g, '[I] ekwipunek', px + pw - 10, 153, C.dgray, { align: 'right' });
-    drawText(g, `Karty (${run.cards.reduce((n, c) => n + c.stacks, 0)})    losowania kart: ${run.cardRerolls}`, px + 10, 172, C.lavender);
-    run.cards.slice(0, 14).forEach((c, i) => {
+    const ex0 = px + pw - 10 - SLOTS.length * 19;
+    SLOTS.forEach((sl, i) => drawItemSlot(r, run.equipment[sl.id], ex0 + i * 19, 184, 18, false));
+
+    // Karty: nazwy w dwóch kolumnach.
+    const nCards = run.cards.reduce((n, c) => n + c.stacks, 0);
+    head(`Karty (${nCards})`, 208);
+    run.cards.slice(0, 8).forEach((c, i) => {
       const def = CARD_BY_ID[c.id];
-      const x = px + 10 + (i % 2) * 128, y = 185 + Math.floor(i / 2) * 10;
-      drawText(g, `${def.name}${c.stacks > 1 ? ' x' + c.stacks : ''}`, x, y, def.cursed ? C.hotpink : rarityColor(def.rarity, 0));
+      drawText(g, `${def.name}${c.stacks > 1 ? ' x' + c.stacks : ''}`, x0 + (i % 2) * (colW + 8), 220 + Math.floor(i / 2) * 9, def.cursed ? C.hotpink : rarityColor(def.rarity, 0), SMALL_TXT);
     });
-    if (run.cards.length > 14) drawText(g, `+${run.cards.length - 14} więcej`, px + pw - 10, 172, C.dgray, { align: 'right' });
+    if (run.cards.length > 8) drawText(g, `+${run.cards.length - 8} więcej`, px + pw - 10, 208, C.dgray, { align: 'right', ...SMALL_TXT });
+    if (!run.cards.length) drawText(g, 'Brak kart', x0, 220, C.dgray, SMALL_TXT);
   }
 
   private renderCleared(): void {

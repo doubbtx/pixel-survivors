@@ -327,6 +327,9 @@ src/
 **Weapon Devotion for the whole run (0.23.4)**:
 - With a single weapon you now gain a Devotion rank at level 10 and every 5 levels after, with no limit: x1.35 damage per rank (multiplicative), +8% attack speed, +10% area, an extra projectile every second rank, and evolution without its passive. A one-weapon run now keeps up with a full arsenal until the end.
 
+**Cleaner pause screen (0.23.5)**:
+- The pause screen no longer shows the HUD and banners underneath. Menu on the left, your character on the right: stats in two columns (unchanged ones dimmed), weapons with level, DPS and share bar, passives with equipment, and cards.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
