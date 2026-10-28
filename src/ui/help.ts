@@ -26,6 +26,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Ulepszenia broni mają jakość: od Zwykłego do Legendarnego. Lepsza jakość daje dodatkowe bonusy.',
       'Ewolucja: broń na maksymalnym poziomie z pasywką z jej opisu zmienia się w mocniejszą wersję.',
       'Karty: rzadsze, mocne ulepszenia. Co 5 poziomów, po elicie i po bossie.',
+      'Wierność broni: kto na poziomie 10 i 20 ma tylko jedną broń, dostaje stopień: +20% obrażeń, +10% szybkości ataku i +1 pocisk.',
       'Przedmioty: skrzynie z elit i bossów. Kolor to jakość. Kowadło: Kuźnia do +15, przekuwanie i jakość (strona Moce).',
       'Trafia cię tylko mały środek postaci: przeciskaj się między pociskami.',
       'Nowi wrogowie: Tarczownik (blokuje pociski z przodu, obejdź go), Przywoływacz, Kamikaze (wybucha), Skoczek (teleport), Pajęczarz (sieci spowalniają).',
@@ -42,6 +43,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Wybuch toksyn (ogień + trucizna): wybuch obszarowy za warstwy trucizny.',
       'Przewodzenie (błyskawica + trucizna): trucizna przeskakuje na pobliskich wrogów.',
       'Przeciążenie (ogień + błyskawica): mały wybuch z odrzutem.',
+      'Odporność: każdy boss jest odporny na żywioł swojego biomu. Tabela reakcji: C, potem Tab.',
     ],
   },
   {

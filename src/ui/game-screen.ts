@@ -32,7 +32,7 @@ import { music } from '../core/music';
 import { ExpeditionMapView } from './expedition';
 import { Hints } from './hints';
 import { HelpScreen } from './help';
-import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
+import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
 import { bonusLines } from '../data/upgrades';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 import { MetaScreen } from './meta';
@@ -726,7 +726,7 @@ export class GameScreen implements Screen {
       drawText(g, w.def.evolved ? '*' : String(w.level), x + 16, y + 6, C.white, { align: 'right', outline: C.black });
       drawText(g, fmt((run.dmgBySource.get(w.def.name) ?? 0) / time), x + 7, y + 16, C.gold, { align: 'center' });
       // Augmenty broni: turkusowe kropki nad ikoną.
-      const augs = run.augments.filter((id) => AUGMENT_BY_ID[id].weapon === weaponBase(w.def)).length;
+      const augs = run.augments.filter((id) => augmentWorks(AUGMENT_BY_ID[id], w.def)).length;
       for (let k = 0; k < augs; k++) r.rect(x + k * 4, y - 3, 3, 2, C.cyan);
       // Zebrane bonusy jakości ulepszeń (najwyżej 2 linie, reszta jako +N).
       const lines = bonusLines(w.bonus, true);

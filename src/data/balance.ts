@@ -92,7 +92,7 @@ export const BAL = {
    * utrata HP, gdy gracz jest dalej niż `totemGuard`.
    * Krąg: promień. Złoto za zadanie × głębokość. Karna fala: zwykli wrogowie i elity.
    */
-  tasks: { first: 40, every: 60, acceptLife: 25, placeMin: 90, placeMax: 150, huntDist: 60, totemR: 40, totemDrain: 1.5, totemMax: 5, totemGuard: 70, totemAlone: 4, circleR: 32, gold: 25, ore: 1, failWave: 16, failElites: 2 },
+  tasks: { first: 40, every: 60, acceptLife: 25, placeMin: 90, placeMax: 150, huntDist: 60, totemR: 40, totemKillR: 70, totemDrain: 1.5, totemMax: 5, totemGuard: 70, totemAlone: 4, circleR: 32, gold: 25, ore: 1, failWave: 16, failElites: 2 },
   /** Poziom broni, od którego przy awansie pojawiają się jej augmenty (data/augments.ts). */
   augmentMinLevel: 3,
   passiveSlots: 6,
@@ -311,6 +311,21 @@ export const BAL = {
    * Reakcje żywiołów (dwa stany naraz na wrogu, game/run.ts react): odnowienie na wrogu (s) i parametry.
    * Obrażenia liczone od trafienia wywołującego reakcję (× mnożnik × (1 + flaga reactPower)).
    */
+  /**
+   * Wierność broni: na poziomach `levels` z wciąż jedną bronią (startowa albo jej ewolucja) stopień rośnie o 1.
+   * Każdy stopień: obrażenia tej broni × (1 + dmg), szybkość ataku + atkSpeed, pociski + amount. Działa, dopóki broń jest jedna.
+   */
+  loyal: { levels: [10, 20] as number[], dmg: 0.2, atkSpeed: 0.1, amount: 1 },
+  /**
+   * Szarża Borguna: uderzenie na końcu × (1 + perHit za staranowanego wroga, maks. maxBonus), Furia za wroga,
+   * każde zabójstwo szarżą skraca odnowienie o `refund` (maks. refundMax).
+   */
+  charge: { impactMul: 1.2, perHit: 0.12, maxBonus: 1.5, fury: 2, refund: 0.1, refundMax: 0.5 },
+  /**
+   * Odporność bossa na żywioł swojego biomu (indeks = biom: łąka, bagno, pustkowie, otchłań, pustka):
+   * stan tego żywiołu się nie nakłada, a obrażenia od niego × mul.
+   */
+  bossResist: { mul: 0.5, biome: ['lightning', 'poison', 'fire', 'ice', null] as const },
   reactions: {
     cd: 0.6,
     /** Ogień + Lód: ogłuszenie i obrażenia; zużywa oba stany. */

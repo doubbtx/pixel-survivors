@@ -315,6 +315,15 @@ src/
 - Press **C** in game (or open it from Pause) to inspect your weapons and passives: next level, quality bonuses, augments, and evolution/fusion recipes as icons (green = ingredient ready).
 - The vault behind a cracked wall now ends with the **Vault Warden**: a mini-boss with six random attacks (some aimed where you are going), a rage phase below half HP, and boss-like HP instead of a damage sponge.
 
+**Fair poison, resistant bosses, smarter fusions (0.23.3)**:
+- Fixed runaway poison: Eternal Plague multiplied poison strength on every spread, so Poison and Toxic Blast reached 1E18 damage and inflated enemy HP. Overkill damage no longer counts toward your power either.
+- Bosses and mini-bosses can't be stunned or frozen. Each boss resists the element of its biome (shown under its health bar).
+- Elements and reactions table: press **C**, then **Tab**.
+- Fused weapons keep their parents' augments (elements always, attack changes when the attack type matches), the rules are explained in the Arsenal and Weapons screen, and every hybrid has its own icon.
+- Blade Wave is now a wide, visible wave that passes through cover. Borgun's Charge ends with a ground slam that grows with every trampled enemy, builds Fury, and kills shorten its cooldown.
+- Totem Defense: kill 15 enemies near the totem. Flawless task: up to 2 hits allowed, no punishment wave.
+- **Weapon Devotion**: reach level 10 and 20 with a single weapon for +20% damage, +10% attack speed and +1 projectile per rank.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

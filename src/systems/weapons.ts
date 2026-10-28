@@ -5,7 +5,6 @@ import { BAL } from '../data/balance';
 import { weaponStatsAt, type WeaponKind, type WeaponStats } from '../data/weapons';
 import type { Enemy, WeaponInst } from '../entities/types';
 import type { Run } from '../game/run';
-import { weaponBase } from '../data/augments';
 
 /** Statystyki broni po uwzględnieniu statystyk gracza (moc, obszar, szybkość ataku, ilość…). */
 export interface EffWeapon extends WeaponStats {
@@ -76,12 +75,11 @@ function fireProjectile(run: Run, w: WeaponInst, s: EffWeapon, angle: number, fo
   if (!pr) return;
   if (boomerang) pr.t = -s.duration; // bumerang: t<0 = lot w przód
   // Augmenty pocisków (data/augments.ts).
-  const base = weaponBase(w.def);
-  if ((base === 'bolt' && run.aug('bolt_seek')) || (base === 'staff' && run.aug('staff_seek')) || (base === 'souls' && run.aug('souls_seek')) || (base === 'knives' && run.aug('knives_seek'))) pr.retarget = 2;
-  if (base === 'bolt' && run.aug('bolt_split')) pr.split = 1;
-  if (base === 'arrow' && run.aug('arrow_split')) pr.splitEnd = 1;
-  if (base === 'boomerang' && run.aug('boom_return')) pr.retMul = 2;
-  if (base === 'staff' && run.aug('staff_blast')) pr.blast = 0.5;
+  if (run.augOn(w, 'bolt_seek') || run.augOn(w, 'staff_seek') || run.augOn(w, 'souls_seek') || run.augOn(w, 'knives_seek')) pr.retarget = 2;
+  if (run.augOn(w, 'bolt_split')) pr.split = 1;
+  if (run.augOn(w, 'arrow_split')) pr.splitEnd = 1;
+  if (run.augOn(w, 'boom_return')) pr.retMul = 2;
+  if (run.augOn(w, 'staff_blast')) pr.blast = 0.5;
   // Hybrydy z fuzji (data/weapons.ts): wybuch, rozszczepienie, naprowadzanie.
   const hy = w.def.hybrid;
   if (hy?.blast) pr.blast = Math.max(pr.blast, hy.blast);
@@ -131,9 +129,9 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     const n = Math.max(1, s.amount);
     const R = orbitRadius(s.area);
     const p = run.player;
-    const grow = run.aug('orbit_grow');
+    const grow = run.augOn(w, 'orbit_grow');
     // Ciskane ostrza (augment): co 3 s każde ostrze wylatuje na zewnątrz.
-    const fling = run.aug('orbit_fling') && (w.timer -= dt) <= 0;
+    const fling = run.augOn(w, 'orbit_fling') && (w.timer -= dt) <= 0;
     if (fling) w.timer = 3;
     for (let k = 0; k < n; k++) {
       const a = w.angle + (k * Math.PI * 2) / n;
@@ -152,7 +150,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     if (!ready(w, s, dt)) return;
     const p = run.player;
     // Puls (augment): co 4. tick fala z mocnym odrzutem; Wysysanie: leczenie za trafionych.
-    const pulse = run.aug('aura_pulse') && ++w.shots % 4 === 0;
+    const pulse = run.augOn(w, 'aura_pulse') && ++w.shots % 4 === 0;
     const R = auraRadius(s.area) * (pulse ? 1.3 : 1);
     let hits = 0;
     run.enemiesInCircle(p.x, p.y, R, (e) => {
@@ -162,7 +160,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       hits++;
     });
     if (pulse) { const f = run.addFx('ring', p.x, p.y, w.def.color, 0.3); if (f) f.r = R; }
-    if (hits && run.aug('aura_drain')) run.heal(run.stats.maxHp * Math.min(0.01, hits * 0.002));
+    if (hits && run.augOn(w, 'aura_drain')) run.heal(run.stats.maxHp * Math.min(0.01, hits * 0.002));
   },
 
   /** Błyskawica: pierwszy cel najbliższy, potem skoki do najbliższego nietrafionego. */
@@ -170,7 +168,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     if (!ready(w, s, dt)) return;
     const p = run.player;
     const hit: number[] = [];
-    const stun = run.aug('chain_stun') ? 0.3 : 0, burst = run.aug('chain_burst');
+    const stun = run.augOn(w, 'chain_stun') ? 0.3 : 0, burst = run.augOn(w, 'chain_burst');
     for (let c = 0; c < s.amount; c++) {
       let cur = c === 0 ? run.nearestEnemy(p.x, p.y, 170) : run.nearestEnemy(p.x + rng.range(-80, 80), p.y + rng.range(-60, 60), 120, hit);
       let fx = p.x, fy = p.y, any = false;
@@ -187,7 +185,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       if (burst && any) run.explode(fx, fy, 22 * s.area, s.damage * 0.6, w.def.name, w.def.color, 2);
     }
     // Kojące światło (augment Świętego światła): leczenie za trafionych.
-    if (hit.length && weaponBase(w.def) === 'light' && run.aug('light_mend')) run.heal(run.stats.maxHp * Math.min(0.01, hit.length * 0.001));
+    if (hit.length && run.augOn(w, 'light_mend')) run.heal(run.stats.maxHp * Math.min(0.01, hit.length * 0.001));
     if (hit.length) sfx.play('zap');
     else w.timer = 0.2;
   },
@@ -226,7 +224,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       const z = run.addZone('beam', p.x, p.y, 3 * s.area, s.damage, s.duration, w.slot, w.def.name);
       if (z) { z.angle = a; z.len = 170; z.tick = 6; }
       // Rozszczepienie światła (augment): dwa krótsze promienie pod kątem.
-      if (run.aug('laser_prism')) for (const d of [-0.5, 0.5]) {
+      if (run.augOn(w, 'laser_prism')) for (const d of [-0.5, 0.5]) {
         const zz = run.addZone('beam', p.x, p.y, 2 * s.area, s.damage * 0.5, s.duration, w.slot, w.def.name);
         if (zz) { zz.angle = a + d; zz.len = 85; zz.tick = 6; }
       }
@@ -262,12 +260,16 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
         hits++;
       });
       // Fala ostrza (augment): przebijająca fala w kierunku cięcia.
-      if (run.aug('axe_wave')) shardProjectile(run, p.x, p.y, a, s.damage * 0.7, w.def.name, 'blade', 99);
+      // Startuje na krawędzi cięcia (nie trafia drugi raz tych samych), szeroka jak cięcie, przelatuje przez teren.
+      if (run.augOn(w, 'axe_wave')) {
+        const pr = run.spawnProjectile({ x: p.x + Math.cos(a) * R * 0.6, y: p.y + Math.sin(a) * R * 0.6, angle: a, speed: 190, damage: s.damage * 0.7, src: w.def.name, kind: 'wave', pierce: 999, life: 0.65, radius: 9 * s.area, knock: s.knock });
+        if (pr) pr.bounces = 0;
+      }
       const f = run.addFx('arc', p.x, p.y, w.def.color, 0.15);
       if (f) { f.r = R; f.a0 = a - 1.05; f.a1 = a + 1.05; }
     }
     // Krwawe cięcie (augment): leczenie za trafionych.
-    if (hits && run.aug('axe_blood')) run.heal(Math.min(5, hits * 0.5));
+    if (hits && run.augOn(w, 'axe_blood')) run.heal(Math.min(5, hits * 0.5));
     sfx.play('dash');
   },
 };

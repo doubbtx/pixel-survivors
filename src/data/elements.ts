@@ -47,6 +47,12 @@ export const SRC_ELEMENT: Record<string, Element> = {
   ...EXTRA_SOURCES,
 };
 
+/** Żywioł obrażeń: źródło z żywiołem, augment broni albo obrażenia od stanu (podpalenie, trucizna, wybuch toksyn). */
+const STATE_SOURCES: Record<string, Element> = { 'Podpalenie': 'fire', 'Trucizna': 'poison', 'Wybuch toksyn': 'poison' };
+export function damageElement(src: string, aug: Map<string, Element>): Element | undefined {
+  return aug.get(src) ?? SRC_ELEMENT[src] ?? STATE_SOURCES[src];
+}
+
 /** Parametry stanów (wartości bazowe; × (1 + siła żywiołów) tam, gdzie to obrażenia lub spowolnienie). */
 export const ELEM = {
   burnTime: 3, burnRatio: 0.3,

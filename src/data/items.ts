@@ -233,7 +233,7 @@ export const SUPERS: SuperDef[] = [
   {
     id: 'frost', name: 'Lodowy dotyk', min: 0.03, max: 0.06, pct: true,
     desc: '{v} szansy przy trafieniu na zamrożenie wroga na 2 s',
-    hooks: { onHit: (_run, e, _d, _c, v) => { if (rng.chance(chance(v))) e.stunT = Math.max(e.stunT, e.boss ? 0.3 : 2); } },
+    hooks: { onHit: (_run, e, _d, _c, v) => { if (rng.chance(chance(v))) e.stunT = Math.max(e.stunT, 2); } },
   },
   {
     id: 'vampire', name: 'Pocałunek wampira', min: 0.01, max: 0.02, pct: true,

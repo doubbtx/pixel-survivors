@@ -14,10 +14,10 @@ import { levelDef, BIOME_CYCLE, VOID_BIOME, type LevelDef } from '../data/levels
 import type { FeatId } from '../data/feats';
 import { resetLevelFeats, featsOnBoss, featsOnKill } from '../systems/feats';
 import { nodeLevel, EX_BLESSINGS, type ExpeditionState } from '../data/expedition';
-import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
+import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
 import type { WeaponBonus } from '../data/upgrades';
 import type { ShopState } from '../data/shop';
-import { SRC_ELEMENT, ELEM, type Element } from '../data/elements';
+import { SRC_ELEMENT, ELEM, damageElement, type Element } from '../data/elements';
 import type { MetaBonus } from '../data/meta';
 import { CARD_BY_ID, type CardSource, type HookName, type CardHooks, type Tag } from '../data/cards';
 import { SYNERGIES, VERSATILITY, tagPoints, tierOf, type SynergyTier } from '../data/synergies';
@@ -783,6 +783,11 @@ export class Run {
     return this.augments.includes(id);
   }
 
+  /** Czy augment o danym id działa na tej broni (także po ewolucji i w hybrydzie z fuzji). */
+  augOn(w: WeaponInst, id: string): boolean {
+    return this.augments.includes(id) && augmentWorks(AUGMENT_BY_ID[id], w.def);
+  }
+
   /** Żywioły z augmentów dla nazw posiadanych broni (także po ewolucji). */
   private indexAugments(): void {
     this.augElem.clear();
@@ -791,10 +796,9 @@ export class Run {
     for (const w of this.weapons) {
       if (w.bonus.crit) this.srcCrit.set(w.def.name, w.bonus.crit);
       if (w.bonus.elem) this.srcElem.set(w.def.name, w.bonus.elem);
-      const base = weaponBase(w.def);
       for (const id of this.augments) {
         const a = AUGMENT_BY_ID[id];
-        if (a?.elem && a.weapon === base) this.augElem.set(w.def.name, a.elem);
+        if (a?.elem && augmentWorks(a, w.def)) this.augElem.set(w.def.name, a.elem);
       }
     }
   }
@@ -975,6 +979,9 @@ export class Run {
     }
     for (const { def, v } of equippedAwakenings(this)) if (def.stats) add(def.stats(v));
     for (const sec of activeSecrets(this)) if (sec.stats) add(sec.stats);
+    // Wierność broni (obrażenia: damageEnemy).
+    const lt = this.loyal;
+    if (lt) { s.atkSpeed += lt * BAL.loyal.atkSpeed; s.amount += lt * BAL.loyal.amount; }
     // Szał Borguna: szybkość ataku i leczenie z obrażeń (obrażenia: resourceDamageMul).
     if (this.rageT > 0) {
       const F = BAL.resource.fury, pw = 1 + this.flag('res.power');
@@ -1024,8 +1031,18 @@ export class Run {
       if (f) f.r = 22;
       this.burst(this.player.x, this.player.y, C.yellow, 16, 70);
       if (this.level % BAL.cardEveryLevels === 0) this.pendingCards.push('level');
+      if (BAL.loyal.levels.includes(this.level) && this.weapons.length === 1) {
+        this.cardState.loyal = (this.cardState.loyal ?? 0) + 1;
+        this.showBanner(`Wierność broni ${this.cardState.loyal}: ${this.weapons[0].def.name} jest mocniejsza!`);
+        this.recomputeStats();
+      }
       this.emit('onLevelUp');
     }
+  }
+
+  /** Stopień Wierności broni (BAL.loyal); 0, gdy gracz ma więcej niż jedną broń. */
+  get loyal(): number {
+    return this.weapons.length === 1 ? this.cardState.loyal ?? 0 : 0;
   }
 
   /** Liczba zabójstw potrzebna do następnego ultimate. */
@@ -1102,22 +1119,26 @@ export class Run {
     const lore = this.lore[e.boss ? 'boss' : e.def.id] ?? 1;
     // Spokój (karta z osiągnięcia): więcej obrażeń po dłuższym czasie bez trafienia.
     const calm = this.flag('calm') > 0 && this.totalTime - this.lastHurtAt >= BAL.feats.calmAfter ? 1 + this.flag('calm') : 1;
-    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resourceDamageMul(this, src) * (1 - e.dr));
+    const loyal = this.loyal && src === this.weapons[0].def.name ? 1 + this.loyal * BAL.loyal.dmg : 1;
+    const resist = this.resistOf(e) !== undefined && damageElement(src, this.augElem) === this.resistOf(e) ? BAL.bossResist.mul : 1;
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * loyal * resourceDamageMul(this, src) * (1 - e.dr));
+    // Statystyki i siła gracza liczą tylko zadane obrażenia (bez nadwyżki ponad HP wroga).
+    const dealt = Math.min(dmg, Math.max(0, e.hp));
     e.hp -= dmg;
     e.flash = 3;
-    this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dmg);
-    this.dmgTotal += dmg;
+    this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
+    this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;
-    if (!pct) this.dmgStep += dmg;
+    if (!pct) this.dmgStep += dealt;
     this.lastHitSrc = src;
-    if (st.lifesteal > 0) this.heal(Math.min(dmg * st.lifesteal, st.maxHp * 0.02));
+    if (st.lifesteal > 0) this.heal(Math.min(dealt * st.lifesteal, st.maxHp * 0.02));
     if (o.knock) {
       const l = Math.hypot(o.kx ?? 0, o.ky ?? 0) || 1;
       const f = o.knock * 25 * (1 - e.def.knockResist);
       e.kx += ((o.kx ?? 0) / l) * f;
       e.ky += ((o.ky ?? 0) / l) * f;
     }
-    if (o.stun) e.stunT = Math.max(e.stunT, e.boss ? o.stun * 0.2 : o.stun);
+    if (o.stun) e.stunT = Math.max(e.stunT, o.stun);
     // Czytelność w tłumie: przy wielu wrogach liczby tylko dla krytyków.
     const n = this.damageNumbers && (crit || this.enemies.count < BAL.juice.numbersCritOnly) ? this.dmgNums.obtain() : null;
     if (n) {
@@ -1154,9 +1175,14 @@ export class Run {
     if (e.hp <= 0 && !e.dead) this.killEnemy(e);
   }
 
+  /** Żywioł, na który wróg jest odporny: boss biomu poziomu (BAL.bossResist). */
+  resistOf(e: Enemy): Element | undefined {
+    return e.boss ? BAL.bossResist.biome[this.levelInfo.biome % BAL.bossResist.biome.length] ?? undefined : undefined;
+  }
+
   /** Nakłada stan żywiołu po trafieniu (siła z `elemPower`); najpierw sprawdza reakcję z innym stanem na wrogu. */
   applyElement(e: Enemy, el: Element, dmg: number): void {
-    if (e.dead || this.react(e, el, dmg)) return;
+    if (e.dead || this.resistOf(e) === el || this.react(e, el, dmg)) return;
     sfx.play(el === 'fire' ? 'burn' : el === 'ice' ? 'freeze' : el === 'lightning' ? 'shock' : 'poison');
     const ep = 1 + this.stats.elemPower;
     switch (el) {
@@ -1167,7 +1193,7 @@ export class Run {
       case 'ice':
         e.slowF = Math.max(e.slowF, Math.min(ELEM.chillMaxSlow, ELEM.chillSlow * ep));
         e.slowT = Math.max(e.slowT, ELEM.chillTime);
-        if (++e.chill >= ELEM.freezeStacks) { e.chill = 0; e.stunT = Math.max(e.stunT, e.boss ? 0.2 : ELEM.freezeTime); }
+        if (++e.chill >= ELEM.freezeStacks) { e.chill = 0; e.stunT = Math.max(e.stunT, ELEM.freezeTime); }
         break;
       case 'lightning':
         e.shockT = ELEM.shockTime;

@@ -50,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.23.2)
+## Stan (wersja 0.23.3)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -284,6 +284,15 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   - 0.23.2: zdolność elity (`eliteAbility`, `BAL.eliteAbility`, pole `Enemy.abilT`): elity wręcz szarżują z pierścieniem
     przy lądowaniu, strzelające na zmianę wachlarz z wyprzedzeniem i pierścień z luką. Królowa Bagien wzmocniona (była
     najsłabszym bossem). Pomiar zagrożenia: bot krążący z unikami, % maks. HP w 30 s (skrypt w scratchpadzie threat.cjs).
+  - 0.23.3: naprawa trucizny (sekret Wieczna Zaraza kopiuje truciznę zamiast `applyElement`, który mnożył siłę przy
+    każdym przeskoku: wykładniczy wzrost do 1E18); statystyki i `dmgStep` (siła gracza → HP wrogów) liczą tylko zadane
+    obrażenia, bez nadwyżki ponad HP. Bossowie i minibossowie (`warden`) odporni na ogłuszenie. Odporność bossa na żywioł
+    biomu (`BAL.bossResist`, `Run.resistOf`, napis pod paskiem bossa). Tabela żywiołów i reakcji w ekranie broni (C, Tab).
+    Augmenty działają w hybrydach (`weaponLines`, `augmentWorks`, `Run.augOn`): żywioł zawsze, zmiana ataku gdy rodzic ma
+    ten sam typ ataku; zasady fuzji (`FUSION_RULES`) w Arsenale, ekranie broni i przy awansie; własne ikony hybryd `ic_f_*`.
+    Fala ostrza: pocisk `kind: 'wave'` (szeroki, przez teren). Szarża Borguna: uderzenie na końcu rośnie z liczbą
+    staranowanych (`BAL.charge`), Furia, zabójstwa skracają odnowienie. Zadania: Obrona totemu = 15 zabójstw przy totemie,
+    Bez skazy = limit 2 trafień bez karnej fali. Wierność broni (`BAL.loyal`, `cardState.loyal`): poziom 10 i 20 z jedną bronią.
 
 ## Plan dalej
 

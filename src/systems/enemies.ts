@@ -391,6 +391,8 @@ export function updateEnemies(run: Run, dt: number): void {
       dx = p.x - e.x; dy = p.y - e.y; dist = Math.hypot(dx, dy) || 1;
     }
 
+    // Bossowie i minibossowie są odporni na ogłuszenie i zamrożenie.
+    if (e.boss || e.def.behavior === 'warden') e.stunT = 0;
     if (e.boss) {
       updateBoss(run, e, dt, dx, dy, dist);
     } else if (e.stunT > 0) {

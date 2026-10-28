@@ -45,7 +45,13 @@ export const SECRETS: SecretDef[] = [
     hooks: {
       onKill: (run, e) => {
         if (e.poisonStacks <= 0) return;
-        run.enemiesInCircle(e.x, e.y, 45, (o) => { for (let i = 0; i < 3; i++) run.applyElement(o, 'poison', e.poisonUnit / ELEM.poisonRatio); });
+        // Kopia trucizny bez mnożenia siły (applyElement mnożyłby ją przy każdym przeskoku: wykładniczy wzrost).
+        run.enemiesInCircle(e.x, e.y, 45, (o) => {
+          if (o.dead) return;
+          o.poisonStacks = Math.max(o.poisonStacks, e.poisonStacks);
+          o.poisonUnit = Math.max(o.poisonUnit, e.poisonUnit);
+          o.poisonT = ELEM.poisonTime;
+        });
         run.burst(e.x, e.y, C.lime, 8, 50);
       },
     },

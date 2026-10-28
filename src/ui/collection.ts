@@ -20,7 +20,7 @@ import { CARD_BY_ID } from '../data/cards';
 import { fmt } from '../util/format';
 import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel } from '../data/weapons';
 import { PASSIVES, PASSIVE_BY_ID } from '../data/passives';
-import { AUGMENTS } from '../data/augments';
+import { AUGMENTS, fusionAugments, FUSION_RULES } from '../data/augments';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 
 const COLS = 15, TILE = 17, STEP = 18;
@@ -197,7 +197,13 @@ export class CollectionScreen implements Screen {
       const fus = FUSIONS.filter((f) => f.a === w.id || f.b === w.id);
       if (fus.length) {
         head('Fuzje (obie bronie na maks. albo po ewolucji)', C.pink);
-        for (const f of fus) text(`+ ${WEAPON_BY_ID[f.a === w.id ? f.b : f.a].name}: ${WEAPON_BY_ID[f.into].name}. ${WEAPON_BY_ID[f.into].desc}`);
+        text(FUSION_RULES, C.dgray);
+        for (const f of fus) {
+          const into = WEAPON_BY_ID[f.into], { kept, lost } = fusionAugments(into);
+          text(`+ ${WEAPON_BY_ID[f.a === w.id ? f.b : f.a].name}: ${into.name}. ${into.desc}`);
+          if (kept.length) text(`Zostają augmenty: ${kept.map((a) => a.name).join(', ')}.`, C.cyan);
+          if (lost.length) text(`Przepadają: ${lost.map((a) => a.name).join(', ')}.`, C.salmon);
+        }
       }
       const augs = AUGMENTS.filter((a) => a.weapon === w.id);
       if (augs.length) {

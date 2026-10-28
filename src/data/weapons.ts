@@ -211,69 +211,69 @@ export const WEAPONS: WeaponDef[] = [
     levels: [], evolved: true,
   },
 
-  // ---- hybrydy z fuzji (FUSIONS); ikona 'fu:<ikona A>:<ikona B>' składana w gfx/sprites.ts ----
+  // ---- hybrydy z fuzji (FUSIONS); ikony ic_f_* w gfx/icons.ts ----
   {
-    id: 'f_firearrow', name: 'Płonące strzały', desc: 'Strzały wybuchające ogniem przy trafieniu.', icon: 'fu:ic_arrow_evo:ic_meteor', kind: 'bolt', color: C.orange, proj: 'arrow', hero: 'kestra',
+    id: 'f_firearrow', name: 'Płonące strzały', desc: 'Strzały wybuchające ogniem przy trafieniu.', icon: 'ic_f_firearrow', kind: 'bolt', color: C.orange, proj: 'arrow', hero: 'kestra',
     base: S({ damage: 36, cooldown: 0.42, amount: 4, speed: 300, duration: 1.4, pierce: 4, knock: 2 }), levels: [], evolved: true, fused: true, hybrid: { blast: 0.6 },
   },
   {
-    id: 'f_stormarrow', name: 'Burzowe strzały', desc: 'Strzały rozszczepiające się przy trafieniu, porażają.', icon: 'fu:ic_arrow_evo:ic_chain', kind: 'bolt', color: C.yellow, proj: 'arrow', hero: 'kestra',
+    id: 'f_stormarrow', name: 'Burzowe strzały', desc: 'Strzały rozszczepiające się przy trafieniu, porażają.', icon: 'ic_f_stormarrow', kind: 'bolt', color: C.yellow, proj: 'arrow', hero: 'kestra',
     base: S({ damage: 34, cooldown: 0.4, amount: 4, speed: 300, duration: 1.4, pierce: 5, knock: 1.5 }), levels: [], evolved: true, fused: true, hybrid: { split: true },
   },
   {
-    id: 'f_frostwhirl', name: 'Mroźny wir', desc: 'Cięcia dookoła bohatera, które mrożą wrogów.', icon: 'fu:ic_axe_evo:ic_aura', kind: 'cleave', color: C.cyan, hero: 'borgun',
+    id: 'f_frostwhirl', name: 'Mroźny wir', desc: 'Cięcia dookoła bohatera, które mrożą wrogów.', icon: 'ic_f_frostwhirl', kind: 'cleave', color: C.cyan, hero: 'borgun',
     base: S({ damage: 55, cooldown: 0.55, amount: 4, area: 2, knock: 5 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_flyaxe', name: 'Latające topory', desc: 'Topory lecą przed siebie i wracają, tnąc wszystko po drodze.', icon: 'fu:ic_axe_evo:ic_boomerang', kind: 'boomerang', color: C.lgray, proj: 'boom', hero: 'borgun',
+    id: 'f_flyaxe', name: 'Latające topory', desc: 'Topory lecą przed siebie i wracają, tnąc wszystko po drodze.', icon: 'ic_f_flyaxe', kind: 'boomerang', color: C.lgray, proj: 'boom', hero: 'borgun',
     base: S({ damage: 52, cooldown: 0.8, amount: 4, speed: 260, duration: 0.8, pierce: 999, knock: 4 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_stormstaff', name: 'Kostur burzy', desc: 'Słoneczne kule naprowadzane na kolejnych wrogów, porażają.', icon: 'fu:ic_staff_evo:ic_chain', kind: 'bolt', color: C.yellow, proj: 'sun', hero: 'ignara',
+    id: 'f_stormstaff', name: 'Kostur burzy', desc: 'Słoneczne kule naprowadzane na kolejnych wrogów, porażają.', icon: 'ic_f_stormstaff', kind: 'bolt', color: C.yellow, proj: 'sun', hero: 'ignara',
     base: S({ damage: 40, cooldown: 0.45, amount: 4, speed: 210, area: 1.6, duration: 1.8, pierce: 3, knock: 2 }), levels: [], evolved: true, fused: true, hybrid: { seek: true },
   },
   {
-    id: 'f_comet', name: 'Kometa', desc: 'Ogromne kule ognia wybuchające przy trafieniu.', icon: 'fu:ic_staff_evo:ic_meteor', kind: 'bolt', color: C.red, proj: 'sun', hero: 'ignara',
+    id: 'f_comet', name: 'Kometa', desc: 'Ogromne kule ognia wybuchające przy trafieniu.', icon: 'ic_f_comet', kind: 'bolt', color: C.red, proj: 'sun', hero: 'ignara',
     base: S({ damage: 46, cooldown: 0.55, amount: 3, speed: 180, area: 2, duration: 1.8, pierce: 1, knock: 3 }), levels: [], evolved: true, fused: true, hybrid: { blast: 1 },
   },
   {
-    id: 'f_soulwhirl', name: 'Wir dusz', desc: 'Gęsty wir zatrutych dusz krąży wokół ciebie.', icon: 'fu:ic_souls_evo:ic_orbit', kind: 'orbit', color: C.pink, proj: 'soul', hero: 'morwen',
+    id: 'f_soulwhirl', name: 'Wir dusz', desc: 'Gęsty wir zatrutych dusz krąży wokół ciebie.', icon: 'ic_f_soulwhirl', kind: 'orbit', color: C.pink, proj: 'soul', hero: 'morwen',
     base: S({ damage: 36, cooldown: 0.22, amount: 9, speed: 4, area: 1.8, knock: 2 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_gravemines', name: 'Grobowe miny', desc: 'Miny pełne trucizny rozsiane wokół ciebie.', icon: 'fu:ic_souls_evo:ic_mines', kind: 'mines', color: C.lime, proj: 'mine', hero: 'morwen',
+    id: 'f_gravemines', name: 'Grobowe miny', desc: 'Miny pełne trucizny rozsiane wokół ciebie.', icon: 'ic_f_gravemines', kind: 'mines', color: C.lime, proj: 'mine', hero: 'morwen',
     base: S({ damage: 95, cooldown: 0.9, amount: 4, area: 1.9, duration: 7, knock: 4 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_bladering', name: 'Wir sztyletów', desc: 'Pierścień sztyletów tnie wszystko wokół ciebie.', icon: 'fu:ic_knives_evo:ic_orbit', kind: 'orbit', color: C.lavender, proj: 'knife', hero: 'vesper',
+    id: 'f_bladering', name: 'Wir sztyletów', desc: 'Pierścień sztyletów tnie wszystko wokół ciebie.', icon: 'ic_f_bladering', kind: 'orbit', color: C.lavender, proj: 'knife', hero: 'vesper',
     base: S({ damage: 34, cooldown: 0.2, amount: 9, speed: 5, area: 1.7, knock: 2 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_shuriken', name: 'Gwiazdy cienia', desc: 'Wirujące noże lecą przed siebie i wracają.', icon: 'fu:ic_knives_evo:ic_boomerang', kind: 'boomerang', color: C.lavender, proj: 'boom', hero: 'vesper',
+    id: 'f_shuriken', name: 'Gwiazdy cienia', desc: 'Wirujące noże lecą przed siebie i wracają.', icon: 'ic_f_shuriken', kind: 'boomerang', color: C.lavender, proj: 'boom', hero: 'vesper',
     base: S({ damage: 44, cooldown: 0.6, amount: 5, speed: 280, duration: 0.7, pierce: 999, knock: 2 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_halo', name: 'Aureola', desc: 'Złota aura pali i odpycha wrogów wokół ciebie.', icon: 'fu:ic_light_evo:ic_aura', kind: 'aura', color: C.yellow, hero: 'aurel',
+    id: 'f_halo', name: 'Aureola', desc: 'Złota aura pali i odpycha wrogów wokół ciebie.', icon: 'ic_f_halo', kind: 'aura', color: C.yellow, hero: 'aurel',
     base: S({ damage: 22, cooldown: 0.3, amount: 0, area: 2.4, knock: 2 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_sunbeam', name: 'Promień słońca', desc: 'Wachlarz słonecznych promieni przeszywa wrogów.', icon: 'fu:ic_light_evo:ic_laser', kind: 'laser', color: C.yellow, hero: 'aurel',
+    id: 'f_sunbeam', name: 'Promień słońca', desc: 'Wachlarz słonecznych promieni przeszywa wrogów.', icon: 'ic_f_sunbeam', kind: 'laser', color: C.yellow, hero: 'aurel',
     base: S({ damage: 28, cooldown: 0.9, amount: 4, area: 2, duration: 0.9, knock: 0 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_thunderorb', name: 'Kula piorunów', desc: 'Gwiazdy rozszczepiające się przy trafieniu, porażają.', icon: 'fu:ic_bolt_evo:ic_chain', kind: 'bolt', color: C.yellow, proj: 'star',
+    id: 'f_thunderorb', name: 'Kula piorunów', desc: 'Gwiazdy rozszczepiające się przy trafieniu, porażają.', icon: 'ic_f_thunderorb', kind: 'bolt', color: C.yellow, proj: 'star',
     base: S({ damage: 36, cooldown: 0.45, amount: 5, speed: 230, area: 1.3, duration: 2, pierce: 3, knock: 1.5 }), levels: [], evolved: true, fused: true, hybrid: { split: true },
   },
   {
-    id: 'f_frostring', name: 'Mroźny pierścień', desc: 'Szeroki pierścień lodowych ostrzy.', icon: 'fu:ic_orbit_evo:ic_aura', kind: 'orbit', color: C.cyan, proj: 'blade',
+    id: 'f_frostring', name: 'Mroźny pierścień', desc: 'Szeroki pierścień lodowych ostrzy.', icon: 'ic_f_frostring', kind: 'orbit', color: C.cyan, proj: 'blade',
     base: S({ damage: 36, cooldown: 0.22, amount: 10, speed: 4.5, area: 2.2, knock: 3 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_firefield', name: 'Ognista ziemia', desc: 'Nieustanny deszcz ogromnych meteorów.', icon: 'fu:ic_meteor_evo:ic_mines', kind: 'meteor', color: C.red,
+    id: 'f_firefield', name: 'Ognista ziemia', desc: 'Nieustanny deszcz ogromnych meteorów.', icon: 'ic_f_firefield', kind: 'meteor', color: C.red,
     base: S({ damage: 100, cooldown: 1.2, amount: 6, area: 2, duration: 0.6, knock: 4 }), levels: [], evolved: true, fused: true,
   },
   {
-    id: 'f_mirror', name: 'Lustrzany promień', desc: 'Wachlarz porażających promieni.', icon: 'fu:ic_laser_evo:ic_boomerang', kind: 'laser', color: C.yellow,
+    id: 'f_mirror', name: 'Lustrzany promień', desc: 'Wachlarz porażających promieni.', icon: 'ic_f_mirror', kind: 'laser', color: C.yellow,
     base: S({ damage: 26, cooldown: 1, amount: 5, area: 2, duration: 0.9, knock: 0 }), levels: [], evolved: true, fused: true,
   },
 ];

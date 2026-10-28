@@ -307,6 +307,8 @@ function drawWorld(run: Run, r: Renderer): void {
       r.withAlpha(0.6, () => r.circle(tx, ty, Math.max(1, Math.round(R * Math.min(1, task.progress / task.def.need))), C.cyan));
     } else if (task.started && kind === 'totem' && vis(task.x, task.y)) {
       r.withAlpha(0.15, () => r.circle(tx, ty, Math.round(BAL.tasks.totemR * ZOOM), C.red, true));
+      // Zabójstwa w tym kręgu liczą się do zadania.
+      r.withAlpha(0.5, () => r.circle(tx, ty, Math.round(BAL.tasks.totemKillR * ZOOM), C.lime));
       drawShadow(g, tx, ty + 12, 16);
       drawSprite(g, 'totem', tx, ty);
       r.rect(tx - 12, ty - 22, 24, 4, C.black);
@@ -480,6 +482,15 @@ function drawWorld(run: Run, r: Renderer): void {
         drawSprite(g, `${pr.forceCrit ? 'arrowc' : 'arrow'}@${dir}`, x, y);
       } else if (pr.kind === 'boomerang') {
         drawSprite(g, `boom${Math.floor(pr.t * 16) & 3}`, x, y);
+      } else if (pr.kind === 'wave') {
+        // Fala ostrza: półksiężyc wypukły w stronę lotu, blednie pod koniec.
+        const d = Math.atan2(pr.vy, pr.vx), rr = pr.radius * ZOOM;
+        r.withAlpha(Math.min(1, pr.life * 4), () => {
+          for (let a = d - 1.1; a <= d + 1.1; a += 0.12) {
+            r.rect(x - Math.cos(d) * rr * 0.5 + Math.cos(a) * rr, y - Math.sin(d) * rr * 0.5 + Math.sin(a) * rr, 3, 3, C.lgray);
+            r.rect(x - Math.cos(d) * rr * 0.5 + Math.cos(a) * (rr - 2), y - Math.sin(d) * rr * 0.5 + Math.sin(a) * (rr - 2), 2, 2, C.white);
+          }
+        });
       } else {
         drawSprite(g, pr.sprite, x, y);
       }

@@ -6,14 +6,35 @@ import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel, describeLevel } from '../data/weapons';
 import { PASSIVE_BY_ID } from '../data/passives';
-import { AUGMENT_BY_ID, weaponBase } from '../data/augments';
-import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
+import { AUGMENT_BY_ID, weaponBase, augmentWorks, fusionAugments, FUSION_RULES } from '../data/augments';
+import { ELEMENTS, WEAPON_ELEMENT, ELEM, type Element } from '../data/elements';
+import { BAL } from '../data/balance';
+import { buildElements } from '../systems/tasks';
 import { bonusLines } from '../data/upgrades';
 import type { Run } from '../game/run';
 import { dim, panel, slot, inside, hovered, button } from './widgets';
 
 const CELL = 22, STEP = 26, GX = 16, WY = 50, PY = 116, COLS = 6;
 const DX = 186, SMALL = { scale: 0.75 } as const;
+
+/** Reakcje żywiołów (game/run.ts react) z opisem skutku; liczby z BAL.reactions. */
+function reactions(): { a: Element; b: Element; name: string; col: number; desc: string }[] {
+  const R = BAL.reactions, pct = (v: number) => `${Math.round(v * 100)}%`;
+  return [
+    { a: 'fire', b: 'ice', name: 'Para', col: C.lgray, desc: `ogłusza na ${R.steam.stun} s i zadaje ${pct(R.steam.mul)} trafienia. Zużywa oba stany.` },
+    { a: 'lightning', b: 'ice', name: 'Kruszenie', col: C.cyan, desc: `następne trafienie zadaje x${R.shatter.mul} obrażeń. Zużywa lód.` },
+    { a: 'fire', b: 'poison', name: 'Wybuch toksyn', col: C.lime, desc: `wybuch wokół wroga za całą truciznę x${R.toxic.mul}. Zużywa truciznę.` },
+    { a: 'lightning', b: 'poison', name: 'Przewodzenie', col: C.yellow, desc: `trucizna przeskakuje na ${R.conduct.n} pobliskich wrogów.` },
+    { a: 'fire', b: 'lightning', name: 'Przeciążenie', col: C.orange, desc: `wybuch z odrzutem za ${pct(R.overload.mul)} trafienia. Zużywa porażenie.` },
+  ];
+}
+
+const STATES: [Element, string][] = [
+  ['fire', `podpalenie: ${Math.round(ELEM.burnRatio * 100)}% trafienia na sekundę przez ${ELEM.burnTime} s`],
+  ['ice', `spowolnienie ${Math.round(ELEM.chillSlow * 100)}%, co ${ELEM.freezeStacks}. trafienie zamraża`],
+  ['lightning', `wróg dostaje +${Math.round((ELEM.shockMul - 1) * 100)}% obrażeń przez ${ELEM.shockTime} s`],
+  ['poison', `do ${ELEM.poisonMaxStacks} warstw, każda ${Math.round(ELEM.poisonRatio * 100)}% trafienia na sekundę`],
+];
 
 /** Gniazdo przepisu: ikona w ramce, zielona gdy składnik jest gotowy, szara gdy go brakuje. */
 function part(r: Renderer, icon: string, x: number, y: number, ok: boolean): void {
@@ -40,6 +61,8 @@ function recipe(r: Renderer, x: number, y: number, a: [string, boolean], b: [str
 export class BuildView {
   private sel = 0;
   private lastMouse = 0;
+  /** Prawa strona: szczegóły zaznaczonego albo tabela żywiołów i reakcji (Tab). */
+  private elems = false;
 
   constructor(private readonly run: Run) {}
 
@@ -55,15 +78,16 @@ export class BuildView {
   /** Zwraca true, gdy ekran ma zostać zamknięty. */
   update(input: Input): boolean {
     if (input.pressed('back') || input.pressed('pause') || input.pressed('build') || input.pressed('confirm')) return true;
+    const m = input.mouse;
+    if (input.pressed('inventory') || (input.pressed('click') && inside(m.x, m.y, 80, H - 26, 90, 16))) { this.elems = !this.elems; sfx.play('select'); }
     const n = this.count;
     if (n) {
       if (input.pressed('left') || input.pressed('up')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
       if (input.pressed('right') || input.pressed('down')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
     }
-    const m = input.mouse;
     for (let i = 0; i < n; i++) {
       const [x, y] = this.cellPos(i);
-      if (inside(m.x, m.y, x, y, CELL, CELL) && (m.lastMove !== this.lastMouse || input.pressed('click'))) this.sel = i;
+      if (inside(m.x, m.y, x, y, CELL, CELL) && (m.lastMove !== this.lastMouse || input.pressed('click'))) { this.sel = i; if (input.pressed('click')) this.elems = false; }
     }
     this.lastMouse = m.lastMove;
     return input.pressed('click') && inside(m.x, m.y, 14, H - 26, 60, 16);
@@ -87,7 +111,9 @@ export class BuildView {
     drawText(g, 'Strzałki / mysz: wybór', GX, H - 56, C.dgray, SMALL);
     drawText(g, 'C / Esc: wróć', GX, H - 47, C.dgray, SMALL);
     button(r, 14, H - 26, 60, 16, 'Wróć');
+    button(r, 80, H - 26, 90, 16, this.elems ? 'Szczegóły' : 'Żywioły [Tab]');
     panel(r, DX, 34, W - DX - 6, H - 40, C.gold);
+    if (this.elems) { this.renderElements(r); return; }
     if (!this.count) return;
     this.sel = Math.min(this.sel, this.count - 1);
     if (this.sel < nw) this.renderWeapon(r, this.sel);
@@ -106,10 +132,28 @@ export class BuildView {
     const head = (s: string, col: number) => { y += 3; drawText(g, s, x, y, col); y += 11; };
     text(d.desc, C.white);
     if (!d.evolved && w.level < maxLevel(d)) text(`Następny poziom: ${describeLevel(d, w.level + 1)}`);
+    // Wierność broni: stopień i następny próg (tylko przy jednej broni).
+    if (run.weapons.length === 1) {
+      const L = BAL.loyal, lt = run.loyal, next = L.levels.find((l) => l > run.level);
+      if (lt) text(`Wierność broni ${lt}: +${Math.round(lt * L.dmg * 100)}% obrażeń, +${Math.round(lt * L.atkSpeed * 100)}% szybkości ataku, +${lt * L.amount} pocisków.`, C.gold);
+      if (next) text(`Tylko ta broń do poziomu ${next}: kolejny stopień Wierności broni.`, C.yellow);
+    }
     const bonus = bonusLines(w.bonus);
     if (bonus.length) text(`Bonusy jakości: ${bonus.join(', ')}`, C.cyan);
-    const augs = run.augments.filter((id) => AUGMENT_BY_ID[id].weapon === base).map((id) => AUGMENT_BY_ID[id].name);
+    const augs = run.augments.filter((id) => augmentWorks(AUGMENT_BY_ID[id], d)).map((id) => AUGMENT_BY_ID[id].name);
     if (augs.length) text(`Augmenty: ${augs.join(', ')}`, C.cyan);
+    // Hybryda: z czego powstała i które augmenty rodziców przepadły.
+    const f = d.fused ? FUSIONS.find((x) => x.into === d.id) : undefined;
+    if (f) {
+      const lost = fusionAugments(d).lost.filter((a) => run.aug(a.id)).map((a) => a.name);
+      head('Fuzja', C.pink);
+      recipe(r, x, y, [WEAPON_BY_ID[f.a].icon, true], [WEAPON_BY_ID[f.b].icon, true], d.icon);
+      drawText(g, `${WEAPON_BY_ID[f.a].name} +`, x + 86, y, C.white, SMALL);
+      drawText(g, WEAPON_BY_ID[f.b].name, x + 86, y + 9, C.white, SMALL);
+      y += 22;
+      text(FUSION_RULES, C.dgray);
+      if (lost.length) text(`Nie działają tu: ${lost.join(', ')} (inny typ ataku).`, C.salmon);
+    }
     // Ewolucja: broń na maks. + pasywka.
     const evo = WEAPON_BY_ID[base]?.evolve;
     if (evo && !d.evolved) {
@@ -133,7 +177,43 @@ export class BuildView {
         drawText(g, into.name, x + 86, y, C.white, SMALL);
         drawText(g, ow ? `masz: ${WEAPON_BY_ID[other].name}` : `brak: ${WEAPON_BY_ID[other].name}`, x + 86, y + 9, ow ? C.lime : C.salmon, SMALL);
         y += 22;
+        const lost = fusionAugments(into).lost.filter((a) => run.aug(a.id)).map((a) => a.name);
+        if (lost.length) text(`Przepadną: ${lost.join(', ')}`, C.salmon);
       }
+    }
+  }
+
+  /** Żywioły i reakcje: stany, pary z opisem skutku; jasne są te, które twój build potrafi wywołać. */
+  private renderElements(r: Renderer): void {
+    const g = r.g, x = DX + 10, tw = (W - DX - 26) / SMALL.scale, own = new Set(buildElements(this.run));
+    let y = 40;
+    drawText(g, 'Żywioły', x, y, C.yellow);
+    y += 11;
+    for (const [el, desc] of STATES) {
+      const d = ELEMENTS[el], a = own.has(el) ? 1 : 0.5;
+      r.withAlpha(a, () => { drawText(g, d.name, x, y, d.color, SMALL); drawText(g, desc, x + 46, y, C.lgray, SMALL); });
+      y += 8.5;
+    }
+    y += 4;
+    drawText(g, 'Reakcje (drugi żywioł na wrogu)', x, y, C.yellow);
+    y += 11;
+    for (const re of reactions()) {
+      const ok = own.has(re.a) && own.has(re.b);
+      r.withAlpha(ok ? 1 : 0.5, () => {
+        const A = ELEMENTS[re.a], B = ELEMENTS[re.b];
+        let lx = x;
+        drawText(g, re.name, lx, y, re.col, SMALL);
+        lx += 62;
+        drawText(g, A.name, lx, y, A.color, SMALL);
+        drawText(g, '+', lx + 42, y, C.lgray, SMALL);
+        drawText(g, B.name, lx + 49, y, B.color, SMALL);
+        y += 8.5;
+        for (const l of wrapText(re.desc, tw - 8)) { drawText(g, l, x + 6, y, C.lgray, SMALL); y += 8.5; }
+      });
+      y += 2;
+    }
+    for (const l of wrapText(`Jasne: twój build ma oba żywioły. Boss jest odporny na żywioł swojego biomu: stan się nie nakłada, obrażenia ${Math.round((1 - BAL.bossResist.mul) * 100)}% mniejsze.`, tw)) {
+      drawText(g, l, x, y, C.dgray, SMALL); y += 8.5;
     }
   }
 

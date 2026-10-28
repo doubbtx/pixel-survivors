@@ -44,8 +44,8 @@ export function updateProjectiles(run: Run, dt: number): void {
       }
     }
 
-    // Teren: osłony i beczki zatrzymują pociski gracza (bumerangi przelatują).
-    const tb = pr.kind === 'boomerang' ? null : terrainBlocker(run, pr.x, pr.y, pr.radius);
+    // Teren: osłony i beczki zatrzymują pociski gracza (bumerangi i fale przelatują).
+    const tb = pr.kind === 'boomerang' || pr.kind === 'wave' ? null : terrainBlocker(run, pr.x, pr.y, pr.radius);
     if (tb) { hitTerrain(run, tb); run.projectiles.release(pr); continue; }
     const cand = run.hash.query(pr.x, pr.y, pr.radius + 12, run.qa);
     for (let j = 0; j < cand.length; j++) {

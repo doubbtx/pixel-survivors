@@ -88,7 +88,7 @@ export function resourceOnHit(run: Run, e: Enemy): void {
 }
 
 /** Przyrost furii (poza Szałem); pełna wyzwala Szał. */
-function furyGain(run: Run, v: number): void {
+export function furyGain(run: Run, v: number): void {
   run.resIdle = 0;
   if (run.rageT > 0) return;
   gain(run, v);

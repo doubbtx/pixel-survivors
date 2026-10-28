@@ -7,7 +7,7 @@ import { abilityParam, abilityCooldown, type AbilityKind, type AbilitySlot } fro
 import { SLOT, type AbilityInst, type Enemy } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnMinion } from './minions';
-import { resourceOnCast, spendSouls, spendStreak, spendFaith } from './resource';
+import { resourceOnCast, spendSouls, spendStreak, spendFaith, furyGain } from './resource';
 
 const ORDER: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
 
@@ -92,15 +92,15 @@ const EVO_EXTRA: Record<string, Cast> = {
   // Lodowa sieć: zamrożenie wrogów w środku.
   k_net: (run, _a, P) => {
     const [x, y] = aimPoint(run, P('range'));
-    run.enemiesInCircle(x, y, P('radius') * run.stats.area, (e) => { e.stunT = Math.max(e.stunT, e.boss ? 0.3 : 1.5); });
+    run.enemiesInCircle(x, y, P('radius') * run.stats.area, (e) => { e.stunT = Math.max(e.stunT, 1.5); });
   },
   // Nawałnica z nieba: drugi grad wokół gracza.
   k_rain: (run, a, P) => {
     const z = run.addZone('rain', run.player.x, run.player.y, P('radius') * run.stats.area * 0.8, P('damage') * run.stats.might, P('duration') * run.stats.duration, SLOT.ult, a.def.name);
     if (z) z.tick = 15;
   },
-  // Taran tytana: fala uderzeniowa na końcu szarży.
-  b_charge: (run, a, P) => run.schedule(0.22, () => run.explode(run.player.x, run.player.y, 40 * run.stats.area, P('damage') * run.stats.might, a.def.name, C.orange, 6)),
+  // Taran tytana: druga, szersza fala uderzeniowa po uderzeniu kończącym szarżę.
+  b_charge: (run, a, P) => run.schedule(0.45, () => run.explode(run.player.x, run.player.y, P('impact') * 1.5 * run.stats.area, P('damage') * run.stats.might, a.def.name, C.orange, 6)),
   // Rozłam: druga, szersza fala.
   b_slam: (run, a, P) => run.schedule(0.45, () => {
     const p = run.player, r = P('radius') * 1.6 * run.stats.area;
@@ -179,16 +179,30 @@ const CASTS: Record<AbilityKind, Cast> = {
   charge(run, a, P) {
     const p = run.player;
     const [dx, dy] = aimDir(run);
-    const dist = P('dist');
+    const dist = P('dist'), Q = BAL.charge;
     const dur = 0.2;
-    // Obrażenia na całej trasie od razu; samo przemieszczenie trwa `dur`.
+    // Obrażenia na całej trasie od razu (wrogowie odrzuceni na boki); samo przemieszczenie trwa `dur`.
+    let hits = 0, kills = 0;
     for (let d = 0; d <= dist; d += 8) {
       run.enemiesInCircle(p.x + dx * d, p.y + dy * d, P('width'), (e) => {
         if (e.hitStamp[SLOT.q] === run.step) return;
         e.hitStamp[SLOT.q] = run.step;
-        run.damageEnemy(e, P('damage') * run.stats.might, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 5, stun: P('stun') });
+        const side = (e.x - p.x) * -dy + (e.y - p.y) * dx >= 0 ? 1 : -1;
+        run.damageEnemy(e, P('damage') * run.stats.might, a.def.name, { kx: -dy * side + dx * 0.3, ky: dx * side + dy * 0.3, knock: 5, stun: P('stun') });
+        hits++;
+        if (e.dead) kills++;
       });
     }
+    // Furia za staranowanych, zabójstwa skracają odnowienie.
+    if (run.hero.resource.kind === 'fury' && hits) furyGain(run, hits * Q.fury);
+    if (kills) a.cd *= 1 - Math.min(Q.refundMax, kills * Q.refund);
+    // Uderzenie w ziemię na końcu: tym mocniejsze, im więcej wrogów staranowano.
+    const impact = P('impact') * run.stats.area, bonus = 1 + Math.min(Q.maxBonus, hits * Q.perHit);
+    run.schedule(dur, () => {
+      run.explode(p.x, p.y, impact, P('damage') * Q.impactMul * bonus * run.stats.might, a.def.name, C.orange, 5);
+      run.burst(p.x, p.y, C.brown, 14 + hits * 2, 70);
+      run.addShake(2 + Math.min(3, hits * 0.3));
+    });
     const f = run.addFx('line', p.x, p.y, C.orange, 0.25);
     if (f) { f.x2 = p.x + dx * dist; f.y2 = p.y + dy * dist; f.w = 3; }
     p.dashT = dur;

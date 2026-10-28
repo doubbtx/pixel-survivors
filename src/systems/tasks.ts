@@ -30,7 +30,7 @@ export interface Task {
 const ELEMS: Element[] = ['fire', 'ice', 'lightning', 'poison'];
 
 /** Żywioły, które build nakłada: bronie (i augmenty), karty, super-bonusy. */
-function buildElements(run: Run): Element[] {
+export function buildElements(run: Run): Element[] {
   const out = new Set<Element>();
   for (const w of run.weapons) { const el = WEAPON_ELEMENT[w.def.id]; if (el) out.add(el); }
   for (const el of run.augElem.values()) out.add(el);
@@ -145,6 +145,7 @@ export function updateTasks(run: Run, dt: number): void {
       t.hp -= (Math.min(n, T.totemMax) * T.totemDrain / 100) * dt;
       if ((t.x - p.x) ** 2 + (t.y - p.y) ** 2 > T.totemGuard * T.totemGuard) t.hp -= (T.totemAlone / 100) * dt;
       if (t.hp <= 0) { run.burst(t.x, t.y, C.brown, 24, 70); finish(run, false); return; }
+      if (t.progress >= t.def.need) { finish(run, true); return; }
       break;
     }
     case 'circle':
@@ -155,18 +156,21 @@ export function updateTasks(run: Run, dt: number): void {
       if (t.progress >= t.def.need) { finish(run, true); return; }
       break;
   }
-  if (t.life <= 0) finish(run, t.def.kind === 'totem' || t.def.kind === 'dodge');
+  if (t.life <= 0) finish(run, t.def.kind === 'dodge');
 }
 
-/** Oberwanie przerywa zadanie „Bez skazy”. */
+/** Oberwanie w zadaniu „Bez skazy”: `need`-te trafienie je przerywa. */
 export function taskOnHurt(run: Run): void {
-  if (run.task?.started && run.task.def.kind === 'dodge') finish(run, false);
+  const t = run.task;
+  if (t?.started && t.def.kind === 'dodge' && ++t.progress >= t.def.need) finish(run, false);
 }
 
-/** Zabójstwo: postęp „Próby żywiołu”. */
+/** Zabójstwo: postęp „Próby żywiołu” i „Obrony totemu”. */
 export function taskOnKill(run: Run, e: Enemy): void {
   const t = run.task;
   if (t?.started && t.def.kind === 'element' && hasElement(e, t.elem!)) t.progress++;
+  const R = BAL.tasks.totemKillR;
+  if (t?.started && t.def.kind === 'totem' && (e.x - t.x) ** 2 + (e.y - t.y) ** 2 < R * R) t.progress++;
 }
 
 /** Punkt do znacznika poza ekranem: kamień, totem, krąg albo ścigana elita. */
@@ -184,9 +188,9 @@ export function taskStatus(run: Run): string {
   if (!t.started) return 'Dotknij kamienia';
   switch (t.def.kind) {
     case 'hunt': return 'Zabij elitę';
-    case 'totem': return `Totem ${Math.max(0, Math.ceil(t.hp * 100))}%`;
+    case 'totem': return `Totem ${Math.max(0, Math.ceil(t.hp * 100))}%, ${t.progress}/${t.def.need}`;
     case 'circle': return `W kręgu ${Math.floor(t.progress)}/${t.def.need} s`;
-    case 'dodge': return 'Bez trafienia';
+    case 'dodge': return `Trafienia ${t.progress}/${t.def.need - 1}`;
     case 'element': return `${ELEMENTS[t.elem!].name} ${t.progress}/${t.def.need}`;
   }
 }

@@ -224,6 +224,8 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, debug: boolean
     r.roundRect(bx2 + bw2, 41, 3, 11, 1, C.gold);
     drawSprite(g, 'ui_skull', bx2 - 10, 46);
     py = 55;
+    const res = run.resistOf(b);
+    if (res) { drawText(g, `Odporny na: ${ELEMENTS[res].name}`, W / 2, 54, ELEMENTS[res].color, { align: 'center', ...SMALL }); py = 64; }
   } else if (!run.bossSpawned) {
     const o = run.levelInfo.objective;
     const label = run.dungeon ? `Loch: fala ${run.dungeon.wave}/${BAL.events.dungeonWaves}${run.dungeon.cleared ? ', oczyszczony' : ''}`

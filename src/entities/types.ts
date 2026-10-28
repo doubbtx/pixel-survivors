@@ -123,7 +123,7 @@ export interface Enemy extends Poolable {
   dvy: number;
 }
 
-export type ProjKind = 'normal' | 'arrow' | 'boomerang';
+export type ProjKind = 'normal' | 'arrow' | 'boomerang' | 'wave';
 
 export interface Projectile extends Poolable {
   x: number;

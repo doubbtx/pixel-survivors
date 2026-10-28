@@ -53,6 +53,11 @@ function skull(p: Painter, cx: number, cy: number): void {
   for (let x = cx - 2; x <= cx + 2; x += 2) p.px(x, cy + 4, C.dgray);
 }
 
+/** Znak hybrydy z fuzji: różowy romb w lewym górnym rogu. */
+function fuseMark(p: Painter): void {
+  p.px(1, 0, C.hotpink).px(0, 1, C.hotpink).px(2, 1, C.hotpink).px(1, 2, C.hotpink).px(1, 1, C.white);
+}
+
 function boltShape(p: Painter, ox: number, oy: number, col: number = C.yellow): void {
   p.poly([[ox + 8, oy + 1], [ox + 3, oy + 8], [ox + 7, oy + 8], [ox + 5, oy + 15], [ox + 12, oy + 6], [ox + 8, oy + 6], [ox + 10, oy + 1]], col);
   p.line(ox + 8, oy + 2, ox + 5, oy + 7, C.white);
@@ -162,6 +167,114 @@ export const ICON_FNS: Record<string, IconFn> = {
   ic_axe_evo: (p) => {
     p.line(3, 14, 10, 5, C.ddbrown).polyShade([[8.5, 1], [14.5, 3], [13.5, 10], [9, 7]], RAMP.red);
     p.line(14, 3, 13, 9, C.salmon).px(11, 11, C.red).px(11, 12, C.dred).px(5, 13, C.red);
+  },
+
+  // ===================== hybrydy z fuzji =====================
+  // Znak fuzji: różowy romb w lewym górnym rogu (fuseMark).
+  ic_f_firearrow: (p) => {
+    p.line(2, 14, 11, 5, C.brown).px(2, 14, C.red).px(3, 14, C.red).px(2, 13, C.red);
+    flame(p, 11.5, 5, 0.55);
+    p.px(5, 9, C.orange).px(7, 10, C.gold);
+    fuseMark(p);
+  },
+  ic_f_stormarrow: (p) => {
+    arrow(p, 2, 14, 10, 6, C.yellow, C.cyan);
+    p.poly([[10, 6], [15, 1], [13, 5], [15, 6], [11, 8]], C.yellow).px(13, 3, C.white);
+    p.line(11, 9, 14, 12, C.yellow).line(7, 4, 9, 1, C.yellow);
+    fuseMark(p);
+  },
+  ic_f_frostwhirl: (p) => {
+    for (let k = 0; k < 2; k++) {
+      const a = k * Math.PI, c = Math.cos(a), s = Math.sin(a);
+      const R = (x: number, y: number): [number, number] => [8 + x * c - y * s, 8 + x * s + y * c];
+      p.polyShade([R(1, -2), R(6.5, -5), R(7, 1), R(2, 1)], [C.navy, C.blue, C.cyan, C.white]);
+    }
+    p.ring(8, 8, 7, 1, C.cyan).sphere(8, 8, 1.8, 1.8, RAMP.stone);
+    p.px(3, 3, C.white).px(13, 13, C.white);
+    fuseMark(p);
+  },
+  ic_f_flyaxe: (p) => {
+    for (let a = 0.6; a < 4.4; a += 0.15) p.px(8 + Math.cos(a) * 6.5, 8 + Math.sin(a) * 6.5, C.lavender);
+    p.line(4, 12, 9, 7, C.brown).polyShade([[8, 3], [13.5, 4.5], [12.5, 10], [9.5, 7.5]], RAMP.stone).line(13, 5, 12.5, 9, C.white);
+    p.px(14, 12, C.lgray).px(12, 14, C.lgray);
+    fuseMark(p);
+  },
+  ic_f_stormstaff: (p) => {
+    p.line(2, 14, 9, 7, C.brown).line(3, 14, 10, 7, C.dbrown);
+    p.sphere(11, 5, 3.6, 3.6, [C.navy, C.blue, C.cyan, C.white]);
+    p.poly([[11.5, 2], [9.5, 5.5], [11.2, 5.5], [10, 8.5], [13, 4.5], [11.5, 4.5], [12.5, 2]], C.yellow);
+    p.px(15, 2, C.yellow).px(14, 9, C.yellow);
+    fuseMark(p);
+  },
+  ic_f_comet: (p) => {
+    p.poly([[0.5, 4], [9, 7], [7, 10]], C.cyan).poly([[2, 1], [10, 6], [8, 8]], C.blue).poly([[3, 6], [9, 9], [8, 10]], C.white);
+    p.sphere(10.5, 10.5, 4.5, 4.5, [C.dred, C.orange, C.gold, C.white]).px(9, 9, C.white);
+    fuseMark(p);
+  },
+  ic_f_soulwhirl: (p) => {
+    for (let a = 0; a < TAU; a += 0.1) p.px(8 + Math.cos(a) * (3 + a * 0.6), 8 + Math.sin(a) * (3 + a * 0.6), a < 3 ? C.lime : C.green);
+    for (const [x, y] of [[12, 4], [4, 12], [13, 12]] as const) p.sphere(x, y, 1.8, 1.8, [C.plum, C.pink, C.salmon, C.white]);
+    p.sphere(8, 8, 2.2, 2.2, RAMP.bone).px(7, 8, C.black).px(9, 8, C.black);
+    fuseMark(p);
+  },
+  ic_f_gravemines: (p) => {
+    p.px(8, 1, C.lime).px(8, 15, C.lime).px(1, 8, C.lime).px(15, 8, C.lime).px(3, 3, C.lime).px(13, 13, C.lime).px(13, 3, C.lime);
+    p.sphere(8, 8.5, 5.5, 5.5, RAMP.night);
+    p.sphere(8, 8, 3.2, 3, RAMP.bone).rect(6, 7, 2, 2, C.black).rect(9, 7, 2, 2, C.black).px(8, 10, C.lime);
+    fuseMark(p);
+  },
+  ic_f_bladering: (p) => {
+    p.ring(8, 8, 6.5, 1, C.slate);
+    for (let k = 0; k < 4; k++) {
+      const a = (k * TAU) / 4 + 0.4, x = 8 + Math.cos(a) * 5.5, y = 8 + Math.sin(a) * 5.5, t = a + Math.PI / 2;
+      p.line(x - Math.cos(t) * 2.5, y - Math.sin(t) * 2.5, x + Math.cos(t) * 2.5, y + Math.sin(t) * 2.5, C.lgray).px(x + Math.cos(t) * 2.5, y + Math.sin(t) * 2.5, C.white);
+    }
+    p.sphere(8, 8, 2, 2, RAMP.purple);
+    fuseMark(p);
+  },
+  ic_f_shuriken: (p) => {
+    p.poly([[8, 0.5], [9.5, 6.5], [15.5, 8], [9.5, 9.5], [8, 15.5], [6.5, 9.5], [0.5, 8], [6.5, 6.5]], C.slate);
+    p.poly([[8, 2.5], [9, 7], [8, 8], [7, 7]], C.lavender).poly([[13.5, 8], [9, 9], [8, 8], [9, 7]], C.lgray);
+    p.disc(8, 8, 1.2, C.black).px(8, 2, C.white).px(13, 8, C.white);
+    fuseMark(p);
+  },
+  ic_f_halo: (p) => {
+    for (let a = 0; a < TAU; a += TAU / 8) p.line(8 + Math.cos(a) * 3, 9 + Math.sin(a) * 3, 8 + Math.cos(a) * 7, 9 + Math.sin(a) * 7, C.orange);
+    for (let a = 0; a < TAU; a += 0.05) p.px(8 + Math.cos(a) * 5.5, 5 + Math.sin(a) * 2, Math.sin(a) > 0 ? C.gold : C.yellow);
+    p.sphere(8, 9.5, 2.6, 2.6, [C.gold, C.yellow, C.cream, C.white]);
+    fuseMark(p);
+  },
+  ic_f_sunbeam: (p) => {
+    p.line(5, 6, 15, 15, C.gold).line(6, 5, 15, 14, C.yellow).line(5, 5, 15, 15, C.white);
+    for (let a = 0; a < TAU; a += TAU / 8) p.px(5 + Math.cos(a) * 5, 5 + Math.sin(a) * 5, C.orange);
+    p.sphere(5, 5, 3.4, 3.4, [C.orange, C.gold, C.yellow, C.white]);
+    fuseMark(p);
+  },
+  ic_f_thunderorb: (p) => {
+    p.sphere(8, 8, 6.5, 6.5, [C.navy, C.blue, C.cyan, C.white]);
+    p.poly([[9, 2.5], [5, 8.5], [7.5, 8.5], [6, 13.5], [11, 7], [8.5, 7], [10.5, 2.5]], C.yellow).px(7, 7, C.white);
+    fuseMark(p);
+  },
+  ic_f_frostring: (p) => {
+    p.ring(8, 8, 6, 1.4, C.cyan).ring(8, 8, 3.5, 1, C.blue);
+    for (let k = 0; k < 6; k++) {
+      const a = (k * TAU) / 6, x = 8 + Math.cos(a) * 6.5, y = 8 + Math.sin(a) * 6.5;
+      p.poly([[x, y - 2], [x + 1.2, y], [x, y + 2], [x - 1.2, y]], C.white);
+    }
+    p.px(8, 8, C.white);
+    fuseMark(p);
+  },
+  ic_f_firefield: (p) => {
+    p.polyShade([[0.5, 12], [15.5, 12], [15.5, 15], [0.5, 15]], RAMP.wood);
+    flame(p, 4, 9, 0.4); flame(p, 11, 8, 0.5); flame(p, 8, 11, 0.3);
+    p.px(2, 13, C.orange).px(13, 14, C.red);
+    fuseMark(p);
+  },
+  ic_f_mirror: (p) => {
+    p.polyShade([[9, 1.5], [14.5, 7], [9, 12.5], [3.5, 7]], [C.slate, C.lavender, C.lgray, C.white]);
+    p.line(0.5, 14, 7, 9, C.pink).line(9, 7, 15, 13, C.pink).px(15, 13, C.white).px(0, 14, C.white);
+    p.line(9, 4, 12, 7, C.white);
+    fuseMark(p);
   },
 
   // ===================== pasywki =====================

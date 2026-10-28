@@ -105,6 +105,7 @@ const ABILITY_DELTA: Record<string, (v: number, def: AbilityDef) => string> = {
   stun: (v) => `ogłuszenie o ${v} s dłuższe`,
   blast: (v) => `+${v} promienia wybuchów`,
   exec: (v) => `próg egzekucji +${Math.round(v * 100)}% HP`,
+  impact: (v) => `+${v} promienia uderzenia`,
 };
 
 /** Co daje następny poziom umiejętności (dla ekranu awansu). */
@@ -157,10 +158,10 @@ export const HEROES: HeroDef[] = [
     resource: { kind: 'fury', name: 'Furia', color: C.red, desc: 'Rośnie od walki wręcz i obrywania. Pełna wyzwala Szał: kilka sekund dużo silniejszych i szybszych ciosów z leczeniem.' },
     abilities: [
       {
-        id: 'b_charge', name: 'Szarża', icon: 'ab_b_charge', desc: 'Pędzisz w stronę celownika, raniąc i ogłuszając wrogów na drodze.', slot: 'q', kind: 'charge', color: C.orange,
+        id: 'b_charge', name: 'Szarża', icon: 'ab_b_charge', desc: 'Szarżujesz do celownika, tratując wrogów, i kończysz uderzeniem w ziemię. Każdy staranowany wróg wzmacnia uderzenie i daje Furię, zabójstwa skracają odnowienie.', slot: 'q', kind: 'charge', color: C.orange,
         cooldown: 7, cdPerLevel: -0.4, maxLevel: 5,
-        p: { damage: 30, dist: 90, width: 14, stun: 0.6 }, pl: { damage: 14, dist: 8 },
-        evo: { tag: 'Szybkość', name: 'Taran tytana', desc: 'Dłuższa szarża zakończona falą uderzeniową.', icon: 'ab_b_charge_evo', bonus: { damage: 30, dist: 30 } },
+        p: { damage: 30, dist: 90, width: 14, stun: 0.6, impact: 30 }, pl: { damage: 14, dist: 8, impact: 2 },
+        evo: { tag: 'Szybkość', name: 'Taran tytana', desc: 'Dłuższa szarża, dwa razy szersze uderzenie i druga fala uderzeniowa.', icon: 'ab_b_charge_evo', bonus: { damage: 30, dist: 30, impact: 30 } },
       },
       {
         id: 'b_slam', name: 'Wstrząs', icon: 'ab_b_slam', desc: 'Uderzasz w ziemię: ranisz i ogłuszasz wrogów wokół siebie.', slot: 'e', kind: 'slam', color: C.brown,

@@ -10,7 +10,7 @@ import type { Tag } from '../data/cards';
 import type { Stats } from '../entities/types';
 import { WEAPON_TAGS, STAT_TAG, SYNERGY_BY_TAG, tierOf } from '../data/synergies';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
-import { AUGMENTS, weaponBase } from '../data/augments';
+import { AUGMENTS, weaponBase, augmentWorks, fusionAugments } from '../data/augments';
 import { rollQuality, rollWeaponBonus, addWeaponBonus, bonusLines, type WeaponBonus } from '../data/upgrades';
 import { RARITIES } from '../data/items';
 
@@ -129,24 +129,28 @@ function candidates(run: Run): Option[] {
   for (const f of FUSIONS) {
     const a = ownedBase(run, f.a), b = ownedBase(run, f.b), into = WEAPON_BY_ID[f.into];
     if (!a || !b || !fusionReady(a) || !fusionReady(b)) continue;
-    out.push({ kind: 'fusion', id: f.into, name: into.name, desc: into.desc, hint: `Łączy: ${a.def.name} + ${b.def.name}, zwalnia slot`, icon: into.icon, tag: 'Fuzja', color: into.color, tags: [], recipe: { parts: [a.def.icon, b.def.icon], result: into.icon } });
+    const { kept, lost } = fusionAugments(into), has = (l: typeof kept) => l.filter((x) => run.aug(x.id)).map((x) => x.name);
+    const augNote = `${has(kept).length ? ` Zostają: ${has(kept).join(', ')}.` : ''}${has(lost).length ? ` Przepadną: ${has(lost).join(', ')}.` : ''}`;
+    out.push({ kind: 'fusion', id: f.into, name: into.name, desc: into.desc + augNote, hint: `Łączy: ${a.def.name} + ${b.def.name}, zwalnia slot`, icon: into.icon, tag: 'Fuzja', color: into.color, tags: [], recipe: { parts: [a.def.icon, b.def.icon], result: into.icon } });
   }
   // Augmenty: broń od BAL.augmentMinLevel (ewolucja zawsze), każdy augment raz.
   for (const w of run.weapons) {
     if (!w.def.evolved && w.level < BAL.augmentMinLevel) continue;
-    const base = weaponBase(w.def);
     for (const a of AUGMENTS) {
-      if (a.weapon !== base || run.aug(a.id)) continue;
+      if (!augmentWorks(a, w.def) || run.aug(a.id)) continue;
       const el = a.elem ? ` Żywioł: ${ELEMENTS[a.elem].name}.` : '';
       out.push({ kind: 'augment', id: a.id, name: a.name, desc: a.desc + el, hint: `Augment broni: ${w.def.name}`, icon: w.def.icon, tag: 'Augment', color: C.cyan, tags: [] });
     }
   }
   if (run.weapons.length < BAL.weaponSlots) {
+    // Druga broń kończy Wierność broni (BAL.loyal).
+    const lone = run.weapons.length === 1, last = Math.max(...BAL.loyal.levels);
+    const loyalHint = lone && run.loyal > 0 ? 'Tracisz Wierność broni!' : lone && run.level < last ? 'Kończy szansę na Wierność broni' : '';
     for (const d of WEAPONS) {
       if (d.evolved || ownedW.has(d.id) || run.banished.has(d.id) || (d.hero && d.hero !== run.hero.id)) continue;
       const el = WEAPON_ELEMENT[d.id];
       const desc = el ? `${d.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : d.desc;
-      out.push({ kind: 'weaponNew', id: d.id, name: d.name, desc, hint: fusionHint(run, d) || evolveHint(run, d), icon: d.icon, tag: 'Nowa broń', color: d.color, tags: WEAPON_TAGS[d.kind], recipe: weaponRecipe(run, d) });
+      out.push({ kind: 'weaponNew', id: d.id, name: d.name, desc, hint: loyalHint || fusionHint(run, d) || evolveHint(run, d), icon: d.icon, tag: 'Nowa broń', color: d.color, tags: WEAPON_TAGS[d.kind], recipe: weaponRecipe(run, d) });
     }
   }
   for (const p of run.passives) {

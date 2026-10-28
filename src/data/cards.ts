@@ -343,7 +343,7 @@ export const CARDS: CardDef[] = [
     hooks: {
       onDamageTaken: (run) => {
         const p = run.player;
-        run.enemiesInCircle(p.x, p.y, 28, (e) => { e.stunT = Math.max(e.stunT, e.boss ? 0.4 : 2); });
+        run.enemiesInCircle(p.x, p.y, 28, (e) => { e.stunT = Math.max(e.stunT, 2); });
         const f = run.addFx('ring', p.x, p.y, C.blue, 0.3);
         if (f) f.r = 28;
       },
@@ -410,7 +410,7 @@ export const CARDS: CardDef[] = [
     hooks: {
       onDash: (run) => {
         const p = run.player;
-        run.enemiesInCircle(p.x, p.y, 34 * run.stats.area, (e) => { e.stunT = Math.max(e.stunT, e.boss ? 0.2 : 0.8); });
+        run.enemiesInCircle(p.x, p.y, 34 * run.stats.area, (e) => { e.stunT = Math.max(e.stunT, 0.8); });
         run.burst(p.x, p.y, C.lgray, 16, 40);
       },
     },
