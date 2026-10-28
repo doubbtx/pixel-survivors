@@ -8,13 +8,15 @@ import { sfx } from '../core/audio';
  * Okno: miękki cień, czarne zaokrąglone tło, ramka w kolorze akcentu z cienką jasną linią w środku,
  * wnętrze z gradientem (granat → czerń) i małe romby w rogach. Linie ułamkowe — bufor ma więcej pikseli niż logika.
  */
-export function panel(r: Renderer, x: number, y: number, w: number, h: number, accent: number = C.lavender, fill: number = C.navy): void {
+export function panel(r: Renderer, x: number, y: number, w: number, h: number, accent: number = C.dgray, fill: number = C.navy): void {
   x = Math.round(x); y = Math.round(y);
   r.withAlpha(0.45, () => r.roundRect(x + 2, y + 3, w, h, 5, C.black));
   r.roundRect(x, y, w, h, 5, C.black);
   r.roundRect(x + 1, y + 1, w - 2, h - 2, 4, fill, C.black);
+  // Rama z fazą: kolor akcentu, ciemna linia oddzielająca od wnętrza, delikatny połysk.
   r.roundFrame(x + 0.5, y + 0.5, w - 1, h - 1, 4.5, accent, 1);
-  r.withAlpha(0.35, () => r.roundFrame(x + 2, y + 2, w - 4, h - 4, 3, C.white, 0.5));
+  r.withAlpha(0.7, () => r.roundFrame(x + 1.5, y + 1.5, w - 3, h - 3, 3.5, C.black, 0.5));
+  r.withAlpha(0.18, () => r.roundFrame(x + 2, y + 2, w - 4, h - 4, 3, C.white, 0.5));
   // Faza 32-bit: jasna krawędź u góry, cień u dołu wnętrza.
   r.withAlpha(0.22, () => r.rect(x + 4, y + 2.5, w - 8, 1, C.white));
   r.withAlpha(0.45, () => r.rect(x + 4, y + h - 3.5, w - 8, 1, C.black));
@@ -58,12 +60,12 @@ export interface ButtonOpts {
 
 /** Przycisk: zaokrąglony, pod myszą jaśniejszy i lekko uniesiony, wybrany wypełniony kolorem akcentu. */
 export function button(r: Renderer, x: number, y: number, w: number, h: number, label: string, o: ButtonOpts = {}): void {
-  const hot = hovered(x, y, w, h), acc = o.accent ?? C.blue, lift = hot ? -1 : 0;
+  const hot = hovered(x, y, w, h), acc = o.accent ?? C.gold, lift = hot ? -1 : 0;
   r.withAlpha(0.45, () => r.roundRect(x + 1, y + 2, w, h, 4, C.black));
-  r.roundRect(x, y + lift, w, h, 4, o.active ? C.dblue : hot ? C.slate : C.navy, C.black);
-  r.roundFrame(x + 0.5, y + 0.5 + lift, w - 1, h - 1, 3.5, o.active || hot ? acc : C.slate, o.active ? 1 : 0.75);
+  r.roundRect(x, y + lift, w, h, 4, o.active ? C.dbrown : hot ? C.dgray : C.slate, o.active ? C.ddbrown : C.navy);
+  r.roundFrame(x + 0.5, y + 0.5 + lift, w - 1, h - 1, 3.5, o.active || hot ? acc : C.dgray, o.active ? 1 : 0.75);
   if (o.pulse && !o.active) r.withAlpha(0.35 + 0.35 * Math.sin(performance.now() / 160), () => r.roundFrame(x - 0.5, y - 0.5 + lift, w + 1, h + 1, 4.5, C.yellow, 1));
-  if (hot || o.active) r.withAlpha(0.5, () => r.rect(x + 3, y + 1 + lift, w - 6, 0.5, C.white));
+  r.withAlpha(hot || o.active ? 0.5 : 0.2, () => r.rect(x + 3, y + 1 + lift, w - 6, 0.5, C.white));
   const sc = o.scale ?? 1;
   drawText(r.g, label, x + w / 2, y + lift + Math.round((h - 11 * sc) / 2), o.col ?? (o.active || hot ? C.yellow : C.white), { align: 'center', shadow: C.black, scale: sc });
 }
@@ -183,9 +185,9 @@ export class Menu {
       const on = i === this.sel;
       hovered(x, y, w, h);
       if (on) {
-        r.withAlpha(0.9, () => r.roundRect(x, y, w, h, 3, C.dblue, C.navy));
-        r.roundFrame(x, y, w, h, 3, C.blue, 0.5);
-        r.withAlpha(0.5, () => r.rect(x + 3, y + 0.5, w - 6, 0.5, C.cyan));
+        r.withAlpha(0.9, () => r.roundRect(x, y, w, h, 3, C.dbrown, C.ddbrown));
+        r.roundFrame(x, y, w, h, 3, C.gold, 0.75);
+        r.withAlpha(0.5, () => r.rect(x + 3, y + 0.5, w - 6, 0.5, C.yellow));
         cursor(r, x + 6, y + Math.floor((h - 7) / 2));
       }
       const ty = y + Math.floor((h - LINE_H) / 2) + 1;
@@ -201,7 +203,7 @@ export class Menu {
 }
 
 /** Gniazdo na ikonę (HUD, pauza): zaokrąglone, czarna oprawa, ramka w kolorze `border`, wnętrze z gradientem i połyskiem. */
-export function slot(r: Renderer, x: number, y: number, s: number, border: number = C.slate): void {
+export function slot(r: Renderer, x: number, y: number, s: number, border: number = C.dgray): void {
   r.roundRect(x, y, s, s, 3, C.black);
   r.roundRect(x + 1, y + 1, s - 2, s - 2, 2.5, C.slate, C.black);
   r.roundFrame(x + 0.5, y + 0.5, s - 1, s - 1, 3, border, 1);

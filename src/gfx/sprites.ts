@@ -259,7 +259,7 @@ function build(name: string): HTMLCanvasElement {
   if (base === 'tspikes') return spikes(f === 1).canvas();
   if (base === 'totem') return totem().canvas();
   if (ICON_FNS[name]) {
-    const p = new Painter(16, 16);
+    const p = new Painter(16, 16, HI);
     ICON_FNS[name](p);
     return p.outline().canvas();
   }

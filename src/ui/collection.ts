@@ -372,7 +372,7 @@ export class CollectionScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g, col = this.col;
     r.clear(C.black);
-    button(r, W - 116, 8, 108, 18, `[Tab] ${TAB_NAME[TABS[(TABS.indexOf(this.tab) + 1) % TABS.length]]} >`, { pulse: true, accent: this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.blue });
+    button(r, W - 116, 8, 108, 18, `[Tab] ${TAB_NAME[TABS[(TABS.indexOf(this.tab) + 1) % TABS.length]]} >`, { pulse: true, accent: this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.gold });
     if (this.tab === 'bestiary' || this.tab === 'achievements' || this.tab === 'feats') {
       const head = { bestiary: ['Bestiariusz', C.lavender], achievements: ['Osiągnięcia', C.lime], feats: ['Wyczyny', C.gold] }[this.tab] as [string, number];
       drawText(g, head[0], W / 2, 10, head[1], { align: 'center', scale: 2, outline: C.black });

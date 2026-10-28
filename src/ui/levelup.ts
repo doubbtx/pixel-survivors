@@ -213,7 +213,7 @@ export class LevelUpView {
     });
     for (const b of this.buttons()) {
       const on = b.label.includes('Wygnaj') && this.banishMode;
-      button(r, b.x, BTN_Y, BTN_W, 20, b.label, { active: on, accent: on ? C.red : C.blue, col: on ? C.salmon : undefined });
+      button(r, b.x, BTN_Y, BTN_W, 20, b.label, { active: on, accent: on ? C.red : C.gold, col: on ? C.salmon : undefined });
     }
     // Podpis na ciemnym tle: pod nim są sloty HUD.
     const note = 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', nw = textWidth(note) + 12;

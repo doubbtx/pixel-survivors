@@ -357,6 +357,10 @@ src/
 - Smoother dithered shading, rim light on every shape and coloured dark outlines.
 - Ground tiles, decorations, projectiles, crystals, chests, coins and effects are now drawn at double resolution too.
 
+**Matching interface (0.23.13)**:
+- All icons (weapons, passives, items, cards, abilities) use the new smoother style.
+- One interface theme: steel bevelled frames, gold highlight for the selected menu entry, buttons and tabs.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.
