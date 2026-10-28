@@ -256,7 +256,7 @@ export function updateEvents(run: Run, dt: number): void {
 /** Przedmiot Legendarny (z mieczem w kamieniu): losujemy łup bossa, aż trafi się Legendarny (z limitem prób). */
 function rollLegendary(run: Run) {
   for (let i = 0; i < 200; i++) {
-    const it = rollItem(run.depth + 1, 'boss', run.flag('itemLuck') + 3);
+    const it = rollItem(run.depth + 1, 'boss', run.luck() + 3);
     if (it.rarity === 4) return it;
   }
   return rollItem(run.depth + 1, 'boss', 10);

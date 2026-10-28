@@ -104,7 +104,7 @@ export class LevelUpView {
   }
 
   private get count(): number {
-    return Math.min(4, 3 + this.run.stats.luck);
+    return Math.min(4, 3 + this.run.stats.choices);
   }
 
   private roll(): void {

@@ -300,7 +300,7 @@ export const SUPERS: SuperDef[] = [
   },
   {
     id: 'fortune', name: 'Fortuna', min: 0.3, max: 0.6, pct: true, flags: ['itemLuck'],
-    desc: '+{v} szansy na lepszą jakość przedmiotów',
+    desc: '+{v} szczęścia (lepsze przedmioty i karty, częstsze skrzynie)',
   },
 ];
 

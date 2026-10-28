@@ -89,7 +89,7 @@ export function rollShop(run: Run, depth: number): ShopState {
   const stock: Record<string, number> = {};
   for (const s of SERVICES) stock[s.id] = BAL.shopStock[s.id];
   for (const e of elixirs) stock[`elixir:${e}`] = BAL.shopStock.elixir;
-  return { depth, items: rollShopItems(depth, run.flag('itemLuck'), run.shopLevel), elixirs, stock, refreshes: 0, level: run.shopLevel };
+  return { depth, items: rollShopItems(depth, run.luck(), run.shopLevel), elixirs, stock, refreshes: 0, level: run.shopLevel };
 }
 
 export function itemPrice(it: Item, shop: ShopState): number {

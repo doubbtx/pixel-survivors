@@ -444,7 +444,7 @@ export const CARDS: CardDef[] = [
   { id: 'u_pact', name: 'Krwawy kontrakt', rarity: 'prism', tags: ['Klątwa', 'Krytyk'], unlock: 'gambler', cursed: true, desc: '+35% obrażeń i +20% szybkości ataku, ale wrogowie mają +20% HP.', stats: { might: 0.35, atkSpeed: 0.2 }, flags: { enemyHp: 0.2 } },
   { id: 'u_ward', name: 'Spokój', rarity: 'gold', tags: ['Krytyk', 'Tarcze'], unlock: 'flawless_level', desc: 'Po 10 s bez trafienia zadajesz +25% obrażeń.', flags: { calm: 0.25 } },
   { id: 'u_halo', name: 'Nimb', rarity: 'prism', tags: ['Tarcze', 'Życie'], unlock: 'flawless_run', desc: 'Pierwsze trafienie na każdym poziomie jest zablokowane. +20 maks. HP.', flags: { firstBlock: 1 }, stats: { maxHp: 20 } },
-  { id: 'u_medal', name: 'Medal', rarity: 'gold', tags: ['Umiejętności'], unlock: 'feat_hunter', desc: '+1 karta do wyboru przy każdym awansie, +10% doświadczenia.', stats: { luck: 1, growth: 0.1 } },
+  { id: 'u_medal', name: 'Medal', rarity: 'gold', tags: ['Umiejętności'], unlock: 'feat_hunter', desc: '+1 karta do wyboru przy każdym awansie, +10% doświadczenia.', stats: { choices: 1, growth: 0.1 } },
   {
     id: 'h_k_inspire', name: 'Natchnienie', rarity: 'prism', tags: ['Umiejętności'], hero: 'kestra', desc: 'Przez 4 s po Deszczu strzał Q i E odnawiają się 3x szybciej.',
     hooks: {
@@ -497,8 +497,9 @@ export const CARD_BY_ID: Record<string, CardDef> = Object.fromEntries(CARDS.map(
 export type CardSource = 'level' | 'fight' | 'elite' | 'boss' | 'shop';
 
 /** Rzadkość oferty: wszystkie 3 karty w ofercie mają tę samą rzadkość. */
-export function rollRarity(depth: number, lvl: number, source: CardSource): Rarity {
-  let gold = BAL.goldChance(depth, lvl), prism = BAL.prismChance(depth, lvl);
+export function rollRarity(depth: number, lvl: number, source: CardSource, luck = 0): Rarity {
+  // Szczęście podnosi szansę na złote i pryzmatyczne karty (BAL.luckCards).
+  let gold = BAL.goldChance(depth, lvl) + luck * BAL.luckCards.gold, prism = BAL.prismChance(depth, lvl) * (1 + luck * BAL.luckCards.prism);
   if (source === 'elite' || source === 'shop') gold += 0.1;
   if (source === 'boss') prism *= 2;
   const r = rng.next();
@@ -519,7 +520,7 @@ export function cardPool(run: Run, rarity: Rarity, exclude: string[] = []): Card
 }
 
 export function rollOffer(run: Run, source: CardSource): { rarity: Rarity; cards: CardDef[] } {
-  let rarity = rollRarity(run.depth, run.level, source);
+  let rarity = rollRarity(run.depth, run.level, source, run.luck());
   let pool = cardPool(run, rarity);
   // Wszystkie unikalne karty tej rzadkości już zebrane — srebrne karty kumulowane są zawsze dostępne.
   if (pool.length === 0) { rarity = 'silver'; pool = cardPool(run, rarity); }

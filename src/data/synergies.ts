@@ -188,7 +188,7 @@ export const VERSATILITY: { name: string; thresholds: number[]; tiers: SynergyTi
         },
       },
     },
-    { desc: 'Mistrz: +30% obrażeń, +10% kryt., +1 karta', stats: { might: 0.3, crit: 0.1, luck: 1 } },
+    { desc: 'Mistrz: +30% obrażeń, +10% kryt., +1 karta', stats: { might: 0.3, crit: 0.1, choices: 1 } },
   ],
 };
 

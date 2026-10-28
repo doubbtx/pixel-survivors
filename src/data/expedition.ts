@@ -107,7 +107,7 @@ export const EX_BLESSINGS: { id: string; name: string; desc: string; stats: Part
   { id: 'haste', name: 'Zręczność', desc: '+25% szybkości ataku', stats: { atkSpeed: 0.25 } },
   { id: 'wisdom', name: 'Mądrość', desc: '+40% doświadczenia', stats: { growth: 0.4 } },
   { id: 'vigor', name: 'Żywotność', desc: '+25 maks. HP i +1 HP/s', stats: { maxHp: 25, regen: 1 } },
-  { id: 'luck', name: 'Fortuna', desc: '+30% złota i +1 karta przy awansie', stats: { greed: 0.3, luck: 1 } },
+  { id: 'luck', name: 'Fortuna', desc: '+30% złota i +1 karta przy awansie', stats: { greed: 0.3, choices: 1 } },
 ];
 
 /** Węzeł mapy wyprawy. Mapy z walką mają nazwę, rzadkość, modyfikatory i bonus. */

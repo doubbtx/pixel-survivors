@@ -409,6 +409,11 @@ src/
 **Clearer Expedition bonus (0.25.2)**:
 - The Expedition map now shows "essence +X%" (with a tooltip) instead of the misleading "loot +X%": rewards from map modifiers you finished raise the essence you get at the end of the expedition.
 
+**Luck (0.26.0)**:
+- New Luck stat: better item quality, more chests from normal enemies, more uniques and lucky jackpots, rarer card offers and better weapon upgrade quality. Sources: the new Horseshoe passive (+15% per level), the Fortune affix, cards and map rewards.
+- "+1 level-up choice" (Clover, Medal and others) is now its own stat and works as before.
+- Luck and level-up choices are shown in the pause stats.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

@@ -31,7 +31,8 @@ export const PASSIVES: PassiveDef[] = [
   P('fang', 'Kieł', 'Leczysz się za 1% zadanych obrażeń', 'lifesteal', 0.01),
   P('herb', 'Ziele', 'Odnawiasz 0.3 HP na sekundę', 'regen', 0.3),
   P('fury', 'Furia', 'Bronie atakują 8% szybciej', 'atkSpeed', 0.08),
-  P('clover', 'Koniczyna', '+1 karta do wyboru przy każdym awansie', 'luck', 1, 1),
+  P('clover', 'Koniczyna', '+1 karta do wyboru przy każdym awansie', 'choices', 1, 1),
+  P('horseshoe', 'Podkowa', '+15% szczęścia: lepsze przedmioty i karty, częstsze skrzynie', 'luck', 0.15),
 ];
 
 export const PASSIVE_BY_ID: Record<string, PassiveDef> = Object.fromEntries(PASSIVES.map((p) => [p.id, p]));

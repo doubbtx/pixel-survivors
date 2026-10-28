@@ -22,7 +22,10 @@ export interface Stats {
   crit: number;
   critMult: number;
   lifesteal: number;
+  /** Szczęście (0.15 = +15%): jakość przedmiotów, szansa na skrzynie, unikaty i szczęśliwy traf, rzadsze karty, jakość ulepszeń broni. */
   luck: number;
+  /** Dodatkowe karty do wyboru przy awansie (3 + choices, najwyżej 4). */
+  choices: number;
   growth: number;
   greed: number;
   /** Siła żywiołów: mnoży obrażenia podpalenia i trucizny oraz spowolnienie lodu (0.2 = +20%). */

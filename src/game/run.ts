@@ -55,7 +55,7 @@ import { updateLevelEvents, eventFlags, comboOnKill, comboOnHurt, type LevelEven
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
-  duration: 1, projSpeed: 1, magnet: 1, crit: 0.05, critMult: 2, lifesteal: 0, luck: 0, growth: 1, greed: 1, atkSpeed: 0, elemPower: 0,
+  duration: 1, projSpeed: 1, magnet: 1, crit: 0.05, critMult: 2, lifesteal: 0, luck: 0, choices: 0, growth: 1, greed: 1, atkSpeed: 0, elemPower: 0,
 };
 
 /** Numer progu synergii na banerze. */
@@ -1335,7 +1335,7 @@ export class Run {
       this.showBanner('Złoty szlam złapany!');
       grantMat(this, 'heart', BAL.forge.slimeHeart);
     } else {
-      if (rng.chance(BAL.itemDropChance * (1 + this.flag('mapLoot')))) this.dropChest(e.x, e.y, 'drop');
+      if (rng.chance(BAL.itemDropChance * (1 + this.flag('mapLoot')) * (1 + this.luck() * BAL.luckDrop))) this.dropChest(e.x, e.y, 'drop');
       else if (rng.chance(BAL.meatChance)) this.spawnPickup(e.x, e.y, 'meat', 0);
       else if (rng.chance(BAL.magnetChance)) this.spawnPickup(e.x, e.y, 'magnet', 0);
       else if (rng.chance(BAL.coinChance * (1 + this.flag('goldRain') * BAL.levelEvents.goldRain))) this.spawnPickup(e.x, e.y, 'coin', 1);
@@ -1587,11 +1587,16 @@ export class Run {
     return p;
   }
 
-  /** Łup ze źródła (jakość zależy od źródła, głębokości i Fortuny); z bossów i elit rzadko unikat (BAL.uniques). */
+  /** Szczęście: statystyka bohatera (pasywka Podkowa, karty, synergie) plus flaga `itemLuck` (afiks Fortuna, karty, nagrody map). */
+  luck(): number {
+    return Math.max(0, this.stats.luck + this.flag('itemLuck'));
+  }
+
+  /** Łup ze źródła (jakość zależy od źródła, głębokości i Szczęścia); z bossów i elit rzadko unikat (BAL.uniques). */
   rollLoot(source: LootSource): { source: LootSource; item: Item } {
     const U = BAL.uniques, chance = source === 'boss' ? U.boss : source === 'elite' ? U.elite : 0, L = BAL.loot;
     // Szczęśliwy traf: Legendarny przedmiot albo unikat z dowolnego łupu.
-    if (rng.chance(L.jackpot * (1 + this.flag('itemLuck')))) {
+    if (rng.chance(L.jackpot * (1 + this.luck()))) {
       this.showBanner('Szczęśliwy traf!');
       sfx.play('levelup');
       if (rng.chance(L.jackpotUnique)) {
@@ -1601,12 +1606,12 @@ export class Run {
       }
       return { source, item: rollItem(this.depth, source, 0, undefined, RARITIES.length - 1) };
     }
-    if (chance > 0 && rng.chance(chance * (1 + this.flag('itemLuck')))) {
+    if (chance > 0 && rng.chance(chance * (1 + this.luck()))) {
       const item = rollUnique(this.depth);
       this.uniquesFound.add(item.unique!);
       return { source, item };
     }
-    return { source, item: rollItem(this.depth, source, this.flag('itemLuck')) };
+    return { source, item: rollItem(this.depth, source, this.luck()) };
   }
 
   /** Skrzynia na ziemi z przedmiotem wylosowanym od razu — jakość widać po poświacie. */

@@ -28,6 +28,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Karty: rzadsze, mocne ulepszenia. Co 5 poziomów, po elicie i po bossie.',
       'Wierność broni: z jedną bronią od poziomu 10 co 5 poziomów dostajesz stopień (bez limitu): x1.35 obrażeń, szybkość ataku, obszar, pociski i ewolucja bez pasywki.',
       'Przedmioty: skrzynie z elit i bossów. Kolor to jakość. Kowadło: Kuźnia do +15, przekuwanie i jakość (strona Moce).',
+      'Szczęście (pasywka Podkowa, afiks Fortuna, karty): lepsze przedmioty, częstsze skrzynie i unikaty, rzadsze karty, lepsza jakość ulepszeń broni.',
       'Trafia cię tylko mały środek postaci: przeciskaj się między pociskami.',
       'Nowi wrogowie: Tarczownik (blokuje pociski z przodu, obejdź go), Przywoływacz, Kamikaze (wybucha), Skoczek (teleport), Pajęczarz (sieci spowalniają).',
       'Wydarzenia: Krwawy księżyc (więcej elit i łupu), Złota godzina, Burza (pioruny w zaznaczone kręgi). Kombo: zabójstwa bez oberwania dają więcej złota.',

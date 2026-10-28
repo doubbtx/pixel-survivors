@@ -26,7 +26,7 @@ export const BAL = {
    */
   weaponQuality: {
     weights: [62, 24, 9, 4, 1],
-    luckMul: 0.6,
+    luckMul: 1.5,
     amountFrom: 3,
     values: {
       dmg: [0, 0.06, 0.1, 0.16, 0.25],
@@ -214,6 +214,10 @@ export const BAL = {
   uniques: { boss: 0.08, elite: 0.02 },
   /** Szansa, że zwykły wróg upuści skrzynię z przedmiotem. */
   itemDropChance: 0.0008,
+  /** Szczęście zwiększa szansę na skrzynię ze zwykłego wroga: × (1 + szczęście × luckDrop). */
+  luckDrop: 1,
+  /** Szczęście a karty: +szczęście × gold do szansy na złote, szansa na pryzmatyczne × (1 + szczęście × prism). */
+  luckCards: { gold: 0.3, prism: 1 },
   bagSize: 24,
 
   // --- sklep między poziomami (Hardcore) ---

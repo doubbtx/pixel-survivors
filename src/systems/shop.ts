@@ -70,7 +70,7 @@ export function buyShopUpgrade(run: Run): BuyResult {
   if (run.gold < price) return fail('Za mało złota');
   run.gold -= price;
   shop.level = ++run.shopLevel;
-  if (run.shopLevel === 3 || run.shopLevel === 5) shop.items.push(rollShopItems(shop.depth, run.flag('itemLuck'), run.shopLevel)[0]);
+  if (run.shopLevel === 3 || run.shopLevel === 5) shop.items.push(rollShopItems(shop.depth, run.luck(), run.shopLevel)[0]);
   return { ok: true, note: `Sklep poziom ${run.shopLevel}` };
 }
 
@@ -80,6 +80,6 @@ export function refreshShop(run: Run): BuyResult {
   if (run.gold < price) return fail('Za mało złota');
   run.gold -= price;
   shop.refreshes++;
-  shop.items = rollShopItems(shop.depth, run.flag('itemLuck'), shop.level ?? 1);
+  shop.items = rollShopItems(shop.depth, run.luck(), shop.level ?? 1);
   return { ok: true, note: 'Nowe przedmioty' };
 }

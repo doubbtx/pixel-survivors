@@ -376,7 +376,7 @@ export class GameScreen implements Screen {
     ex.cleared++;
     switch (kind) {
       case 'treasure':
-        run.pendingLoot.push({ source: 'boss', item: rollItem(run.depth, 'boss', run.flag('itemLuck') + X.treasureLuck) });
+        run.pendingLoot.push({ source: 'boss', item: rollItem(run.depth, 'boss', run.luck() + X.treasureLuck) });
         this.saveSlot(false);
         this.openPending();
         break;
@@ -733,8 +733,9 @@ export class GameScreen implements Screen {
     let totalDmg = 0;
     for (const v of run.dmgBySource.values()) totalDmg += v;
     drawText(g, run.hero.name, x0, 15, run.hero.color, { shadow: C.black });
-    drawText(g, `poziom postaci ${run.level}`, x0 + textWidth(run.hero.name) + 6, 15, C.lgray);
-    drawText(g, `DPS ${fmt(totalDmg / time)}`, px + pw / 2 + 6, 15, C.gold, { shadow: C.black });
+    const lvlTxt = `poziom postaci ${run.level}`, lvlX = x0 + textWidth(run.hero.name) + 6;
+    drawText(g, lvlTxt, lvlX, 15, C.lgray);
+    drawText(g, `DPS ${fmt(totalDmg / time)}`, lvlX + textWidth(lvlTxt) + 10, 15, C.gold, { shadow: C.black });
     const head = (t: string, y: number) => { drawText(g, t, x0, y, C.lavender); r.withAlpha(0.4, () => r.rect(x0 + textWidth(t) + 4, y + 5, pw - 24 - textWidth(t), 0.5, C.lavender)); };
 
     // Statystyki: etykieta po lewej, wartość po prawej; wartość bazowa przygaszona.
@@ -747,9 +748,10 @@ export class GameScreen implements Screen {
       ['Szybkość ataku', pct(s.atkSpeed), s.atkSpeed !== 0], ['Odnowienie', pct(-s.cdr), s.cdr !== 0],
       ['Obszar', `x${s.area.toFixed(2)}`, s.area !== 1], ['Pociski', `+${s.amount}`, s.amount > 0],
       ['Czas działania', `x${s.duration.toFixed(2)}`, s.duration !== 1], ['Siła żywiołów', pct(s.elemPower), s.elemPower !== 0],
+      ['Szczęście', pct(run.luck()), run.luck() > 0], ['Karty przy awansie', String(Math.min(4, 3 + s.choices)), s.choices > 0],
     ];
     stats.forEach(([k, v, on], i) => {
-      const cx = x0 + (i % 2) * (colW + 8), y = 41 + Math.floor(i / 2) * 9;
+      const cx = x0 + (i % 2) * (colW + 8), y = 41 + Math.floor(i / 2) * 8;
       drawText(g, k, cx, y, on ? C.lgray : C.dgray, SMALL_TXT);
       drawText(g, v, cx + colW - 8, y, on ? C.white : C.dgray, { align: 'right', ...SMALL_TXT });
     });

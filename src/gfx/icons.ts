@@ -326,6 +326,17 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.polyShade([[3, 14], [5, 6], [9, 2], [12, 4], [10, 9], [13, 12], [8, 15]], RAMP.fire);
     p.line(2, 4, 6, 1, C.yellow).line(1, 8, 4, 6, C.yellow).line(12, 1, 15, 3, C.yellow).px(8, 7, C.white);
   },
+  pi_horseshoe: (p) => {
+    // Podkowa otwarta ku górze (żelazo z jasną krawędzią), otwory na gwoździe i złota iskra szczęścia.
+    const pt = (a: number, r: number): [number, number] => [8 + Math.cos(a) * r, 7.5 + Math.sin(a) * r * 1.05];
+    for (let a = -0.2 * Math.PI; a < 1.2 * Math.PI; a += 0.12) {
+      p.line(...pt(a, 5.6), ...pt(a + 0.12, 5.6), C.slate);
+      p.line(...pt(a, 4.6), ...pt(a + 0.12, 4.6), a > 0.6 * Math.PI ? C.lgray : C.lavender);
+    }
+    for (const a of [0.1, 0.35, 0.65, 0.9]) p.dot(...pt(a * Math.PI, 5.1), C.black);
+    p.px(2.5, 3, C.lgray).px(12.5, 3, C.lavender);
+    p.px(8, 1, C.yellow).dot(8.3, 0.4, C.white).dot(7.4, 1.4, C.gold).dot(9.2, 1.4, C.gold);
+  },
   pi_clover: (p) => {
     for (const [x, y] of [[5.5, 5], [10.5, 5], [5.5, 10], [10.5, 10]]) p.sphere(x, y, 3, 3, RAMP.green);
     p.px(8, 8, C.lime).line(9, 9, 13, 15, C.dgreen).px(4, 4, C.white);

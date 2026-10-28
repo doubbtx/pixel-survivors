@@ -836,7 +836,6 @@ export const EN: Record<string, string> = {
   "+{} pocisk dla każdej broni": "+{} projectile for each weapon",
   "+{} siły żywiołów": "+{} elemental power",
   "+{} szansy na krytyk": "+{} crit chance",
-  "+{} szansy na lepszą jakość przedmiotów": "+{} item quality chance",
   "+{} szybkości": "+{} move speed",
   "+{} szybkości ataku": "+{} attack speed",
   "+{} wielkości ataków": "+{} area",
@@ -2329,4 +2328,10 @@ export const EN: Record<string, string> = {
   "Odblokowanie: {} {}/{}": "Unlock: {} {}/{}",
   "esencja +{}%": "essence +{}%",
   "Nagrody za modyfikatory ukończonych map. Na koniec wyprawy dostaniesz tyle więcej esencji do Rozwoju.": "Rewards from the modifiers of maps you finished. At the end of the expedition you get this much more essence for Progression.",
+  "+{} szczęścia (lepsze przedmioty i karty, częstsze skrzynie)": "+{} luck (better items and cards, more chests)",
+  "Podkowa": "Horseshoe",
+  "+15% szczęścia: lepsze przedmioty i karty, częstsze skrzynie": "+15% luck: better items and cards, more chests",
+  "Szczęście": "Luck",
+  "Karty przy awansie": "Level-up choices",
+  "Szczęście (pasywka Podkowa, afiks Fortuna, karty): lepsze przedmioty, częstsze skrzynie i unikaty, rzadsze karty, lepsza jakość ulepszeń broni.": "Luck (Horseshoe passive, Fortune affix, cards): better items, more chests and uniques, rarer cards, better weapon upgrade quality.",
 };

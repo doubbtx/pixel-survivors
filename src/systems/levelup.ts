@@ -120,7 +120,7 @@ function candidates(run: Run): Option[] {
       out.push({ kind: 'evolve', id: w.def.id, name: into.name, desc: into.desc, hint: `Zastępuje: ${w.def.name}`, icon: into.icon, tag: 'Ewolucja', color: into.color, tags: WEAPON_TAGS[into.kind], recipe: { parts: [w.def.icon, PASSIVE_BY_ID[ev.passive].icon], result: into.icon } });
     } else if (w.level < maxLevel(w.def)) {
       // Jakość ulepszenia: dodatkowe bonusy broni (Szczęście podnosi szansę na lepszą).
-      const q = rollQuality(run.stats.luck), bonus = rollWeaponBonus(w.def, q);
+      const q = rollQuality(run.luck()), bonus = rollWeaponBonus(w.def, q);
       const extra = bonusLines(bonus);
       const desc = describeLevel(w.def, w.level + 1) + (extra.length ? `. Bonus: ${extra.join(', ')}` : '');
       out.push({ kind: 'weaponUp', id: w.def.id, name: w.def.name, desc, hint: fusionHint(run, w.def) || evolveHint(run, w.def), icon: w.def.icon, tag: `${q ? RARITIES[q].name.pl : 'Poziom'} ${w.level + 1}/${maxLevel(w.def)}`, color: q ? RARITIES[q].color : w.def.color, tags: [], quality: q, bonus, recipe: weaponRecipe(run, w.def) });
