@@ -155,6 +155,7 @@ export class MainMenu implements Screen {
       g.restore();
     }
     drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 39, C.lavender, { align: 'center', scale: 0.75, outline: C.black });
+    drawText(g, `v${__APP_VERSION__}`, W - 4, H - 10, C.lavender, { align: 'right', scale: 0.75, outline: C.black });
     // Lewy panel: pozycje w grupach z nagłówkami.
     panel(r, MENU_X, 48, MENU_W, 166, C.gold);
     MENU_GROUPS.forEach(([name, first]) => {

@@ -414,6 +414,9 @@ src/
 - "+1 level-up choice" (Clover, Medal and others) is now its own stat and works as before.
 - Luck and level-up choices are shown in the pause stats.
 
+**Version number (0.26.1)**:
+- The main menu shows the game version in the bottom-right corner, so you can check that the browser loaded the latest build.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

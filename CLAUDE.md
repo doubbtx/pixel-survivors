@@ -50,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `theme.ts` (wspólny styl: kolory akcentów, odstępy, rozmiary HUD, `tile`, `meter`, `iconSlot`, `cornerTag`, `label`), `widgets.ts` (panel, dim, bar, Menu, slot — w stylu z theme.ts), `hud.ts` (tylko rysowanie + stan animacji `HudAnim`), `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `skills.ts` (`drawSkills`: opisy umiejętności na wyborze bohatera i w pauzie), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts` — zakładki Ogólne/Umiejętności/Zasób, przyciski Wstecz i Start, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.26.0)
+## Stan (wersja 0.26.1)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -399,6 +399,8 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `BAL.luckDrop`)), rzadkości kart (`BAL.luckCards`: złote +, pryzmatyczne ×), jakości ulepszeń broni (`rollQuality`,
   `BAL.weaponQuality.luckMul` 1.5). Nowa pasywka Podkowa (`horseshoe`, +15% na poziom, ikona `pi_horseshoe`). W pauzie
   wiersze Szczęście i Karty przy awansie; opis w Pomocy (Rozgrywka).
+  - 0.26.1: numer wersji w prawym dolnym rogu menu głównego (`__APP_VERSION__` z package.json przez `define` w vite.config.ts,
+    deklaracja w src/env.d.ts) — łatwo sprawdzić, czy przeglądarka wczytała najnowszą grę.
 ## Plan dalej
 
 - Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Głowy bossów, Pustka.
