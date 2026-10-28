@@ -65,6 +65,8 @@ export interface EnemyDef {
   behavior: EnemyBehavior;
   keepDist?: number;
   shoot?: ShootDef;
+  /** Sprite pocisków minibossa lochu (zachowanie 'warden'). */
+  bullet?: string;
   /** 0 = pełny odrzut, 1 = brak odrzutu. */
   knockResist: number;
 }
@@ -102,8 +104,9 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'sentinel', color: C.cyan, name: 'Strażnik', sprite: 'sentinel', hp: 90, speed: 10, damage: 7, radius: 6, xp: 10, behavior: 'keep', keepDist: 120, knockResist: 0.9,
     shoot: { volley: { shape: 'gapRing', count: 18, gap: 4, speed: 58, sprite: 'eb_cyan' }, aim: 'random', cooldown: 4.5, windup: 0.7, range: 180 },
   },
-  /** Strażnik skarbca (pęknięta ściana): miniboss z losowymi atakami (systems/enemies.ts updateWarden). */
-  warden: { id: 'warden', color: C.cyan, name: 'Strażnik skarbca', sprite: 'sentinel', hp: 45, speed: 34, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1 },
+  /** Minibossowie lochów z losowymi atakami (systems/enemies.ts updateWarden): skarbiec za pęknięta ścianą i zwykły loch. */
+  warden: { id: 'warden', color: C.cyan, name: 'Strażnik skarbca', sprite: 'sentinel', hp: 80, speed: 34, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1, bullet: 'eb_cyan' },
+  keeper: { id: 'keeper', color: C.orange, name: 'Strażnik lochu', sprite: 'golem', hp: 80, speed: 30, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
   boss: {
     id: 'boss', color: C.pink, name: 'Władca Otchłani', sprite: 'boss', hp: BAL.bossBaseHp, speed: 22, damage: 25, radius: 10, xp: 400, behavior: 'boss', knockResist: 1,
   },

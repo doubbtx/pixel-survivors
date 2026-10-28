@@ -130,12 +130,11 @@ function spawnWave(run: Run): void {
     const a = (i / n) * Math.PI * 2;
     spawnEnemy(run, rng.pick(WAVE_MIX), d.cx + Math.cos(a) * E.arenaR * 0.8, d.cy + Math.sin(a) * E.arenaR * 0.8);
   }
-  // Ostatnia fala: strażnik lochu (elita; w skarbcu miniboss z losowymi atakami i HP skalowanym jak u bossa).
+  // Ostatnia fala: miniboss lochu z losowymi atakami (skarbiec: Strażnik skarbca, zwykły loch: Strażnik lochu),
+  // HP skalowane siłą buildu słabiej, jak u bossa.
   if (d.wave === wavesOf(d) - 1) {
-    if (d.kind === 'vault') {
-      const w = spawnEnemy(run, 'warden', d.cx, d.cy - E.arenaR * 0.6, { elite: [] });
-      if (w) w.maxHp = w.hp = w.maxHp * Math.pow(run.powerMul, BAL.bossPowerExp - 1);
-    } else spawnEnemy(run, 'sentinel', d.cx, d.cy - E.arenaR * 0.6, { elite: ['armored', 'volley'] });
+    const w = spawnEnemy(run, d.kind === 'vault' ? 'warden' : 'keeper', d.cx, d.cy - E.arenaR * 0.6, { elite: [] });
+    if (w) w.maxHp = w.hp = w.maxHp * Math.pow(run.powerMul, BAL.bossPowerExp - 1);
   }
   d.wave++;
 }

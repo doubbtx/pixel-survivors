@@ -3,6 +3,7 @@
  * Nowy napis w grze: dopisz tu jego angielską wersję (kolejność `{}` taka sama).
  */
 export const EN: Record<string, string> = {
+  "Strażnik lochu": "Dungeon Keeper",
   "Bronie i pasywki": "Weapons and Passives",
   "Bronie i pasywki [C]": "Weapons and Passives [C]",
   "Strzałki / mysz: wybór": "Arrows / mouse: select",
