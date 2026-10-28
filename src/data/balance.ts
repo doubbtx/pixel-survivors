@@ -312,10 +312,12 @@ export const BAL = {
    * Obrażenia liczone od trafienia wywołującego reakcję (× mnożnik × (1 + flaga reactPower)).
    */
   /**
-   * Wierność broni: na poziomach `levels` z wciąż jedną bronią (startowa albo jej ewolucja) stopień rośnie o 1.
-   * Każdy stopień: obrażenia tej broni × (1 + dmg), szybkość ataku + atkSpeed, pociski + amount. Działa, dopóki broń jest jedna.
+   * Wierność broni: od poziomu `first` co `every` poziomów, z wciąż jedną bronią (startowa albo jej ewolucja), stopień
+   * rośnie o 1, bez limitu. Za stopień: obrażenia tej broni × (1 + dmg) (mnożnikowo), szybkość ataku + atkSpeed,
+   * obszar + area, pocisk co `amountEvery` stopni (pierwszy od razu); od 1. stopnia ewolucja bez pasywki.
+   * Działa, dopóki broń jest jedna. Dobrane symulacją (jedna broń vs pełny zestaw w Endless).
    */
-  loyal: { levels: [10, 20] as number[], dmg: 0.2, atkSpeed: 0.1, amount: 1 },
+  loyal: { first: 10, every: 5, dmg: 0.35, atkSpeed: 0.08, area: 0.1, amountEvery: 2 },
   /**
    * Szarża Borguna: uderzenie na końcu × (1 + perHit za staranowanego wroga, maks. maxBonus), Furia za wroga,
    * każde zabójstwo szarżą skraca odnowienie o `refund` (maks. refundMax).

@@ -26,7 +26,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Ulepszenia broni mają jakość: od Zwykłego do Legendarnego. Lepsza jakość daje dodatkowe bonusy.',
       'Ewolucja: broń na maksymalnym poziomie z pasywką z jej opisu zmienia się w mocniejszą wersję.',
       'Karty: rzadsze, mocne ulepszenia. Co 5 poziomów, po elicie i po bossie.',
-      'Wierność broni: kto na poziomie 10 i 20 ma tylko jedną broń, dostaje stopień: +20% obrażeń, +10% szybkości ataku i +1 pocisk.',
+      'Wierność broni: z jedną bronią od poziomu 10 co 5 poziomów dostajesz stopień (bez limitu): x1.35 obrażeń, szybkość ataku, obszar, pociski i ewolucja bez pasywki.',
       'Przedmioty: skrzynie z elit i bossów. Kolor to jakość. Kowadło: Kuźnia do +15, przekuwanie i jakość (strona Moce).',
       'Trafia cię tylko mały środek postaci: przeciskaj się między pociskami.',
       'Nowi wrogowie: Tarczownik (blokuje pociski z przodu, obejdź go), Przywoływacz, Kamikaze (wybucha), Skoczek (teleport), Pajęczarz (sieci spowalniają).',

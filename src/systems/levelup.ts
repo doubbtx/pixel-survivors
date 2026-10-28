@@ -114,7 +114,8 @@ function candidates(run: Run): Option[] {
 
   for (const w of run.weapons) {
     const ev = w.def.evolve;
-    if (w.level >= maxLevel(w.def) && ev && ownedP.has(ev.passive)) {
+    // Wierność broni: ewolucja bez pasywki.
+    if (w.level >= maxLevel(w.def) && ev && (ownedP.has(ev.passive) || run.loyal > 0)) {
       const into = WEAPON_BY_ID[ev.into];
       out.push({ kind: 'evolve', id: w.def.id, name: into.name, desc: into.desc, hint: `Zastępuje: ${w.def.name}`, icon: into.icon, tag: 'Ewolucja', color: into.color, tags: WEAPON_TAGS[into.kind], recipe: { parts: [w.def.icon, PASSIVE_BY_ID[ev.passive].icon], result: into.icon } });
     } else if (w.level < maxLevel(w.def)) {
@@ -144,8 +145,8 @@ function candidates(run: Run): Option[] {
   }
   if (run.weapons.length < BAL.weaponSlots) {
     // Druga broń kończy Wierność broni (BAL.loyal).
-    const lone = run.weapons.length === 1, last = Math.max(...BAL.loyal.levels);
-    const loyalHint = lone && run.loyal > 0 ? 'Tracisz Wierność broni!' : lone && run.level < last ? 'Kończy szansę na Wierność broni' : '';
+    const lone = run.weapons.length === 1;
+    const loyalHint = lone && run.loyal > 0 ? 'Tracisz Wierność broni!' : lone ? 'Kończy szansę na Wierność broni' : '';
     for (const d of WEAPONS) {
       if (d.evolved || ownedW.has(d.id) || run.banished.has(d.id) || (d.hero && d.hero !== run.hero.id)) continue;
       const el = WEAPON_ELEMENT[d.id];

@@ -324,6 +324,9 @@ src/
 - Totem Defense: kill 15 enemies near the totem. Flawless task: up to 2 hits allowed, no punishment wave.
 - **Weapon Devotion**: reach level 10 and 20 with a single weapon for +20% damage, +10% attack speed and +1 projectile per rank.
 
+**Weapon Devotion for the whole run (0.23.4)**:
+- With a single weapon you now gain a Devotion rank at level 10 and every 5 levels after, with no limit: x1.35 damage per rank (multiplicative), +8% attack speed, +10% area, an extra projectile every second rank, and evolution without its passive. A one-weapon run now keeps up with a full arsenal until the end.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

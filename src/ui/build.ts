@@ -134,9 +134,9 @@ export class BuildView {
     if (!d.evolved && w.level < maxLevel(d)) text(`Następny poziom: ${describeLevel(d, w.level + 1)}`);
     // Wierność broni: stopień i następny próg (tylko przy jednej broni).
     if (run.weapons.length === 1) {
-      const L = BAL.loyal, lt = run.loyal, next = L.levels.find((l) => l > run.level);
-      if (lt) text(`Wierność broni ${lt}: +${Math.round(lt * L.dmg * 100)}% obrażeń, +${Math.round(lt * L.atkSpeed * 100)}% szybkości ataku, +${lt * L.amount} pocisków.`, C.gold);
-      if (next) text(`Tylko ta broń do poziomu ${next}: kolejny stopień Wierności broni.`, C.yellow);
+      const L = BAL.loyal, lt = run.loyal;
+      if (lt) text(`Wierność broni ${lt}: x${(Math.pow(1 + L.dmg, lt)).toFixed(1)} obrażeń, +${Math.round(lt * L.atkSpeed * 100)}% szybkości ataku, +${Math.round(lt * L.area * 100)}% obszaru, +${Math.ceil(lt / L.amountEvery)} pocisków, ewolucja bez pasywki.`, C.gold);
+      text(`Tylko ta broń do poziomu ${run.nextLoyalLevel}: kolejny stopień Wierności broni.`, C.yellow);
     }
     const bonus = bonusLines(w.bonus);
     if (bonus.length) text(`Bonusy jakości: ${bonus.join(', ')}`, C.cyan);
@@ -157,7 +157,7 @@ export class BuildView {
     // Ewolucja: broń na maks. + pasywka.
     const evo = WEAPON_BY_ID[base]?.evolve;
     if (evo && !d.evolved) {
-      const pas = PASSIVE_BY_ID[evo.passive], into = WEAPON_BY_ID[evo.into], maxed = w.level >= maxLevel(d), has = run.passives.some((p) => p.id === pas.id);
+      const pas = PASSIVE_BY_ID[evo.passive], into = WEAPON_BY_ID[evo.into], maxed = w.level >= maxLevel(d), has = run.passives.some((p) => p.id === pas.id) || run.loyal > 0;
       head(`Ewolucja: ${into.name}`, C.yellow);
       recipe(r, x, y, [d.icon, maxed], [pas.icon, has], into.icon);
       drawText(g, maxed ? 'broń na maks.' : `broń: poziom ${maxLevel(d)}`, x + 86, y, maxed ? C.lime : C.lgray, SMALL);

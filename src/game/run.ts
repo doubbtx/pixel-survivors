@@ -981,7 +981,7 @@ export class Run {
     for (const sec of activeSecrets(this)) if (sec.stats) add(sec.stats);
     // Wierność broni (obrażenia: damageEnemy).
     const lt = this.loyal;
-    if (lt) { s.atkSpeed += lt * BAL.loyal.atkSpeed; s.amount += lt * BAL.loyal.amount; }
+    if (lt) { s.atkSpeed += lt * BAL.loyal.atkSpeed; s.area += lt * BAL.loyal.area; s.amount += Math.ceil(lt / BAL.loyal.amountEvery); }
     // Szał Borguna: szybkość ataku i leczenie z obrażeń (obrażenia: resourceDamageMul).
     if (this.rageT > 0) {
       const F = BAL.resource.fury, pw = 1 + this.flag('res.power');
@@ -1031,7 +1031,8 @@ export class Run {
       if (f) f.r = 22;
       this.burst(this.player.x, this.player.y, C.yellow, 16, 70);
       if (this.level % BAL.cardEveryLevels === 0) this.pendingCards.push('level');
-      if (BAL.loyal.levels.includes(this.level) && this.weapons.length === 1) {
+      const L = BAL.loyal;
+      if (this.level >= L.first && (this.level - L.first) % L.every === 0 && this.weapons.length === 1) {
         this.cardState.loyal = (this.cardState.loyal ?? 0) + 1;
         this.showBanner(`Wierność broni ${this.cardState.loyal}: ${this.weapons[0].def.name} jest mocniejsza!`);
         this.recomputeStats();
@@ -1043,6 +1044,12 @@ export class Run {
   /** Stopień Wierności broni (BAL.loyal); 0, gdy gracz ma więcej niż jedną broń. */
   get loyal(): number {
     return this.weapons.length === 1 ? this.cardState.loyal ?? 0 : 0;
+  }
+
+  /** Następny poziom, na którym Wierność broni zyska stopień. */
+  get nextLoyalLevel(): number {
+    const L = BAL.loyal;
+    return this.level < L.first ? L.first : L.first + (Math.floor((this.level - L.first) / L.every) + 1) * L.every;
   }
 
   /** Liczba zabójstw potrzebna do następnego ultimate. */
@@ -1119,7 +1126,7 @@ export class Run {
     const lore = this.lore[e.boss ? 'boss' : e.def.id] ?? 1;
     // Spokój (karta z osiągnięcia): więcej obrażeń po dłuższym czasie bez trafienia.
     const calm = this.flag('calm') > 0 && this.totalTime - this.lastHurtAt >= BAL.feats.calmAfter ? 1 + this.flag('calm') : 1;
-    const loyal = this.loyal && src === this.weapons[0].def.name ? 1 + this.loyal * BAL.loyal.dmg : 1;
+    const loyal = this.loyal && src === this.weapons[0].def.name ? Math.pow(1 + BAL.loyal.dmg, this.loyal) : 1;
     const resist = this.resistOf(e) !== undefined && damageElement(src, this.augElem) === this.resistOf(e) ? BAL.bossResist.mul : 1;
     const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * loyal * resourceDamageMul(this, src) * (1 - e.dr));
     // Statystyki i siła gracza liczą tylko zadane obrażenia (bez nadwyżki ponad HP wroga).
