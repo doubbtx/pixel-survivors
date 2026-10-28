@@ -13,7 +13,8 @@ import { endSlotRun } from '../game/campaign';
 import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { Menu, panel, inside, slot, button, hovered, moreArrow, type MenuItem } from './widgets';
+import { Menu, panel, inside, slot, button, hovered, type MenuItem } from './widgets';
+import { drawSkills } from './skills';
 import { setLang, type Lang } from '../core/i18n';
 import type { Action } from '../core/input';
 import { music, MENU_MOOD } from '../core/music';
@@ -382,18 +383,23 @@ function renderBoard(app: App, x: number, y: number, w: number, rows: number): v
 }
 
 const LIST_X = 12, LIST_W = 140, ROW_H = 32, TOP = 38;
-const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212, TAB_W = 44, MORE_W = 64;
-const TABS = ['Ogólne', 'Zasób'];
+const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212, TAB_W = 62, MORE_W = 64;
+const TABS = ['Ogólne', 'Umiejętności', 'Zasób'];
+const TAB_Y = TOP + 43;
+/** Przyciski na dole ekranu wyboru bohatera: Wstecz (lewo) i Start (prawo). */
+const BTN_Y = H - 18, BTN_H = 15, BACK_W = 70, START_W = 110;
 /** Mały tekst szczegółów. */
 const SMALL = { scale: 0.75 } as const;
 
 /** Wybór bohatera: lista po lewej (do 6 bohaterów), szczegóły zaznaczonego po prawej. */
 export class HeroSelect implements Screen {
   private sel = 0;
-  /** Strona szczegółów: 0 ogólne (broń, pasywka, umiejętności), 1 zasób z liczbami. */
+  /** Strona szczegółów: 0 ogólne (broń, pasywka, umiejętności), 1 umiejętności z opisami, 2 zasób z liczbami. */
   private page = 0;
   /** Lewy górny róg przycisku „Szczegóły” na stronie ogólnej (ustawiany przy rysowaniu). */
   private moreAt: [number, number] = [-99, -99];
+  /** Górna krawędź siatki umiejętności na stronie ogólnej (klik otwiera stronę umiejętności). */
+  private skillsAt = -99;
 
   constructor(private readonly app: App, private readonly mode: Mode, private readonly opts: GameOpts = {}) {
     // Kursor na ostatnio wybranym bohaterze.
@@ -412,7 +418,7 @@ export class HeroSelect implements Screen {
     const n = HEROES.length;
     if (inp.pressed('up')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
     if (inp.pressed('down')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
-    if (inp.pressed('left') || inp.pressed('right')) { this.page = 1 - this.page; sfx.play('select'); }
+    if (inp.pressed('left') || inp.pressed('right')) { this.page = (this.page + (inp.pressed('left') ? TABS.length - 1 : 1)) % TABS.length; sfx.play('select'); }
     if (inp.pressed('confirm')) this.start();
     if (inp.pressed('back')) this.app.go(this.mode === 'training' ? new MainMenu(this.app) : new SlotScreen(this.app, this.mode));
     if (inp.pressed('inventory')) { this.app.go(new PactScreen(this.app, this)); return; }
@@ -420,9 +426,11 @@ export class HeroSelect implements Screen {
     if (inp.pressed('click')) {
       const { x, y } = inp.mouse;
       if (inside(x, y, LIST_X, this.pactY(), LIST_W, 18)) { this.app.go(new PactScreen(this.app, this)); return; }
-      for (let i = 0; i < 2; i++) if (inside(x, y, this.tabX(i), TOP + 21, TAB_W, 14)) { this.page = i; sfx.play('select'); return; }
-      if (this.page === 0 && inside(x, y, this.moreAt[0], this.moreAt[1] - 1, MORE_W, 14)) { this.page = 1; sfx.play('select'); return; }
-      if (inside(x, y, DET_X, TOP, DET_W, DET_H)) { this.start(); return; }
+      for (let i = 0; i < TABS.length; i++) if (inside(x, y, this.tabX(i), TAB_Y, TAB_W, 13)) { this.page = i; sfx.play('select'); return; }
+      if (this.page === 0 && inside(x, y, this.moreAt[0], this.moreAt[1] - 1, MORE_W, 14)) { this.page = 2; sfx.play('select'); return; }
+      if (this.page === 0 && inside(x, y, DET_X + 8, this.skillsAt, DET_W - 16, 40)) { this.page = 1; sfx.play('select'); return; }
+      if (inside(x, y, W - 12 - START_W, BTN_Y, START_W, BTN_H)) { this.start(); return; }
+      if (inside(x, y, LIST_X, BTN_Y, BACK_W, BTN_H)) { this.app.go(this.mode === 'training' ? new MainMenu(this.app) : new SlotScreen(this.app, this.mode)); return; }
       HEROES.forEach((_, i) => {
         if (!inside(x, y, LIST_X, TOP + i * ROW_H, LIST_W, ROW_H - 4)) return;
         if (this.sel === i) this.start();
@@ -447,9 +455,9 @@ export class HeroSelect implements Screen {
     return skin && heroSkins(this.app.save.pacts.best[id] ?? 0).some((b) => b.id === skin) ? `${h.sprite}~${skin}` : h.sprite;
   }
 
-  /** Lewa krawędź zakładki `i` szczegółów (prawy górny róg panelu). */
+  /** Lewa krawędź zakładki `i` szczegółów (rząd pod nazwą bohatera). */
   private tabX(i: number): number {
-    return DET_X + DET_W - 16 - (2 - i) * (TAB_W + 2);
+    return DET_X + 64 + i * (TAB_W + 2);
   }
 
   /** Przycisk paktów pod listą bohaterów. */
@@ -489,14 +497,10 @@ export class HeroSelect implements Screen {
     // Skórki za odznaki Paktu.
     const owned = heroSkins(this.app.save.pacts.best[h.id] ?? 0), cur = this.app.save.skins[h.id] ?? '';
     if (owned.length) drawText(g, `Skórka: ${cur && BADGE_BY_ID[cur] ? BADGE_BY_ID[cur].name : 'zwykła'} [X]`, x + DET_W - 10, y + 8, cur ? BADGE_BY_ID[cur]?.color ?? C.lgray : C.lgray, { align: 'right' });
-    drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 38, C.lavender);
-    TABS.forEach((t, i) => {
-      const on = i === this.page;
-      button(r, this.tabX(i), y + 21, TAB_W, 14, t, { active: on, accent: C.gold, pulse: i === 1 });
-    });
-    // Strzałka przy zakładkach: druga strona ma więcej informacji.
-    moreArrow(r, this.page === 0 ? this.tabX(2) + 5 : this.tabX(0) - 6, y + 28, this.page === 0 ? 1 : -1);
+    drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 31, C.lavender);
+    TABS.forEach((t, i) => button(r, this.tabX(i), TAB_Y, TAB_W, 13, t, { active: i === this.page, accent: C.gold }));
     if (this.page === 0) this.renderGeneral(h, x, y);
+    else if (this.page === 1) drawSkills(r, h.abilities.map((a) => ({ def: a, cd: a.slot === 'ult' ? 'ładowane zabójstwami' : `odnowienie ${a.cooldown} s`, evo: false })), x + 12, y + 66, DET_W - 24);
     else this.renderResource(h, x, y);
     const rec = heroRecord(this.app.save, h.id);
     const best = m === 'hardcore' ? `Najdalej: poziom ${rec.bestDepth}`
@@ -507,7 +511,10 @@ export class HeroSelect implements Screen {
       const hm = heroMeta(this.app.save.meta, h.id);
       drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
     }
-    drawText(g, 'Góra/dół: bohater    Lewo/prawo: szczegóły    Enter: start    Esc: wstecz', W / 2, H - 16, C.lavender, { align: 'center' });
+    // Przyciski: Wstecz i Start (myszą lub klawiszami Esc / Enter).
+    button(r, LIST_X, BTN_Y, BACK_W, BTN_H, 'Wstecz [Esc]');
+    button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, `Start: ${h.name} [Enter]`, { accent: C.gold, col: C.yellow, pulse: true });
+    drawText(g, 'Góra/dół: bohater    Lewo/prawo: zakładki', (LIST_X + BACK_W + W - 12 - START_W) / 2, BTN_Y + 2, C.dgray, { align: 'center', scale: 0.75 });
   }
 
   /** Strona ogólna: broń, pasywka, zasób w skrócie, umiejętności. */
@@ -526,7 +533,10 @@ export class HeroSelect implements Screen {
     this.moreAt = [mx, ly];
     ly += 11;
     ly += 6;
-    // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa.
+    // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa (klik: strona z opisami).
+    this.skillsAt = ly;
+    if (hovered(x + 8, ly, DET_W - 16, 40)) r.withAlpha(0.15, () => r.roundRect(x + 8, ly - 2, DET_W - 16, 42, 2, C.white));
+    drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 32, C.dgray, { align: 'right', scale: 0.75 });
     h.abilities.forEach((a, i) => {
       const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
       const ax = x + 12 + (i % 2) * 140, ay = ly + Math.floor(i / 2) * 20;

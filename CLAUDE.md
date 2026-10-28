@@ -48,9 +48,9 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   `salvage`, `slotFor`), `toSnapshot`/`fromSnapshot`.
 - `game/` — też `render.ts` (świat), `scenery.ts` (skupiska dekoracji i kompozycje ruin, bez kolizji), `campaign.ts` (`endSlotRun`: koniec runu w slocie, rekordy, tablica Hardcore).
 - `ui/` — `theme.ts` (wspólny styl: kolory akcentów, odstępy, rozmiary HUD, `tile`, `meter`, `iconSlot`, `cornerTag`, `label`), `widgets.ts` (panel, dim, bar, Menu, slot — w stylu z theme.ts), `hud.ts` (tylko rysowanie + stan animacji `HudAnim`), `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
-  `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
+  `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `skills.ts` (`drawSkills`: opisy umiejętności na wyborze bohatera i w pauzie), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts` — zakładki Ogólne/Umiejętności/Zasób, przyciski Wstecz i Start, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.24.1)
+## Stan (wersja 0.25.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -343,7 +343,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     dekoracje i efekty w world.ts używają `spot`/`stroke` zamiast `px`/`line`. Plamy podłoża i kafelków bez grubej szachownicy,
     przerysowane osłony terenu, kolce, kwiaty, strzały; cząsteczki 2/3 rozmiaru; gładki księżyc w menu.
 
-  - 0.23.19: czcionka pikselowa Pixelify Sans (@fontsource/pixelify-sans 500/700, OFL, z polskimi znakami) zamiast Nunito;
+  - 0.23.19: czcionka pikselowa Pixelify Sans (@fontsource/pixelify-sans 500/700, OFL, z polskimi znakami) zamiast Nunito (od 0.25 Jersey 10);
     core/font.ts: `FONT_PX` 9, waga 500 (tytuły `scale` ≥ 2: 700). Układ ekranów bez zmian, napisy się mieszczą.
 - Etap 0.24 (przebudowa oprawy: ruiny w lesie, lekki HUD):
   - HUD (ui/hud.ts + ui/theme.ts): cienki pasek XP (`UI.xpH`), karta bohatera 108×31 (portret, życie z wartością i śladem
@@ -372,6 +372,21 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     tylko na starcie poziomu (nic gotowego na ekranie) budżet jest duży. Skupiska dekoracji liczone raz na komórkę
     (`clusters` w game/scenery.ts). Sprite'y biomu, kompozycji, wszystkich wrogów i bohatera budowane z wyprzedzeniem
     (`queueWarm` / `warmStep`, `WARM_BUDGET` ms na klatkę). Wcześniej nowy kawałek terenu kosztował 30–110 ms w jednej klatce.
+- Etap 0.25 (czytelność i menu):
+  - Czcionka Jersey 10 (@fontsource/jersey-10, jedna grubość 400, `FONT_PX` 11,5).
+  - Życie w HUD: przy trafieniu pasek błyska na biało, jasny ślad (`UI.lifeTrail` = kremowy) zostaje 0,22 s i szybko się
+    zwija, obok karty pojawia się utracona liczba („-12”, sumowana w serii, `HudAnim.hitAmt`). Mały pasek pod bohaterem tylko
+    przez `HP_BAR_SHOW` s po trafieniu (stale poniżej 30% życia).
+  - Wybór bohatera: zakładki klikane (Ogólne, Umiejętności z pełnymi opisami, Zasób; lewo/prawo przełącza), przyciski
+    „Wstecz [Esc]” i „Start [Enter]”; klik w panel szczegółów już nie startuje gry.
+  - Pauza: prawa kolumna z zakładkami Postać / Umiejętności (lewo/prawo albo klik): poziom, odnowienie lub ładunek R, opis,
+    ewolucja z wymaganą synergią, pasywka i zasób.
+  - Mapa Ekspedycji: tło z podłoża biomu aktu (gfx/ground.ts), kropki postępu aktów, plakietki stanu (HP, złoto, łup, mapy,
+    błogosławieństwo), legenda rodzajów węzłów, grubsze ścieżki, puls dostępnych węzłów, podpis wybranego, przyciski
+    Plecak / Menu / Wyrusz (`BTNS`).
+  - Rozwój: następny węzeł gałęzi wymaga poprzedniego na poziomie co najmniej `ceil(max × BAL.meta.unlockFrac)` (0,5),
+    `prevNode`, `unlockLevel` w data/meta.ts; kafelek pokazuje „wymaga 3/5”, opis — „Odblokowanie: nazwa poziom/wymagany”.
+    Już kupione węzły zostają (zasada dotyczy tylko zakupu).
 ## Plan dalej
 
 - Balans po testach: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Głowy bossów, Pustka.

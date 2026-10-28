@@ -6,7 +6,7 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { HEROES } from '../data/heroes';
 import {
-  heroMeta, heroTree, treeBranches, nodeCost, nodeUnlocked, nodeLine, paragonLevel, spentEssence, type MetaNode,
+  heroMeta, heroTree, treeBranches, nodeCost, nodeUnlocked, prevNode, unlockLevel, nodeLine, paragonLevel, spentEssence, type MetaNode,
 } from '../data/meta';
 import { fmt } from '../util/format';
 import type { App, Screen } from './app';
@@ -63,7 +63,10 @@ export class MetaScreen implements Screen {
   private buy(n: MetaNode): void {
     const h = this.hm, lvl = h.nodes[n.id] ?? 0;
     if (lvl >= n.max) return this.say('Maksymalny poziom', false);
-    if (!nodeUnlocked(h, this.tree, n)) return this.say('Najpierw kup poprzedni węzeł w tej gałęzi', false);
+    if (!nodeUnlocked(h, this.tree, n)) {
+      const prev = prevNode(this.tree, n)!;
+      return this.say(`Najpierw rozwiń ${prev.name} do ${unlockLevel(prev)}/${prev.max}`, false);
+    }
     const cost = nodeCost(n, lvl);
     if (h.essence < cost) return this.say(`Potrzeba ${fmt(cost)} esencji`, false);
     h.essence -= cost;
@@ -168,13 +171,16 @@ export class MetaScreen implements Screen {
         else r.withAlpha(0.3, () => drawSprite(g, n.icon, x + 12, y + 14));
         drawText(g, n.name, x + 22, y + 3, open ? (n.key ? C.pink : C.white) : C.dgray);
         if (n.max > 1) drawText(g, `${lvl}/${n.max}`, x + COL_W - 5, y + 14, maxed ? C.gold : C.lgray, { align: 'right' });
-        const costTxt = maxed ? 'MAX' : !open ? 'zablok.' : fmt(cost);
+        // Zablokowany węzeł: ile poziomów poprzedniego jeszcze potrzeba (połowa jego maksimum).
+        const prev = prevNode(tree, n);
+        const costTxt = maxed ? 'MAX' : !open && prev ? `wymaga ${unlockLevel(prev)}/${prev.max}` : fmt(cost);
         drawText(g, costTxt, x + 22, y + 14, maxed ? C.gold : !open ? C.dgray : h.essence >= cost ? C.cyan : C.salmon);
       });
     });
     // Opis zaznaczonego węzła.
-    const n = this.columns()[this.col][this.row], lvl = h.nodes[n.id] ?? 0;
-    const now = n.key ? (lvl ? 'Aktywny: ' : 'Klucz: ') + n.desc : lvl > 0 ? `Teraz: ${nodeLine(n, lvl)}` : 'Nie kupiony';
+    const n = this.columns()[this.col][this.row], lvl = h.nodes[n.id] ?? 0, prev = prevNode(tree, n);
+    const lock = !nodeUnlocked(h, tree, n) && prev ? `Odblokowanie: ${prev.name} ${h.nodes[prev.id] ?? 0}/${unlockLevel(prev)}   ` : '';
+    const now = lock + (n.key ? (lvl ? 'Aktywny: ' : 'Klucz: ') + n.desc : lvl > 0 ? `Teraz: ${nodeLine(n, lvl)}` : 'Nie kupiony');
     const next = !n.key && lvl < n.max ? `   Następny poziom: ${nodeLine(n, lvl + 1)}` : '';
     drawText(g, `${n.name}. ${now}${next}`, W / 2, 222, C.lgray, { align: 'center' });
     // Przyciski.

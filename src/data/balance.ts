@@ -269,6 +269,8 @@ export const BAL = {
   meta: {
     /** Koszt kolejnego poziomu węzła = koszt bazowy × tyle^poziom. */
     costGrowth: 1.8,
+    /** Następny węzeł gałęzi odblokowuje się, gdy poprzedni ma co najmniej taką część swoich poziomów (w górę). */
+    unlockFrac: 0.5,
     /** Esencja za run: za poziom kampanii, za sekundę (dzielnik), za zabójstwa (dzielnik), za poziom postaci. */
     essencePerDepth: 12,
     essenceSecDiv: 20,

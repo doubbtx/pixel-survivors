@@ -25,6 +25,10 @@ const GRADE = 0.35;
 const GROUND_BUDGET = 3;
 /** Czas (ms) na wstępne budowanie sprite'ów w jednej klatce. */
 const WARM_BUDGET = 2;
+/** Ile sekund po trafieniu widać mały pasek życia pod bohaterem. */
+const HP_BAR_SHOW = 2;
+/** Ostatnio widziane życie gracza i czas ostatniego trafienia (pasek pod bohaterem). */
+const hpSeen: { run: Run | null; hp: number; at: number } = { run: null, hp: 0, at: -99 };
 /** Odległość pocisku (jednostki świata), od której pokazuje się rdzeń trafienia gracza. */
 const CORE_SHOW = 45;
 const FIRE_COLS = [C.red, C.orange, C.gold, C.yellow, C.orange];
@@ -515,10 +519,14 @@ function drawWorld(run: Run, r: Renderer): void {
   if (run.outcome !== 'dead' && run.bullets.items.some((b) => (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < CORE_SHOW * CORE_SHOW)) {
     r.withAlpha(0.85, () => { r.rect(px - 1.5, py - 1.5, 3, 3, C.black); r.rect(px - 0.5, py - 0.5, 1, 1, C.white); });
   }
-  // Mały pasek HP pod graczem: tylko gdy jest ranny, cienki i półprzezroczysty.
-  if (p.hp < run.stats.maxHp && run.outcome !== 'dead') r.withAlpha(0.8, () => {
+  // Mały pasek HP pod graczem: przez chwilę po trafieniu (wygasa) i stale przy niskim życiu.
+  if (p.hp < hpSeen.hp - 0.5 || hpSeen.run !== run) hpSeen.at = run.totalTime;
+  hpSeen.hp = p.hp; hpSeen.run = run;
+  const frac = Math.max(0, p.hp / run.stats.maxHp), since = run.totalTime - hpSeen.at;
+  const barA = frac < 0.3 ? 0.85 : since < HP_BAR_SHOW ? Math.min(0.85, (HP_BAR_SHOW - since) * 2) : 0;
+  if (barA > 0 && p.hp < run.stats.maxHp && run.outcome !== 'dead') r.withAlpha(barA, () => {
     r.rect(px - 8, py + 13, 16, 2, C.black);
-    r.rect(px - 8, py + 13, Math.round(16 * Math.max(0, p.hp / run.stats.maxHp)), 1.5, C.red);
+    r.rect(px - 8, py + 13, 16 * frac, 1.5, since < 0.15 ? C.white : C.red);
   });
 
   // Ostrza orbity i pociski gracza.

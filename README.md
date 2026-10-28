@@ -7,7 +7,7 @@ Przeglądarkowy survivors-like / bullet hell w stylu 16-bit: Canvas 2D + TypeScr
 - Ekran 480×270 skalowany całkowitoliczbowo (`imageSmoothingEnabled = false`). Świat rysowany w powiększeniu 1,5× (`ZOOM` w `core/renderer.ts`): logika gry działa w jednostkach świata, a sprite'y mają więcej detali niż hitboksy.
 - Paleta ENDESGA 32 z rampami cieniowania (`core/palette.ts`). Półprzezroczystość (cienie, poświaty stref, przyciemnienia) miesza kolory palety, jak „color math” na SNES-ie.
 - Sprite'y generowane w kodzie: `gfx/painter.ts` (cieniowanie rampą ze światłem z lewej-góry, automatyczny obrys), `gfx/actors.ts` (postacie z animacją: chód bohaterów, pulsowanie szlamów, machanie skrzydłami, mruganie, migotanie płomieni, „oddech” bossa), `gfx/icons.ts` (56 ikon 16×16: 20 broni z ewolucjami, 13 pasywek, 8 umiejętności, 4 usługi sklepu, odłamek, 10 tagów kart), `gfx/world.ts` (iskry trafień, obłoki śmierci, eksplozje, strzały w 16 kierunkach, 24 dekoracje terenu — 6 na biom). Gra odwołuje się tylko do nazw sprite'ów (`nazwa@klatka`), więc można je podmienić na sprite sheet bez zmian w logice.
-- Pikselowa czcionka Pixelify Sans (`core/font.ts`, pakiet @fontsource/pixelify-sans, licencja OFL) z cieniem albo obrysem.
+- Pikselowa czcionka Jersey 10 (`core/font.ts`, pakiet @fontsource/jersey-10, licencja OFL) z cieniem albo obrysem.
 - Okna z fazowaną ramką i gradientem (dithering), paski z połyskiem, kursor-strzałka w menu, winieta, cienie pod postaciami, poświaty pocisków wrogów.
 - HUD: portret bohatera, gniazda broni i pasywek (puste też widoczne), umiejętności z ikonami, odnowieniem i ładunkiem ultimate, ozdobny pasek bossa; karty z narożnymi klejnotami, poświatą ikony i połyskiem kart pryzmatycznych; gradientowe logo.
 
@@ -394,6 +394,14 @@ src/
 
 **Smoother (0.24.1)**:
 - Fixed regular stutter while walking: new ground pieces are now built a little at a time and ahead of the camera, and enemy and decoration graphics are prepared in the background instead of on first sight.
+
+**Clearer hits, abilities and Expedition map (0.25.0)**:
+- New font: Jersey 10.
+- Taking damage is easy to see: the HP bar flashes, the lost part shows briefly in a light colour and shrinks quickly, and the amount lost ("-12") pops up next to the bar. The small HP bar under your hero only shows for a moment after a hit (and always when you are low).
+- Hero select has clickable tabs (General, Abilities with full descriptions, Resource) and Back / Start buttons.
+- The pause screen has an Abilities tab: level, cooldown or ult charge, description, evolution and the synergy it needs.
+- A nicer Expedition map: the act's terrain in the background, act progress, status chips, a legend, clearer paths, and Backpack / Menu / Travel buttons.
+- Progression: the next node in a branch unlocks once the previous one has at least half of its levels.
 
 ### Jak przetestować
 

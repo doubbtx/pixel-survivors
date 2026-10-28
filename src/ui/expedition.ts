@@ -8,15 +8,29 @@ import { BAL } from '../data/balance';
 import { BIOMES, objectiveLabel } from '../data/levels';
 import {
   NODE_INFO, actBiome, chooseTier, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
-  type MapNode,
+  type MapNode, type NodeKind,
 } from '../data/expedition';
 import type { Run } from '../game/run';
 import { fmt } from '../util/format';
-import { dim, panel, slot, inside, hovered } from './widgets';
+import { panel, inside, hovered, button } from './widgets';
+import { tile, iconSlot, UI } from './theme';
+import { CHUNK, groundChunk, groundBase, groundFrame } from '../gfx/ground';
 
-const MAP_X = 8, MAP_Y = 30, MAP_W = W - 16, MAP_H = 136;
+const MAP_X = 8, MAP_Y = 28, MAP_W = W - 16, MAP_H = 140;
 const NODE = 20;
 const DET_Y = MAP_Y + MAP_H + 4;
+/** Przyciski w prawym dolnym rogu panelu szczegółów: Plecak, Menu, Wyrusz (lewy górny róg, szerokość). */
+const BTN_Y = H - 21, BTN_H = 14;
+const BTNS: { label: string; w: number; act: 'inventory' | 'menu' | 'go' }[] = [
+  { label: 'Plecak [I]', w: 56, act: 'inventory' }, { label: 'Menu [Esc]', w: 56, act: 'menu' }, { label: 'Wyrusz [Enter]', w: 86, act: 'go' },
+];
+function btnX(i: number): number {
+  let x = MAP_X + MAP_W - 8;
+  for (let k = BTNS.length - 1; k >= i; k--) x -= BTNS[k].w + (k < BTNS.length - 1 ? 3 : 0);
+  return x;
+}
+/** Legenda rodzajów węzłów (górny wiersz mapy). */
+const LEGEND: NodeKind[] = ['fight', 'elite', 'dungeon', 'treasure', 'shop', 'anvil', 'rest', 'shrine', 'boss'];
 
 /** Przyciski poziomu trudności w prawym górnym rogu panelu szczegółów (lewy górny róg przycisku). */
 const TIER_W = 46;
@@ -28,7 +42,7 @@ const SMALL = { scale: 0.75 } as const;
 function nodePos(row: number, lane: number): [number, number] {
   const X = BAL.expedition;
   const step = (MAP_W - 60) / (X.rows - 1);
-  return [MAP_X + 30 + row * step, MAP_Y + 30 + lane * ((MAP_H - 44) / (X.lanes - 1))];
+  return [MAP_X + 30 + row * step, MAP_Y + 34 + lane * ((MAP_H - 50) / (X.lanes - 1))];
 }
 
 export type MapAction = { pick: number } | 'inventory' | 'menu' | null;
@@ -80,6 +94,14 @@ export class ExpeditionMapView {
       sfx.play('select');
       this.onTier(t);
     });
+    // Przyciski: Plecak, Menu, Wyrusz.
+    if (input.pressed('click')) {
+      for (let i = 0; i < BTNS.length; i++) {
+        if (!inside(m.x, m.y, btnX(i), BTN_Y, BTNS[i].w, BTN_H)) continue;
+        const act = BTNS[i].act;
+        return act === 'go' ? { pick: lanes[this.sel] } : act;
+      }
+    }
     if (input.pressed('confirm')) return { pick: lanes[this.sel] };
     return null;
   }
@@ -87,18 +109,48 @@ export class ExpeditionMapView {
   render(r: Renderer): void {
     const g = r.g, run = this.run, ex = run.expedition!;
     const X = BAL.expedition;
-    dim(r);
+    r.withAlpha(0.82, () => r.rect(0, 0, W, H, C.black));
     const secretAct = ex.act > X.acts;
-    drawText(g, secretAct ? 'Ekspedycja - akt 4: Pustka' : `Ekspedycja - akt ${ex.act}/${X.acts}`, W / 2, 6, secretAct ? C.hotpink : C.yellow, { align: 'center', scale: 2, outline: C.black });
-    drawText(g, 'Enter/klik: idź   I: plecak', W - 8, 4, C.dgray, { align: 'right' });
-    drawText(g, 'Esc: menu (zapis)', W - 8, 15, C.dgray, { align: 'right' });
-    panel(r, MAP_X, MAP_Y, MAP_W, MAP_H, C.gold);
-    const biome = BIOMES[actBiome(ex.act)];
-    drawText(g, ex.voidKey && !secretAct ? `${biome.name}   Klucz Pustki` : biome.name, MAP_X + 8, MAP_Y + 5, ex.voidKey ? C.hotpink : C.lavender);
+    drawText(g, secretAct ? 'Ekspedycja - akt 4: Pustka' : `Ekspedycja - akt ${ex.act}/${X.acts}`, W / 2, 4, secretAct ? C.hotpink : C.yellow, { align: 'center', scale: 2, outline: C.black });
+    // Lewa strona nagłówka: biom aktu i postęp aktów (kropki).
+    const biomeId = actBiome(ex.act), biome = BIOMES[biomeId];
+    for (let k = 0; k < X.acts; k++) r.roundRect(MAP_X + 2 + k * 8, 10, 6, 6, 1, k < ex.act - 1 ? C.gold : k === ex.act - 1 ? C.yellow : C.slate);
+    drawText(g, ex.voidKey && !secretAct ? `${biome.name}   Klucz Pustki` : biome.name, MAP_X + 4 + X.acts * 8, 6, ex.voidKey ? C.hotpink : C.lavender);
+    // Prawa strona nagłówka: plakietki stanu wyprawy.
     const bless = ex.blessing ? EX_BLESSINGS.find((b) => b.id === ex.blessing!.id) : null;
-    const info = [`mapy ${ex.cleared}`, `łup +${ex.bonus}%`, `złoto ${fmt(run.gold)}`, `HP ${fmt(run.player.hp)}/${fmt(run.stats.maxHp)}`];
-    if (bless) info.unshift(`${bless.name} (${ex.blessing!.maps})`);
-    drawText(g, info.join('   '), MAP_X + MAP_W - 8, MAP_Y + 5, C.lgray, { align: 'right' });
+    const chips: [string, number][] = [[`HP ${fmt(run.player.hp)}/${fmt(run.stats.maxHp)}`, C.salmon], [`złoto ${fmt(run.gold)}`, C.gold], [`łup +${ex.bonus}%`, C.lime], [`mapy ${ex.cleared}`, C.lgray]];
+    if (bless) chips.push([`${bless.name} (${ex.blessing!.maps})`, C.yellow]);
+    let cx = MAP_X + MAP_W;
+    for (const [t, col] of chips) {
+      const w = textWidth(t) * 0.75 + 8;
+      cx -= w;
+      if (cx < W / 2 + 90) break;
+      tile(r, cx, 7, w, 10, col);
+      drawText(g, t, cx + w / 2, 7.5, col, { align: 'center', scale: 0.75 });
+      cx -= 3;
+    }
+
+    // Mapa: tło z podłoża biomu aktu (ten sam generator co w grze), przygaszone.
+    panel(r, MAP_X, MAP_Y, MAP_W, MAP_H, C.gold);
+    g.save();
+    g.beginPath(); g.rect(MAP_X + 1, MAP_Y + 1, MAP_W - 2, MAP_H - 2); g.clip();
+    groundFrame(8);
+    const seed = 900 + ex.act * 31;
+    for (let gx = 0; gx * CHUNK < MAP_W; gx++) {
+      const c = groundChunk(biome, seed, gx, 0, 2);
+      if (c) g.drawImage(c, MAP_X + gx * CHUNK, MAP_Y, CHUNK, CHUNK);
+      else { g.fillStyle = groundBase(biome); g.fillRect(MAP_X + gx * CHUNK, MAP_Y, CHUNK, CHUNK); }
+    }
+    r.withAlpha(0.55, () => r.rect(MAP_X, MAP_Y, MAP_W, MAP_H, C.black));
+    g.restore();
+    // Legenda rodzajów węzłów.
+    let lx = MAP_X + 8;
+    for (const k of LEGEND) {
+      const info = NODE_INFO[k];
+      r.withAlpha(0.8, () => drawSprite(g, info.icon, lx + 5, MAP_Y + 9));
+      drawText(g, info.name, lx + 14, MAP_Y + 5, info.color, { scale: 0.75, outline: C.black });
+      lx += 19 + textWidth(info.name) * 0.75;
+    }
 
     const cur = exRow(ex);
     const lanes = this.lanes;
@@ -113,7 +165,8 @@ export class ExpeditionMapView {
           const [x0, y0] = nodePos(row, a), [x1, y1] = nodePos(row + 1, b);
           const walked = ex.path[row] === a && ex.path[row + 1] === b;
           const open = row === cur && ex.path[row] === a && lanes.includes(b);
-          r.line(x0, y0, x1, y1, walked ? C.gold : open ? (b === target ? C.yellow : C.lavender) : C.slate);
+          const col = walked ? C.gold : open ? (b === target ? C.yellow : C.lavender) : C.dgray;
+          r.withAlpha(walked || open ? 1 : 0.6, () => { r.line(x0, y0 + 1, x1, y1 + 1, C.black, 2); r.line(x0, y0, x1, y1, col, walked || b === target && open ? 2 : 1); });
         });
       });
     }
@@ -128,18 +181,26 @@ export class ExpeditionMapView {
       const visited = ex.path[row] === lane;
       const bob = picked ? Math.round(Math.sin(t * 6)) : 0;
       const draw = () => {
-        slot(r, x - NODE / 2, y - NODE / 2 + bob, NODE, picked ? C.white : visited ? C.gold : nodeColor(m));
+        // Dostępne węzły: delikatny puls ramki; wybrany: biała ramka i podpis rodzaju.
+        if (reachable && !picked) r.withAlpha(0.25 + 0.2 * Math.sin(t * 4 + lane), () => r.roundRect(x - NODE / 2 - 2, y - NODE / 2 - 2, NODE + 4, NODE + 4, UI.radius + 1, nodeColor(m)));
+        iconSlot(r, x - NODE / 2, y - NODE / 2 + bob, NODE, picked ? C.white : visited ? C.gold : nodeColor(m), 0.8);
         drawSprite(g, NODE_INFO[m.kind].icon, x, y + bob);
+        if (picked) {
+          const nm = NODE_INFO[m.kind].name, w = textWidth(nm) * 0.75 + 6;
+          tile(r, x - w / 2, y + NODE / 2 + 3, w, 8, C.white, 0.85);
+          drawText(g, nm, x, y + NODE / 2 + 3, C.white, { align: 'center', scale: 0.75 });
+        }
         // Liczba modyfikatorów mapy: kropki pod węzłem.
-        for (let k = 0; k < (m.mods?.length ?? 0); k++) r.rect(x - 8 + k * 3, y + NODE / 2 + 1 + bob, 2, 2, C.salmon);
+        if (!picked) for (let k = 0; k < (m.mods?.length ?? 0); k++) r.rect(x - 8 + k * 3, y + NODE / 2 + 1 + bob, 2, 2, C.salmon);
       };
       if ((row <= cur && !visited) || row > cur + 1 || (row === cur + 1 && !reachable)) r.withAlpha(0.45, draw);
       else draw();
       if (row === cur && visited) drawSprite(g, `${run.heroSprite}@0`, x, y - 18);
     }));
 
-    // Szczegóły zaznaczonego węzła.
+    // Szczegóły zaznaczonego węzła i przyciski.
     panel(r, MAP_X, DET_Y, MAP_W, H - DET_Y - 4);
+    BTNS.forEach((b, i) => button(r, btnX(i), BTN_Y, b.w, BTN_H, b.label, b.act === 'go' ? { accent: C.gold, col: C.yellow, pulse: target !== undefined, scale: 0.75 } : { scale: 0.75 }));
     if (target === undefined) return;
     const m = ex.map[cur + 1][target]!;
     const kind = NODE_INFO[m.kind];
@@ -172,8 +233,8 @@ export class ExpeditionMapView {
         drawText(g, 'Trudność [1-4]', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
         m.tiers.forEach((t, i) => {
           const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i], hot = hovered(bx, by, TIER_W, 11);
-          r.roundRect(bx, by, TIER_W, 11, 3, on ? C.dblue : hot ? C.slate : C.black, on ? C.navy : C.black);
-          r.roundFrame(bx, by, TIER_W, 11, 3, on || hot ? rr.color : C.slate, on ? 1 : 0.5);
+          r.roundRect(bx, by, TIER_W, 11, UI.radius, on ? C.navy : hot ? C.slate : C.black);
+          r.roundFrame(bx, by, TIER_W, 11, UI.radius, on || hot ? rr.color : C.slate, on ? 1 : 0.5);
           drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 2, on || hot ? rr.color : C.dgray, { align: 'center', ...SMALL });
           drawText(g, t.length ? `${t.length} mod.` : 'bez mod.', bx + TIER_W / 2, by + 13, C.dgray, { align: 'center', ...SMALL });
         });
@@ -185,7 +246,7 @@ export class ExpeditionMapView {
         wrapText(b.desc, 200 / SMALL.scale).forEach((l, i) => drawText(g, l, rx, y0 + 37 + i * 9, C.lgray, { align: 'right', ...SMALL }));
       }
       const rew = mapReward(m);
-      if (rew > 0) drawText(g, `Nagroda: +${rew}% łupu i jakości, +${Math.round(rew * X.rewardEssence)}% esencji`, rx, y0 + 76, C.gold, { align: 'right', ...SMALL });
+      if (rew > 0) drawText(g, `Nagroda: +${rew}% łupu i jakości, +${Math.round(rew * X.rewardEssence)}% esencji`, rx, y0 + 58, C.gold, { align: 'right', ...SMALL });
     } else {
       drawText(g, kind.name, x0 + 26, y0, kind.color, { shadow: C.black });
       wrapText(kind.desc, 300).forEach((l, i) => drawText(g, l, x0 + 26, y0 + 12 + i * 11, C.lgray));

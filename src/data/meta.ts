@@ -223,11 +223,22 @@ export function nodeCost(n: MetaNode, level: number): number {
   return Math.round(n.cost * Math.pow(BAL.meta.costGrowth, level));
 }
 
-/** Węzeł wymaga poprzedniego w swojej gałęzi na poziomie 1+. */
-export function nodeUnlocked(h: HeroMeta, tree: MetaNode[], n: MetaNode): boolean {
+/** Poprzedni węzeł w gałęzi (null dla pierwszego). */
+export function prevNode(tree: MetaNode[], n: MetaNode): MetaNode | null {
   const branch = tree.filter((x) => x.branch === n.branch);
   const i = branch.indexOf(n);
-  return i === 0 || (h.nodes[branch[i - 1].id] ?? 0) > 0;
+  return i > 0 ? branch[i - 1] : null;
+}
+
+/** Poziom poprzedniego węzła potrzebny do odblokowania następnego: co najmniej połowa jego maksimum (w górę). */
+export function unlockLevel(prev: MetaNode): number {
+  return Math.ceil(prev.max * BAL.meta.unlockFrac);
+}
+
+/** Węzeł wymaga poprzedniego w swojej gałęzi rozwiniętego co najmniej do połowy (`unlockLevel`). */
+export function nodeUnlocked(h: HeroMeta, tree: MetaNode[], n: MetaNode): boolean {
+  const prev = prevNode(tree, n);
+  return !prev || (h.nodes[prev.id] ?? 0) >= unlockLevel(prev);
 }
 
 export function nodeLine(n: MetaNode, level: number): string {

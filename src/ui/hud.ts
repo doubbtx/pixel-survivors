@@ -45,6 +45,11 @@ interface HudAnim {
   hp: number;
   hpTrail: number;
   trailHold: number;
+  /** Błysk paska życia po trafieniu i ostatnia utrata (liczba przy pasku). */
+  hitFlash: number;
+  hitT: number;
+  hitAmt: number;
+  hpAbs: number;
   xp: number;
   level: number;
   levelFlash: number;
@@ -66,7 +71,7 @@ function animFor(run: Run): HudAnim {
   if (!a) {
     const hp = Math.max(0, run.player.hp / run.stats.maxHp);
     a = {
-      last: performance.now(), hp, hpTrail: hp, trailHold: 0, xp: run.xp / run.xpNext, level: run.level, levelFlash: 0,
+      last: performance.now(), hp, hpTrail: hp, trailHold: 0, hitFlash: 0, hitT: 0, hitAmt: 0, hpAbs: run.player.hp, xp: run.xp / run.xpNext, level: run.level, levelFlash: 0,
       gold: run.gold, goldFlash: 0, combo: 0, comboText: '',
       ready: { q: abilityReady(run, 'q'), e: abilityReady(run, 'e'), dash: abilityReady(run, 'dash'), ult: abilityReady(run, 'ult') },
       readyFlash: { q: 0, e: 0, dash: 0, ult: 0 },
@@ -81,11 +86,20 @@ function tickAnim(run: Run, a: HudAnim): void {
   const now = performance.now(), dt = Math.min(0.1, (now - a.last) / 1000);
   a.last = now;
   const hp = Math.max(0, run.player.hp / run.stats.maxHp);
-  // Życie: pasek dogania wartość szybko, ślad utraconego życia czeka chwilę i powoli znika.
-  if (hp < a.hp - 0.001) { a.hpTrail = Math.max(a.hpTrail, a.hp); a.trailHold = 0.35; }
-  a.hp = approach(a.hp, hp, dt, 20);
+  // Życie: przy trafieniu pasek błyska, jasny ślad utraconej części zostaje na chwilę i szybko się zwija,
+  // a obok paska pojawia się utracona liczba (sumowana przy serii trafień).
+  if (run.player.hp < a.hpAbs - 0.5) {
+    const lost = a.hpAbs - run.player.hp;
+    a.hitAmt = a.hitT > 0 ? a.hitAmt + lost : lost;
+    a.hitT = 0.9; a.hitFlash = 0.18;
+    a.hpTrail = Math.max(a.hpTrail, a.hp); a.trailHold = 0.22;
+  }
+  a.hpAbs = run.player.hp;
+  a.hitT = Math.max(0, a.hitT - dt);
+  a.hitFlash = Math.max(0, a.hitFlash - dt);
+  a.hp = approach(a.hp, hp, dt, 25);
   if (a.trailHold > 0) a.trailHold -= dt;
-  else a.hpTrail = approach(a.hpTrail, a.hp, dt, 4);
+  else a.hpTrail = approach(a.hpTrail, a.hp, dt, 9);
   if (a.hpTrail < a.hp) a.hpTrail = a.hp;
   // Doświadczenie: przy awansie pasek zaczyna od zera, a poziom krótko błyska.
   if (run.level !== a.level) { a.level = run.level; a.levelFlash = 0.8; a.xp = 0; }
@@ -213,9 +227,14 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
   // Życie: aktualna i maksymalna wartość na pasku, ślad utraconego życia, tarcza jako cienka linia pod spodem.
   const bx = px + ps + 4, bw = x + w - 3 - bx;
   meter(r, bx, py, bw, 8, a.hp, UI.life, a.hpTrail, UI.lifeTrail);
+  if (a.hitFlash > 0) r.withAlpha(a.hitFlash / 0.18 * 0.7, () => r.roundRect(bx, py, bw, 8, 1, C.white));
   if (run.healGlow > 0) r.withAlpha(Math.min(1, run.healGlow * 2), () => r.roundFrame(bx - 0.5, py - 0.5, bw + 1, 9, 1, C.lime, 0.75));
   if (p.shield > 0) r.rect(bx, py + 8.5, bw * Math.min(1, p.shield / st.maxHp), 1, C.cyan);
   drawText(g, `${fmt(p.hp)} / ${fmt(st.maxHp)}`, bx + bw / 2, py + 0.3, C.white, { align: 'center', ...SMALL });
+  if (a.hitT > 0) {
+    const t = `-${fmt(Math.round(a.hitAmt))}`, up = (0.9 - a.hitT) * 4;
+    r.withAlpha(Math.min(1, a.hitT * 3), () => drawText(g, t, x + w + 3, py - up, C.red, { outline: C.black }));
+  }
   // Zasób bohatera: płaski pasek z nazwą i wartością.
   const res = run.hero.resource, fr = resFrac(run), ry = py + 11;
   const hot = res.kind === 'heat' && run.res > BAL.resource.heat.burnFrom;

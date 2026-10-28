@@ -15,6 +15,9 @@ import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
 import { button, Menu, dim, panel, inside, slot, bar } from './widgets';
 import { renderHud } from './hud';
+import { drawSkills } from './skills';
+import type { AbilitySlot } from '../data/heroes';
+import { abilityMaxCd } from '../systems/abilities';
 import { LevelUpView } from './levelup';
 import { LootView, InventoryView, drawItemSlot } from './items';
 import { SLOTS } from '../data/items';
@@ -53,6 +56,7 @@ type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'sh
 const OVERLAY_DELAY = 0.3;
 /** Pauza: lewa kolumna z menu (x, szerokość) i drobny tekst podsumowania. */
 const PL = 8, PLW = 150, SMALL_TXT = { scale: 0.75 } as const;
+const PAUSE_TABS = ['Postać', 'Umiejętności'];
 
 /**
  * Ekran rozgrywki: run + nakładki (awans, karta, skrzynia, pauza, ukończenie poziomu, mapa Ekspedycji, koniec runu).
@@ -75,6 +79,8 @@ export class GameScreen implements Screen {
   private buildReturn: State = 'pause';
   /** Statystyki diagnostyczne w HUD (F3 / `), nie zapisywane. */
   private diag = false;
+  /** Prawa kolumna pauzy: 0 postać (statystyki, bronie, karty), 1 umiejętności z opisami. */
+  private pausePage = 0;
   private anvil: AnvilView | null = null;
   private map: ExpeditionMapView | null = null;
   /** Stan, do którego wraca kowadło (ekran ukończenia, sklep albo mapa). */
@@ -625,6 +631,8 @@ export class GameScreen implements Screen {
       }
       case 'pause':
         if (inp.pressed('pause')) { this.state = this.overlayReturn; return; }
+        if (inp.pressed('left') || inp.pressed('right')) { this.pausePage = 1 - this.pausePage; sfx.play('select'); }
+        PAUSE_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.pauseTab(i))) { this.pausePage = i; sfx.play('select'); } });
         this.pauseMenu.update(inp);
         break;
       case 'cleared':
@@ -716,15 +724,17 @@ export class GameScreen implements Screen {
       wrapText(warn, (PLW - 16) / 0.75).forEach((l, i) => drawText(g, l, PL + PLW / 2, H - 34 + i * 9, C.salmon, { align: 'center', scale: 0.75 }));
     }
 
-    // Prawa kolumna: postać.
+    // Prawa kolumna: postać albo umiejętności (zakładki, strzałki lewo/prawo).
     const px = PL + PLW + 6, pw = W - px - 8, x0 = px + 10, colW = (pw - 20) / 2;
     panel(r, px, 8, pw, H - 16);
+    PAUSE_TABS.forEach((t, i) => button(r, ...this.pauseTab(i), t, { active: i === this.pausePage, accent: C.gold, scale: 0.75 }));
+    if (this.pausePage === 1) { this.renderPauseSkills(px, pw); return; }
     const time = Math.max(1, run.totalTime);
     let totalDmg = 0;
     for (const v of run.dmgBySource.values()) totalDmg += v;
     drawText(g, run.hero.name, x0, 15, run.hero.color, { shadow: C.black });
     drawText(g, `poziom postaci ${run.level}`, x0 + textWidth(run.hero.name) + 6, 15, C.lgray);
-    drawText(g, `DPS ${fmt(totalDmg / time)}`, px + pw - 10, 15, C.gold, { align: 'right', shadow: C.black });
+    drawText(g, `DPS ${fmt(totalDmg / time)}`, px + pw / 2 + 6, 15, C.gold, { shadow: C.black });
     const head = (t: string, y: number) => { drawText(g, t, x0, y, C.lavender); r.withAlpha(0.4, () => r.rect(x0 + textWidth(t) + 4, y + 5, pw - 24 - textWidth(t), 0.5, C.lavender)); };
 
     // Statystyki: etykieta po lewej, wartość po prawej; wartość bazowa przygaszona.
@@ -780,6 +790,29 @@ export class GameScreen implements Screen {
     });
     if (run.cards.length > 8) drawText(g, `+${run.cards.length - 8} więcej`, px + pw - 10, 208, C.dgray, { align: 'right', ...SMALL_TXT });
     if (!run.cards.length) drawText(g, 'Brak kart', x0, 220, C.dgray, SMALL_TXT);
+  }
+
+  /** Zakładka `i` prawej kolumny pauzy: [x, y, szerokość, wysokość]. */
+  private pauseTab(i: number): [number, number, number, number] {
+    const px = PL + PLW + 6, pw = W - px - 8, tw = 58;
+    return [px + pw - 8 - (PAUSE_TABS.length - i) * (tw + 2), 12, tw, 12];
+  }
+
+  /** Pauza, zakładka umiejętności: poziom, odnowienie, opis i ewolucja każdej umiejętności; pasywka i zasób bohatera. */
+  private renderPauseSkills(px: number, pw: number): void {
+    const r = this.app.r, g = r.g, run = this.run, x0 = px + 10;
+    drawText(g, run.hero.name, x0, 15, run.hero.color, { shadow: C.black });
+    const slots: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
+    let y = drawSkills(r, slots.map((sl) => {
+      const a = run.abilities[sl];
+      const cd = sl === 'ult' ? `ładunek ${Math.min(run.ultCharge, run.ultNeed())}/${run.ultNeed()}` : `odnowienie ${abilityMaxCd(run, sl).toFixed(1)} s`;
+      return { def: a.def, level: a.level, cd, evo: true };
+    }), x0, 32, pw - 20);
+    const tw = (pw - 20) / 0.75;
+    for (const [t, col] of [[`Pasywka: ${run.hero.passive.name}. ${run.hero.passive.desc}`, C.yellow], [`Zasób: ${run.hero.resource.name}. ${run.hero.resource.desc}`, run.hero.resource.color]] as const) {
+      for (const line of wrapText(t, tw)) { if (y < H - 18) drawText(g, line, x0, y, col, SMALL_TXT); y += 8; }
+      y += 3;
+    }
   }
 
   private renderCleared(): void {

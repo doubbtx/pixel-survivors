@@ -27,7 +27,8 @@ export const UI = {
   textHi: C.white,
   textDim: C.lavender,
   life: C.red,
-  lifeTrail: C.salmon,
+  /** Ślad świeżo utraconego życia: jasny, żeby trafienie było widać od razu. */
+  lifeTrail: C.cream,
   xp: C.cyan,
   reward: C.gold,
   threat: C.red,
