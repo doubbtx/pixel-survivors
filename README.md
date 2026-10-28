@@ -335,6 +335,10 @@ src/
 - End of run: tiles with the key numbers, damage table with share bars and percentages.
 - HUD: synergy badges show the tag name, and "Stage N" replaces "Level N" so it isn't confused with your character level.
 
+**Fixes (0.23.7)**:
+- End of run: the DPS chart and Build tabs react to clicks on the buttons themselves.
+- Progression in English no longer shows Polish words ("Keystone", "damage taken").
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

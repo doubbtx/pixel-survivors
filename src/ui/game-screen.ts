@@ -636,7 +636,7 @@ export class GameScreen implements Screen {
           this.endPage = (this.endPage + (inp.pressed('left') ? 2 : 1)) % 3;
           sfx.play('select');
         }
-        END_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, 50 + i * 128, 62, 124, 14)) this.endPage = i; });
+        END_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.endTab(i))) this.endPage = i; });
         break;
     }
   }
@@ -811,6 +811,11 @@ export class GameScreen implements Screen {
   private endY = 98;
   private endH = END_BOTTOM - 98;
 
+  /** Prostokąt zakładki `i` ekranu końca (rysowanie i kliknięcie z jednego miejsca). */
+  private endTab(i: number): [number, number, number, number] {
+    return [END_X + i * ((END_W + 4) / 3), this.endY - 17, (END_W - 8) / 3, 14];
+  }
+
   private renderEnd(): void {
     const r = this.app.r, g = r.g, run = this.run;
     dim(r);
@@ -855,7 +860,7 @@ export class GameScreen implements Screen {
     this.endH = END_BOTTOM - this.endY;
     // Zakładki: obrażenia, wykres DPS, karta buildu (Tab / strzałki / klik).
     END_TABS.forEach((t, i) => {
-      button(r, END_X + i * ((END_W + 4) / 3), this.endY - 17, (END_W - 8) / 3, 14, t, { active: i === this.endPage, accent: C.gold });
+      button(r, ...this.endTab(i), t, { active: i === this.endPage, accent: C.gold });
     });
     panel(r, END_X, this.endY, END_W, this.endH);
     if (this.endPage === 0) this.renderDamage();

@@ -3,6 +3,10 @@
  * Nowy napis w grze: dopisz tu jego angielską wersję (kolejność `{}` taka sama).
  */
 export const EN: Record<string, string> = {
+  "+{}% otrzymywanych obrażeń": "+{}% damage taken",
+  "Klucz": "Keystone",
+  "otrzymywanych obrażeń": "damage taken",
+  "-{}% otrzymywanych obrażeń": "-{}% damage taken",
   "Etap": "Stage",
   "Etap {}": "Stage {}",
   "Głębia {}": "Depth {}",

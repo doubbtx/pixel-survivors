@@ -50,7 +50,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `ui/` — `widgets.ts` (panel, dim, bar, Menu, slot), `hud.ts`, `levelup.ts`, `cards.ts`, `items.ts` (LootView, InventoryView),
   `shop.ts` (ShopView), `anvil.ts` (AnvilView z panelem Kuźni: etap `forge`, animacja młota), `expedition.ts` (ExpeditionMapView), `collection.ts` (zakładki: karty i bany, unikaty, sekrety, bestiariusz, osiągnięcia), `meta.ts` (ekran Rozwój), `synergies.ts` (ekran synergii, lista w HUD, ikony tagów), `powers.ts` (wybór mocy bossa), `pacts.ts` (ekran paktów), `game-screen.ts` (stany: play/levelup/cards/power/loot/inventory/shop/anvil/synergies/pause/cleared/map/end; `saveSlot`, `overlayReturn`), `menus.ts` (`SlotScreen` per tryb, `HeroSelect` z `GameOpts`, `DailyScreen`, kod Konami w `MainMenu`).
 
-## Stan (wersja 0.23.6)
+## Stan (wersja 0.23.7)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -303,6 +303,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     w ui/hints.ts): w grze u góry pod celem, w nakładkach na wstędze tytułu, pozostałe czekają w kolejce. Ekran końca:
     kafelki z liczbami, panel zakładek tuż pod liniami informacji (`endY`), obrażenia z paskiem i udziałem %. HUD:
     plakietki synergii z nazwą tagu, „Etap N” zamiast „Poziom N” (myliło się z poziomem postaci). Plakietka „Polecane” na karcie.
+  - 0.23.7: zakładki ekranu końca klikane tam, gdzie są rysowane (`endTab`); Rozwój po angielsku bez polskich resztek (Klucz, otrzymywanych obrażeń).
 
 ## Plan dalej
 
