@@ -403,6 +403,9 @@ src/
 - A nicer Expedition map: the act's terrain in the background, act progress, status chips, a legend, clearer paths, and Backpack / Menu / Travel buttons.
 - Progression: the next node in a branch unlocks once the previous one has at least half of its levels.
 
+**Aurel without lag (0.25.1)**:
+- Fixed heavy stutter during Aurel's attacks (and other growing rings, auras and zones): large circles are now drawn directly instead of being rebuilt pixel by pixel every frame.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

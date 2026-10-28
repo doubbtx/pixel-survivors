@@ -9,6 +9,10 @@ export const H = 270;
  * a świat rysuje się w obszarze VW × VH pikseli logicznych świata (renderer skaluje go do całego ekranu).
  */
 export const ZOOM = 1.5;
+/** Okręgi o większym promieniu (piksele logiczne) rysowane są łukiem zamiast z gotowej bitmapy. */
+const CIRCLE_BITMAP_MAX = 24;
+/** Limit gotowych bitmap okręgów w pamięci podręcznej. */
+const CIRCLE_CACHE_MAX = 300;
 export let VIEW_S = 1;
 export let VIEW_W = W / ZOOM;
 export let VIEW_H = H / ZOOM;
@@ -177,24 +181,37 @@ export class Renderer {
 
   /** Okrąg w stylu pikselowym (obrys lub dysk) — rasteryzowany raz i trzymany w cache. */
   circle(x: number, y: number, r: number, col: number, fill = false): void {
-    // Okrąg liczony na siatce prymitywów (krawędź tej samej gęstości co sprite'y), obwódka grubości 1 piksela logicznego.
-    // W UI okrąg też idzie po siatce bufora (K), żeby pasował do gładkich ramek; pozostałe prymitywy UI zostają w pikselach logicznych.
+    // Duże okręgi (fale, aury, strefy — często rosnące co klatkę): rysowane wprost jako łuk, bez budowania obrazka.
+    // Budowanie bitmapy dla każdego nowego promienia kosztowało setki tysięcy pikseli na klatkę.
+    if (r > CIRCLE_BITMAP_MAX) {
+      const g = this.g;
+      g.fillStyle = g.strokeStyle = PAL[col];
+      g.beginPath();
+      if (fill) { g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+      else { g.lineWidth = 1; g.arc(x, y, r - 0.5, 0, Math.PI * 2); g.stroke(); }
+      return;
+    }
+    // Małe okręgi: z pamięci podręcznej, liczone na siatce prymitywów (krawędź tej samej gęstości co sprite'y),
+    // obwódka grubości 1 piksela logicznego. W UI po siatce bufora (K), żeby pasowały do gładkich ramek.
     const d = this.g === this.wg ? this.worldRes : this.k, R = Math.max(d, Math.round(r * d));
-    if (R > 240 * d) return;
     const key = `${R}|${d}|${col}|${fill ? 1 : 0}`;
     let c = this.circleCache.get(key);
     if (!c) {
-      c = document.createElement('canvas');
-      c.width = c.height = R * 2 + 1;
-      const cg = c.getContext('2d')!;
-      cg.fillStyle = PAL[col];
+      const n = R * 2 + 1, img = new ImageData(n, n), px = img.data, hex = parseInt(PAL[col].slice(1), 16);
+      const cr = (hex >> 16) & 255, cgr = (hex >> 8) & 255, cb = hex & 255;
       for (let yy = -R; yy <= R; yy++) {
         for (let xx = -R; xx <= R; xx++) {
           const dd = Math.sqrt(xx * xx + yy * yy);
-          if (dd <= R + 0.3 && (fill || dd > R - d + 0.3)) cg.fillRect(xx + R, yy + R, 1, 1);
+          if (dd > R + 0.3 || (!fill && dd <= R - d + 0.3)) continue;
+          const o = ((yy + R) * n + xx + R) * 4;
+          px[o] = cr; px[o + 1] = cgr; px[o + 2] = cb; px[o + 3] = 255;
         }
       }
+      c = document.createElement('canvas');
+      c.width = c.height = n;
+      c.getContext('2d')!.putImageData(img, 0, 0);
       this.circleCache.set(key, c);
+      if (this.circleCache.size > CIRCLE_CACHE_MAX) this.circleCache.delete(this.circleCache.keys().next().value!);
     }
     this.g.drawImage(c, Math.round(x * d) / d - R / d, Math.round(y * d) / d - R / d, (R * 2 + 1) / d, (R * 2 + 1) / d);
   }
