@@ -148,14 +148,10 @@ function groundTile(b: Biome, v: number): Painter {
   const r = new Rng(v * 7919 + 13);
   const [dark, base, light] = b.ground;
   p.rect(0, 0, 32, 32, base);
-  // Plamy: szachownica drobnych pikseli wewnątrz elipsy.
+  // Plamy: ciemniejsze miękkie elipsy z ditherowanym brzegiem (drobne piksele, bez szachownicy).
   for (let i = 0; i < 3; i++) {
     const cx = r.int(4, 27), cy = r.int(4, 27), rx = r.int(2, 6), ry = r.int(1, 3);
-    for (let y = cy - ry; y <= cy + ry; y += 0.5) {
-      for (let x = cx - rx; x <= cx + rx; x += 0.5) {
-        if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1 && (x * 2 + y * 2) % 2 === 0) p.dot(x, y, dark);
-      }
-    }
+    p.soft((x, y) => Math.min(...[-32, 0, 32].flatMap((ox) => [-32, 0, 32].map((oy) => ((x - cx - ox) / rx) ** 2 + ((y - cy - oy) / ry) ** 2))), dark, 1);
   }
   // Drobny szum.
   for (let i = 0; i < 70; i++) p.dot(r.int(0, 63) / 2, r.int(0, 63) / 2, r.chance(0.6) ? dark : light);

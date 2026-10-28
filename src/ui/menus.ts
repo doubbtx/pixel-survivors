@@ -45,11 +45,17 @@ function menuBackdrop(app: App, t: number): void {
     const tw = (Math.sin(t * 2 + i) + 1) / 2;
     r.withAlpha(0.4 + 0.6 * tw, () => r.rect(x, y, i % 7 === 0 ? 1 : 0.5, i % 7 === 0 ? 1 : 0.5, i % 5 === 0 ? C.white : C.lgray));
   }
-  // Księżyc z poświatą.
-  r.withAlpha(0.12, () => r.circle(404, 38, 22, C.cream, true));
-  r.circle(404, 38, 12, C.cream, true);
-  r.circle(400, 35, 3, C.tan, true);
-  r.circle(408, 42, 2, C.tan, true);
+  // Księżyc z poświatą: gładkie koła jak wzgórza (grube piksele logiczne odstawały od drobnych sprite'ów).
+  const disc = (x: number, y: number, rad: number, col: number) => {
+    g.fillStyle = PAL[col];
+    g.beginPath();
+    g.arc(x, y, rad, 0, Math.PI * 2);
+    g.fill();
+  };
+  r.withAlpha(0.08, () => disc(404, 38, 24, C.cream));
+  r.withAlpha(0.12, () => disc(404, 38, 17, C.cream));
+  disc(404, 38, 12, C.cream);
+  r.withAlpha(0.7, () => { disc(400, 35, 2.8, C.tan); disc(408.5, 42, 1.8, C.tan); disc(406, 32.5, 1.2, C.tan); });
   // Wzgórza: dalsze jaśniejsze, bliższe ciemniejsze, przesuwają się wolniej niż łąka (paralaksa).
   for (const [col, base, amp, speed, freq] of [[C.navy, groundY - 34, 12, 4, 0.021], [C.black, groundY - 14, 10, 10, 0.034]] as const) {
     g.fillStyle = PAL[col];

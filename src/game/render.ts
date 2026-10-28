@@ -482,14 +482,7 @@ function drawWorld(run: Run, r: Renderer): void {
   // Znacznik gracza (Ustawienia): cienka elipsa na ziemi pod stopami (część sceny, nie nakładka).
   if (run.playerMarker && run.outcome !== 'dead') {
     const pr = 10 + Math.sin(run.time * 4) * 0.8;
-    g.save();
-    g.globalAlpha *= 0.5;
-    g.strokeStyle = PAL[run.player.hurtCd > 0 ? C.red : C.gold];
-    g.lineWidth = 1;
-    g.beginPath();
-    g.ellipse(px, py + 9, pr, pr * 0.42, 0, 0, Math.PI * 2);
-    g.stroke();
-    g.restore();
+    r.withAlpha(0.5, () => r.ellipse(px, py + 9, pr, pr * 0.42, run.player.hurtCd > 0 ? C.red : C.gold));
   }
   // Gracz (miganie przy nietykalności).
   const blink = (p.hurtCd > 0 || p.iframes > 0) && run.step % 6 < 3;
@@ -573,7 +566,8 @@ function drawWorld(run: Run, r: Renderer): void {
   // Cząsteczki i efekty (trafienia, wybuchy, błyski) — też ataki gracza.
   atk(() => {
     for (const pt of run.particles.items) {
-      if (vis(pt.x, pt.y)) r.rect(X(pt.x), Y(pt.y), pt.size + 1, pt.size + 1, pt.col);
+      // Cząsteczki w drobnych pikselach (2/3 piksela logicznego na stopień rozmiaru), jak detale sprite'ów.
+      if (vis(pt.x, pt.y)) r.rect(X(pt.x), Y(pt.y), (pt.size + 1) * 0.67, (pt.size + 1) * 0.67, pt.col);
     }
     for (const f of run.fx.items) {
       const k = f.life / f.max;

@@ -377,6 +377,11 @@ src/
 - Your hero no longer looks pasted on: a thin ground ellipse instead of the bright ring, the hit core only shows when a bullet is close, the small HP bar only when you are hurt, a soft shield glow, and your light now falls on the ground around you.
 - Smaller, thinner text everywhere; ability keys, slot levels and the resource label fit inside the HUD; banners and tips are much smaller.
 
+**One pixel size for the whole world (0.23.18)**:
+- Everything in the world now uses the same fine pixel grid as the characters: ground patches, bullet outlines, the ground ellipse under the hero, puddles, circles and particles were drawn in big chunky pixels before.
+- Ground spots fade out softly instead of a coarse checkerboard; the crate, boulder, pillar, spikes, flowers, reeds and arrows got fine details matching the heroes.
+- The menu moon is smooth like the hills, and circles in panels (level-up cards) follow the smooth UI frames.
+
 ### Jak przetestować
 
 1. `npm run dev` → Kampania Hardcore → Nowa kampania → bohater.

@@ -94,6 +94,21 @@ export class Painter {
     return this;
   }
 
+  /**
+   * Miękka plama: `dist(x, y)` w jednostkach projektu zwraca odległość znormalizowaną (≤ 1 = wnętrze).
+   * Brzeg od `1 - edge` do 1 rozpuszcza się ditheringiem Bayera na drobnych pikselach (bez grubej szachownicy).
+   */
+  soft(dist: (x: number, y: number) => number, c: number, edge = 0.3): this {
+    const r = this.res;
+    for (let fy = 0; fy < this.fh; fy++) {
+      for (let fx = 0; fx < this.fw; fx++) {
+        const v = dist((fx + 0.5) / r, (fy + 0.5) / r);
+        if (v <= 1 - edge || (v <= 1 && (1 - v) / edge > BAYER[(fy & 3) * 4 + (fx & 3)])) this.set(fx, fy, c);
+      }
+    }
+    return this;
+  }
+
   /** Elipsa cieniowana jak kula (światło z lewej-góry). `ramp` od cienia do światła. */
   sphere(cx: number, cy: number, rx: number, ry: number, ramp: Ramp): this {
     const r = this.res;
@@ -136,6 +151,27 @@ export class Painter {
   thin(x0: number, y0: number, x1: number, y1: number, c: number): this {
     const r = this.res, n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1 / r) * r;
     for (let i = 0; i <= n; i++) this.set(Math.floor((x0 + ((x1 - x0) * i) / n) * r), Math.floor((y0 + ((y1 - y0) * i) / n) * r), c);
+    return this;
+  }
+
+  /** Kropka 2×2 piksele obrazu: detal dekoracji (drobniejszy niż jednostka `px`, wyraźniejszy niż `dot`). */
+  spot(x: number, y: number, c: number): this {
+    const fx = Math.floor(x * this.res), fy = Math.floor(y * this.res);
+    return this.dotAt(fx, fy, c).dotAt(fx + 1, fy, c).dotAt(fx, fy + 1, c).dotAt(fx + 1, fy + 1, c);
+  }
+
+  /** Linia grubości 2 pikseli obrazu (łodygi, trzciny, drzewce): środek między `line` a `thin`. */
+  stroke(x0: number, y0: number, x1: number, y1: number, c: number): this {
+    const r = this.res, n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1 / r) * r;
+    for (let i = 0; i <= n; i++) {
+      const fx = Math.floor((x0 + ((x1 - x0) * i) / n) * r), fy = Math.floor((y0 + ((y1 - y0) * i) / n) * r);
+      this.dotAt(fx, fy, c).dotAt(fx + 1, fy, c).dotAt(fx, fy + 1, c).dotAt(fx + 1, fy + 1, c);
+    }
+    return this;
+  }
+
+  private dotAt(fx: number, fy: number, c: number): this {
+    this.set(fx, fy, c);
     return this;
   }
 

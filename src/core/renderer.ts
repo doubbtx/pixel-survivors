@@ -120,9 +120,21 @@ export class Renderer {
     this.g.fillRect(0, 0, W, H);
   }
 
+  /** Siatka prymitywów (podziałki na piksel logiczny): w świecie piksele płótna świata, jak w sprite'ach; w UI piksele logiczne. */
+  private get dens(): number {
+    return this.g === this.wg ? this.worldRes : 1;
+  }
+
+  /** Zaokrąglenie do siatki prymitywów. */
+  private snap(v: number): number {
+    const d = this.dens;
+    return Math.round(v * d) / d;
+  }
+
   rect(x: number, y: number, w: number, h: number, col: number): void {
     this.g.fillStyle = PAL[col];
-    this.g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+    const d = this.dens;
+    this.g.fillRect(this.snap(x), this.snap(y), Math.round(w * d) / d, Math.round(h * d) / d);
   }
 
   /** Zaokrąglony prostokąt wypełniony kolorem albo pionowym gradientem (góra → dół) z palety. Interfejs (gładkie okna). */
@@ -160,36 +172,53 @@ export class Renderer {
 
   /** Okrąg w stylu pikselowym (obrys lub dysk) — rasteryzowany raz i trzymany w cache. */
   circle(x: number, y: number, r: number, col: number, fill = false): void {
-    r = Math.max(1, Math.round(r));
-    if (r > 240) return;
-    const key = `${r}|${col}|${fill ? 1 : 0}`;
+    // Okrąg liczony na siatce prymitywów (krawędź tej samej gęstości co sprite'y), obwódka grubości 1 piksela logicznego.
+    // W UI okrąg też idzie po siatce bufora (K), żeby pasował do gładkich ramek; pozostałe prymitywy UI zostają w pikselach logicznych.
+    const d = this.g === this.wg ? this.worldRes : this.k, R = Math.max(d, Math.round(r * d));
+    if (R > 240 * d) return;
+    const key = `${R}|${d}|${col}|${fill ? 1 : 0}`;
     let c = this.circleCache.get(key);
     if (!c) {
       c = document.createElement('canvas');
-      c.width = c.height = r * 2 + 1;
+      c.width = c.height = R * 2 + 1;
       const cg = c.getContext('2d')!;
       cg.fillStyle = PAL[col];
-      for (let yy = -r; yy <= r; yy++) {
-        for (let xx = -r; xx <= r; xx++) {
-          const d = Math.sqrt(xx * xx + yy * yy);
-          if (d <= r + 0.3 && (fill || d > r - 0.7)) cg.fillRect(xx + r, yy + r, 1, 1);
+      for (let yy = -R; yy <= R; yy++) {
+        for (let xx = -R; xx <= R; xx++) {
+          const dd = Math.sqrt(xx * xx + yy * yy);
+          if (dd <= R + 0.3 && (fill || dd > R - d + 0.3)) cg.fillRect(xx + R, yy + R, 1, 1);
         }
       }
       this.circleCache.set(key, c);
     }
-    this.g.drawImage(c, Math.round(x) - r, Math.round(y) - r);
+    this.g.drawImage(c, Math.round(x * d) / d - R / d, Math.round(y * d) / d - R / d, (R * 2 + 1) / d, (R * 2 + 1) / d);
   }
 
-  /** Linia Bresenhama o grubości `w` pikseli. */
+  /** Obwódka elipsy grubości jednej podziałki siatki prymitywów (w świecie: drobny piksel, bez wygładzania wektorowego). */
+  ellipse(x: number, y: number, rx: number, ry: number, col: number): void {
+    this.g.fillStyle = PAL[col];
+    const d = this.dens, cx = this.snap(x) * d, cy = this.snap(y) * d, RX = rx * d, RY = ry * d;
+    for (let yy = Math.floor(-RY) - 1; yy <= Math.ceil(RY) + 1; yy++) {
+      for (let xx = Math.floor(-RX) - 1; xx <= Math.ceil(RX) + 1; xx++) {
+        // Odległość od brzegu w pikselach siatki (przybliżenie przez gradient funkcji elipsy).
+        const f = (xx / RX) ** 2 + (yy / RY) ** 2 - 1;
+        const gl = 2 * Math.hypot(xx / (RX * RX), yy / (RY * RY)) || 1;
+        if (Math.abs(f / gl) <= 0.5) this.g.fillRect((cx + xx) / d, (cy + yy) / d, 1 / d, 1 / d);
+      }
+    }
+  }
+
+  /** Linia Bresenhama o grubości `w` pikseli logicznych, krokowana co podziałkę siatki prymitywów (gładkie skosy w świecie). */
   line(x0: number, y0: number, x1: number, y1: number, col: number, w = 1): void {
     this.g.fillStyle = PAL[col];
-    x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+    const d = this.dens;
+    x0 = Math.round(x0 * d); y0 = Math.round(y0 * d); x1 = Math.round(x1 * d); y1 = Math.round(y1 * d);
     const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
-    const o = Math.floor(w / 2);
+    const o = Math.floor((w * d) / 2);
     let err = dx + dy;
-    for (let i = 0; i < 1500; i++) {
-      this.g.fillRect(x0 - o, y0 - o, w, w);
+    for (let i = 0; i < 1500 * d; i++) {
+      this.g.fillRect((x0 - o) / d, (y0 - o) / d, w, w);
       if (x0 === x1 && y0 === y1) break;
       const e2 = 2 * err;
       if (e2 >= dy) { err += dy; x0 += sx; }

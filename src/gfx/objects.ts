@@ -29,21 +29,33 @@ export function swordStone(): Painter {
 /** Osłona terenu (systems/terrain.ts): 0 skrzynia, 1 głaz, 2 kolumna; `cracked` = uszkodzona (pęknięcia). */
 export function cover(v: number, cracked: boolean): Painter {
   const p = new Painter(26, 28, HI);
+  const e = 1 / HI;
   if (v === 0) {
-    // Skrzynia okuta metalem.
-    p.block(2, 8, 22, 18, RAMP.wood).rect(2, 16, 22, 1, C.ddbrown).rect(12, 8, 2, 18, C.ddbrown);
-    p.line(3, 9, 23, 25, C.dbrown).rect(2, 8, 22, 1, C.clay);
-    for (const [x, y] of [[2, 8], [21, 8], [2, 23], [21, 23]]) p.rect(x, y, 3, 3, C.lgray).px(x + 1, y + 1, C.white);
+    // Skrzynia okuta metalem: deski z fugami i słojami, metalowe narożniki z nitami (detale w drobnych pikselach).
+    p.block(2, 8, 22, 18, RAMP.wood);
+    for (const y of [12.5, 17, 21.5]) p.thin(2 + e, y, 24 - e, y, C.ddbrown).thin(2 + e, y + e, 24 - e, y + e, C.clay);
+    p.rect(12, 8, 2, 18, C.dbrown).thin(12, 8, 12, 26 - e, C.ddbrown).thin(13.5, 8, 13.5, 26 - e, C.clay);
+    for (const [x, y] of [[5, 10], [17, 14.5], [7, 19], [19, 23.5], [8, 14.5], [16, 10]]) p.thin(x, y, x + 3, y, C.dbrown);
+    p.rect(2, 8, 22, e * 2, C.tan);
+    for (const [x, y, sx, sy] of [[2, 8, 1, 1], [24, 8, -1, 1], [2, 26, 1, -1], [24, 26, -1, -1]] as const) {
+      const x0 = sx > 0 ? x : x - 4, y0 = sy > 0 ? y : y - 4;
+      p.block(x0, y0, 4, 4, RAMP.stone).dot(x0 + 1.4, y0 + 1.4, C.white).dot(x0 + 2.4, y0 + 2.4, C.dgray);
+    }
+    p.block(11.5, 15, 3, 4, RAMP.gold).dot(12.8, 16.5, C.ddbrown).dot(12.8, 17, C.ddbrown);
   } else if (v === 1) {
-    // Głaz o nieregularnym kształcie.
+    // Głaz o nieregularnym kształcie, rysy i mech w drobnych pikselach.
     p.polyShade([[1, 26], [3, 14], [8, 6], [15, 4], [22, 9], [25, 18], [24, 26]], RAMP.stone);
-    p.line(8, 9, 12, 7, C.lgray).line(5, 15, 7, 11, C.lgray).line(14, 14, 18, 22, C.slate).line(18, 22, 21, 20, C.slate);
+    p.thin(8, 9, 12, 7, C.lgray).thin(5, 15, 7, 11, C.lgray).thin(9, 8, 10.5, 7.3, C.white);
+    p.thin(14, 14, 18, 22, C.slate).thin(18, 22, 21, 20, C.slate).thin(14.3, 14, 18.3, 22, C.dgray);
+    for (const [x, y] of [[3, 24], [5, 25], [4, 23.5], [21, 25], [23, 24]]) p.dot(x, y, C.green).dot(x + e, y, C.dgreen);
   } else {
-    // Kolumna z głowicą.
-    p.block(7, 4, 12, 20, RAMP.stone).rect(4, 22, 18, 4, C.dgray).rect(4, 22, 18, 1, C.lgray).rect(5, 1, 16, 4, C.lavender).rect(5, 1, 16, 1, C.white);
-    p.line(10, 6, 10, 21, C.slate).line(15, 6, 15, 21, C.slate);
+    // Kolumna z głowicą: żłobienia i faza w drobnych pikselach.
+    p.block(7, 4, 12, 20, RAMP.stone).block(4, 22, 18, 4, RAMP.stone).block(5, 1, 16, 4, [C.dgray, C.lavender, C.lavender, C.white]);
+    for (const x of [9.5, 12.5, 15.5]) p.thin(x, 5.5, x, 21.5, C.slate).thin(x + e, 5.5, x + e, 21.5, C.lgray);
   }
-  if (cracked) p.line(8, 10, 13, 16, C.black).line(13, 16, 10, 22, C.black).line(13, 16, 18, 13, C.black);
+  if (cracked) {
+    for (const [a, b, c2, d] of [[8, 10, 13, 16], [13, 16, 10, 22], [13, 16, 18, 13]] as const) p.thin(a, b, c2, d, C.black).thin(a + e, b, c2 + e, d, C.dgray);
+  }
   return p.outline();
 }
 
@@ -61,8 +73,9 @@ export function spikes(up: boolean): Painter {
   const p = new Painter(26, 18, HI);
   p.sphere(13, 12, 12, 5, RAMP.night);
   for (const [x, y] of [[6, 11], [13, 10], [20, 11], [9, 14], [17, 14]]) {
-    if (up) p.poly([[x - 2, y + 1], [x, y - 7], [x + 2, y + 1]], C.lgray).line(x, y - 6, x, y, C.white);
-    else p.rect(x - 1, y, 3, 2, C.black);
+    // Otwór: ciemna elipsa z jasnym dolnym brzegiem; wysunięte ostrze z cienkim światłem krawędzi.
+    p.sphere(x, y + 1, 1.8, 1, [C.black, C.black, C.navy]).thin(x - 1, y + 2, x + 1, y + 2, C.slate);
+    if (up) p.poly([[x - 1.5, y + 1], [x, y - 7], [x + 1.5, y + 1]], C.lgray).thin(x - 0.4, y - 6, x - 0.4, y, C.white).thin(x + 0.6, y - 4, x + 0.6, y, C.dgray);
   }
   return p.outline();
 }
