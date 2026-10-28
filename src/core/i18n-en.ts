@@ -2079,7 +2079,7 @@ export const EN: Record<string, string> = {
   "Obraz i widoczność...": "Display and Visibility...",
   "Obraz: {}": "Display: {}",
   "Ogólne": "General",
-  "Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety (więcej FPS, telefon).": "Low: fewer particles, no shadows, glow or vignette (more FPS, good for phones).",
+  "Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety, świat w niższej rozdzielczości (więcej FPS, telefon).": "Low: fewer particles, no shadows, glows or vignette, and a lower-resolution world (more FPS, phones).",
   "POSTĘP": "PROGRESS",
   "Pakty dnia:": "Pacts of the day:",
   "Pakty ryzyka [Tab]": "Risk Pacts [Tab]",

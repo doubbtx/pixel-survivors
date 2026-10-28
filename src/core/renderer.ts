@@ -14,12 +14,10 @@ export let VIEW_W = W / ZOOM;
 export let VIEW_H = H / ZOOM;
 export let VW = W;
 export let VH = H;
-/** Rozdzielczość płótna świata (piksele na piksel logiczny świata): 2 = detale postaci w stylu 32-bit. */
-const WORLD_RES = 2;
 
 /**
  * Renderer: bufor W·K × H·K (K całkowite) — UI rysuje w pikselach logicznych przez transformację ×K (gładkie linie, zaokrąglenia).
- * Świat (beginWorld) rysuje się na osobnym płótnie w pikselach logicznych świata (VW × VH, płótno WORLD_RES razy gęstsze)
+ * Świat (beginWorld) rysuje się na osobnym płótnie w pikselach logicznych świata (VW × VH, płótno `worldRes` razy gęstsze)
  * i endWorld wkleja je do bufora powiększone o K·s (też całkowite, więc piksele sprite'ów są równe).
  * Prymitywy pikselowe (prostokąty, okręgi z cache, linie Bresenhama) trzymają się palety;
  * półprzezroczystość ustawia się przez globalAlpha (cienie, poświaty).
@@ -38,6 +36,8 @@ export class Renderer {
   /** Przybliżenie świata żądane w Ustawieniach (rzeczywiste: VIEW_S, zaokrąglone tak, żeby K·s było całkowite). */
   private zoom = 1;
   private circleCache = new Map<string, HTMLCanvasElement>();
+  /** Rozdzielczość płótna świata (piksele na piksel logiczny świata): 3 = pełne detale grafiki, 2 = Efekty oszczędne. */
+  private worldRes = 3;
 
   constructor(private readonly display: HTMLCanvasElement) {
     this.buf = display;
@@ -52,6 +52,13 @@ export class Renderer {
     this.resize();
   }
 
+  /** Rozdzielczość płótna świata (Ustawienia: Efekty pełne 3, oszczędne 2). */
+  setWorldRes(res: number): void {
+    if (res === this.worldRes) return;
+    this.worldRes = res;
+    this.applyZoom();
+  }
+
   /** Przybliżenie świata (1 = najdalej). */
   setZoom(z: number): void {
     this.zoom = z;
@@ -64,11 +71,11 @@ export class Renderer {
     VH = H / VIEW_S;
     VIEW_W = VW / ZOOM;
     VIEW_H = VH / ZOOM;
-    this.world.width = Math.ceil(VW) * WORLD_RES;
-    this.world.height = Math.ceil(VH) * WORLD_RES;
+    this.world.width = Math.ceil(VW) * this.worldRes;
+    this.world.height = Math.ceil(VH) * this.worldRes;
     this.wg.imageSmoothingEnabled = false;
     // Rysowanie w pikselach logicznych świata; sprite'y 32-bit (obraz 2×) pokazują wtedy pełne detale.
-    this.wg.setTransform(WORLD_RES, 0, 0, WORLD_RES, 0, 0);
+    this.wg.setTransform(this.worldRes, 0, 0, this.worldRes, 0, 0);
   }
 
   /**
@@ -99,7 +106,7 @@ export class Renderer {
   /** Wkleja świat do bufora (powiększenie VIEW_S, piksele równe) i wraca do rysowania UI. */
   endWorld(): void {
     this.g = this.ui;
-    this.ui.drawImage(this.world, 0, 0, (this.world.width / WORLD_RES) * VIEW_S, (this.world.height / WORLD_RES) * VIEW_S);
+    this.ui.drawImage(this.world, 0, 0, (this.world.width / this.worldRes) * VIEW_S, (this.world.height / this.worldRes) * VIEW_S);
   }
 
   /** Przelicza współrzędne zdarzenia (px ekranu) na piksele logiczne bufora. */

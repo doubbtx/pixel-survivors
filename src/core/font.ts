@@ -2,157 +2,38 @@ import { PAL } from './palette';
 import { tr } from './i18n';
 
 /**
- * Proporcjonalna czcionka pikselowa w stylu 16-bit: wielkie i małe litery, cyfry, interpunkcja.
- * Glif = wiersze '#'/'.' (szerokość wynika z długości wiersza). Wysokość wersalików 7 px,
- * x-height 5 px, wydłużenia dolne 2 px. Nad wersalikami są 2 wiersze na akcenty polskich liter,
- * które składane są z litery bazowej + akcentu (ą ć ę ń ó ś ź ż i wielkie).
- * Układ komórki: [2 wiersze akcentów][7 wierszy korpusu][2 wiersze wydłużeń] = 11 px.
+ * Czcionka gry: gładka, zaokrąglona Nunito (licencja OFL, pakiet @fontsource/nunito, ładowana w main.ts) rysowana wektorowo
+ * na buforze K× — ostre krawędzie przy każdej skali okna. Rozmiar dobrany do dawnej czcionki pikselowej: linia 12 px,
+ * wersaliki ok. 7 px, linia bazowa 9 px poniżej górnej krawędzi (nad nią miejsce na akcenty wersalików).
+ * Większe napisy (scale ≥ 2: tytuły) w grubszej odmianie.
  */
-const G: Record<string, string[]> = {
-  A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
-  B: ['####.', '#...#', '#...#', '####.', '#...#', '#...#', '####.'],
-  C: ['.###.', '#...#', '#....', '#....', '#....', '#...#', '.###.'],
-  D: ['####.', '#...#', '#...#', '#...#', '#...#', '#...#', '####.'],
-  E: ['#####', '#....', '#....', '####.', '#....', '#....', '#####'],
-  F: ['#####', '#....', '#....', '####.', '#....', '#....', '#....'],
-  G: ['.###.', '#...#', '#....', '#.###', '#...#', '#...#', '.####'],
-  H: ['#...#', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
-  I: ['###', '.#.', '.#.', '.#.', '.#.', '.#.', '###'],
-  J: ['..###', '...#.', '...#.', '...#.', '#..#.', '#..#.', '.##..'],
-  K: ['#...#', '#..#.', '#.#..', '##...', '#.#..', '#..#.', '#...#'],
-  L: ['#....', '#....', '#....', '#....', '#....', '#....', '#####'],
-  Ł: ['#....', '#....', '#.#..', '##...', '#....', '#....', '#####'],
-  M: ['#...#', '##.##', '#.#.#', '#.#.#', '#...#', '#...#', '#...#'],
-  N: ['#...#', '##..#', '#.#.#', '#..##', '#...#', '#...#', '#...#'],
-  O: ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
-  P: ['####.', '#...#', '#...#', '####.', '#....', '#....', '#....'],
-  Q: ['.###.', '#...#', '#...#', '#...#', '#.#.#', '#..#.', '.##.#'],
-  R: ['####.', '#...#', '#...#', '####.', '#.#..', '#..#.', '#...#'],
-  S: ['.####', '#....', '#....', '.###.', '....#', '....#', '####.'],
-  T: ['#####', '..#..', '..#..', '..#..', '..#..', '..#..', '..#..'],
-  U: ['#...#', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
-  V: ['#...#', '#...#', '#...#', '#...#', '#...#', '.#.#.', '..#..'],
-  W: ['#...#', '#...#', '#...#', '#.#.#', '#.#.#', '##.##', '#...#'],
-  X: ['#...#', '#...#', '.#.#.', '..#..', '.#.#.', '#...#', '#...#'],
-  Y: ['#...#', '#...#', '.#.#.', '..#..', '..#..', '..#..', '..#..'],
-  Z: ['#####', '....#', '...#.', '..#..', '.#...', '#....', '#####'],
-  a: ['....', '....', '.##.', '...#', '.###', '#..#', '.###'],
-  b: ['#...', '#...', '###.', '#..#', '#..#', '#..#', '###.'],
-  c: ['....', '....', '.###', '#...', '#...', '#...', '.###'],
-  d: ['...#', '...#', '.###', '#..#', '#..#', '#..#', '.###'],
-  e: ['....', '....', '.##.', '#..#', '####', '#...', '.###'],
-  f: ['..##', '.#..', '####', '.#..', '.#..', '.#..', '.#..'],
-  g: ['....', '....', '.###', '#..#', '#..#', '#..#', '.###', '...#', '.##.'],
-  h: ['#...', '#...', '###.', '#..#', '#..#', '#..#', '#..#'],
-  i: ['.#.', '...', '##.', '.#.', '.#.', '.#.', '###'],
-  j: ['..#', '...', '.##', '..#', '..#', '..#', '..#', '#.#', '.#.'],
-  k: ['#...', '#...', '#..#', '#.#.', '##..', '#.#.', '#..#'],
-  l: ['##.', '.#.', '.#.', '.#.', '.#.', '.#.', '###'],
-  ł: ['##.', '.#.', '.##', '##.', '.#.', '.#.', '###'],
-  m: ['.....', '.....', '##.#.', '#.#.#', '#.#.#', '#.#.#', '#...#'],
-  n: ['....', '....', '###.', '#..#', '#..#', '#..#', '#..#'],
-  o: ['....', '....', '.##.', '#..#', '#..#', '#..#', '.##.'],
-  p: ['....', '....', '###.', '#..#', '#..#', '#..#', '###.', '#...', '#...'],
-  q: ['....', '....', '.###', '#..#', '#..#', '#..#', '.###', '...#', '...#'],
-  r: ['...', '...', '#.#', '##.', '#..', '#..', '#..'],
-  s: ['....', '....', '.###', '#...', '.##.', '...#', '###.'],
-  t: ['.#..', '.#..', '####', '.#..', '.#..', '.#..', '..##'],
-  u: ['....', '....', '#..#', '#..#', '#..#', '#..#', '.###'],
-  v: ['.....', '.....', '#...#', '#...#', '#...#', '.#.#.', '..#..'],
-  w: ['.....', '.....', '#...#', '#...#', '#.#.#', '#.#.#', '.#.#.'],
-  x: ['....', '....', '#..#', '#..#', '.##.', '#..#', '#..#'],
-  y: ['....', '....', '#..#', '#..#', '#..#', '#..#', '.###', '...#', '.##.'],
-  z: ['....', '....', '####', '...#', '.##.', '#...', '####'],
-  '0': ['.##.', '#..#', '#.##', '##.#', '#..#', '#..#', '.##.'],
-  '1': ['.#.', '##.', '.#.', '.#.', '.#.', '.#.', '###'],
-  '2': ['.##.', '#..#', '...#', '..#.', '.#..', '#...', '####'],
-  '3': ['###.', '...#', '...#', '.##.', '...#', '...#', '###.'],
-  '4': ['..##', '.#.#', '#..#', '####', '...#', '...#', '...#'],
-  '5': ['####', '#...', '###.', '...#', '...#', '#..#', '.##.'],
-  '6': ['.##.', '#...', '#...', '###.', '#..#', '#..#', '.##.'],
-  '7': ['####', '...#', '..#.', '..#.', '.#..', '.#..', '.#..'],
-  '8': ['.##.', '#..#', '#..#', '.##.', '#..#', '#..#', '.##.'],
-  '9': ['.##.', '#..#', '#..#', '.###', '...#', '...#', '.##.'],
-  '.': ['.', '.', '.', '.', '.', '.', '#'],
-  ',': ['..', '..', '..', '..', '..', '..', '.#', '#.'],
-  ':': ['.', '.', '#', '.', '.', '.', '#'],
-  ';': ['..', '..', '.#', '..', '..', '..', '.#', '#.'],
-  '!': ['#', '#', '#', '#', '#', '.', '#'],
-  '?': ['.##.', '#..#', '...#', '..#.', '.#..', '....', '.#..'],
-  '-': ['...', '...', '...', '###', '...', '...', '...'],
-  '+': ['...', '...', '.#.', '###', '.#.', '...', '...'],
-  '/': ['...#', '...#', '..#.', '.#..', '.#..', '#...', '#...'],
-  '%': ['#...#', '#..#.', '...#.', '..#..', '.#...', '.#..#', '#...#'],
-  '(': ['.#', '#.', '#.', '#.', '#.', '#.', '.#'],
-  ')': ['#.', '.#', '.#', '.#', '.#', '.#', '#.'],
-  '[': ['##', '#.', '#.', '#.', '#.', '#.', '##'],
-  ']': ['##', '.#', '.#', '.#', '.#', '.#', '##'],
-  "'": ['#', '#', '.', '.', '.', '.', '.'],
-  '"': ['#.#', '#.#', '...', '...', '...', '...', '...'],
-  '=': ['...', '...', '###', '...', '###', '...', '...'],
-  '<': ['...#', '..#.', '.#..', '#...', '.#..', '..#.', '...#'],
-  '>': ['#...', '.#..', '..#.', '...#', '..#.', '.#..', '#...'],
-  '*': ['...', '...', '#.#', '.#.', '#.#', '...', '...'],
-  '#': ['.....', '.#.#.', '#####', '.#.#.', '#####', '.#.#.', '.....'],
-  '_': ['....', '....', '....', '....', '....', '....', '####'],
-  '^': ['.#.', '#.#', '...', '...', '...', '...', '...'],
-  ' ': ['..', '..', '..', '..', '..', '..', '..'],
-};
-
-type Accent = 'acute' | 'dot' | 'ogonek';
-const POLISH: Record<string, [string, Accent]> = {
-  Ą: ['A', 'ogonek'], Ć: ['C', 'acute'], Ę: ['E', 'ogonek'], Ń: ['N', 'acute'], Ó: ['O', 'acute'],
-  Ś: ['S', 'acute'], Ź: ['Z', 'acute'], Ż: ['Z', 'dot'],
-  ą: ['a', 'ogonek'], ć: ['c', 'acute'], ę: ['e', 'ogonek'], ń: ['n', 'acute'], ó: ['o', 'acute'],
-  ś: ['s', 'acute'], ź: ['z', 'acute'], ż: ['z', 'dot'],
-};
-
 export const LINE_H = 12;
-const TOP = 2;
-const CELL_H = 11;
+const FONT_PX = 9.5;
+const BASELINE = 9;
+const FAMILY = '"Nunito", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
 
-/** Wiersze korpusu glifu (bez akcentów). Nieznane znaki rysowane jako '?'. */
-export function glyph(ch: string): string[] {
-  const pl = POLISH[ch];
-  return G[pl ? pl[0] : ch] ?? G['?'];
-}
+const fontOf = (scale: number) => `${scale >= 2 ? 800 : 700} ${FONT_PX * scale}px ${FAMILY}`;
 
-function glyphWidth(ch: string): number {
-  return glyph(ch)[0].length;
-}
+/** Pomiar szerokości: osobny kontekst i pamięć podręczna (czyszczona po wczytaniu czcionki, `resetFontCache`). */
+const measure = document.createElement('canvas').getContext('2d')!;
+const widths = new Map<string, number>();
 
-const cache = new Map<string, HTMLCanvasElement>();
-
-function glyphCanvas(ch: string, col: number): HTMLCanvasElement {
-  const key = ch + col;
-  let c = cache.get(key);
-  if (c) return c;
-  const rows = glyph(ch);
-  const w = rows[0].length;
-  c = document.createElement('canvas');
-  c.width = w;
-  c.height = CELL_H;
-  const g = c.getContext('2d')!;
-  g.fillStyle = PAL[col];
-  rows.forEach((row, y) => { for (let x = 0; x < w; x++) if (row[x] === '#') g.fillRect(x, TOP + y, 1, 1); });
-  const pl = POLISH[ch];
-  if (pl) {
-    const upper = ch === ch.toUpperCase();
-    const top = upper ? 0 : TOP;
-    const cx = Math.floor(w / 2);
-    if (pl[1] === 'acute') { g.fillRect(cx + 1, top, 1, 1); g.fillRect(cx, top + 1, 1, 1); }
-    if (pl[1] === 'dot') g.fillRect(cx, top + 1, 1, 1);
-    if (pl[1] === 'ogonek') { g.fillRect(w - 2, TOP + 7, 1, 1); g.fillRect(w - 1, TOP + 8, 1, 1); }
-  }
-  cache.set(key, c);
-  return c;
+export function resetFontCache(): void {
+  widths.clear();
+  labels.clear();
 }
 
 /** Szerokość napisu bez tłumaczenia (napis już w docelowym języku). */
 function rawWidth(s: string, scale = 1): number {
-  let w = 0;
-  for (const ch of s) w += glyphWidth(ch) + 1;
-  return Math.max(0, w - 1) * scale;
+  const key = `${scale >= 2 ? 'b' : 'n'}${s}`;
+  let w = widths.get(key);
+  if (w === undefined) {
+    if (widths.size > 8000) widths.clear();
+    measure.font = fontOf(scale >= 2 ? 2 : 1);
+    w = measure.measureText(s).width / (scale >= 2 ? 2 : 1);
+    widths.set(key, w);
+  }
+  return w * scale;
 }
 
 /** Szerokość napisu po przetłumaczeniu (core/i18n.ts) — tak, jak go narysuje drawText. */
@@ -162,7 +43,7 @@ export function textWidth(s: string, scale = 1): number {
 
 export interface TextOpts {
   align?: 'left' | 'center' | 'right';
-  /** Kolor cienia przesuniętego o 1 px w prawo i w dół. */
+  /** Kolor cienia przesuniętego w prawo i w dół. */
   shadow?: number;
   /** Kolor pełnego obrysu (czytelność na ruchliwym tle). */
   outline?: number;
@@ -170,36 +51,36 @@ export interface TextOpts {
 }
 
 /** Rysuje tekst. `y` to górna krawędź linii (łącznie z miejscem na akcenty wersalików). */
-/** Kierunki obrysu napisu (8 sąsiadów). */
-const OUTLINE_DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
-
 export function drawText(g: CanvasRenderingContext2D, s: string, x: number, y: number, col: number, o: TextOpts = {}): void {
   s = tr(s);
+  if (!s) return;
   const scale = o.scale ?? 1;
   const w = rawWidth(s, scale);
-  let sx = Math.round(o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x);
-  const sy = Math.round(y);
-  for (const ch of s) {
-    const gw = glyphWidth(ch);
-    if (ch !== ' ') {
-      const dw = gw * scale, dh = CELL_H * scale;
-      if (o.outline !== undefined) {
-        const oc = glyphCanvas(ch, o.outline);
-        // Obrys pół piksela logicznego (bufor ma więcej pikseli): cieńszy i czystszy niż pełny piksel.
-        const o2 = 0.5 * scale;
-        for (const [dx, dy] of OUTLINE_DIRS) g.drawImage(oc, sx + dx * o2, sy + dy * o2, dw, dh);
-      }
-      if (o.shadow !== undefined) g.drawImage(glyphCanvas(ch, o.shadow), sx + scale, sy + scale, dw, dh);
-      g.drawImage(glyphCanvas(ch, col), sx, sy, dw, dh);
-    }
-    sx += (gw + 1) * scale;
+  const sx = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+  const by = y + BASELINE * scale;
+  g.font = fontOf(scale);
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+  if (o.outline !== undefined) {
+    g.strokeStyle = PAL[o.outline];
+    g.lineJoin = 'round';
+    g.lineWidth = 1.6 * Math.max(1, scale * 0.75);
+    g.strokeText(s, sx, by);
   }
+  if (o.shadow !== undefined) {
+    g.fillStyle = PAL[o.shadow];
+    g.fillText(s, sx + 0.75 * scale, by + 0.75 * scale);
+  }
+  g.fillStyle = PAL[col];
+  g.fillText(s, sx, by);
 }
 
 const labels = new Map<string, HTMLCanvasElement>();
+/** Rozdzielczość gotowych napisów (piksele obrazu na piksel logiczny): ostre także po powiększeniu. */
+const LABEL_RES = 4;
 
 /**
- * Napis z obrysem wyśrodkowany w (x, y) z gotowego obrazka — jedno rysowanie zamiast pięciu na znak.
+ * Napis z obrysem wyśrodkowany w (x, y) z gotowego obrazka — jedno rysowanie zamiast tekstu wektorowego co klatkę.
  * Dla często powtarzanych krótkich napisów (liczby obrażeń); pamięć podręczna czyszczona po 500 wpisach.
  */
 export function drawLabel(g: CanvasRenderingContext2D, s: string, x: number, y: number, col: number, outline: number): void {
@@ -209,12 +90,15 @@ export function drawLabel(g: CanvasRenderingContext2D, s: string, x: number, y: 
   if (!c) {
     if (labels.size > 500) labels.clear();
     c = document.createElement('canvas');
-    c.width = textWidth(s) + 2;
-    c.height = CELL_H + 2;
-    drawText(c.getContext('2d')!, s, 1, 1, col, { outline });
+    c.width = Math.ceil((rawWidth(s) + 4) * LABEL_RES);
+    c.height = (LINE_H + 2) * LABEL_RES;
+    const cg = c.getContext('2d')!;
+    cg.scale(LABEL_RES, LABEL_RES);
+    drawText(cg, s, 2, 1, col, { outline });
     labels.set(key, c);
   }
-  g.drawImage(c, Math.round(x - c.width / 2), Math.round(y) - 1);
+  const w = c.width / LABEL_RES, h = c.height / LABEL_RES;
+  g.drawImage(c, Math.round(x - w / 2), Math.round(y) - 1, w, h);
 }
 
 /** Łamie tekst (najpierw tłumaczony w całości) na linie o szerokości max `maxW` pikseli, po słowach. */

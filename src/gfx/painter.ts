@@ -269,5 +269,5 @@ export class Painter {
 const RES = new WeakMap<HTMLCanvasElement, number>();
 
 /** Rozdzielczość grafiki świata w stylu 32-bit (piksele obrazu na jednostkę); ikony interfejsu zostają przy 1. */
-export const HI = 2;
+export const HI = 3;
 export const canvasRes = (c: HTMLCanvasElement): number => RES.get(c) ?? 1;

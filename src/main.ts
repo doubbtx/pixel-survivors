@@ -9,6 +9,9 @@ import { MainMenu, toggleFullscreen } from './ui/menus';
 import { pointer } from './ui/widgets';
 import { setLang } from './core/i18n';
 import { music } from './core/music';
+import { resetFontCache } from './core/font';
+import '@fontsource/nunito/700.css';
+import '@fontsource/nunito/800.css';
 
 /**
  * Punkt wejścia: tworzy renderer, wejście i zapis, a potem kręci pętlę ze stałym krokiem.
@@ -22,7 +25,11 @@ sfx.setVolume(save.settings.volume);
 music.setVolume(save.settings.music);
 renderer.setFill(save.settings.scaleFill);
 renderer.setZoom(save.settings.zoom);
+renderer.setWorldRes(save.settings.lowFx ? 2 : 3);
 setLang(save.settings.lang);
+// Czcionka: wymuszenie wczytania (płótno samo jej nie zażąda), potem nowe pomiary szerokości napisów.
+const SAMPLE = 'Aa ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ';
+Promise.all([document.fonts.load('700 10px Nunito', SAMPLE), document.fonts.load('800 20px Nunito', SAMPLE)]).then(resetFontCache, () => undefined);
 
 // AudioContext wymaga gestu użytkownika.
 const unlock = () => sfx.unlock();
@@ -41,6 +48,7 @@ const app: App = {
   go(s) { screen = s; fadeT = FADE; input.touchControls = false; input.stick = null; },
   persist() {
     writeSave(save);
+    renderer.setWorldRes(save.settings.lowFx ? 2 : 3);
     sfx.setVolume(save.settings.volume);
     music.setVolume(save.settings.music);
   },

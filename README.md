@@ -7,7 +7,7 @@ Przeglądarkowy survivors-like / bullet hell w stylu 16-bit: Canvas 2D + TypeScr
 - Ekran 480×270 skalowany całkowitoliczbowo (`imageSmoothingEnabled = false`). Świat rysowany w powiększeniu 1,5× (`ZOOM` w `core/renderer.ts`): logika gry działa w jednostkach świata, a sprite'y mają więcej detali niż hitboksy.
 - Paleta ENDESGA 32 z rampami cieniowania (`core/palette.ts`). Półprzezroczystość (cienie, poświaty stref, przyciemnienia) miesza kolory palety, jak „color math” na SNES-ie.
 - Sprite'y generowane w kodzie: `gfx/painter.ts` (cieniowanie rampą ze światłem z lewej-góry, automatyczny obrys), `gfx/actors.ts` (postacie z animacją: chód bohaterów, pulsowanie szlamów, machanie skrzydłami, mruganie, migotanie płomieni, „oddech” bossa), `gfx/icons.ts` (56 ikon 16×16: 20 broni z ewolucjami, 13 pasywek, 8 umiejętności, 4 usługi sklepu, odłamek, 10 tagów kart), `gfx/world.ts` (iskry trafień, obłoki śmierci, eksplozje, strzały w 16 kierunkach, 24 dekoracje terenu — 6 na biom). Gra odwołuje się tylko do nazw sprite'ów (`nazwa@klatka`), więc można je podmienić na sprite sheet bez zmian w logice.
-- Proporcjonalna czcionka pikselowa z małymi literami i polskimi znakami (`core/font.ts`), z cieniem albo obrysem.
+- Gładka czcionka Nunito (`core/font.ts`, pakiet @fontsource/nunito, licencja OFL) z cieniem albo obrysem.
 - Okna z fazowaną ramką i gradientem (dithering), paski z połyskiem, kursor-strzałka w menu, winieta, cienie pod postaciami, poświaty pocisków wrogów.
 - HUD: portret bohatera, gniazda broni i pasywek (puste też widoczne), umiejętności z ikonami, odnowieniem i ładunkiem ultimate, ozdobny pasek bossa; karty z narożnymi klejnotami, poświatą ikony i połyskiem kart pryzmatycznych; gradientowe logo.
 
@@ -363,6 +363,10 @@ src/
 
 **Rarity in order (0.23.14)**:
 - Quality colours now climb the way most games do: Common grey, Magic green, Rare blue, Epic purple, Legendary orange, and Uniques gold (they used to be beige and looked weaker than Common). Gold cards use the same gold.
+
+**Smoother look (0.23.15)**:
+- New smooth, rounded font (Nunito) across the whole game instead of the blocky pixel font.
+- Heroes, enemies, skills, icons and the world are drawn at triple resolution: finer pixels, smoother curves and shading. Settings → Effects: low keeps the world at double resolution for slower devices.
 
 ### Jak przetestować
 
