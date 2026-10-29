@@ -609,6 +609,13 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   kartą (`cardFrame`) i bohaterem na liście. Podpowiedzi jako cicha płytka z turkusowym znacznikiem po lewej. Nagłówki grup menu
   zwykłą pisownią (Play / Progress / Other), bez wielkich liter. Przy nowych ekranach: `panel(r, x, y, w, h)` bez akcentu,
   akcent tylko gdy coś znaczy.
+- 0.36.2 (sprawdzenie układu): test wystawania napisów (przechwycenie `fillText` i `roundRect` w Playwright, z uwzględnieniem
+  przycinania przewijanych list) na wszystkich ekranach po angielsku i po polsku. Poprawki: opis w Ustawieniach pod oknem listy
+  (dłuższe zakładki), przyciski sklepu `BTNS` (wspólne dla rysowania i kliknięć, „Back to the map” się mieści), podpowiedzi
+  sklepu i kowadła w nowych miejscach, krótsza podpowiedź mapy, kolumny tabeli żywiołów liczone z najdłuższej nazwy
+  (`renderElements`), nazwy i koszty węzłów Rozwoju dopasowane do kafelka (`fit`), „Endless Stream” po polsku „Wieczny nurt”,
+  podświetlenie wiersza `Menu` co najmniej `LINE_H + 2` (ogonki ę, g, j), tekst przycisku wyśrodkowany na wysokości 12·skala,
+  zakładki wyboru bohatera 14 px. Nowe ekrany: szerokości kolumn i przycisków z `textWidth`, nie stałe (polski jest dłuższy).
 - 0.37.0 (punkt 2 + węzły-wydarzenia): telemetria `life`/`eLife` (czas życia zabitych), `ult`, `growth`, `goal`; bot `maps`
   z celem, `statOnly`/`offers`. Pomiar: pula ulepszeń nie wyczerpuje się (do poz. 142), bonusy XP nie spychają na podłogę,
   mapy „przetrwaj” 4× dłuższe niż „pokonaj” → `surviveScale` 0.5; bossowie Ekspedycji P50 6 s → `expedition.bossHp` ×3

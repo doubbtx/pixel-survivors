@@ -242,6 +242,6 @@ export class LevelUpView {
     // Podpis na ciemnym tle: pod nim są sloty HUD.
     const note = 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', nw = textWidth(note) + 12;
     r.withAlpha(0.85, () => r.roundRect(W / 2 - nw / 2, 235, nw, 14, 4, C.black));
-    drawText(r.g, note, W / 2, 238, C.lavender, { align: 'center', shadow: C.black });
+    drawText(r.g, note, W / 2, 236.5, C.lavender, { align: 'center', shadow: C.black });
   }
 }

@@ -1,7 +1,7 @@
 import { tr } from '../core/i18n';
 import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText } from '../core/font';
+import { drawText, textWidth } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
@@ -169,12 +169,16 @@ export class MetaScreen implements Screen {
         panel(r, x, y, COL_W, NODE_H, sel ? C.yellow : maxed ? C.gold : n.key ? C.pink : lvl > 0 ? C.lavender : C.slate);
         if (open) drawSprite(g, n.icon, x + 12, y + 14);
         else r.withAlpha(0.3, () => drawSprite(g, n.icon, x + 12, y + 14));
-        drawText(g, n.name, x + 22, y + 3, open ? (n.key ? C.pink : C.white) : C.lavender);
-        if (n.max > 1) drawText(g, `${lvl}/${n.max}`, x + COL_W - 5, y + 14, maxed ? C.gold : C.lgray, { align: 'right' });
+        // Napisy dopasowane do kafelka (długie nazwy, np. po polsku, zmniejszają się zamiast wystawać).
+        const fit = (t: string, room: number) => Math.min(1, room / Math.max(1, textWidth(t)));
+        drawText(g, n.name, x + 22, y + 3, open ? (n.key ? C.pink : C.white) : C.lavender, { scale: fit(n.name, COL_W - 26) });
+        const lvlTxt = `${lvl}/${n.max}`;
+        if (n.max > 1) drawText(g, lvlTxt, x + COL_W - 5, y + 14, maxed ? C.gold : C.lgray, { align: 'right' });
         // Zablokowany węzeł: ile poziomów poprzedniego jeszcze potrzeba (połowa jego maksimum).
         const prev = prevNode(tree, n);
         const costTxt = maxed ? 'MAX' : !open && prev ? `wymaga ${unlockLevel(prev)}/${prev.max}` : fmt(cost);
-        drawText(g, costTxt, x + 22, y + 14, maxed ? C.gold : !open ? C.lavender : h.essence >= cost ? C.cyan : C.salmon);
+        const costRoom = COL_W - 22 - (n.max > 1 ? textWidth(lvlTxt) + 9 : 5);
+        drawText(g, costTxt, x + 22, y + 14, maxed ? C.gold : !open ? C.lavender : h.essence >= cost ? C.cyan : C.salmon, { scale: fit(costTxt, costRoom) });
       });
     });
     // Opis zaznaczonego węzła.

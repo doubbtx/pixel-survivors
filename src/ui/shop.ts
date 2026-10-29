@@ -24,6 +24,8 @@ const ROW_Y = [52, 108, 164];
 const FORGE_SERVICES = new Set(['stone', 'ore', 'bless', 'dragon']);
 const DET_X = 278, DET_W = 196;
 const BTN_Y = 236;
+/** Przyciski pod listą (x, szerokość): odśwież, ekwipunek, kowadło, wyjście — wspólne dla rysowania i kliknięć. */
+const BTNS = { refresh: [10, 58], inv: [72, 56], anvil: [132, 46], close: [182, 88] } as const;
 
 /** Pozycja oferty: przedmiot, usługa albo eliksir. */
 type Entry =
@@ -134,10 +136,10 @@ export class ShopView {
       }
     }
     if (input.pressed('click')) {
-      if (inside(m.x, m.y, 14, BTN_Y, 62, 16)) this.refresh();
-      if (inside(m.x, m.y, 80, BTN_Y, 62, 16)) return 'inventory';
-      if (inside(m.x, m.y, 146, BTN_Y, 58, 16)) return 'anvil';
-      if (inside(m.x, m.y, 208, BTN_Y, 58, 16)) return 'close';
+      if (inside(m.x, m.y, BTNS.refresh[0], BTN_Y, BTNS.refresh[1], 16)) this.refresh();
+      if (inside(m.x, m.y, BTNS.inv[0], BTN_Y, BTNS.inv[1], 16)) return 'inventory';
+      if (inside(m.x, m.y, BTNS.anvil[0], BTN_Y, BTNS.anvil[1], 16)) return 'anvil';
+      if (inside(m.x, m.y, BTNS.close[0], BTN_Y, BTNS.close[1], 16)) return 'close';
       if (inside(m.x, m.y, DET_X, BTN_Y, DET_W, 16)) this.buy(this.row(this.cy)[this.cx]);
     }
     this.lastMouse = m.lastMove;
@@ -183,14 +185,14 @@ export class ShopView {
 
     this.renderDetails(r);
 
-    const btn = (x: number, w: number, label: string, col: number) => {
+    const btn = ([x, w]: readonly [number, number], label: string, col: number) => {
       button(r, x, BTN_Y, w, 16, label, { col });
     };
     const rp = refreshPrice(shop);
-    btn(14, 62, `Odśwież ${rp}`, run.gold >= rp ? C.yellow : C.red);
-    btn(80, 62, 'Ekwipunek', C.lgray);
-    btn(146, 58, 'Kowadło', this.run.expedition?.noForge ? C.dgray : C.orange);
-    btn(208, 58, this.exitLabel, C.white);
+    btn(BTNS.refresh, `Odśwież ${rp}`, run.gold >= rp ? C.yellow : C.red);
+    btn(BTNS.inv, 'Ekwipunek', C.lgray);
+    btn(BTNS.anvil, 'Kowadło', this.run.expedition?.noForge ? C.dgray : C.orange);
+    btn(BTNS.close, this.exitLabel, C.white);
     if (this.noteT > 0) drawText(g, this.note, W / 2, H - 13, this.noteBad ? C.salmon : C.lime, { align: 'center', outline: C.black });
   }
 

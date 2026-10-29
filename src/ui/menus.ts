@@ -337,7 +337,7 @@ export class HeroSelect implements Screen {
     if (inp.pressed('click')) {
       const { x, y } = inp.mouse;
       if (inside(x, y, LIST_X, this.pactY(), LIST_W, 18) && unlocked(this.app.save, 'pacts')) { this.app.go(new PactScreen(this.app, this)); return; }
-      for (let i = 0; i < TABS.length; i++) if (inside(x, y, this.tabX(i), TAB_Y, TAB_W, 13)) { this.page = i; sfx.play('select'); return; }
+      for (let i = 0; i < TABS.length; i++) if (inside(x, y, this.tabX(i), TAB_Y, TAB_W, 14)) { this.page = i; sfx.play('select'); return; }
       if (this.page === 0 && inside(x, y, this.moreAt[0], this.moreAt[1] - 1, MORE_W, 14)) { this.page = 2; sfx.play('select'); return; }
       if (this.page === 0 && inside(x, y, DET_X + 8, this.skillsAt, DET_W - 16, 40)) { this.page = 1; sfx.play('select'); return; }
       if (inside(x, y, W - 12 - START_W, BTN_Y, START_W, BTN_H)) { this.start(); return; }
@@ -412,7 +412,7 @@ export class HeroSelect implements Screen {
     const owned = heroSkins(this.app.save.pacts.best[h.id] ?? 0), cur = this.app.save.skins[h.id] ?? '';
     if (owned.length) drawText(g, `Skórka: ${cur && BADGE_BY_ID[cur] ? BADGE_BY_ID[cur].name : 'zwykła'} [X]`, x + DET_W - 10, y + 8, cur ? BADGE_BY_ID[cur]?.color ?? C.lgray : C.lgray, { align: 'right' });
     drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 31, C.lavender);
-    TABS.forEach((t, i) => button(r, this.tabX(i), TAB_Y, TAB_W, 13, t, { active: i === this.page, accent: C.gold }));
+    TABS.forEach((t, i) => button(r, this.tabX(i), TAB_Y, TAB_W, 14, t, { active: i === this.page, accent: C.gold }));
     if (this.page === 0) this.renderGeneral(h, x, y);
     else {
       // Umiejętności i zasób: przewijany obszar do dołu panelu (dłuższe opisy przy dużym tekście).
@@ -653,7 +653,9 @@ export class SettingsScreen implements Screen {
     panel(r, W / 2 - 180, SET_LIST_Y - 6, 360, this.menu.items.length * SET_ROW + 10, C.slate);
     this.menu.render(r);
     drawText(g, 'Tab / Q / E: kategoria    Lewo/prawo: zmień', W / 2, H - 14, C.lavender, { align: 'center' });
-    wrapText(this.hints[this.menu.sel](), 420).forEach((l, i) => drawText(g, l, W / 2, 222 + i * 11, C.lavender, { align: 'center' }));
+    // Opis pod oknem listy (długie zakładki mają wyższe okno, opis zjeżdża niżej).
+    const descY = Math.max(222, SET_LIST_Y + 4 + this.menu.items.length * SET_ROW + 4);
+    wrapText(this.hints[this.menu.sel](), 420).forEach((l, i) => drawText(g, l, W / 2, descY + i * 11, C.lavender, { align: 'center' }));
   }
 }
 

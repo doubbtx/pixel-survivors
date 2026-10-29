@@ -98,7 +98,7 @@ export function button(r: Renderer, x: number, y: number, w: number, h: number, 
   r.roundFrame(x, y, w, h, UI.radius, o.active || hot ? acc : UI.border, o.active ? 1 : UI.line * 1.5);
   if (o.pulse && !o.active) r.withAlpha(0.35 + 0.35 * Math.sin(performance.now() / 160), () => r.roundFrame(x - 1, y - 1, w + 2, h + 2, UI.radius + 1, C.yellow, 0.75));
   const sc = o.scale ?? 1;
-  drawText(r.g, label, x + w / 2, y + Math.round((h - 11 * sc) / 2), o.col ?? (o.active || hot ? C.yellow : C.white), { align: 'center', shadow: C.black, scale: sc });
+  drawText(r.g, label, x + w / 2, y + Math.round((h - 12 * sc) / 2), o.col ?? (o.active || hot ? C.yellow : C.white), { align: 'center', shadow: C.black, scale: sc });
 }
 
 /**
@@ -251,10 +251,12 @@ export class Menu {
       const on = i === this.sel;
       hovered(x, y, w, h);
       if (on) {
-        ember(r, x, y, w, h, 3);
-        r.withAlpha(0.9, () => r.roundRect(x, y, w, h, 3, C.dbrown, C.ddbrown));
-        r.roundFrame(x, y, w, h, 3, C.gold, 0.75);
-        r.withAlpha(0.5, () => r.rect(x + 3, y + 0.5, w - 6, 0.5, C.yellow));
+        // Podświetlenie co najmniej na wysokość litery z ogonkiem (ę, g, j), też przy gęstych listach.
+        const hb = Math.max(h, LINE_H + 2), yb = y - (hb - h) / 2;
+        ember(r, x, yb, w, hb, 3);
+        r.withAlpha(0.9, () => r.roundRect(x, yb, w, hb, 3, C.dbrown, C.ddbrown));
+        r.roundFrame(x, yb, w, hb, 3, C.gold, 0.75);
+        r.withAlpha(0.5, () => r.rect(x + 3, yb + 0.5, w - 6, 0.5, C.yellow));
         cursor(r, x + 6, y + Math.floor((h - 7) / 2));
       }
       const ty = y + Math.floor((h - LINE_H) / 2) + 1;
