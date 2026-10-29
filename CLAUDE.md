@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.37.0)
+## Stan (wersja 0.37.1)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -626,6 +626,13 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   `freeSlot` (spawner): pełna pula nigdy nie zwalnia bossa ani elity; zabezpieczenie na zwolniony obiekt bossa
   (rzadka blokada poziomu w teście bota). Legenda mapy: tylko rodzaje obecne w akcie.
 
+- 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
+  Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula
+  z poświatą; miecz wbity w głaz (zbrocze, jelec z kamieniami, owinięta rękojeść); kamień zadania jako obelisk z wyrytą runą;
+  totem z rzeźbioną twarzą, czaszką i piórami; portal jako kamienny pierścień z runami i spiralnym wirem; beczka z klepkami,
+  obręczami, pasem ostrzegawczym i lontem; kuta płyta kolców z nitami; fontanna dwupiętrowa z kroplami (klatka); cztery
+  różne znaki run (`GLYPHS`) z poświatą po zapaleniu; mural w ramie ze strzałkami kolejności; grzyb, schody, kurhan z
+  portalem i gniazdami kluczy, gaj z kwiatami i kryształem.
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
@@ -641,7 +648,7 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - Potem opakowanie: najpierw Android, potem iOS, na końcu Steam.
 
 ### Otwarte sprawy z ostatnich wersji (do wplecenia w fazy)
-- Grafika 32-bit: obiekty map (kapliczki, portale, totemy, sekrety) i efekty (wybuchy, iskry) bez dorysowanych detali; mniej popularni wrogowie do dopracowania.
+- Grafika 32-bit: obiekty map i efekty zrobione (0.29.1, 0.37.1); mniej popularni wrogowie do dopracowania.
 - Nowa broń Aurela (pierścień światła, 0.23.9): siła ustawiona na oko, do zmierzenia botem względem starej.
 - Do decyzji autora: celownik myszy i ramki gniazd umiejętności (czy też je wyciszyć), pulsujące światło dla unikatów (pomarańczowy Legendarny i złoty Unikat są do siebie podobne).
 - Balans: Ekspedycja (długość walk, nagrody węzłów), zasoby (Kombo, Wiara), zadania, moce bossów, Pustka; reakcje żywiołów (Przeciążenie, Wybuch toksyn) dominują obrażenia w późnej grze.

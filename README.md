@@ -487,6 +487,7 @@ src/
 - 0.34.5: menu screens (Progression, Records, Settings, Help, Evolution book, hero select, Expedition and Endless) get the same title band as the in-game overlays; Records show "not played yet" instead of rows of zeros; Versatility in Synergies is the first row of the list with its thresholds at full size; the Expedition map panel lists the biome's enemies (and the miniboss on elite maps) under the modifiers.
 - 0.36.1 (look): windows lost their decorative colored frames; a frame color now always means something (rarity, active state, warning). The one glowing thing is the selection, a warm ember glow under the chosen menu entry, active button, card or hero. Hints are a quiet tile with a cyan marker instead of a framed window. Menu group labels in sentence case.
 - 0.36.2 (layout check): every screen tested in English and Polish for text that spills out of its box or overlaps other text. Fixed: Settings description under the list, shop buttons ("Back to the map" fits), shop, anvil and map hints no longer cover buttons or key text, element table columns sized to the longest name, Progression node names and costs fit their tiles, menu row highlight tall enough for letters with tails, hero select tabs.
+- 0.37.1 (map objects): shrines, sword in the stone, task stone, totem, portals, explosive barrel, spike plate, fountain, rune stones (each with its own glyph), mural, mushroom, stairs, barrow and grove redrawn in the 32-bit style with stone seams, moss, rim light and glows.
 
 ### Jak przetestować
 
