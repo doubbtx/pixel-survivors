@@ -2,7 +2,7 @@ import { W, H, VW, VH, ZOOM, type Renderer } from '../core/renderer';
 import { C, PAL } from '../core/palette';
 import { drawLabel } from '../core/font';
 import { rng } from '../core/rng';
-import { drawSprite, drawShadow, getSprite, queueWarm, warmStep } from '../gfx/sprites';
+import { drawSprite, drawShadow, getSprite, queueWarm, warmStep, STREAKS } from '../gfx/sprites';
 import { ANIM } from '../gfx/actors';
 import { ENEMIES, ELITE_MODS } from '../data/enemies';
 import { LANDMARK_KINDS } from '../gfx/landmarks';
@@ -649,6 +649,10 @@ function drawWorld(run: Run, r: Renderer): void {
         r.line(x + c * 4, y + s * 4, x + c * 11, y + s * 11, C.white, 3);
       } else if (SPIN.has(pr.sprite)) {
         drawSprite(g, `${pr.sprite}${Math.floor(pr.t * 14) & 3}`, x, y);
+      } else if (STREAKS[pr.sprite]) {
+        // Pociski gracza wydłużone wzdłuż lotu (okrągłe są tylko wrogie): gotowe klatki w ARROW_DIRS kierunkach.
+        const dir = (Math.round((Math.atan2(pr.vy, pr.vx) / (Math.PI * 2)) * ARROW_DIRS) + ARROW_DIRS) % ARROW_DIRS;
+        drawSprite(g, `pb_${pr.sprite}@${dir}`, x, y);
       } else {
         drawSprite(g, pr.sprite, x, y);
       }
