@@ -189,7 +189,7 @@ export class Bot {
         }
         if (this.style !== 'idle') this.play(run, dt);
         break;
-      case 'levelup': if (this.kit.length) { press('back'); break; } this.countOffer(gs.levelUp, run.level); press((['n1', 'n2', 'n3'] as const)[rnd(Math.min(3, gs.levelUp?.options?.length ?? 3))]); break;
+      case 'levelup': if (this.kit.length) { press('skip'); break; } this.countOffer(gs.levelUp, run.level); press((['n1', 'n2', 'n3'] as const)[rnd(Math.min(3, gs.levelUp?.options?.length ?? 3))]); break;
       case 'cards': press((['n1', 'n2', 'n3'] as const)[rnd(3)]); break;
       case 'power': press('confirm'); break;
       case 'relic': press('confirm'); break;
