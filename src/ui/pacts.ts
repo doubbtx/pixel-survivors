@@ -40,7 +40,7 @@ export class PactScreen implements Screen {
     const p = PACTS[this.sel];
     if (inp.pressed('left')) this.set(p.id, (this.chosen[p.id] ?? 0) - 1);
     if (inp.pressed('right')) this.set(p.id, (this.chosen[p.id] ?? 0) + 1);
-    if (inp.pressed('reroll')) { for (const k of Object.keys(this.chosen)) delete this.chosen[k]; this.app.persist(); sfx.play('select'); }
+    if (inp.pressed('reroll') || (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, W / 2 + 46, H - 24, 80, 16))) { for (const k of Object.keys(this.chosen)) delete this.chosen[k]; this.app.persist(); sfx.play('select'); }
     if (!inp.pressed('click')) return;
     const m = inp.mouse;
     PACTS.forEach((q, i) => {
@@ -76,5 +76,6 @@ export class PactScreen implements Screen {
     drawText(g, `Odznaki bohatera za bossa pokonanego z Paktem: ${badges}.`, W / 2, TOP + PACTS.length * ROW_H + 4, C.lavender, { align: 'center' });
     drawText(g, 'Strzałki: wybór i poziom    R: wyzeruj    Esc: wróć', W / 2, H - 40, C.lavender, { align: 'center' });
     button(r, W / 2 - 40, H - 24, 80, 16, 'Wstecz [Esc]');
+    button(r, W / 2 + 46, H - 24, 80, 16, 'Reset [R]');
   }
 }
