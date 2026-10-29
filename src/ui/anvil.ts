@@ -68,6 +68,8 @@ export class AnvilView {
   private noteBad = false;
   /** Kuźnia: wybrane zwoje i tryb ryzyka, animacja młota, wynik ostatniej próby, potwierdzenie ryzyka. */
   private opts: ForgeOpts = { bless: false, dragon: false, talisman: false, risk: false };
+  /** Pad / strzałki w kuźni: zaznaczona opcja (-1 = brak, mysz i klawisze 1-4 działają bez niej). */
+  private optSel = -1;
   private hammer = 0;
   private result: { text: string; outcome: ForgeOutcome; t: number } | null = null;
   private confirmRisk = false;
@@ -212,12 +214,16 @@ export class AnvilView {
     else if (!nextStep(it) || it.cracked) this.stage = 'ops';
   }
 
-  /** Etap kuźni: klawisze 1-4 przełączają zwoje i ryzyko, Enter / przycisk kuje, Esc wraca do menu. */
+  /** Etap kuźni: klawisze 1-4 przełączają zwoje i ryzyko (pad: góra/dół i RB albo X), Enter / przycisk kuje, Esc wraca do menu. */
   private updateForge(input: Input, back: boolean): void {
     if (this.hammer > 0) return;
     if (back) { this.stage = 'ops'; return; }
     const nums = ['n1', 'n2', 'n3', 'n4'] as const;
     nums.forEach((n, i) => { if (input.pressed(n)) this.toggle(OPT_KEYS[i]); });
+    const n = OPT_KEYS.length;
+    if (input.pressed('down')) this.optSel = (this.optSel + 1) % n;
+    if (input.pressed('up')) this.optSel = (Math.max(0, this.optSel) + n - 1) % n;
+    if (input.pressed('skip') && this.optSel >= 0) this.toggle(OPT_KEYS[this.optSel]);
     if (input.pressed('confirm')) this.strike();
     if (!input.pressed('click')) return;
     const m = input.mouse;
@@ -421,6 +427,7 @@ export class AnvilView {
     OPT_KEYS.forEach((k, i) => {
       const y = OPT_Y + i * OPT_H, on = this.opts[k];
       const label = k === 'risk' ? `Ryzyko: +${Math.round(BAL.forge.risk * 100)}%, pęknięcie = zniszczenie` : `${OPT_LABEL[k]} (${run.scrolls[k]})`;
+      if (i === this.optSel) r.roundFrame(x + 4, y - 1, DET_W - 8, OPT_H - 1, 2, C.yellow, 0.5);
       r.rect(x + 8, y + 2, 7, 7, C.black);
       if (on) r.rect(x + 9, y + 3, 5, 5, k === 'risk' ? C.red : C.lime);
       drawText(g, `${i + 1}`, x + 18, y, C.dgray);

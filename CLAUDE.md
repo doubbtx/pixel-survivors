@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.28.0)
+## Stan (wersja 0.29.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -429,6 +429,26 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   powtórka: Ustawienia → Ogólne → Replay tutorial. HUD w samouczku bez licznika bossa.
   Bot testowy: `?bot=endless|expedition|tutorial` (src/dev/bot.ts, tylko `import.meta.env.DEV`), `scripts/bot.cjs` / `npm run bot`.
   Tłumaczenie: zdania tłumaczone też osobno (kandydat obok podziału na separatorach), lista „A, B” we wstawce wzorca EN → PL.
+- Etap 0.29 (faza 3 planu): czytelność i dostępność.
+  - Rozmiar tekstu: `Settings.textLarge` (domyślnie na dotyku), `core/font.ts` `setTextSize`, `DESC` (opcje rysowania),
+    `descS()` (skala: 0.75 albo 1), `descLH()` (odstęp linii 9 albo 11). Teksty opisowe używają DESC: umiejętności (`drawSkills`),
+    strony Umiejętności i Zasób na wyborze bohatera, Arsenał, ekran Bronie i pasywki z Żywiołami, modyfikatory i podpowiedzi mapy,
+    opis przedmiotu w plecaku, pauza (Umiejętności), Synergie, Pomoc; karty awansu przy dużym tekście nie zmniejszają opisu
+    (podpowiedź ustępuje, w ostateczności „...”). Drobne etykiety HUD zostają 0.75.
+  - Przewijanie: `ui/widgets.ts` `Scroll` (`update` z obszarem, `begin` → przesunięcie, `end` z wysokością treści i paskiem),
+    `Input.scroll` (kółko myszy, przeciąganie palcem poza rozgrywką), akcje `pageUp`/`pageDown`, prawa gałka pada.
+  - Ograniczenie błysków: `Settings.reduceFlash`, `run.reduceFlash`, `Run.blink(okres, wł.)` zamiast `run.step % n < m`
+    (przy ograniczeniu zawsze włączone: zapowiedzi ataków świecą stale), bez białych błysków trafień i znikania, gracz przy
+    nietykalności półprzezroczysty zamiast migać; HUD: bez błysku paska XP i HP, plakietka LV bez migania.
+  - Ostrzeżenie o błyskach przy pierwszym uruchomieniu (`ui/flash-warning.ts`, `Settings.flashWarned`) z przełącznikiem.
+  - Zmiana klawiszy: `core/input.ts` `FIXED` (strzałki, Enter, Esc, Tab, cyfry, Spacja = confirm, R = reroll, debug) i `REBIND`
+    (akcja → domyślny kod), `setBindings`, `keyOf`, `keyName`, `actionKey`; `Input.capture` przechwytuje następny klawisz.
+    Ekran `ui/controls.ts` (Ustawienia → Ogólne → Controls): zamiana z akcją, która miała ten klawisz; Reset to defaults.
+    `Settings.keys`. Klawisze w HUD, opisach umiejętności (`skillKey`) i samouczku (`{q}`, `{move}`…) z przypisań.
+  - Pad: RT = bronie i pasywki, prawa gałka (klik) = kowadło; mapa: LB/RB (R/X) zmienia trudność; Kuźnia: góra/dół + RB/X
+    przełącza opcję (`optSel`). Wszystkie menu mają odpowiedniki klawiszy (strzałki, Enter, Esc, Tab).
+  - Mapa Ekspedycji: klik w węzeł tylko zaznacza (`ExpeditionMapView.update`), wejście przyciskiem Wyrusz albo Enterem.
+  - Nie zrobione: szersza logiczna rozdzielczość na ekranach 20:9 (telefon ma pasy po bokach, interfejs nie zajmuje więcej miejsca).
 ## Plan dalej (przed wydaniem)
 
 Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z innej sesji). Plan uzgodniony z autorem; kolejność faz = kolejność wersji.
@@ -463,7 +483,7 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   - wygrana na Rare: trudność Nightmare;
   - Kolekcja: zakładki pojawiają się, gdy jest w nich pierwsza rzecz.
 
-### Faza 3: czytelność i dostępność (v0.29)
+### Faza 3: czytelność i dostępność (v0.29) — GOTOWE (0.29.0), poza szerszym interfejsem na 20:9
 - Tekst czytelny na PC i telefonie (czcionka Jersey 10 od 0.25; sprawdzić czytelność na telefonie):
   - opcja Text size (Normal / Large), domyślnie Large na dotyku;
   - ważne opisy bez pomniejszonego tekstu, w zamian strony albo przewijanie (Arsenał, szczegóły zasobu, karty, panel mapy);

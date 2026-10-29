@@ -9,15 +9,60 @@ export type Action =
   | 'n1' | 'n2' | 'n3' | 'n4' | 'pageUp' | 'pageDown'
   | 'debug' | 'debugTime' | 'debugLevel' | 'debugLoot';
 
-const KEYMAP: Record<string, Action[]> = {
-  KeyW: ['up'], ArrowUp: ['up'], KeyS: ['down'], ArrowDown: ['down'],
-  KeyA: ['left'], ArrowLeft: ['left'], KeyD: ['right'], ArrowRight: ['right'],
-  KeyQ: ['q'], KeyE: ['e'], Space: ['dash', 'confirm'], KeyR: ['ult', 'reroll'],
-  Enter: ['confirm'], Escape: ['pause', 'back'], KeyP: ['pause'],
-  KeyF: ['fullscreen'], KeyX: ['skip'], KeyB: ['banish'], KeyI: ['inventory'], Tab: ['inventory'], KeyK: ['anvil'], KeyC: ['build'],
+/** Klawisze stałe (menu: strzałki, Enter, Esc, Tab, cyfry, przewijanie, debug) — zawsze działają, niezależnie od przypisań. */
+const FIXED: Record<string, Action[]> = {
+  ArrowUp: ['up'], ArrowDown: ['down'], ArrowLeft: ['left'], ArrowRight: ['right'],
+  Space: ['confirm'], KeyR: ['reroll'], Enter: ['confirm'], Escape: ['pause', 'back'], KeyF: ['fullscreen'], Tab: ['inventory'],
   Digit1: ['n1'], Digit2: ['n2'], Digit3: ['n3'], Digit4: ['n4'], PageUp: ['pageUp'], PageDown: ['pageDown'],
   F3: ['debug'], Backquote: ['debug'], F4: ['debugTime'], F6: ['debugLevel'], F7: ['debugLoot'],
 };
+
+/** Akcje do zmiany w Ustawieniach → Sterowanie (ui/controls.ts) i ich domyślne klawisze (KeyboardEvent.code). */
+export const REBIND: [Action, string][] = [
+  ['up', 'KeyW'], ['down', 'KeyS'], ['left', 'KeyA'], ['right', 'KeyD'],
+  ['q', 'KeyQ'], ['e', 'KeyE'], ['dash', 'Space'], ['ult', 'KeyR'],
+  ['inventory', 'KeyI'], ['build', 'KeyC'], ['skip', 'KeyX'], ['banish', 'KeyB'], ['anvil', 'KeyK'], ['pause', 'KeyP'],
+];
+const DEFAULT_KEY = Object.fromEntries(REBIND) as Partial<Record<Action, string>>;
+
+let bindings: Partial<Record<Action, string>> = {};
+let KEYMAP = buildKeymap();
+
+function buildKeymap(): Record<string, Action[]> {
+  const m: Record<string, Action[]> = {};
+  for (const [k, v] of Object.entries(FIXED)) m[k] = [...v];
+  for (const [a] of REBIND) {
+    const code = keyOf(a);
+    if (!(m[code] ??= []).includes(a)) m[code].push(a);
+  }
+  return m;
+}
+
+/** Przypisania gracza (Settings.keys: akcja → kod klawisza); brakujące = domyślne. */
+export function setBindings(b: Partial<Record<Action, string>>): void {
+  bindings = { ...b };
+  KEYMAP = buildKeymap();
+}
+
+/** Bieżący klawisz akcji do zmiany. */
+export function keyOf(a: Action): string {
+  return bindings[a] ?? DEFAULT_KEY[a] ?? '';
+}
+
+/** Czytelna nazwa klawisza: „KeyQ” → „Q”, „Digit5” → „5”, „ShiftLeft” → „L-Shift”. */
+export function keyName(code: string): string {
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad')) return `Num ${code.slice(6)}`;
+  const side = code.endsWith('Left') ? 'L-' : code.endsWith('Right') ? 'R-' : '';
+  const base = side ? code.replace(/(Left|Right)$/, '') : code;
+  const named: Record<string, string> = { Space: 'Space', Control: 'Ctrl', Meta: 'Cmd', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Backslash: '\\' };
+  return side + (named[base] ?? base);
+}
+
+/** Klawisz akcji do wyświetlenia (HUD, opisy umiejętności, samouczek). */
+export const actionKey = (a: Action): string => keyName(keyOf(a));
+
 
 /** Gniazda umiejętności w HUD (prawy dół) — na telefonie są też przyciskami dotykowymi. Kolejność: Q, E, unik, R. */
 export const ABILITY_SLOT = 32;
@@ -30,10 +75,10 @@ export const TOUCH_PAUSE = { x: W - 110, y: 8, s: 20 };
 /** Zasięg wychylenia wirtualnego joysticka (piksele logiczne). */
 export const STICK_R = 26;
 
-/** Standardowe mapowanie Gamepad API (Xbox: A=0, B=1, X=2, Y=3, LB=4, RB=5, Start=9, D-pad=12..15). */
+/** Standardowe mapowanie Gamepad API (Xbox: A=0, B=1, X=2, Y=3, LB=4, RB=5, LT=6, RT=7, View=8, Start=9, prawa gałka=11, D-pad=12..15). */
 const PADMAP: Record<number, Action[]> = {
   0: ['confirm', 'dash'], 1: ['back', 'e'], 2: ['q'], 3: ['ult'],
-  4: ['reroll'], 5: ['skip'], 9: ['pause'], 8: ['banish'], 6: ['inventory'],
+  4: ['reroll'], 5: ['skip'], 9: ['pause'], 8: ['banish'], 6: ['inventory'], 7: ['build'], 11: ['anvil'],
   12: ['up'], 13: ['down'], 14: ['left'], 15: ['right'],
 };
 
@@ -61,11 +106,15 @@ export class Input {
   focusLost = false;
   /** Przewinięcie w pikselach logicznych od ostatniego kroku (kółko myszy, przeciąganie palcem; dodatnie = w dół). */
   scroll = 0;
+  /** Następny wciśnięty klawisz trafia tutaj zamiast do gry (zmiana przypisania). */
+  capture: ((code: string) => void) | null = null;
   /** Dowolny klawisz (także bez przypisanej akcji) naciśnięty od ostatniego kroku. */
   private anyKey = false;
 
   constructor(renderer: Renderer, canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
+      // Przechwycenie klawisza (Ustawienia → Sterowanie): bez akcji gry.
+      if (this.capture && !e.repeat) { e.preventDefault(); const cb = this.capture; this.capture = null; cb(e.code); return; }
       if (!e.repeat) this.anyKey = true;
       const acts = KEYMAP[e.code];
       if (!acts) return;

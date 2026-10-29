@@ -20,6 +20,7 @@ import { GameScreen } from './game-screen';
 import { CollectionScreen } from './collection';
 import { MetaScreen } from './meta';
 import { BalanceScreen } from './balance';
+import { ControlsScreen } from './controls';
 import { HelpScreen } from './help';
 import { heroMeta, paragonLevel } from '../data/meta';
 import { pactLevel, pactBadge, heroSkins, BADGE_BY_ID } from '../data/pacts';
@@ -578,6 +579,7 @@ export class SettingsScreen implements Screen {
         sw('Pauza po wyjściu z okna', () => yes(s.autoPause), toggle('autoPause'), 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.'),
         sw('Podpowiedzi', () => yes(s.hints), toggle('hints'), 'Krótkie wskazówki przy pierwszym spotkaniu z mechaniką (awans, skrzynie, elity, reakcje...).'),
         [{ label: () => (app.save.seenHints.length ? 'Pokaż podpowiedzi od nowa' : 'Podpowiedzi: wszystkie przed tobą'), act: () => { app.save.seenHints = []; app.persist(); } }, () => 'Kolejna gra pokaże wszystkie podpowiedzi jeszcze raz.'],
+        [{ label: () => 'Controls', act: () => app.go(new ControlsScreen(app, this)) }, () => 'Change the keys for movement, abilities, dodge and menus in the game.'],
         [{ label: () => 'Replay tutorial', act: () => app.go(new GameScreen(app, 'kestra', 'endless', undefined, true)) }, () => 'Play the short tutorial again (2-3 minutes): movement, abilities, dodging, loot and a boss.'],
       ],
       [
@@ -593,6 +595,7 @@ export class SettingsScreen implements Screen {
         sw('Zatrzymanie klatki przy trafieniach', () => yes(s.hitstop), toggle('hitstop'), 'Gra na ułamek sekundy staje przy zabiciu elity, bossa i mocnym trafieniu.'),
       ],
       [
+        sw('Reduce flashing', () => yes(s.reduceFlash), () => { s.reduceFlash = !s.reduceFlash; app.persist(); }, 'For players sensitive to flashing lights: no blinking warnings (they stay lit instead) and no white hit flashes.'),
         sw('Text size', () => (s.textLarge ? 'Large' : 'Normal'), () => { s.textLarge = !s.textLarge; setTextSize(s.textLarge); app.persist(); }, 'Large: descriptions (abilities, cards, items, map, pause) at full size instead of smaller text. Longer texts scroll or split into pages.'),
         opt('Przyciemnienie tła', () => DIM_LABEL[Math.max(0, DIM_LEVELS.indexOf(s.bgDim))], dim, () => 'Ciemniejsze podłoże i dekoracje: postacie, wrogowie i pociski bardziej odcinają się od tła.'),
         sw('Wyraźne pociski wrogów', () => yes(s.bulletOutline), toggle('bulletOutline'), 'Pociski wrogów dostają ciemną obwódkę, lepiej odcinają się od tła i efektów.'),

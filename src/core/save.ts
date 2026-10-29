@@ -70,6 +70,12 @@ export interface Settings {
   lang: Lang;
   /** Rozmiar tekstów opisowych (core/font.ts `setTextSize`): duży domyślnie na dotyku. */
   textLarge: boolean;
+  /** Ograniczenie błysków (dostępność): bez migania i białych błysków. */
+  reduceFlash: boolean;
+  /** Ostrzeżenie o błyskach pokazane (pierwsze uruchomienie). */
+  flashWarned: boolean;
+  /** Przypisania klawiszy (core/input.ts REBIND: akcja → KeyboardEvent.code); brak = domyślny. */
+  keys: Record<string, string>;
 }
 
 /** Kolekcja kart (między runami): odkryte, liczba wyborów i bany (wykluczone z ofert); odkryte unikaty (nowe pole bez migracji). */
@@ -194,7 +200,7 @@ function defaults(): SaveData {
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
       playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en',
-      textLarge: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches },
+      textLarge: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches, reduceFlash: false, flashWarned: false, keys: {} },
     records: {},
     slots: { endless: null, expedition: null },
     notice: '',

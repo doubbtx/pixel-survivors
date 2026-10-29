@@ -18,6 +18,16 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.29',
+    lines: [
+      'Text size option (Settings, Readability): Large shows descriptions at full size; long texts scroll (mouse wheel, drag, PageUp / PageDown, right stick).',
+      'Reduce flashing option and a photosensitivity warning on first launch.',
+      'Change your keys in Settings, General, Controls. Ability keys in the HUD and tutorial follow your choice.',
+      'Gamepad: map difficulty on LB / RB, forge options with up / down and RB, RT opens weapons and passives.',
+      'Expedition map: clicking a node only selects it. Start with Travel or Enter.',
+    ],
+  },
+  {
     version: '0.28',
     lines: [
       'New players start with a short interactive tutorial (skip it in the pause menu, replay it in Settings).',

@@ -16,6 +16,8 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Menu w grze: Esc pauza, I albo Tab ekwipunek, C bronie i pasywki (ewolucje, fuzje), K kowadło (między poziomami), F pełny ekran.',
       'Awans: 1-4 albo klik wybiera, R losuje ponownie, X pomija, B wygania opcję z puli do końca runu.',
       'Telefon: lewa połowa ekranu to joystick, ikony umiejętności w prawym dolnym rogu to przyciski.',
+      'Gamepad: left stick moves, A dodges and confirms, X and B abilities, Y ultimate, Start pause, LT backpack, RT weapons and passives, LB / RB reroll and skip (map difficulty), right stick aims and scrolls.',
+      'Keys: change them in Settings, General, Controls. Long texts: PageUp / PageDown, mouse wheel or drag.',
     ],
   },
   {

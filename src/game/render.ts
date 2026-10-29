@@ -179,7 +179,7 @@ function drawWorld(run: Run, r: Renderer): void {
       if (w.def.kind !== 'aura') continue;
       const rad = auraRadius(effectiveStats(run, w).area) * ZOOM;
       if (glow) r.withAlpha(0.16, () => r.circle(px, py, rad, w.def.color, true));
-      r.circle(px, py, rad, run.step % 20 < 10 ? w.def.color : C.orange);
+      r.circle(px, py, rad, run.blink(20, 10) ? w.def.color : C.orange);
     }
     if (ult.def.kind === 'titan' && ult.activeT > 0) {
       const rad = ult.def.p.radius * run.stats.area * ZOOM;
@@ -195,14 +195,14 @@ function drawWorld(run: Run, r: Renderer): void {
       switch (z.kind) {
         case 'meteor': {
           r.withAlpha(0.25, () => r.circle(zx, zy, zr, C.red, true));
-          if (run.step % 8 < 5) r.circle(zx, zy, zr, C.red);
+          if (run.blink(8, 5)) r.circle(zx, zy, zr, C.red);
           const fall = Math.max(0, 1 - z.t / z.delay);
           drawSprite(g, 'eb_orange', zx + fall * 45, zy - fall * 135, { scale: 2 });
           break;
         }
         case 'mine':
           drawShadow(g, zx, zy + 5, 10);
-          drawSprite(g, z.t > 0.4 && run.step % 20 < 10 ? 'mine1' : 'mine0', zx, zy);
+          drawSprite(g, z.t > 0.4 && run.blink(20, 10) ? 'mine1' : 'mine0', zx, zy);
           break;
         case 'net':
           r.withAlpha(0.15, () => r.circle(zx, zy, zr, C.lgray, true));
@@ -225,13 +225,13 @@ function drawWorld(run: Run, r: Renderer): void {
         case 'curse':
           // Bagno dusz: zielono-fioletowa toń z bąblami i ognikami.
           r.withAlpha(0.22, () => r.circle(zx, zy, zr, C.dgreen, true));
-          r.circle(zx, zy, zr, run.step % 30 < 15 ? C.lime : C.plum);
+          r.circle(zx, zy, zr, run.blink(30, 15) ? C.lime : C.plum);
           for (let k = 0; k < 4; k++) r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7, 2, 2, k % 2 ? C.lime : C.pink);
           break;
         case 'holy':
           // Uświęcona ziemia: złoty krąg z unoszącymi się iskrami światła.
           r.withAlpha(0.18, () => r.circle(zx, zy, zr, C.yellow, true));
-          r.circle(zx, zy, zr, run.step % 30 < 15 ? C.gold : C.yellow);
+          r.circle(zx, zy, zr, run.blink(30, 15) ? C.gold : C.yellow);
           r.circle(zx, zy, zr * 0.6, C.cream);
           for (let k = 0; k < 4; k++) r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7 - rng.range(0, 6), 1, 2, k % 2 ? C.white : C.yellow);
           break;
@@ -308,9 +308,9 @@ function drawWorld(run: Run, r: Renderer): void {
     if (t.kind === 'cover') {
       drawSprite(g, `tcover@${t.v + (t.hp < BAL.terrain.coverHp / 2 ? 3 : 0)}`, tx, ty - 4);
       // Pęknięta ściana (sekret): migocząca fioletowa szczelina.
-      if (t.secret && run.step % 50 < 12) { r.rect(tx - 1, ty - 10, 2, 8, C.pink); r.rect(tx + 1, ty - 4, 2, 2, C.hotpink); }
+      if (t.secret && run.blink(50, 12)) { r.rect(tx - 1, ty - 10, 2, 8, C.pink); r.rect(tx + 1, ty - 4, 2, 2, C.hotpink); }
     }
-    else drawSprite(g, 'tbarrel', tx, ty - 4, { flash: t.t > 0 && run.step % 4 < 2 });
+    else drawSprite(g, 'tbarrel', tx, ty - 4, { flash: t.t > 0 && run.blink(4, 2) });
   }
 
   // Obiekty mapy: kapliczki (z paskiem aktywacji), miecz w kamieniu, portale.
@@ -341,9 +341,9 @@ function drawWorld(run: Run, r: Renderer): void {
       drawSprite(g, o.kind, ox, oy);
     } else if (o.kind === 'barrow') {
       r.withAlpha(0.25, () => r.circle(ox, oy, 24, C.gold, true));
-      drawSprite(g, `barrow@${run.step % 40 < 20 ? 1 : 0}`, ox, oy - 4);
+      drawSprite(g, `barrow@${run.blink(40, 20) ? 1 : 0}`, ox, oy - 4);
     } else if (o.kind === 'sword') {
-      if (run.step % 30 < 15) r.rect(ox + 3, oy - 12, 2, 2, C.white);
+      if (run.blink(30, 15)) r.rect(ox + 3, oy - 12, 2, 2, C.white);
       drawSprite(g, 'swordstone', ox, oy);
     } else {
       r.withAlpha(0.3, () => r.circle(ox, oy, 20, o.kind === 'exit' ? C.lime : C.pink, true));
@@ -374,7 +374,7 @@ function drawWorld(run: Run, r: Renderer): void {
       drawSprite(g, 'taskstone', tx, ty);
     } else if (task.started && kind === 'hunt') {
       const e = run.enemies.items.find((x) => x.uid === task.target && !x.dead);
-      if (e && vis(e.x, e.y) && run.step % 20 < 14) {
+      if (e && vis(e.x, e.y) && run.blink(20, 14)) {
         const ex = X(e.x), ey = Y(e.y - e.radius) - 10;
         r.rect(ex - 3, ey - 4, 7, 3, C.black); r.rect(ex - 2, ey - 3, 5, 1, C.red); r.rect(ex - 1, ey - 2, 3, 2, C.red); r.rect(ex, ey, 1, 1, C.red);
       }
@@ -421,7 +421,7 @@ function drawWorld(run: Run, r: Renderer): void {
           r.rect(sx - w / 2 + ((k * 7) % w), sy - t * h, 2, 2, t > 0.7 ? C.white : col);
         }
       }
-      if (it.item.super && run.step % 16 < 10) {
+      if (it.item.super && run.blink(16, 10)) {
         for (const [ox, oy] of [[-11, -8], [10, -4], [-6, 6], [8, 9]]) r.rect(sx + ox, sy + oy + bob, 2, 2, C.yellow);
       }
     }
@@ -431,12 +431,12 @@ function drawWorld(run: Run, r: Renderer): void {
 
   // Wieżyczki (karty z tagiem Przywołania).
   for (const t of run.turrets.items) {
-    if (t.life > 1.5 || run.step % 8 < 5) drawSprite(g, 'turret', X(t.x), Y(t.y));
+    if (t.life > 1.5 || run.blink(8, 5)) drawSprite(g, 'turret', X(t.x), Y(t.y));
   }
 
   // Sługi (duchy): półprzezroczyste, migają przed zniknięciem.
   for (const m of run.minions.items) {
-    if (!vis(m.x, m.y) || (m.life < 1.5 && run.step % 8 >= 5)) continue;
+    if (!vis(m.x, m.y) || (m.life < 1.5 && !run.reduceFlash && run.step % 8 >= 5)) continue;
     const name = m.holy ? (m.big ? 'angelbig' : 'angel') : m.big ? 'wraithbig' : 'wraith';
     r.withAlpha(0.85, () => drawSprite(g, `${name}@${animFrame(name, run.step, m._i * 5)}`, X(m.x), Y(m.y) - 2, { flipX: m.x > p.x }));
   }
@@ -445,8 +445,8 @@ function drawWorld(run: Run, r: Renderer): void {
   for (const e of run.enemies.items) {
     if (e.dead || !vis(e.x, e.y)) continue;
     const ex = X(e.x), ey = Y(e.y);
-    if (e.elite) r.circle(ex, ey + e.radius * ZOOM, e.radius * ZOOM * 1.2, run.step % 30 < 15 ? C.yellow : C.orange);
-    if (e.boss && e.invuln > 0 && run.step % 6 < 3) continue;
+    if (e.elite) r.circle(ex, ey + e.radius * ZOOM, e.radius * ZOOM * 1.2, run.blink(30, 15) ? C.yellow : C.orange);
+    if (e.boss && e.invuln > 0 && !run.reduceFlash && run.step % 6 < 3) continue;
     drawSprite(g, `${e.sprite}@${animFrame(e.sprite, run.step, e.uid * 7)}`, ex, ey, { flash: e.flash > 0, scale: e.scale, flipX: e.x > p.x });
     // Boss: zapowiedzi ataków — kurczący się krąg przed nazwanym atakiem, linia szarży (unik ma być czytelny).
     if (e.boss && e.invuln <= 0) {
@@ -456,7 +456,7 @@ function drawWorld(run: Run, r: Renderer): void {
       }
       if (e.dashT > 0.5) {
         const d = Math.hypot(e.dvx, e.dvy) || 1, L = 0.5 * d * ZOOM;
-        r.withAlpha(run.step % 6 < 3 ? 0.7 : 0.35, () => r.line(ex, ey, ex + (e.dvx / d) * L, ey + (e.dvy / d) * L, C.red, 3));
+        r.withAlpha(run.blink(6, 3) ? 0.7 : 0.35, () => r.line(ex, ey, ex + (e.dvx / d) * L, ey + (e.dvy / d) * L, C.red, 3));
       }
     }
     // Tarczownik: łuk tarczy w kierunku, w którym patrzy.
@@ -505,12 +505,14 @@ function drawWorld(run: Run, r: Renderer): void {
     r.withAlpha(0.5, () => r.ellipse(px, py + 9, pr, pr * 0.42, run.player.hurtCd > 0 ? C.red : C.gold));
   }
   // Gracz (miganie przy nietykalności).
-  const blink = (p.hurtCd > 0 || p.iframes > 0) && run.step % 6 < 3;
-  if (!blink && run.outcome !== 'dead') {
+  // Ograniczenie błysków: zamiast migania stałe półprzezroczyste.
+  const blink = (p.hurtCd > 0 || p.iframes > 0) && !run.reduceFlash && run.step % 6 < 3;
+  const ghost = (p.hurtCd > 0 || p.iframes > 0) && run.reduceFlash;
+  if (!blink && run.outcome !== 'dead') r.withAlpha(ghost ? 0.55 : 1, () => {
     const scale = ult.def.kind === 'titan' && ult.activeT > 0 ? 2 : 1;
     const frame = p.moving || p.dashT > 0 ? animFrame(run.heroSprite, run.step, 0) : 0;
-    drawSprite(g, `${run.heroSprite}@${frame}`, px, py, { flash: p.flash > 0, scale, flipX: p.fx < 0 });
-  }
+    drawSprite(g, `${run.heroSprite}@${frame}`, px, py, { flash: p.flash > 0 && !run.reduceFlash, scale, flipX: p.fx < 0 });
+  });
   if (p.shield > 0) {
     // Tarcza: jeden czytelny pierścień (bez nakładających się poświat).
     r.withAlpha(0.6, () => r.circle(px, py + 1, 13, C.cyan));
@@ -627,7 +629,7 @@ function drawWorld(run: Run, r: Renderer): void {
         case 'fade': {
           // Znikający wróg: biały błysk sylwetki, potem bladnięcie i lekkie uniesienie.
           const up = (1 - k) * 4;
-          r.withAlpha(k * 0.8, () => drawSprite(g, f.sprite, X(f.x), Y(f.y) - up, { flash: k > 0.7, scale: Math.max(1, Math.round(f.r)), flipX: f.a0 === 1 }));
+          r.withAlpha(k * 0.8, () => drawSprite(g, f.sprite, X(f.x), Y(f.y) - up, { flash: k > 0.7 && !run.reduceFlash, scale: Math.max(1, Math.round(f.r)), flipX: f.a0 === 1 }));
           break;
         }
         case 'arc':
@@ -666,7 +668,7 @@ function drawWorld(run: Run, r: Renderer): void {
   }
   for (const s of run.strikes) {
     const sx = X(s.x), sy = Y(s.y), col = s.foe ? C.orange : C.cyan;
-    r.circle(sx, sy, BAL.levelEvents.stormR * ZOOM, run.step % 8 < 4 ? C.white : col);
+    r.circle(sx, sy, BAL.levelEvents.stormR * ZOOM, !run.reduceFlash && run.step % 8 < 4 ? C.white : col);
     r.withAlpha(0.15, () => r.circle(sx, sy, BAL.levelEvents.stormR * ZOOM * Math.max(0, 1 - s.t / BAL.levelEvents.stormWarn), col, true));
   }
   if (fancy) g.drawImage(getVignette(), 0, 0, VW, VH);
@@ -678,7 +680,7 @@ function drawWorld(run: Run, r: Renderer): void {
     const mx = Math.round(px + dx * k), my = Math.round(py + dy * k);
     r.circle(mx, my, 5, C.black, true);
     r.circle(mx, my, 4, col, true);
-    if (run.step % 30 < 15) r.rect(mx - 1, my - 1, 2, 2, C.white);
+    if (run.blink(30, 15)) r.rect(mx - 1, my - 1, 2, 2, C.white);
   };
   for (const it of run.pickups.items) {
     if (!it.item || vis(it.x, it.y) || (it.item.rarity < 2 && !it.item.super)) continue;

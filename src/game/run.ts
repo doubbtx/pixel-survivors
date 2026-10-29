@@ -449,6 +449,8 @@ export class Run {
   bgDim = 0;
   bulletOutline = false;
   playerMarker = false;
+  /** Ograniczenie błysków (Ustawienia, dostępność): miganie zastępuje stały kolor, bez białych błysków trafień. */
+  reduceFlash = false;
   /** Ukryte pociski gracza (ustawienie): nadal działają, tylko nie są rysowane. */
   playerFx: PlayerFx = 'visible';
 
@@ -622,6 +624,11 @@ export class Run {
     this.shake = Math.max(0, this.shake - dt * 20);
     this.camX = this.player.x - VIEW_W / 2;
     this.camY = this.player.y - VIEW_H / 2;
+  }
+
+  /** Miganie co `period` kroków (włączone przez pierwsze `on`); przy ograniczeniu błysków zawsze włączone (stały stan). */
+  blink(period: number, on: number): boolean {
+    return this.reduceFlash || this.step % period < on;
   }
 
   private rebuildHash(): void {
@@ -1128,7 +1135,7 @@ export class Run {
     // Statystyki (tabela obrażeń, DPS) liczą tylko zadane obrażenia; siła gracza (trudność) i kradzież życia całe trafienie.
     const dealt = Math.min(dmg, Math.max(0, e.hp));
     e.hp -= dmg;
-    e.flash = 3;
+    if (!this.reduceFlash) e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;

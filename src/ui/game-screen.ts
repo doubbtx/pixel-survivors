@@ -524,6 +524,7 @@ export class GameScreen implements Screen {
     run.bgDim = set.bgDim;
     run.bulletOutline = set.bulletOutline;
     run.playerMarker = set.playerMarker;
+    run.reduceFlash = set.reduceFlash;
     if (run.easy !== set.easy) { run.easy = set.easy; run.onBuildChanged(); }
     // Statystyki diagnostyczne (F3 / `): tylko na czas sesji; klawisze testowe nadal wymagają trybu debug w Ustawieniach.
     if (inp.pressed('debug')) this.diag = !this.diag;

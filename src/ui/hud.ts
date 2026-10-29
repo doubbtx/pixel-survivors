@@ -11,7 +11,7 @@ import { abilityMaxCd } from '../systems/abilities';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { fmt, fmtTime } from '../util/format';
 import type { LoopStats } from '../core/loop';
-import { abilitySlotPos, ABILITY_SLOT, TOUCH_PAUSE, STICK_R, type Input } from '../core/input';
+import { actionKey, abilitySlotPos, ABILITY_SLOT, TOUCH_PAUSE, STICK_R, type Input } from '../core/input';
 import type { Run } from '../game/run';
 import { drawSynergyHud } from './synergies';
 import { resFrac, resMax } from '../systems/resource';
@@ -31,7 +31,6 @@ import { UI, SMALL, OUT, tile, meter, iconSlot, cornerTag, label, approach } fro
  * środek dołu — pasek umiejętności Q/E/Spacja/R (na dotyku prawy dół, większe przyciski).
  */
 
-const KEY_LABEL: Record<AbilitySlot, string> = { q: 'Q', e: 'E', dash: 'Spc', ult: 'R' };
 const ABILITIES: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
 
 /** Kolory pasków zasobów bohaterów (płaskie). */
@@ -220,14 +219,14 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
   g.beginPath(); g.rect(px, py, ps, ps); g.clip();
   drawSprite(g, `${run.heroSprite}@0`, px + ps / 2, py + ps / 2 + 2);
   g.restore();
-  const lv = `LV ${run.level}`, lw = textWidth(lv) * 0.75 + 4, flash = a.levelFlash > 0 && a.levelFlash % 0.2 > 0.1;
+  const lv = `LV ${run.level}`, lw = textWidth(lv) * 0.75 + 4, flash = a.levelFlash > 0 && (run.reduceFlash || a.levelFlash % 0.2 > 0.1);
   r.roundRect(px + ps / 2 - lw / 2, py + ps - 4, lw, 7, 1.5, flash ? C.teal : C.black);
   r.roundFrame(px + ps / 2 - lw / 2, py + ps - 4, lw, 7, 1.5, UI.xp, UI.line);
   drawText(g, lv, px + ps / 2, py + ps - 4.5, a.levelFlash > 0 ? C.white : UI.xp, { align: 'center', scale: 0.75 });
   // Życie: aktualna i maksymalna wartość na pasku, ślad utraconego życia, tarcza jako cienka linia pod spodem.
   const bx = px + ps + 4, bw = x + w - 3 - bx;
   meter(r, bx, py, bw, 8, a.hp, UI.life, a.hpTrail, UI.lifeTrail);
-  if (a.hitFlash > 0) r.withAlpha(a.hitFlash / 0.18 * 0.7, () => r.roundRect(bx, py, bw, 8, 1, C.white));
+  if (a.hitFlash > 0 && !run.reduceFlash) r.withAlpha(a.hitFlash / 0.18 * 0.7, () => r.roundRect(bx, py, bw, 8, 1, C.white));
   if (run.healGlow > 0) r.withAlpha(Math.min(1, run.healGlow * 2), () => r.roundFrame(bx - 0.5, py - 0.5, bw + 1, 9, 1, C.lime, 0.75));
   if (p.shield > 0) r.rect(bx, py + 8.5, bw * Math.min(1, p.shield / st.maxHp), 1, C.cyan);
   drawText(g, `${fmt(p.hp)} / ${fmt(st.maxHp)}`, bx + bw / 2, py + 0.3, C.white, { align: 'center', ...SMALL });
@@ -410,7 +409,7 @@ function drawAbilities(r: Renderer, run: Run, a: HudAnim, touch: boolean): void 
       r.withAlpha(k * 0.3, () => r.roundRect(x, y, S, S, UI.radius, C.white));
     }
     // Klawisz: mała plakietka w lewym dolnym rogu; poziom umiejętności kreskami nad gniazdem.
-    const kl = KEY_LABEL[sl], kw = textWidth(kl) * 0.75 + 3;
+    const kl = sl === 'dash' && actionKey('dash') === 'Space' ? 'Spc' : actionKey(sl), kw = textWidth(kl) * 0.75 + 3;
     r.withAlpha(0.8, () => r.roundRect(x, y + S - 6.5, kw, 6.5, 1, C.black));
     drawText(g, kl, x + 1.5, y + S - 7.5, ready ? C.white : UI.textDim, { scale: 0.75 });
     if (ab.def.maxLevel > 1) for (let l = 0; l < ab.level; l++) r.rect(x + 1 + l * 4, y - 2.5, 3, 1, UI.reward);
@@ -450,7 +449,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
 
   // Cienki pasek doświadczenia na całej szerokości; błysk po zebraniu kryształu i przy awansie.
   meter(r, 0, 0, W, UI.xpH, a.xp, UI.xp);
-  if (run.xpPulse > 0 || a.levelFlash > 0) r.withAlpha(Math.min(0.8, run.xpPulse * 3 + a.levelFlash), () => r.rect(0, 0, a.levelFlash > 0 ? W : W * a.xp, UI.xpH, C.white));
+  if ((run.xpPulse > 0 || a.levelFlash > 0) && !run.reduceFlash) r.withAlpha(Math.min(0.8, run.xpPulse * 3 + a.levelFlash), () => r.rect(0, 0, a.levelFlash > 0 ? W : W * a.xp, UI.xpH, C.white));
 
   const cardBottom = drawHeroCard(r, run, a);
   const statusBottom = drawStatusRow(r, run, UI.edge, cardBottom + UI.gap + 1);

@@ -3,10 +3,11 @@ import { C } from '../core/palette';
 import { drawText, textWidth, wrapText, DESC, descS, descLH } from '../core/font';
 import { drawSprite } from '../gfx/sprites';
 import type { AbilityDef, AbilitySlot } from '../data/heroes';
+import { actionKey } from '../core/input';
 import { slot } from './widgets';
 
-/** Klawisz umiejętności w opisach. */
-export const SKILL_KEY: Record<AbilitySlot, string> = { q: 'Q', e: 'E', dash: 'Spacja', ult: 'R' };
+/** Klawisz umiejętności w opisach (z przypisań w Ustawieniach → Sterowanie). */
+export const skillKey = (s: AbilitySlot): string => actionKey(s);
 
 export interface SkillEntry {
   def: AbilityDef;
@@ -29,8 +30,8 @@ export function drawSkills(r: Renderer, list: SkillEntry[], x: number, y: number
     slot(r, x, y, 18, d.color);
     drawSprite(g, d.icon, x + 9, y + 9);
     const tx = x + 24;
-    drawText(g, `[${SKILL_KEY[d.slot]}]`, tx, y - 1, C.lavender);
-    drawText(g, d.name, tx + textWidth(`[${SKILL_KEY[d.slot]}]`) + 4, y - 1, d.color);
+    drawText(g, `[${skillKey(d.slot)}]`, tx, y - 1, C.lavender);
+    drawText(g, d.name, tx + textWidth(`[${skillKey(d.slot)}]`) + 4, y - 1, d.color);
     const info = s.level !== undefined && d.maxLevel > 1 ? `poz. ${s.level}/${d.maxLevel}   ${s.cd}` : s.cd;
     drawText(g, info, x + w, y - 1, C.lgray, { align: 'right', scale: 0.75 });
     let ly = y + 10;

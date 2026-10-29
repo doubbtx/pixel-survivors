@@ -23,7 +23,7 @@ const BTN_W = 120;
 function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, selected: boolean, warn: boolean, recommended: boolean): void {
   const q = o.quality ?? 0;
   // Jakość ulepszenia broni: ramka w kolorze jakości, Epickie i Legendarne pulsują jaśniej.
-  const qCol = q >= 3 && Math.floor(performance.now() / 250) % 2 ? C.white : RARITIES[q].color;
+  const qCol = q >= 3 && !run.reduceFlash && Math.floor(performance.now() / 250) % 2 ? C.white : RARITIES[q].color;
   panel(r, x, y, CARD_W, CARD_H, warn ? C.red : selected ? C.gold : q ? qCol : recommended ? C.yellow : C.slate);
   const cx = x + CARD_W / 2;
   const isNew = o.kind === 'weaponNew' || o.kind === 'passiveNew';

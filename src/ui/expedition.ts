@@ -87,11 +87,18 @@ export class ExpeditionMapView {
       const [x, y] = nodePos(row, lanes[i]);
       if (!inside(m.x, m.y, x - NODE / 2, y - NODE / 2, NODE, NODE)) continue;
       if (m.lastMove !== this.lastMouse) this.sel = i;
-      if (input.pressed('click')) { this.sel = i; return { pick: lanes[i] }; }
+      // Klik tylko zaznacza węzeł; wejście przyciskiem Wyrusz albo Enterem (bez przypadkowego startu walki).
+      if (input.pressed('click') && this.sel !== i) { this.sel = i; sfx.play('select'); }
+      else if (input.pressed('click')) this.sel = i;
     }
     this.lastMouse = m.lastMove;
-    // Poziom trudności wyprawy: klawisze 1-4 albo klik w przycisk (gdy zaznaczona mapa ma poziomy).
+    // Poziom trudności wyprawy: klawisze 1-4, LB/RB na padzie (R/X) albo klik w przycisk (gdy zaznaczona mapa ma poziomy).
     const ex = this.run.expedition!, tiered = !!ex.map[row][lanes[this.sel]]?.tiers;
+    const step = input.pressed('skip') ? 1 : input.pressed('reroll') ? -1 : 0;
+    if (tiered && step) {
+      const t = Math.max(0, Math.min(ex.maxTier ?? MAP_RARITY.length - 1, (ex.tier ?? 0) + step));
+      if (chooseTier(ex, t)) { sfx.play('select'); this.onTier(t); }
+    }
     const keys = ['n1', 'n2', 'n3', 'n4'] as const;
     keys.forEach((key, t) => {
       const [bx, by] = tierPos(t);
@@ -255,7 +262,7 @@ export class ExpeditionMapView {
       // Poziom trudności wyprawy (przyciski 1-4) w prawym górnym rogu.
       const rx = MAP_X + MAP_W - 8;
       if (m.tiers) {
-        drawText(g, 'Trudność [1-4]', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
+        drawText(g, 'Difficulty [1-4, R/X]', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
         m.tiers.forEach((t, i) => {
           const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i];
           // Poziom jeszcze niezdobyty (data/unlocks.ts): przygaszony, z opisem, jak go odblokować.

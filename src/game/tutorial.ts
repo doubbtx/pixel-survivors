@@ -1,5 +1,5 @@
 import type { Run } from './run';
-import type { Input } from '../core/input';
+import { actionKey, type Action, type Input } from '../core/input';
 import type { AbilitySlot } from '../data/heroes';
 import { spawnEnemy } from '../systems/spawner';
 import { rng } from '../core/rng';
@@ -37,7 +37,7 @@ const alive = (run: Run) => run.enemies.items.some((e) => !e.dead);
 const STEPS: Step[] = [
   {
     title: 'Move',
-    body: { kbm: 'Move with WASD or the arrow keys.', pad: 'Move with the left stick.', touch: 'Drag on the left side of the screen to move.' },
+    body: { kbm: 'Move with {move} or the arrow keys.', pad: 'Move with the left stick.', touch: 'Drag on the left side of the screen to move.' },
     done: (_r, t) => t.moved > 80,
   },
   {
@@ -54,19 +54,19 @@ const STEPS: Step[] = [
   },
   {
     title: 'Abilities',
-    body: { kbm: 'Use your abilities: press Q, then E.', pad: 'Use your abilities: press X, then B.', touch: 'Use your abilities: tap Q, then E (bottom right).' },
+    body: { kbm: 'Use your abilities: press {q}, then {e}.', pad: 'Use your abilities: press X, then B.', touch: 'Use your abilities: tap Q, then E (bottom right).' },
     enter: (run) => weak(run, 'bat', 8, 140),
     done: (_r, t) => t.cast.q && t.cast.e,
   },
   {
     title: 'Dodge',
-    body: { kbm: 'Press Space to dodge. You cannot be hurt while dodging, even through enemies.', pad: 'Press A to dodge. You cannot be hurt while dodging, even through enemies.', touch: 'Tap the dodge button (bottom right). You cannot be hurt while dodging, even through enemies.' },
+    body: { kbm: 'Press {dash} to dodge. You cannot be hurt while dodging, even through enemies.', pad: 'Press A to dodge. You cannot be hurt while dodging, even through enemies.', touch: 'Tap the dodge button (bottom right). You cannot be hurt while dodging, even through enemies.' },
     enter: (run) => weak(run, 'slime', 12, 70, 3),
     done: (_r, t) => t.cast.dash,
   },
   {
     title: 'Ultimate',
-    body: { kbm: 'Kills charge your ultimate. It is ready now: press R.', pad: 'Kills charge your ultimate. It is ready now: press Y.', touch: 'Kills charge your ultimate. It is ready now: tap R.' },
+    body: { kbm: 'Kills charge your ultimate. It is ready now: press {ult}.', pad: 'Kills charge your ultimate. It is ready now: press Y.', touch: 'Kills charge your ultimate. It is ready now: tap R.' },
     enter: (run) => { run.ultCharge = run.ultNeed(); weak(run, 'bat', 10, 150); },
     done: (_r, t) => t.cast.ult,
   },
@@ -107,7 +107,9 @@ export class Tutorial {
   text(input: Input): { title: string; body: string } {
     if (this.finished) return { title: 'Tutorial complete', body: 'You are ready. Your first Expedition is next: three acts, each with a boss at the end.' };
     const s = STEPS[Math.max(0, this.step)];
-    return { title: s.title, body: s.body[input.lastDevice] };
+    // Klawisze z przypisań gracza (Ustawienia → Sterowanie).
+    const keys: Record<string, string> = { move: ['up', 'left', 'down', 'right'].map((a) => actionKey(a as Action)).join(''), q: actionKey('q'), e: actionKey('e'), dash: actionKey('dash'), ult: actionKey('ult') };
+    return { title: s.title, body: s.body[input.lastDevice].replace(/\{(\w+)\}/g, (_, k: string) => keys[k] ?? k) };
   }
 
   /** Co klatkę rozgrywki (po run.update). */

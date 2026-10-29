@@ -433,6 +433,13 @@ src/
 - Existing saves keep everything unlocked and skip the tutorial (save version 9).
 - Test bot (dev server only): `node scripts/bot.cjs bot=endless|expedition|tutorial ...` plays the game by itself and reports errors, slow steps and missing translations.
 
+**Readability and accessibility (0.29.0)**:
+- Text size (Settings → Readability): Normal or Large (default on touch screens). Large draws descriptions at full size: abilities, hero resource, Arsenal, weapons and passives, elements, map modifiers, item description, pause, synergies, help. Long texts scroll with the mouse wheel, a finger drag, PageUp / PageDown or the right stick.
+- Reduce flashing (Settings → Readability) and a photosensitivity warning on first launch: blinking warnings stay lit, no white hit flashes, the hero turns half-transparent instead of blinking while invulnerable.
+- Key rebinding (Settings → General → Controls): movement, Q, E, dodge, ultimate, backpack, weapons, skip, banish, anvil, pause. Arrows, Enter, Esc, Tab and 1-4 always work in menus. The HUD, ability descriptions and the tutorial show your keys.
+- Expedition map: clicking a node only selects it; Travel or Enter starts it (no accidental fights).
+- Gamepad: RT opens weapons and passives, right stick click the anvil, LB / RB change the map difficulty, forge options with up / down and RB.
+
 ### Jak przetestować
 
 1. `npm run dev` → Endless → Nowy run → bohater (albo Ekspedycja → Nowa ekspedycja).

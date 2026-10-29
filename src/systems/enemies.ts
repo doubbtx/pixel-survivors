@@ -95,7 +95,7 @@ function updateBoss(run: Run, e: Enemy, dt: number, dx: number, dy: number, dist
   if (e.dashT > 0) {
     e.dashT -= dt;
     if (e.dashT < 0.5) { e.x += e.dvx * dt; e.y += e.dvy * dt; } // po zapowiedzi — szarża
-    else if (run.step % 4 < 2) e.flash = 2;
+    else if (run.blink(4, 2)) e.flash = 2;
   } else if (dist > 1) {
     // Boss trzyma dystans: walka toczy się na pociski, nie na zderzenia (jak w ROTMG).
     const dir = dist > 70 ? 1 : dist < 50 ? -1 : 0;
@@ -112,7 +112,7 @@ function updateBoss(run: Run, e: Enemy, dt: number, dx: number, dy: number, dist
     fireVolley(run, e.x, e.y, { ...B_SPIN(2 + phase), sprite: SPIN_SPRITE[style] }, e.shootA, dmg);
   }
   e.actT -= dt;
-  if (e.actT > 0 && e.actT < 0.5 && run.step % 6 < 3) e.flash = 2; // zapowiedź ataku
+  if (e.actT > 0 && e.actT < 0.5 && run.blink(6, 3)) e.flash = 2; // zapowiedź ataku
   if (e.actT > 0) return;
   const alt = (e.phase + Math.floor(e.age / 3)) % 2; // na zmianę dwa ataki fazy
   e.actT = BOSS_STYLES[style](run, e, phase, alt, dmg, dx, dy, dist);
@@ -276,7 +276,7 @@ function updateWarden(run: Run, e: Enemy, dt: number, dx: number, dy: number, di
   const Wd = BAL.secretsMap.warden, rage = e.hp < e.maxHp * 0.5, spr = e.def.bullet ?? 'eb_cyan';
   if (e.dashT > 0) {
     e.dashT -= dt;
-    if (e.dashT < 0.5) { e.x += e.dvx * dt; e.y += e.dvy * dt; } else if (run.step % 4 < 2) e.flash = 2;
+    if (e.dashT < 0.5) { e.x += e.dvx * dt; e.y += e.dvy * dt; } else if (run.blink(4, 2)) e.flash = 2;
   } else {
     // Krąży w dystansie `k`; gdy gracz ucieka poza ekran, dogania go prosto i szybciej (miniboss ma być widoczny).
     const k = rage ? 55 : 70, far = dist > Wd.catchUp, side = e.uid % 2 ? 1 : -1;
@@ -292,7 +292,7 @@ function updateWarden(run: Run, e: Enemy, dt: number, dx: number, dy: number, di
     fireVolley(run, e.x, e.y, { shape: 'ring', count: rage ? 3 : 2, speed: 55, sprite: spr }, e.shootA, dmg);
   }
   e.actT -= dt;
-  if (e.actT > 0 && e.actT < 0.4 && run.step % 6 < 3) e.flash = 2; // zapowiedź ataku
+  if (e.actT > 0 && e.actT < 0.4 && run.blink(6, 3)) e.flash = 2; // zapowiedź ataku
   if (e.actT > 0) return;
   const n = WARDEN_ATTACKS.length;
   let pick = rng.int(0, n - 1);
@@ -310,7 +310,7 @@ const isMeleeElite = (e: Enemy) => !e.def.shoot && e.def.behavior !== 'keep' && 
 function updateEliteCharge(run: Run, e: Enemy, dt: number): void {
   const A = BAL.eliteAbility, prev = e.dashT;
   e.dashT -= dt;
-  if (e.dashT < 0.4) { e.x += e.dvx * dt; e.y += e.dvy * dt; } else if (run.step % 4 < 2) e.flash = 2;
+  if (e.dashT < 0.4) { e.x += e.dvx * dt; e.y += e.dvy * dt; } else if (run.blink(4, 2)) e.flash = 2;
   if (prev > 0 && e.dashT <= 0) fireVolley(run, e.x, e.y, { shape: 'ring', count: A.ring, speed: 65, sprite: 'eb_orange' }, rng.range(0, TAU), e.damage * BAL.bulletDmg);
 }
 
@@ -321,7 +321,7 @@ function updateEliteCharge(run: Run, e: Enemy, dt: number): void {
 function eliteAbility(run: Run, e: Enemy, dt: number, nx: number, ny: number, dist: number): void {
   const A = BAL.eliteAbility;
   e.abilT -= dt;
-  if (e.abilT > 0 && e.abilT < A.windup && dist < A.range && run.step % 6 < 3) e.flash = 2;
+  if (e.abilT > 0 && e.abilT < A.windup && dist < A.range && run.blink(6, 3)) e.flash = 2;
   if (e.abilT > 0 || dist > A.range) return;
   e.abilT = rng.range(A.cdMin, A.cdMax);
   const dmg = e.damage * BAL.bulletDmg;
@@ -428,7 +428,7 @@ export function updateEnemies(run: Run, dt: number): void {
           // Lont: stoi i miga, potem wybuch (rani gracza w promieniu, sam ginie).
           if (e.dashT > 0) {
             e.dashT -= dt;
-            if (run.step % 4 < 2) e.flash = 2;
+            if (run.blink(4, 2)) e.flash = 2;
             if (e.dashT <= 0) {
               if (dist < N.kamikazeR + p.r) run.hurtPlayer(e.damage * N.kamikazeDmg);
               run.boomFx(e.x, e.y, N.kamikazeR);
@@ -443,7 +443,7 @@ export function updateEnemies(run: Run, dt: number): void {
         case 'blink':
           // Teleport obok gracza po zapowiedzi (miganie).
           e.actT -= dt;
-          if (e.actT < 0.5 && run.step % 4 < 2) e.flash = 2;
+          if (e.actT < 0.5 && run.blink(4, 2)) e.flash = 2;
           if (e.actT <= 0) {
             e.actT = N.blinkEvery * rng.range(0.8, 1.2);
             const a = rng.range(0, TAU), r = rng.range(N.blinkMin, N.blinkMax);
@@ -458,7 +458,7 @@ export function updateEnemies(run: Run, dt: number): void {
           const dir = dist > k + 10 ? 1 : dist < k - 10 ? -0.6 : 0;
           e.x += (nx * dir - ny * 0.3) * sp; e.y += (ny * dir + nx * 0.3) * sp;
           e.actT -= dt;
-          if (e.actT < 0.5 && dist < 220 && run.step % 6 < 3) e.flash = 2;
+          if (e.actT < 0.5 && dist < 220 && run.blink(6, 3)) e.flash = 2;
           if (e.actT > 0 || dist > 220) break;
           if (e.def.behavior === 'summoner') {
             e.actT = N.summonEvery;
@@ -491,7 +491,7 @@ export function updateEnemies(run: Run, dt: number): void {
         }
         e.shootT -= dt;
         // Zapowiedź salwy: wróg miga.
-        if (sh?.windup && e.shootT < sh.windup && dist < sh.range && run.step % 6 < 3) e.flash = 2;
+        if (sh?.windup && e.shootT < sh.windup && dist < sh.range && run.blink(6, 3)) e.flash = 2;
         if (e.shootT <= 0 && run.bullets.count < BAL.enemyBulletSoftCap) {
           if (sh && dist < sh.range) {
             shoot(run, e, sh, dmg);
