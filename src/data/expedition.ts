@@ -31,7 +31,7 @@ export const NODE_INFO: Record<NodeKind, NodeInfo> = {
   treasure: { name: 'Skarb', icon: 'ex_chest', color: C.yellow, desc: 'Skrzynia z przedmiotem wysokiej jakości, bez walki.' },
   shop: { name: 'Sklep', icon: 'ex_shop', color: C.gold, desc: 'Sklep z przedmiotami, usługami i eliksirami.' },
   anvil: { name: 'Kowadło', icon: 'ex_anvil', color: C.cyan, desc: 'Ulepszanie i przekuwanie przedmiotów, plus darmowe odłamki.' },
-  rest: { name: 'Obóz', icon: 'ex_rest', color: C.lime, desc: 'Odpoczynek: leczenie i stały bonus do maks. HP.' },
+  rest: { name: 'Obóz', icon: 'ex_rest', color: C.lime, desc: 'Rest: heals, raises max HP for good and gives a bonus for the next fight.' },
   shrine: { name: 'Kapliczka', icon: 'ex_shrine', color: C.yellow, desc: 'Błogosławieństwo na kilka kolejnych map.' },
   boss: { name: 'Boss', icon: 'ex_boss', color: C.salmon, desc: 'Pełny poziom z bossem na końcu aktu.' },
   secret: { name: '???', icon: 'ex_secret', color: C.hotpink, desc: 'Coś tu nie pasuje. Ścieżka, której nie było na mapie...' },
@@ -110,6 +110,15 @@ export const EX_BLESSINGS: { id: string; name: string; desc: string; stats: Part
   { id: 'luck', name: 'Fortuna', desc: '+30% złota i +1 karta przy awansie', stats: { greed: 0.3, choices: 1 } },
 ];
 
+/** Bonus z obozu (węzeł Odpoczynek, 0.30.1): losowy, mocniejszy niż kapliczka, ale tylko na następną mapę z walką. */
+export const CAMP_BUFFS: { id: string; name: string; desc: string; stats: Partial<Stats> }[] = [
+  { id: 'whetstone', name: 'Sharpened blades', desc: '+35% damage', stats: { might: 0.35 } },
+  { id: 'drill', name: 'Morning drill', desc: '+35% attack speed', stats: { atkSpeed: 0.35 } },
+  { id: 'feast', name: 'Hearty meal', desc: '+40 max HP and +2 HP/s', stats: { maxHp: 40, regen: 2 } },
+  { id: 'scout', name: 'Scouted ahead', desc: '+60% experience and +25% gold', stats: { growth: 0.6, greed: 0.25 } },
+  { id: 'calm', name: 'Quiet night', desc: '+20% damage and +20% movement speed', stats: { might: 0.2, speedBonus: 0.2 } },
+];
+
 /** Węzeł mapy wyprawy. Mapy z walką mają nazwę, rzadkość, modyfikatory i bonus. */
 export interface MapNode {
   kind: NodeKind;
@@ -134,6 +143,8 @@ export interface ExpeditionState {
   bonus: number;
   /** Błogosławieństwo kapliczki i liczba map, na które jeszcze działa. */
   blessing: { id: string; maps: number } | null;
+  /** Bonus z obozu (CAMP_BUFFS) na następną mapę z walką. */
+  camp?: string | null;
   /** Klucz Pustki (wygrane Rozdarcie): po ostatnim akcie otwiera sekretny akt 4. */
   voidKey?: boolean;
   /** Poziom trudności map (MAP_RARITY) wybrany przez gracza; obowiązuje dla kolejnych map do zmiany. */

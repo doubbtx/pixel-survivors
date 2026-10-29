@@ -258,7 +258,7 @@ function build(name: string): HTMLCanvasElement {
   if (ICON_FNS[name]) {
     const p = new Painter(16, 16, HI);
     ICON_FNS[name](p);
-    return p.outline().canvas();
+    return p.centerMirror().outline().canvas();
   }
   const b = BUILDERS[name];
   if (!b) throw new Error(`Brak sprite'a: ${name}`);

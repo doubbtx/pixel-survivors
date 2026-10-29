@@ -20,6 +20,20 @@ function arrow(p: Painter, x0: number, y0: number, x1: number, y1: number, head:
   p.px(x0, y0, fletch).px(x0 + dx, y0, fletch).px(x0, y0 + dy, fletch);
 }
 
+/** Strzała z wielokątów (styl 32-bit): drzewce z jaśniejszą krawędzią, stalowy grot z białą krawędzią, czerwone lotki. */
+export function arrowHi(p: Painter, x0: number, y0: number, x1: number, y1: number, fl = 1): void {
+  const L = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / L, uy = (y1 - y0) / L, nx = -uy, ny = ux;
+  const at = (k: number, s: number): [number, number] => [x0 + ux * k + nx * s, y0 + uy * k + ny * s];
+  // Lotki: dwa skośne pióra przy końcu.
+  p.poly([at(0, 0), at(2.8 * fl, 0), at(3.6 * fl, 1.5 * fl), at(0.6 * fl, 1.5 * fl)], C.red).poly([at(0, 0), at(2.8 * fl, 0), at(3.6 * fl, -1.5 * fl), at(0.6 * fl, -1.5 * fl)], C.dred);
+  // Drzewce.
+  p.poly([at(0.5, 0.45), at(L - 2.4, 0.45), at(L - 2.4, -0.45), at(0.5, -0.45)], C.brown);
+  p.thin(...at(1, -0.3), ...at(L - 2.6, -0.3), C.clay);
+  // Grot.
+  p.poly([at(L, 0), at(L - 3, 1.5), at(L - 2.4, 0), at(L - 3, -1.5)], C.lgray);
+  p.thin(...at(L - 0.2, 0), ...at(L - 2.8, -1.3), C.white);
+}
+
 /**
  * Sieć (E Kestry i jej ewolucja): koło z ukośnych linek (oczka co 3 px), jasne węzły na skrzyżowaniach,
  * grubsza lina na obwodzie z obciążnikami. `rope`: [cień, linka, węzeł, lina brzegu], `weight`: kolor obciążników.
@@ -413,7 +427,8 @@ export const ICON_FNS: Record<string, IconFn> = {
   },
 
   // ===================== umiejętności =====================
-  ab_k_volley: (p) => { arrow(p, 2, 14, 9, 2); arrow(p, 2, 14, 14, 7); arrow(p, 2, 14, 14, 13); },
+  // Salwa: trzy równoległe strzały lecące w prawo w górę (symetryczne względem przekątnej).
+  ab_k_volley: (p) => { arrowHi(p, 1.5, 10.5, 10, 2); arrowHi(p, 2.5, 13.5, 13.5, 2.5); arrowHi(p, 5.5, 14.5, 14, 6); },
   ab_k_net: (p) => {
     // Złapany szlam pod siecią (od razu widać, do czego służy), na nim jasna linka.
     p.sphere(8, 9, 4.6, 3.8, RAMP.green).px(6.5, 8, C.black).px(9.5, 8, C.black).px(6, 7, C.white);
@@ -540,12 +555,13 @@ export const ICON_FNS: Record<string, IconFn> = {
   },
 
   syn_all: (p) => {
+    // Osiem równych promieni-klinów w kolorach synergii wokół środka 8,8 (długie na osiach, krótsze na skosach).
     const cols = [C.red, C.orange, C.yellow, C.lime, C.cyan, C.blue, C.pink, C.hotpink];
     for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * TAU;
-      p.line(8, 8, 8 + Math.cos(a) * 7, 8 + Math.sin(a) * 7, cols[i]);
+      const a = (i / 8) * TAU - Math.PI / 2, R = i % 2 ? 6 : 7.3, c = Math.cos(a), s = Math.sin(a);
+      p.poly([[8 + c * 2.4 - s * 1.5, 8 + s * 2.4 + c * 1.5], [8 + c * R, 8 + s * R], [8 + c * 2.4 + s * 1.5, 8 + s * 2.4 - c * 1.5]], cols[i]);
     }
-    p.sphere(8, 8, 3, 3, RAMP.bone).px(7, 7, C.white);
+    p.sphere(8, 8, 2.7, 2.7, RAMP.bone).dot(7, 6.8, C.white).dot(7.34, 6.8, C.white);
   },
 
   // ===================== węzły mapy Ekspedycji =====================
@@ -567,9 +583,13 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.px(8, 8, C.red).px(5, 11, C.cyan).px(11, 11, C.cyan).px(8, 4, C.yellow).px(4, 9, C.yellow);
   },
   ex_chest: (p) => {
-    p.block(2, 7, 12, 7, RAMP.wood).sphere(8, 7, 6, 3.5, RAMP.wood);
-    p.rect(2, 8, 12, 1, C.gold).rect(7, 7, 2, 4, C.yellow).px(7, 10, C.dbrown);
-    p.rect(3, 5, 1, 9, C.gold).rect(12, 5, 1, 9, C.gold);
+    // Skrzynia symetryczna względem x = 8: wieko-kopuła, korpus, dwie złote okucia, zamek z dziurką na środku.
+    p.block(2, 7.5, 12, 6.5, RAMP.wood).sphere(8, 7.5, 6, 3.6, RAMP.wood);
+    p.thin(2.4, 10.4, 13.6, 10.4, C.dbrown).thin(2.4, 12.4, 13.6, 12.4, C.dbrown);
+    p.rect(2, 7.67, 12, 1, C.gold).rect(2, 7.67, 12, 0.34, C.yellow);
+    p.rect(3.67, 4.6, 1.33, 9.4, C.gold).rect(11, 4.6, 1.33, 9.4, C.gold).rect(3.67, 4.6, 0.34, 9.4, C.yellow).rect(11, 4.6, 0.34, 9.4, C.yellow);
+    p.rect(6.67, 7, 2.66, 3.67, C.gold).rect(6.67, 7, 2.66, 0.67, C.yellow).rect(6.67, 7, 0.34, 3.67, C.yellow);
+    p.rect(7.67, 8.33, 0.66, 0.67, C.ddbrown).rect(7.67, 9, 0.66, 0.67, C.ddbrown);
   },
   ex_shop: (p) => {
     p.sphere(8, 10, 5.5, 4.5, RAMP.wood).rect(6, 3, 4, 2, C.brown).line(5, 5, 11, 5, C.gold);
@@ -701,7 +721,8 @@ export const ICON_FNS: Record<string, IconFn> = {
   'tag:Życie': (p) => { heart(p, 8, 7, 1, [C.dred, C.hotpink, C.salmon, C.peach]); p.rect(7, 5, 3, 1, C.white).rect(8, 4, 1, 3, C.white); },
   'tag:Umiejętności': (p) => {
     p.polyShade([[8, 1], [14, 8], [8, 15], [2, 8]], RAMP.purple);
-    p.line(8, 4, 8, 12, C.salmon).line(5, 8, 11, 8, C.salmon).px(8, 8, C.white);
+    // Krzyż na środku: `line` zajmuje x..x+1, więc współrzędne o pół jednostki mniej niż środek 8.
+    p.line(7.5, 4, 7.5, 11, C.salmon).line(4.5, 7.5, 10.5, 7.5, C.salmon).spot(7.67, 7.67, C.white);
   },
   'tag:Klątwa': (p) => { p.ring(8, 8, 7.5, 1, C.plum); skull(p, 8, 8); p.px(5, 7, C.hotpink).px(10, 7, C.hotpink); },
 };

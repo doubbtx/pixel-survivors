@@ -50,6 +50,34 @@ export class Painter {
     this.d = new Int16Array(this.fw * this.fh).fill(-1);
   }
 
+  /**
+   * Ikony (0.30.1): gdy rysunek jest prawie symetryczny w poziomie (różnica z lustrem ≤ `tol`), ale jego oś leży obok
+   * środka płótna (np. `line`/`px` od x=8 zajmują 8..9, a `disc` jest liczony wokół 8,0), przesuwa całość o tyle pikseli
+   * obrazu, żeby oś wypadła na środku. Nie przesuwa, gdy rysunek dotknąłby brzegu (obrys potrzebuje marginesu).
+   */
+  centerMirror(tol = 0.15): this {
+    const { fw, fh, d } = this;
+    let n = 0, x0 = fw, x1 = -1;
+    for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (d[y * fw + x] >= 0) { n++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
+    if (!n) return this;
+    let best = Infinity, bestSh = 0;
+    for (let sh = -6; sh <= 6; sh++) {
+      let mis = 0;
+      for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) {
+        const m = fw - 1 - x + sh, a = d[y * fw + x] >= 0, b = m >= 0 && m < fw && d[y * fw + m] >= 0;
+        if (a !== b) mis++;
+      }
+      if (mis < best || (mis === best && Math.abs(sh) < Math.abs(bestSh))) { best = mis; bestSh = sh; }
+    }
+    // Oś lustra: (fw - 1 + sh) / 2; przesunięcie o -sh/2 (zaokrąglone do całego piksela obrazu).
+    const dx = -Math.round(bestSh / 2);
+    if (!dx || best / n > tol || x0 + dx < 1 || x1 + dx > fw - 2) return this;
+    const src = d.slice();
+    d.fill(-1);
+    for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (src[y * fw + x] >= 0) d[y * fw + x + dx] = src[y * fw + x];
+    return this;
+  }
+
   /** Piksel obrazu (drobny). */
   private set(fx: number, fy: number, c: number): void {
     if (fx >= 0 && fy >= 0 && fx < this.fw && fy < this.fh) this.d[fy * this.fw + fx] = c;

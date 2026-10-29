@@ -525,6 +525,12 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   Strażnicy lochów). Pojawianie: `updateMiniboss` (systems/spawner.ts) — Ekspedycja: mapa elit (`eliteMul < 1`) przy
   `miniAt` celu, raz (`run.minibossDone`); Endless: `run.minibossT` (`miniFirst`, potem `miniEvery`). Elita bez cech
   (`elite: []`): skrzynia, karta, XP; HP × `powerMul^(bossPowerExp-1)`, po 300 s rośnie. Pryzmat pęka na 2 Rozszczepieńce.
+- 0.30.1: obóz (węzeł 'rest') losuje `CAMP_BUFFS` (data/expedition.ts) do `ExpeditionState.camp`: buff na jedną mapę
+  (Run.startLevel jak błogosławieństwo, zdejmowany w GameScreen.onLevelCleared), plakietka na mapie. Pełne efekty wyłączone
+  na stałe (`run.lowFx = true` w GameScreen, bez opcji Efekty; `settings.lowFx` decyduje już tylko o gęstości świata ×2/×3).
+  Ikony: `Painter.centerMirror()` (wołane dla ICON_FNS w sprites.ts) przesuwa prawie symetryczny rysunek tak, by oś lustra
+  była na środku — pamiętaj, że `line`/`px` w x zajmują x..x+1 (środek x+0.5), a `disc`/`sphere`/`poly` liczą wokół x.
+  `arrowHi` (gfx/icons.ts): strzała z wielokątów (Salwa, Grad strzał). Arkusz ikon: /tmp/claude-0/sheet.cjs.
 - Bot: `bot=gallery foes=id,id` (zrzuty wrogów i zapowiedzi, wrogowie z 1e6 HP), raport runu ma `byId` (bestiariusz).
 - Ok. 8 nowych wrogów (1–2 na biom), każdy z innym zachowaniem, zapowiedzią ataku i wpisem w bestiariuszu; grafika od razu w stylu 32-bit (Painter `HI`, detale jak w gfx/actors.ts).
 - Jeden miniboss na biom w stylu Strażnika skarbca, z własnym zestawem losowych ataków (mapy elit i wydarzenie w Endless).

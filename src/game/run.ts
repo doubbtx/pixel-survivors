@@ -13,7 +13,7 @@ import { PASSIVE_BY_ID } from '../data/passives';
 import { levelDef, BIOME_CYCLE, VOID_BIOME, type LevelDef } from '../data/levels';
 import type { FeatId } from '../data/feats';
 import { resetLevelFeats, featsOnBoss, featsOnKill, featsOnWin } from '../systems/feats';
-import { nodeLevel, EX_BLESSINGS, type ExpeditionState } from '../data/expedition';
+import { nodeLevel, EX_BLESSINGS, CAMP_BUFFS, type ExpeditionState } from '../data/expedition';
 import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
 import type { WeaponBonus } from '../data/upgrades';
 import type { ShopState } from '../data/shop';
@@ -526,6 +526,9 @@ export class Run {
     // Błogosławieństwo kapliczki Ekspedycji na kolejne mapy (trwa cały poziom).
     const bless = this.expedition?.blessing ? EX_BLESSINGS.find((b) => b.id === this.expedition!.blessing!.id) : null;
     if (bless) this.buffs.push({ name: bless.name, stats: bless.stats, t: Infinity });
+    // Bonus z obozu: tylko ta jedna mapa (zdejmowany w GameScreen.onLevelCleared).
+    const camp = this.expedition?.camp ? CAMP_BUFFS.find((b) => b.id === this.expedition!.camp) : null;
+    if (camp) this.buffs.push({ name: camp.name, stats: camp.stats, t: Infinity });
     this.indexEffects();
     this.recomputeStats();
     this.revivesLeft = this.flag('revive');

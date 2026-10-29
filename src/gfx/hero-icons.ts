@@ -128,7 +128,8 @@ export const HERO_ICONS: Record<string, (p: Painter) => void> = {
   },
   ab_a_judge: (p) => { pillar(p, 4, 1, 12); pillar(p, 11, 3, 14); p.px(7, 7, C.white).px(14, 5, C.yellow); },
   ab_a_judge_evo: (p) => {
-    pillar(p, 3, 1, 10); pillar(p, 8, 2, 14); pillar(p, 13, 1, 11);
-    p.rect(1, 0, 14, 1, C.gold);
+    // Trzy filary symetrycznie (środek wyższy), złota belka nad nimi; wyrównanie do środka: centerMirror.
+    pillar(p, 3, 3, 12); pillar(p, 8, 2, 14); pillar(p, 13, 3, 12);
+    p.rect(1, 1, 15, 1, C.gold).rect(1, 1, 15, 0.34, C.yellow);
   },
 };

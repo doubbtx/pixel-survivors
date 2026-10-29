@@ -1,6 +1,6 @@
 import { C, RAMP } from '../core/palette';
 import type { Painter } from './painter';
-import { netIcon } from './icons';
+import { netIcon, arrowHi } from './icons';
 
 /**
  * Ikony 16×16 dla kart o unikalnych efektach (cd_<nazwa>) i ewolucji umiejętności (ab_<id>_evo).
@@ -35,11 +35,12 @@ export const CARD_ICONS_GFX: Record<string, (p: Painter) => void> = {
     p.sphere(8, 6, 2, 2, [C.gold, C.yellow, C.white, C.white]).px(8, 4, C.dred);
   },
   cd_shrapnel: (p) => {
-    p.sphere(8, 8, 2.5, 2.5, RAMP.stone);
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * TAU + 0.3;
-      p.line(8 + Math.cos(a) * 4, 8 + Math.sin(a) * 4, 8 + Math.cos(a) * 7, 8 + Math.sin(a) * 7, C.lgray);
+    // Odłamki: osiem równych klinów-ostrzy wokół kuli (symetrycznie względem środka 8,8).
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * TAU + TAU / 16, c = Math.cos(a), s = Math.sin(a);
+      p.poly([[8 + c * 3.6 - s * 1, 8 + s * 3.6 + c * 1], [8 + c * 7.2, 8 + s * 7.2], [8 + c * 3.6 + s * 1, 8 + s * 3.6 - c * 1]], i % 2 ? C.lavender : C.lgray);
     }
+    p.sphere(8, 8, 2.7, 2.7, RAMP.stone);
   },
   cd_frost: (p) => {
     for (let i = 0; i < 3; i++) {
@@ -78,8 +79,12 @@ export const CARD_ICONS_GFX: Record<string, (p: Painter) => void> = {
 
   // ---------------- ewolucje umiejętności ----------------
   ab_k_volley_evo: (p) => {
-    for (const [x, y] of [[13, 2], [15, 7], [15, 12], [10, 1]]) p.line(1, 14, x, y, C.peach).px(x, y, C.white);
-    p.ring(3, 13, 2.5, 1, C.yellow);
+    // Grad strzał: cztery strzały rozchodzących się wachlarzem z jednego punktu (równe kąty), złoty krąg u nasady.
+    for (let k = 0; k < 4; k++) {
+      const a = -Math.PI / 2 + 0.15 + (k / 3) * (Math.PI / 2 - 0.3);
+      arrowHi(p, 2 + Math.cos(a) * 3.5, 14 + Math.sin(a) * 3.5, 2 + Math.cos(a) * 13.3, 14 + Math.sin(a) * 13.3, 0.7);
+    }
+    p.ring(2.6, 13.4, 2.2, 0.8, C.yellow);
   },
   ab_k_net_evo: (p) => {
     // Lodowa sieć: ta sama sieć w kolorach lodu, w środku kryształ.
@@ -134,11 +139,13 @@ export const CARD_ICONS_GFX: Record<string, (p: Painter) => void> = {
     p.sphere(11, 5, 2.4, 2.4, RAMP.bone).px(10, 5, C.black).px(12, 5, C.black);
   },
   ab_m_legion_evo: (p) => {
+    // Legion: sześć klinów (złote i różowe) symetrycznie wokół czaszki z koroną, oczy po obu stronach osi.
     for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * TAU;
-      p.line(8, 8, 8 + Math.cos(a) * 7, 8 + Math.sin(a) * 7, i % 2 ? C.pink : C.gold);
+      const a = (i / 6) * TAU + Math.PI / 6, c = Math.cos(a), s = Math.sin(a);
+      p.poly([[8 + c * 3 - s * 1.2, 8 + s * 3 + c * 1.2], [8 + c * 7.3, 8 + s * 7.3], [8 + c * 3 + s * 1.2, 8 + s * 3 - c * 1.2]], i % 2 ? C.pink : C.gold);
     }
-    p.sphere(8, 8, 3.5, 3.5, [C.slate, C.lavender, C.lgray, C.white]).px(7, 8, C.lime).px(9, 8, C.lime);
-    p.poly([[5, 4], [8, 2], [11, 4], [8, 5]], C.gold);
+    p.sphere(8, 8.5, 3.5, 3.3, [C.slate, C.lavender, C.lgray, C.white]);
+    p.rect(5.67, 8, 1.33, 1.33, C.lime).rect(9, 8, 1.33, 1.33, C.lime);
+    p.poly([[4.5, 5], [5.5, 2.5], [7, 4], [8, 1.8], [9, 4], [10.5, 2.5], [11.5, 5]], C.gold);
   },
 };

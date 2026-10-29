@@ -7,7 +7,7 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { BIOMES, objectiveLabel } from '../data/levels';
 import {
-  NODE_INFO, actBiome, chooseTier, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
+  NODE_INFO, actBiome, chooseTier, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, CAMP_BUFFS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
   type MapNode, type NodeKind,
 } from '../data/expedition';
 import type { Run } from '../game/run';
@@ -143,6 +143,8 @@ export class ExpeditionMapView {
       [`esencja +${essence}%`, C.cyan, 'Nagrody za modyfikatory ukończonych map. Na koniec wyprawy dostaniesz tyle więcej esencji do Rozwoju.'],
     ];
     if (bless) chips.push([`${bless.name} (${ex.blessing!.maps})`, C.yellow]);
+    const camp = ex.camp ? CAMP_BUFFS.find((b) => b.id === ex.camp) : null;
+    if (camp) chips.push([`${camp.name} (1)`, C.lime, `Camp bonus for the next fight: ${camp.desc}.`]);
     let cx = MAP_X + MAP_W, tip: { text: string; x: number } | null = null;
     for (const [t, col, help] of chips) {
       const w = textWidth(t) * 0.75 + 8;

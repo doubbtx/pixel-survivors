@@ -590,7 +590,6 @@ export class SettingsScreen implements Screen {
         sw('Obraz', () => (s.scaleFill ? 'cały ekran' : 'ostre piksele'), toggle('scaleFill'), 'Cały ekran: gra wypełnia okno (większy obraz). Ostre piksele: tylko całkowite powiększenie, z ramką.'),
         opt('Przybliżenie', () => ZOOM_LABEL[Math.max(0, ZOOM_LEVELS.indexOf(s.zoom))], zoom, () => 'Blisko: większe postacie i pociski, mniej widać wokół. Daleko: widok jak w starszych wersjach.'),
         sw('Pełny ekran', () => yes(!!document.fullscreenElement), () => toggleFullscreen(), 'Przełącza tryb pełnoekranowy przeglądarki. W grze: klawisz F.'),
-        sw('Efekty', () => (s.lowFx ? 'oszczędne' : 'pełne'), toggle('lowFx'), 'Oszczędne: mniej cząsteczek, bez cieni, poświat i winiety, świat w niższej rozdzielczości (więcej FPS, telefon).'),
         sw('Wstrząsy ekranu', () => yes(s.shake), toggle('shake'), 'Drganie ekranu przy wybuchach i trafieniach.'),
         sw('Zatrzymanie klatki przy trafieniach', () => yes(s.hitstop), toggle('hitstop'), 'Gra na ułamek sekundy staje przy zabiciu elity, bossa i mocnym trafieniu.'),
       ],

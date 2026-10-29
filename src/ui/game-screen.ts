@@ -28,7 +28,7 @@ import { AnvilView } from './anvil';
 import { rollShop } from '../data/shop';
 import { metaBonus, runEssence, heroMeta, heroTree } from '../data/meta';
 import { rollItem } from '../data/items';
-import { NODE_INFO, EX_BLESSINGS, advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth } from '../data/expedition';
+import { EX_BLESSINGS, CAMP_BUFFS, advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth } from '../data/expedition';
 import { rng } from '../core/rng';
 import { music } from '../core/music';
 import { ExpeditionMapView } from './expedition';
@@ -269,6 +269,7 @@ export class GameScreen implements Screen {
       ex.bonus += mapReward(m);
       if (m.kind === 'secret' && !ex.voidKey) { ex.voidKey = true; this.showToast('Klucz Pustki! Po ostatnim akcie otworzy się akt 4'); }
       if (ex.blessing && --ex.blessing.maps <= 0) ex.blessing = null;
+      ex.camp = null;
       this.updateRecords();
       if (m.kind === 'boss') {
         featsOnWin(run);
@@ -403,7 +404,11 @@ export class GameScreen implements Screen {
       case 'rest':
         run.heal(run.stats.maxHp * X.restHeal);
         run.addBonus('maxHp', X.restMaxHp);
-        this.showToast(`${NODE_INFO.rest.name}: +${Math.round(X.restHeal * 100)}% HP, +${X.restMaxHp} maks. HP`);
+        {
+          const c = rng.pick(CAMP_BUFFS);
+          ex.camp = c.id;
+          this.showToast(`Camp: +${Math.round(X.restHeal * 100)}% HP, +${X.restMaxHp} max HP. Next fight: ${c.name} (${c.desc})`);
+        }
         this.saveSlot(false);
         break;
       case 'shrine': {
@@ -518,7 +523,7 @@ export class GameScreen implements Screen {
     run.aimMode = set.aim;
     run.damageNumbers = set.damageNumbers;
     run.healNumbers = set.healNumbers;
-    run.lowFx = set.lowFx;
+    run.lowFx = true; // pełne efekty (poświaty, cienie, winieta) wyłączone na stałe od 0.30.1
     run.playerFx = set.playerFx;
     run.elemShapes = set.elemShapes;
     run.bgDim = set.bgDim;

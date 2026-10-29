@@ -195,8 +195,10 @@ export const ITEM_ICONS: Record<string, (p: Painter) => void> = {
     p.px(4, 3, C.white).px(10, 3, C.white).rect(3, 6, 4, 1, GOLD[2]).rect(9, 6, 4, 1, GOLD[2]);
   },
   it_band: (p) => {
-    p.ring(8, 9, 5.5, 2, GOLD[2]).ring(8, 9, 5.5, 1, GOLD[3]);
-    p.px(4, 6, C.white).px(12, 12, GOLD[1]);
+    // Obrączka: gładki złoty krąg na środku, jasny łuk z lewej-góry, cień z prawej-dołu.
+    p.ring(8, 8, 5.6, 2, GOLD[2]).ring(8, 8, 5.6, 0.6, GOLD[1]).ring(8, 8, 4.2, 0.5, GOLD[3]);
+    for (let a = 3.5; a < 5; a += 0.12) p.dot(8 + Math.cos(a) * 4.9, 8 + Math.sin(a) * 4.9, C.white);
+    for (let a = 0.3; a < 1.6; a += 0.15) p.dot(8 + Math.cos(a) * 5, 8 + Math.sin(a) * 5, GOLD[0]);
   },
   it_charm: (p) => {
     p.line(3, 1, 8, 6, GOLD[2]).line(13, 1, 8, 6, GOLD[2]);
