@@ -5,7 +5,7 @@ import { sfx } from '../core/audio';
 import { BAL } from '../data/balance';
 import { PACTS, pactLevel, pactDesc, PACT_BADGES } from '../data/pacts';
 import type { App, Screen } from './app';
-import { button, panel, inside } from './widgets';
+import { button, panel, inside, titleBar } from './widgets';
 
 const ROW_H = 21, TOP = 40, X = 20, RW = W - 40;
 
@@ -58,7 +58,7 @@ export class PactScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g, lvl = pactLevel(this.chosen);
     r.clear(C.black);
-    drawText(g, 'Pakty ryzyka', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, 'Pakty ryzyka', 6);
     drawText(g, `Poziom Paktu: ${lvl}    esencja x${(1 + BAL.pacts.essencePer * lvl).toFixed(2)}`, W / 2, 26, lvl ? C.yellow : C.lavender, { align: 'center' });
     PACTS.forEach((p, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel, cur = this.chosen[p.id] ?? 0;

@@ -12,7 +12,7 @@ import { endSlotRun } from '../game/campaign';
 import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { Menu, panel, inside, slot, button, hovered, Scroll, type MenuItem } from './widgets';
+import { Menu, panel, inside, slot, button, hovered, Scroll, type MenuItem, titleBar } from './widgets';
 import { drawSkills } from './skills';
 import { setLang, type Lang } from '../core/i18n';
 import { music, MENU_MOOD } from '../core/music';
@@ -243,7 +243,7 @@ export class SlotScreen implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     const col = SLOT_COLOR[this.mode];
-    drawText(g, SLOT_TITLE[this.mode], W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, SLOT_TITLE[this.mode], 10);
     panel(r, 12, 40, 224, this.panelH(), col);
     const s = this.app.save.slots[this.mode];
     if (s) {
@@ -381,7 +381,7 @@ export class HeroSelect implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     const m = this.mode;
-    drawText(g, `${SLOT_TITLE[m]}: wybierz bohatera`, W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, `${SLOT_TITLE[m]}: wybierz bohatera`, 10);
     // Lista bohaterów.
     HEROES.forEach((h, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel;
@@ -507,16 +507,19 @@ export class RecordsScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
-    drawText(g, 'Rekordy', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, 'Rekordy', 8);
     panel(r, 30, 40, 420, 30 + HEROES.length * 16, C.slate);
     const cols = [42, 110, 176, 242, 300, 370];
     ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Endless', 'Ekspedycja'].forEach((s, i) => drawText(g, s, cols[i], 48, C.lavender));
-    drawText(g, 'Expedition: most maps (expeditions won)', W / 2, 54 + HEROES.length * 16 + 26, C.lavender, { align: 'center', scale: 0.75 });
+    drawText(g, 'Expedition: most maps (expeditions won)', W / 2, 54 + HEROES.length * 16 + 26, C.lavender, { align: 'center' });
     HEROES.forEach((h, i) => {
       const rec = heroRecord(this.app.save, h.id);
       const y = 64 + i * 16;
-      [h.name, fmtTime(rec.bestTime), fmt(rec.bestKills), String(rec.bestLevel), fmtTime(rec.bestEndless), `${rec.bestExpedition} (${rec.expeditionWins})`]
-        .forEach((s, j) => drawText(g, s, cols[j], y, j === 0 ? h.color : C.white));
+      drawText(g, h.name, cols[0], y, h.color);
+      // Bohater bez żadnego runu: jeden napis zamiast rzędu zer.
+      if (rec.bestTime <= 0 && rec.bestEndless <= 0 && rec.bestExpedition <= 0) { drawText(g, 'not played yet', cols[1], y, C.lavender); return; }
+      [fmtTime(rec.bestTime), fmt(rec.bestKills), String(rec.bestLevel), fmtTime(rec.bestEndless), `${rec.bestExpedition} (${rec.expeditionWins})`]
+        .forEach((s, j) => drawText(g, s, cols[j + 1], y, C.white));
     });
   }
 }
@@ -645,7 +648,7 @@ export class SettingsScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
-    drawText(g, 'Ustawienia', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, 'Ustawienia', 6);
     SET_TABS.forEach((t, i) => button(r, setTabX(i), SET_TAB_Y, SET_TAB_W, 16, t, { active: i === this.tab, accent: C.gold }));
     panel(r, W / 2 - 180, SET_LIST_Y - 6, 360, this.menu.items.length * SET_ROW + 10, C.slate);
     this.menu.render(r);

@@ -12,7 +12,7 @@ import { RARITIES } from '../data/items';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { passiveEvolves } from '../systems/levelup';
 import type { App, Screen } from './app';
-import { button, panel, slot, inside, Scroll } from './widgets';
+import { button, panel, slot, inside, Scroll, titleBar } from './widgets';
 
 /** Wpis księgi: przepis z ikon (składniki → wynik), tytuł, sposób zdobycia i opis. */
 interface Entry {
@@ -158,7 +158,7 @@ export class CodexScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g, pg = PAGES[this.page];
     r.clear(C.black);
-    drawText(g, 'Evolution book', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, 'Evolution book', 6);
     PAGES.forEach((p, i) => button(r, this.tabX(i), 30, TAB_W, 16, `${p.title} (${p.entries.length})`, { active: i === this.page, accent: C.gold }));
     panel(r, 10, 52, W - 20, H - 80, C.gold);
     const oy = this.scroll.begin(r, ...AREA), x = 20, tx = x + 3 * S + 2 * 8 + 8, tw = (W - tx - 20) / descS(), lh = descLH();

@@ -145,6 +145,16 @@ export function dim(r: Renderer): void {
   r.withAlpha(0.6, () => { r.rect(0, 4, W, 0.5, C.gold); r.rect(0, 33.5, W, 0.5, C.gold); });
 }
 
+/**
+ * Tytuł ekranu menu na wstędze (jak wstęga tytułu nakładek w `dim`): ciemny pas na całą szerokość ze złotymi liniami,
+ * dopasowany do tytułu w `y`, żeby nie zachodził na zakładki i przyciski pod nim.
+ */
+export function titleBar(r: Renderer, text: string, y: number, col: number = C.yellow): void {
+  r.withAlpha(0.9, () => r.rect(0, y - 3, W, 25, C.navy));
+  r.withAlpha(0.6, () => { r.rect(0, y - 3, W, 0.5, C.gold); r.rect(0, y + 21.5, W, 0.5, C.gold); });
+  drawText(r.g, text, W / 2, y, col, { align: 'center', scale: 2, outline: C.black });
+}
+
 /** Pasek (menu i nakładki): płaski jak w HUD-zie — ciemny tor, wypełnienie jasnym tonem rampy, podziałki co 10% przy długich paskach. */
 export function bar(r: Renderer, x: number, y: number, w: number, h: number, frac: number, ramp: Ramp, bg: number = C.black): void {
   r.withAlpha(bg === C.black ? UI.trackA : 1, () => r.roundRect(x, y, w, h, Math.min(1.5, h / 2), bg));

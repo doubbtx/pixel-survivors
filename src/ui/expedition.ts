@@ -6,6 +6,8 @@ import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { BIOMES, objectiveLabel } from '../data/levels';
+import { BIOME_WAVES } from '../data/waves';
+import { ENEMIES, BIOME_MINIBOSS } from '../data/enemies';
 import {
   NODE_INFO, actBiome, chooseTier, tierOpen, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, CAMP_BUFFS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
   type MapNode, type NodeKind,
@@ -327,6 +329,23 @@ export class ExpeditionMapView {
         });
       }
       if (!mods.length) { drawText(g, 'Bez modyfikatorów', ax, my, C.lavender, DESC); my += lh; }
+      // Kogo spotkasz: wrogowie biomu mapy, na mapie elit także miniboss (w tej samej przewijanej liście).
+      if (m.kind !== 'boss') {
+        const foes = [...new Set((BIOME_WAVES[lv.biome] ?? []).flatMap((w) => w.mix.map(([id]) => id)))];
+        if (m.kind === 'elite' || m.kind === 'secret') foes.unshift(BIOME_MINIBOSS[lv.biome]);
+        my += 3;
+        drawText(g, 'Enemies:', ax, my + 4, C.lavender);
+        let fx = ax + textWidth('Enemies:') + 6;
+        for (const id of foes) {
+          const e = ENEMIES[id], boss = BIOME_MINIBOSS.includes(id);
+          if (!e) continue;
+          if (fx + 18 + textWidth(e.name) > ax + aw - 4) { fx = ax + textWidth('Enemies:') + 6; my += 18; }
+          drawSprite(g, `${e.sprite}@0`, fx + 8, my + 8, { scale: boss ? 1 : 0.8 });
+          drawText(g, e.name, fx + 18, my + 4, boss ? C.salmon : C.lgray);
+          fx += 24 + textWidth(e.name);
+        }
+        my += 18;
+      }
       this.modScroll.end(r, my + oy - ay, ax, ay, aw, ah);
       // Poziom trudności wyprawy (przyciski 1-4) w prawym górnym rogu.
       const rx = MAP_X + MAP_W - 8;

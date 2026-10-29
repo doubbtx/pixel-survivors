@@ -3,7 +3,7 @@ import { C } from '../core/palette';
 import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
 import type { App, Screen } from './app';
-import { panel } from './widgets';
+import { panel, titleBar } from './widgets';
 import { MainMenu } from './menus';
 
 /** Bieżąca wersja w postaci major.minor (poprawki x.y.z nie pokazują ekranu nowości). */
@@ -129,7 +129,7 @@ export class WhatsNewScreen implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     const x = 40, w = W - 80;
-    drawText(g, "What's new", W / 2, 12, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, "What's new", 12);
     panel(r, x, 42, w, H - 76, C.gold);
     let y = 52;
     // Starsza wersja tylko wtedy, gdy zmieści się cała w ramce (nowsza zawsze).

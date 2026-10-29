@@ -11,9 +11,8 @@ import { UI, tile, iconSlot, cornerTag } from './theme';
 
 const OUT = { outline: C.black } as const;
 /** Mały tekst progów (ekran synergii). */
-const SMALL = { scale: 0.75 } as const;
 /** Przewijana lista synergii (x, y, w, h). */
-const LIST_AREA = [4, 60, W - 8, H - 62] as const;
+const LIST_AREA = [4, 28, W - 8, H - 30] as const;
 
 /** Następny próg albo ostatni (gdy wszystkie osiągnięte). */
 function nextThreshold(def: SynergyDef, tier: number): number {
@@ -103,21 +102,21 @@ export class SynergyView {
     dim(r);
     drawText(g, 'Synergie', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
     button(r, W - 70, 8, 62, 16, 'Wstecz [Esc]');
-    // Wszechstronność: nagroda za liczbę aktywnych synergii (pasek u góry, progi w dwóch kolumnach).
-    const vt = run.versTier;
-    panel(r, 6, 28, 468, 30, vt > 0 ? C.pink : C.slate);
-    drawSprite(g, 'syn_all', 18, 43);
-    drawText(g, VERSATILITY.name, 30, 31, vt > 0 ? C.pink : C.white, { shadow: C.black });
-    drawText(g, `aktywne synergie: ${run.versCount}`, 30, 43, C.lgray);
-    VERSATILITY.tiers.forEach((t, k) => {
-      const x = 140 + (k % 2) * 166, y = 33 + Math.floor(k / 2) * 11;
-      drawText(g, `${VERSATILITY.thresholds[k]}: ${t.desc}`, x, y, k < vt ? C.lime : C.lavender, SMALL);
-    });
     // Synergie w dwóch kolumnach; wysokość rzędu z najdłuższego opisu progów (przy dużym tekście lista się przewija).
     const lh = descLH() - 1, tw = (232 - 30) / descS();
     const lines = SYNERGIES.map((d) => d.tiers.map((t, k) => wrapText(`${d.thresholds[k]}: ${t.desc}`, tw)));
     const oy = this.scroll.begin(r, ...LIST_AREA);
     let y = LIST_AREA[1] + 1 - oy;
+    // Wszechstronność (nagroda za liczbę aktywnych synergii) jako pierwszy rząd listy: progi jeden pod drugim, pełnym tekstem.
+    const vt = run.versTier, vLines = VERSATILITY.tiers.map((t, k) => wrapText(`${VERSATILITY.thresholds[k]}: ${t.desc}`, (468 - 150) / descS()));
+    const vh = Math.max(30, 6 + vLines.flat().length * lh);
+    panel(r, 6, y, 468, vh, vt > 0 ? C.pink : C.slate);
+    drawSprite(g, 'syn_all', 18, y + 15);
+    drawText(g, VERSATILITY.name, 30, y + 3, vt > 0 ? C.pink : C.white, { shadow: C.black });
+    drawText(g, `aktywne synergie: ${run.versCount}`, 30, y + 15, C.lgray);
+    let vy = y + 4;
+    vLines.forEach((ls, k) => { for (const l of ls) { drawText(g, l, 144, vy, k < vt ? C.lime : C.lavender, DESC); vy += lh; } });
+    y += vh + 1;
     for (let i = 0; i < SYNERGIES.length; i += 2) {
       const rowH = Math.max(...[i, i + 1].filter((j) => j < SYNERGIES.length).map((j) => 17 + lines[j].flat().length * lh));
       for (const j of [i, i + 1]) {
