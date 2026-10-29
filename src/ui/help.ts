@@ -166,7 +166,7 @@ export class HelpScreen implements Screen {
       const on = i === this.page;
       button(r, this.tabX(i), 30, TAB_W, 16, p.title, { active: on, accent: C.gold });
     });
-    panel(r, 10, 52, W - 20, H - 80, C.gold);
+    panel(r, 10, 52, W - 20, H - 80);
     // Strona, która nie mieści się w ramce: mniejszym tekstem, a przy dużym tekście (Ustawienia) przewijana.
     const lines = PAGES[this.page].lines;
     const fits = lines.reduce((h, l) => h + wrapText(l, W - 44).length * 11 + 5, 0) <= H - 92;

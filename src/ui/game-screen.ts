@@ -341,7 +341,7 @@ export class GameScreen implements Screen {
     const r = this.app.r, g = r.g, tut = this.tut!, { title, body } = tut.text(this.app.input);
     const w = 220, x = W / 2 - w / 2, y = 44, lines = wrapText(body, w - 16);
     const h = 22 + lines.length * 11 + (tut.finished ? 12 : 0);
-    panel(r, x, y, w, h, C.gold);
+    panel(r, x, y, w, h);
     drawText(g, title, x + 8, y + 5, C.yellow, { shadow: C.black });
     drawText(g, tut.finished ? '' : `${Math.min(tut.step + 1, tut.total)}/${tut.total}`, x + w - 8, y + 6, C.lavender, { align: 'right', scale: 0.75 });
     lines.forEach((l, i) => drawText(g, l, x + 8, y + 18 + i * 11, C.white));

@@ -205,7 +205,7 @@ export class CollectionScreen implements Screen {
       if (i === this.wSel) r.frame(x - 2, y - 2, A_TILE + 4, A_TILE + 4, C.white);
     }
     const X = 228, PW = W - X - 6;
-    panel(r, X, 32, PW, 212, C.gold);
+    panel(r, X, 32, PW, 212);
     // Opis zaznaczonego: przewijany (długie opisy przy dużym tekście).
     const oy = this.arsScroll.begin(r, ...ARS_AREA);
     const end = this.arsenalDetails(X, PW, 40 - oy);

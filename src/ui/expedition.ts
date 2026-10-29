@@ -216,7 +216,7 @@ export class ExpeditionMapView {
     }
 
     // Mapa: tło z podłoża biomu aktu (ten sam generator co w grze), przygaszone.
-    panel(r, MAP_X, MAP_Y, MAP_W, MAP_H, C.gold);
+    panel(r, MAP_X, MAP_Y, MAP_W, MAP_H);
     g.save();
     g.beginPath(); g.rect(MAP_X + 1, MAP_Y + 1, MAP_W - 2, MAP_H - 2); g.clip();
     groundFrame(8);

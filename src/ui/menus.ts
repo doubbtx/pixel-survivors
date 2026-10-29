@@ -12,7 +12,8 @@ import { endSlotRun } from '../game/campaign';
 import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { Menu, panel, inside, slot, button, hovered, Scroll, type MenuItem, titleBar } from './widgets';
+import { Menu, panel, inside, slot, button, hovered, Scroll, type MenuItem, titleBar, ember } from './widgets';
+import { UI } from './theme';
 import { drawSkills } from './skills';
 import { setLang, type Lang } from '../core/i18n';
 import { music, MENU_MOOD } from '../core/music';
@@ -131,21 +132,21 @@ export class MainMenu implements Screen {
     drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 39, C.lavender, { align: 'center', scale: 0.75, outline: C.black });
     drawText(g, `v${__APP_VERSION__}`, W - 4, H - 10, C.lavender, { align: 'right', scale: 0.75, outline: C.black });
     // Lewy panel: pozycje w grupach z nagłówkami.
-    panel(r, MENU_X, 48, MENU_W, 166, C.gold);
+    panel(r, MENU_X, 48, MENU_W, 166);
     MENU_GROUPS.forEach(([name, first]) => {
       const y = m.top(first) - 9;
-      drawText(g, name, MENU_X + 10, y, C.gold, { scale: 0.75 });
-      r.withAlpha(0.4, () => r.rect(MENU_X + 10 + textWidth(name) * 0.75 + 4, y + 3.5, MENU_W - 30 - textWidth(name) * 0.75, 0.5, C.gold));
+      drawText(g, name, MENU_X + 10, y, C.lavender, { scale: 0.75 });
+      r.withAlpha(0.5, () => r.rect(MENU_X + 10 + textWidth(name) * 0.75 + 4, y + 3.5, MENU_W - 30 - textWidth(name) * 0.75, 0.5, C.slate));
     });
     m.render(r);
     // Prawy panel: ikona, nazwa i opis zaznaczonej pozycji; nowemu graczowi Ekspedycja jest polecana.
     const dx = MENU_X + MENU_W + 10, dw = W - dx - 18;
-    panel(r, dx, 48, dw, 112, C.lavender);
-    slot(r, dx + 10, 58, 28, C.gold);
+    panel(r, dx, 48, dw, 112);
+    slot(r, dx + 10, 58, 28);
     drawSprite(g, MENU_ICON[m.sel], dx + 24, 72);
     drawText(g, m.items[m.sel].label(), dx + 46, 60, C.yellow, { shadow: C.black });
     const tip = isNewPlayer(this.app) && m.sel === 0;
-    if (tip) drawText(g, 'Polecane na start!', dx + 46, 72, C.lime, { shadow: C.black });
+    if (tip) drawText(g, 'Recommended for a first run', dx + 46, 72, C.lime, { shadow: C.black });
     let ly = 94;
     const desc = m.sel === 1 && !unlocked(this.app.save, 'endless') ? `Locked. ${UNLOCK_BY_ID.endless.how}` : MENU_DESC[m.sel] ?? '';
     for (const l of wrapText(desc, dw - 22)) { drawText(g, l, dx + 11, ly, C.lgray); ly += 11; }
@@ -175,7 +176,7 @@ export class MainMenu implements Screen {
 
 /** Menu główne: lewy panel z pozycjami (grupy: od indeksu) i ikony pozycji w panelu opisu. */
 const MENU_X = 18, MENU_W = 196;
-const MENU_GROUPS: [string, number][] = [['GRAJ', 0], ['POSTĘP', 2], ['INNE', 6]];
+const MENU_GROUPS: [string, number][] = [['Play', 0], ['Progress', 2], ['Other', 6]];
 const MENU_ICON = ['ex_boss', 'ic_orbit_evo', 'syn_all', 'ex_chest', 'ic_bolt_evo', 'cd_gold', 'tag:Umiejętności', 'ex_anvil'];
 
 /** Opisy pozycji menu głównego (kolejność jak w menu). */
@@ -197,7 +198,6 @@ function isNewPlayer(app: App): boolean {
 }
 
 const SLOT_TITLE: Record<SlotMode, string> = { expedition: 'Ekspedycja', endless: 'Endless' };
-const SLOT_COLOR: Record<SlotMode, number> = { expedition: C.lime, endless: C.pink };
 const SLOT_NEW: Record<SlotMode, string> = { expedition: 'Nowa ekspedycja', endless: 'Nowy run' };
 const SLOT_RULES: Record<SlotMode, string> = {
   expedition: `An expedition across ${BAL.expedition.acts} acts. Pick your path through maps with modifiers (risk for more loot), dungeons, shrines, shops, anvils and camps. A boss ends every act. The most essence for Progression.`,
@@ -242,9 +242,8 @@ export class SlotScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
-    const col = SLOT_COLOR[this.mode];
     titleBar(r, SLOT_TITLE[this.mode], 10);
-    panel(r, 12, 40, 224, this.panelH(), col);
+    panel(r, 12, 40, 224, this.panelH());
     const s = this.app.save.slots[this.mode];
     if (s) {
       const h = HERO_BY_ID[s.hero];
@@ -278,7 +277,7 @@ function slotLines(mode: SlotMode, s: RunSnapshot): string[] {
 /** Rekordy bohaterów w trybie (Endless: najdłuższy czas, Ekspedycja: węzły i ukończone wyprawy). */
 function renderHeroBests(app: App, mode: SlotMode, x: number, y: number, w: number): void {
   const r = app.r, g = r.g;
-  panel(r, x, y, w, 26 + HEROES.length * 13, C.gold);
+  panel(r, x, y, w, 26 + HEROES.length * 13);
   drawText(g, 'Rekordy bohaterów', x + 12, y + 8, C.yellow, { shadow: C.black });
   HEROES.forEach((h, i) => {
     const rec = heroRecord(app.save, h.id);
@@ -385,6 +384,7 @@ export class HeroSelect implements Screen {
     // Lista bohaterów.
     HEROES.forEach((h, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel;
+      if (on) ember(r, LIST_X, y, LIST_W, ROW_H - 4, UI.radius + 1);
       panel(r, LIST_X, y, LIST_W, ROW_H - 4, on ? C.gold : hovered(LIST_X, y, LIST_W, ROW_H - 4) ? C.lavender : C.slate);
       const spr = this.spriteOf(h.id), open = heroUnlocked(this.app.save, h.id);
       // Zablokowany bohater: przygaszony, zamiast roli warunek odblokowania.
@@ -402,7 +402,7 @@ export class HeroSelect implements Screen {
     // Szczegóły zaznaczonego (inny bohater albo zakładka: przewijanie od góry).
     const h = HEROES[this.sel], x = DET_X, y = TOP;
     if (this.sel * 10 + this.page !== this.scrollKey) { this.scrollKey = this.sel * 10 + this.page; this.scroll.reset(); }
-    panel(r, x, y, DET_W, DET_H, C.gold);
+    panel(r, x, y, DET_W, DET_H);
     r.withAlpha(0.5, () => r.circle(x + 32, y + 34, 22, C.black, true));
     drawShadow(g, x + 32, y + 56, 30);
     const spr = this.spriteOf(h.id);

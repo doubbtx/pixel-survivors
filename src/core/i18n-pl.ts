@@ -528,4 +528,8 @@ export const PL: Record<string, string> = {
   "No passives yet": "Brak pasywek",
   "{} card - {}": "Karta {} - {}",
   "Enemies:": "Wrogowie:",
+  "Play": "Graj",
+  "Progress": "Postęp",
+  "Other": "Inne",
+  "Recommended for a first run": "Polecane na początek",
 };

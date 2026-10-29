@@ -603,6 +603,12 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   przeżycie mediana 75.5→77 s, boss Ekspedycja P90 58→18 s, Endless P90 175→124 s, mapa P90 230→230 (P50 +24%),
   tłum ≥900 wrogów 7.7%→1%. Po wydaniu: objKills (mapa P50), pula ulepszeń przy szybszym levelowaniu, za krótcy bossowie
   Ekspedycji, telemetria elit / ulta / growth, TTK zamiast kills/15 s.
+- 0.36.1 (styl „kamień i żar”, analiza frontend-design): okna bez dekoracyjnych kolorowych ramek (`panel` bez akcentu);
+  kolor ramki tylko ze znaczeniem: rzadkość, stan (aktywna synergia, wybrany węzeł), ostrzeżenie. Jedyny świecący element to
+  zaznaczenie: `ember` (ui/widgets.ts, ciepła poświata) pod zaznaczoną pozycją `Menu`, aktywnym złotym przyciskiem, wybraną
+  kartą (`cardFrame`) i bohaterem na liście. Podpowiedzi jako cicha płytka z turkusowym znacznikiem po lewej. Nagłówki grup menu
+  zwykłą pisownią (Play / Progress / Other), bez wielkich liter. Przy nowych ekranach: `panel(r, x, y, w, h)` bez akcentu,
+  akcent tylko gdy coś znaczy.
 - 0.37.0 (punkt 2 + węzły-wydarzenia): telemetria `life`/`eLife` (czas życia zabitych), `ult`, `growth`, `goal`; bot `maps`
   z celem, `statOnly`/`offers`. Pomiar: pula ulepszeń nie wyczerpuje się (do poz. 142), bonusy XP nie spychają na podłogę,
   mapy „przetrwaj” 4× dłuższe niż „pokonaj” → `surviveScale` 0.5; bossowie Ekspedycji P50 6 s → `expedition.bossHp` ×3

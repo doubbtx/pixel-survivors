@@ -93,6 +93,7 @@ export interface ButtonOpts {
 /** Przycisk: płaski, cienka ramka; pod myszą jaśniejszy, wybrany z ramką w kolorze akcentu. */
 export function button(r: Renderer, x: number, y: number, w: number, h: number, label: string, o: ButtonOpts = {}): void {
   const hot = hovered(x, y, w, h), acc = o.accent ?? C.gold;
+  if (o.active && acc === C.gold) ember(r, x, y, w, h);
   r.withAlpha(o.active ? 0.95 : 0.85, () => r.roundRect(x, y, w, h, UI.radius, o.active ? C.ddbrown : hot ? C.slate : C.navy));
   r.roundFrame(x, y, w, h, UI.radius, o.active || hot ? acc : UI.border, o.active ? 1 : UI.line * 1.5);
   if (o.pulse && !o.active) r.withAlpha(0.35 + 0.35 * Math.sin(performance.now() / 160), () => r.roundFrame(x - 1, y - 1, w + 2, h + 2, UI.radius + 1, C.yellow, 0.75));
@@ -101,10 +102,20 @@ export function button(r: Renderer, x: number, y: number, w: number, h: number, 
 }
 
 /**
+ * Żar: ciepła poświata pod zaznaczonym elementem (pozycja menu, aktywny przycisk, wybrana karta). Jedyny „świecący”
+ * element interfejsu: okna są ciche, światło ogniska pokazuje, gdzie jest gracz.
+ */
+export function ember(r: Renderer, x: number, y: number, w: number, h: number, rad: number = UI.radius): void {
+  r.withAlpha(0.1, () => r.roundRect(x - 4, y - 3, w + 8, h + 6, rad + 4, C.orange));
+  r.withAlpha(0.14, () => r.roundRect(x - 2, y - 1.5, w + 4, h + 3, rad + 2, C.gold));
+}
+
+/**
  * Wspólna oprawa kart wyboru (awans, karty, moc bossa, kolekcja): okno z ramką w kolorze kategorii (jakość, rzadkość),
  * zaznaczona karta dostaje złotą obwódkę na zewnątrz (ekrany unoszą ją też o kilka pikseli).
  */
 export function cardFrame(r: Renderer, x: number, y: number, w: number, h: number, accent: number, selected: boolean): void {
+  if (selected) ember(r, x - 2, y - 2, w + 4, h + 4, UI.radius + 2);
   panel(r, x, y, w, h, accent);
   if (selected) r.roundFrame(x - 2, y - 2, w + 4, h + 4, UI.radius + 2, C.gold, 1);
 }
@@ -240,6 +251,7 @@ export class Menu {
       const on = i === this.sel;
       hovered(x, y, w, h);
       if (on) {
+        ember(r, x, y, w, h, 3);
         r.withAlpha(0.9, () => r.roundRect(x, y, w, h, 3, C.dbrown, C.ddbrown));
         r.roundFrame(x, y, w, h, 3, C.gold, 0.75);
         r.withAlpha(0.5, () => r.rect(x + 3, y + 0.5, w - 6, 0.5, C.yellow));
