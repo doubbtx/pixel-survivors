@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.43.5',
+    lines: [
+      "Fixes from the second playtest: the Easy mode offer remembers defeats after reloading, Takezo's and Aurel's ability texts are fully translated, Y closes Synergies, situations, quests and events after the quiet start come one by one, DPS shows whole numbers.",
+    ],
+  },
+  {
     version: '0.43.3',
     lines: [
       "Takezo's Flow (full Rhythm) now lasts until you take damage instead of a few seconds.",

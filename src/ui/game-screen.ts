@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { W, H, type Renderer } from '../core/renderer';
 import { C, RAMP } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
@@ -823,7 +824,7 @@ export class GameScreen implements Screen {
     drawText(g, run.hero.name, x0, 33, run.hero.color, { shadow: C.black });
     const lvlTxt = `poziom postaci ${run.level}`, lvlX = x0 + textWidth(run.hero.name) + 6;
     drawText(g, lvlTxt, lvlX, 33, C.lgray);
-    drawText(g, `DPS ${fmt(totalDmg / time)}`, lvlX + textWidth(lvlTxt) + 10, 33, C.gold, { shadow: C.black });
+    drawText(g, `DPS ${fmt(Math.round(totalDmg / time))}`, lvlX + textWidth(lvlTxt) + 10, 33, C.gold, { shadow: C.black });
     if (this.pausePage === 2) { this.renderPauseSkills(x0, pw); return; }
     const head = (t: string, y: number) => { drawText(g, t, x0, y, C.lavender); r.withAlpha(0.4, () => r.rect(x0 + textWidth(t) + 4, y + 5, pw - 24 - textWidth(t), 0.5, C.lavender)); };
     if (this.pausePage === 1) { this.renderPauseBuild(x0, colW, head); return; }
@@ -858,7 +859,7 @@ export class GameScreen implements Screen {
       drawText(g, w.def.name, cx + 22, y - 1, w.def.color);
       drawText(g, w.def.fused ? 'fuzja' : w.def.evolved ? 'ewolucja' : `poz. ${w.level}/${maxLevel(w.def)}`, cx + 22, y + 9, C.lavender);
       const dmg = run.dmgBySource.get(w.def.name) ?? 0;
-      drawText(g, fmt(dmg / time), cx + colW - 8, y - 1, C.gold, { align: 'right' });
+      drawText(g, fmt(Math.round(dmg / time)), cx + colW - 8, y - 1, C.gold, { align: 'right' });
       bar(r, cx + colW - 40, y + 12, 32, 4, dmg / best, RAMP.gold);
     });
   }
@@ -933,7 +934,7 @@ export class GameScreen implements Screen {
       return { def: a.def, level: a.level, cd, evo: true };
     }), x0, area[1] + 4 - oy, pw - 22);
     const tw = (pw - 22) / descS();
-    for (const [t, col] of [[`Pasywka: ${run.hero.passive.name}. ${run.hero.passive.desc}`, C.yellow], [`Zasób: ${run.hero.resource.name}. ${run.hero.resource.desc}`, run.hero.resource.color]] as const) {
+    for (const [t, col] of [[`Pasywka: ${tr(run.hero.passive.name)}. ${tr(run.hero.passive.desc)}`, C.yellow], [`Zasób: ${tr(run.hero.resource.name)}. ${tr(run.hero.resource.desc)}`, run.hero.resource.color]] as const) {
       for (const line of wrapText(t, tw)) { drawText(g, line, x0, y, col, DESC); y += descLH(); }
       y += 3;
     }
@@ -972,7 +973,7 @@ export class GameScreen implements Screen {
       ['Zabójstwa', fmt(run.kills), C.white],
       ['Poziom postaci', String(run.level), C.white],
       [ex ? 'Akt' : this.mode === 'endless' ? 'Głębia' : 'Etap', ex ? `${ex.act}/${BAL.expedition.acts}` : String(run.depth), C.white],
-      ['Średni DPS', fmt(total / Math.max(1, run.totalTime)), C.gold],
+      ['Średni DPS', fmt(Math.round(total / Math.max(1, run.totalTime))), C.gold],
       ['Złoto', fmt(Math.floor(run.gold)), C.yellow],
     ];
     const tw = (W - 24 - 5 * 4) / 6;
@@ -1020,7 +1021,7 @@ export class GameScreen implements Screen {
     const peak = Math.max(total / Math.max(1, run.totalTime), ...run.dpsLog);
     const cards: { title: string; value: string; note: string; icon?: string; rec: boolean }[] = [
       { title: 'Best weapon', value: top ? top[0] : '-', note: top ? `${Math.round((100 * top[1]) / total)}% of damage` : '', icon: topW?.def.icon, rec: false },
-      { title: 'Peak DPS', value: fmt(peak), note: `average ${fmt(total / Math.max(1, run.totalTime))}`, icon: 'cd_tempest', rec: peak > (before.bestDps ?? 0) && peak > 0 },
+      { title: 'Peak DPS', value: fmt(Math.round(peak)), note: `average ${fmt(Math.round(total / Math.max(1, run.totalTime)))}`, icon: 'cd_tempest', rec: peak > (before.bestDps ?? 0) && peak > 0 },
       { title: 'Biggest hit', value: fmt(run.maxHit), note: run.maxHitSrc, icon: 'pi_crit', rec: false },
       { title: 'Longest combo', value: String(run.bestCombo), note: 'kills, no hits taken', icon: 'pi_fury', rec: run.bestCombo > (before.bestCombo ?? 0) && run.bestCombo > 0 },
       { title: 'Best kill streak', value: String(run.bestStreak), note: 'quick kills', icon: 'cd_explode', rec: run.bestStreak > (before.bestStreak ?? 0) && run.bestStreak > 0 },
@@ -1082,7 +1083,7 @@ export class GameScreen implements Screen {
     if (log.length < 2) { drawText(g, 'Za krótki run na wykres.', W / 2, this.endY + this.endH / 2 - 5, C.lavender, { align: 'center' }); return; }
     const x0 = END_X + 16, x1 = END_X + END_W - 12, y0 = this.endY + 18, y1 = this.endY + this.endH - 14, max = Math.max(1, ...log);
     const avg = log.reduce((a, b) => a + b, 0) / log.length;
-    drawText(g, `Najwyżej ${fmt(max)} DPS`, x0, this.endY + 5, C.gold);
+    drawText(g, `Najwyżej ${fmt(Math.round(max))} DPS`, x0, this.endY + 5, C.gold);
     drawText(g, `Średnio ${fmt(avg)} DPS`, x1, this.endY + 5, C.lgray, { align: 'right' });
     r.rect(x0, y1, x1 - x0, 1, C.slate);
     r.rect(x0, y0, 1, y1 - y0, C.slate);

@@ -258,6 +258,7 @@ export function loadSave(): SaveData {
     seenHints: d.seenHints ?? [],
     lastHero: d.lastHero ?? '',
     exTier: d.exTier ?? 0,
+    earlyDeaths: d.earlyDeaths ?? 0,
     pacts: { ...base.pacts, ...d.pacts },
     achievements: d.achievements ?? [],
     bestiary: { ...d.bestiary },

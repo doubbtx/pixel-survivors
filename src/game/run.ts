@@ -592,9 +592,10 @@ export class Run {
     // Łagodny start wyprawy: jedna rzecz naraz — przez pierwsze `quiet` s bez sytuacji, zadań i wydarzeń, elita później.
     if (this.levelInfo.gentle) {
       const G = BAL.expedition.gentle;
+      // Po ciszy po kolei, nie naraz (playtest 2: w 91 s sytuacja, zadanie i wydarzenie jednocześnie).
       this.situationT = Math.max(this.situationT, G.quiet);
-      this.taskT = Math.max(this.taskT, G.quiet);
-      this.levelEventT = Math.max(this.levelEventT, G.quiet);
+      this.taskT = Math.max(this.taskT, G.quiet + G.stagger);
+      this.levelEventT = Math.max(this.levelEventT, G.quiet + 2 * G.stagger);
       this.eliteT = Math.max(this.eliteT, G.elite);
     }
     this.strikes = [];

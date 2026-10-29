@@ -93,7 +93,7 @@ export class SynergyView {
   /** Zwraca true, gdy ekran ma zostać zamknięty. */
   update(input: Input): boolean {
     this.scroll.update(input, ...LIST_AREA, true);
-    if (input.pressed('back') || input.pressed('pause') || input.pressed('confirm')) return true;
+    if (input.pressed('back') || input.pressed('pause') || input.pressed('confirm') || input.pressed('synergies')) return true;
     return input.pressed('click') && inside(input.mouse.x, input.mouse.y, W - 70, 8, 62, 16);
   }
 

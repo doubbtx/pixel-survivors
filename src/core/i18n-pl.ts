@@ -686,4 +686,5 @@ export const PL: Record<string, string> = {
   "After a hit, Flow lasts 2.5 s more, +10% damage.": "Po trafieniu Przepływ trwa jeszcze 2,5 s, +10% obrażeń.",
   "Flow": "Przepływ",
   "Takezo's Flow (full Rhythm) now lasts until you take damage instead of a few seconds.": "Przepływ Takezo (pełny Rytm) trwa teraz do momentu oberwania zamiast kilku sekund.",
+  "Fixes from the second playtest: the Easy mode offer remembers defeats after reloading, Takezo's and Aurel's ability texts are fully translated, Y closes Synergies, situations, quests and events after the quiet start come one by one, DPS shows whole numbers.": "Poprawki z drugiego playtestu: propozycja trybu łatwego pamięta porażki po przeładowaniu, opisy umiejętności Takezo i Aurela są w pełni przetłumaczone, Y zamyka Synergie, sytuacje, zadania i wydarzenia po spokojnym starcie przychodzą po kolei, DPS jako liczby całkowite.",
 };

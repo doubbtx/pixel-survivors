@@ -101,6 +101,6 @@ export class RelicPickView {
       drawText(g, String(i + 1), x + 8, y + CARD_H - 14, C.lavender);
     });
     if (this.pending) button(r, W / 2 - 60, H - 34, 120, 16, 'Keep current [Esc]');
-    drawText(g, '1-3 / click: choose', W / 2, H - 14, C.lavender, { align: 'center', shadow: C.black });
+    drawText(g, '1-3 / click: choose', W / 2, CARD_Y + CARD_H + 4, C.lavender, { align: 'center', shadow: C.black });
   }
 }

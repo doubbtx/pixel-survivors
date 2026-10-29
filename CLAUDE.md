@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.43.3)
+## Stan (wersja 0.43.5)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -703,6 +703,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   `statTotal` „obecnie”. Toast mapy nad przyciskami. Rytm Takezo (0.43.0): `rhythmDrain` po trafieniu, `hit` 1.5, `gap` 0.04.
 - 0.43.3: Przepływ trwa do trafienia (`flowT = Infinity`, pasek pełny); trafienie: `breakRhythm` (opadanie) albo, z flagą
   `rhythm.flow` (węzeł t_max, karta h_t_max, sekret Ganryū), jeszcze tyle sekund Przepływu, potem opadanie od pełnego.
+- 0.43.5 (playtest 2): `earlyDeaths` w loadSave; tr() wstawek w pauzie (pasywka, zasób, ewolucje w skills.ts); Y zamyka
+  Synergie; łagodny start: zadanie +20 s, wydarzenie +40 s po ciszy (`gentle.stagger`); DPS zaokrąglany; podpis ekranu relikwii pod kartami.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

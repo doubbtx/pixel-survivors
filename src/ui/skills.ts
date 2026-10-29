@@ -2,6 +2,7 @@ import type { Renderer } from '../core/renderer';
 import { C } from '../core/palette';
 import { drawText, textWidth, wrapText, DESC, descS, descLH } from '../core/font';
 import { drawSprite } from '../gfx/sprites';
+import { tr } from '../core/i18n';
 import type { AbilityDef, AbilitySlot } from '../data/heroes';
 import { actionKey } from '../core/input';
 import { slot } from './widgets';
@@ -37,7 +38,7 @@ export function drawSkills(r: Renderer, list: SkillEntry[], x: number, y: number
     let ly = y + 10;
     for (const line of wrapText(d.desc, tw)) { drawText(g, line, tx, ly, C.white, DESC); ly += lh; }
     if (s.evo && d.evo) {
-      const t = d.evolved ? 'Ewolucja aktywna.' : `Ewolucja (synergia ${d.evo.tag}): ${d.evo.name}. ${d.evo.desc}`;
+      const t = d.evolved ? 'Ewolucja aktywna.' : `Ewolucja (synergia ${d.evo.tag}): ${tr(d.evo.name)}. ${tr(d.evo.desc)}`;
       for (const line of wrapText(t, tw)) { drawText(g, line, tx, ly, d.evolved ? C.gold : C.yellow, DESC); ly += lh; }
     }
     y = Math.max(y + 22, ly + 4);
