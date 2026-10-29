@@ -45,8 +45,8 @@ function facingAngle(run: Run): number | null {
 }
 
 /** Promień orbity — wspólny dla logiki i renderu. */
-export const orbitRadius = (area: number) => 30 * area;
-export const auraRadius = (area: number) => 26 * area;
+export const orbitRadius = (area: number) => 36 * area;
+export const auraRadius = (area: number) => 32 * area;
 
 type Behavior = (run: Run, w: WeaponInst, s: EffWeapon, dt: number) => void;
 

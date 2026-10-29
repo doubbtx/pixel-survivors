@@ -18,6 +18,13 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.49',
+    lines: [
+      "Melee and pressure: Holy Aura and Orbit Blades reach further, shooters keep a shorter distance and step closer after a volley, and from minute 3 more kamikazes, blinkers and weavers come for you (plus rings of fast enemies every minute after 4:30). Standing still with ranged weapons is riskier now.",
+      "Battle trance: with 3 or more enemies right next to you the ring turns turquoise and you take 15% less damage; close kills heal you a little.",
+    ],
+  },
+  {
     version: '0.48',
     lines: [
       "Phone and touch: the ultimate switch and skin are buttons on the hero screen, boss power has a Skip button, Pacts have Reset, a tap cancels key binding, and in the shop, backpack, Progression and cards the first tap shows the description, the second one buys or picks. Tap later map nodes to preview them.",

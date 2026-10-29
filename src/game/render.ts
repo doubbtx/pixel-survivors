@@ -616,7 +616,9 @@ function drawWorld(run: Run, r: Renderer): void {
   };
   // Bliski dystans (0.47): słaby pierścień zasięgu bonusu, gdy trafienia z bliska trwają.
   const ck = 1 - (run.totalTime - run.closeAt) / 0.5;
-  if (ck > 0 && run.closeAt >= 0) r.withAlpha(0.4 * ck, () => r.circle(px, py, BAL.close.r * ZOOM, C.white));
+  // Trans bitewny (0.49): turkusowy pierścień, dopóki ≥ 3 wrogów jest przy bohaterze (−15% obrażeń).
+  if (run.tranceOn()) r.withAlpha(0.45, () => r.circle(px, py, BAL.close.r * ZOOM, C.cyan));
+  else if (ck > 0 && run.closeAt >= 0) r.withAlpha(0.4 * ck, () => r.circle(px, py, BAL.close.r * ZOOM, C.white));
   drawHero(ghost ? 0.55 : 1);
   // Bastion światła (R4): złota kopuła wokół bohatera (pociski wrogów w niej znikają).
   if (run.bastionT > 0) {

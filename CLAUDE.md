@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.48.0)
+## Stan (wersja 0.49.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -742,6 +742,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   dystansu biały + podpowiedź 'close', przy ≥ flashCrowd wrogach połowa wybuchów i krytyki do `juice.numbersCrowd` (24),
   Rozbłysk z 12 promieniami. Bot `&kit=` naprawiony (xpNext = ∞, awans → skip), `&easy=1`. Pomiar: Kestra god 15 min 1–440 mln
   DPS (0.46.3: 0.2–327 mln) — rozrzut sprzed 0.47, nie regresja.
+- 0.49.0 (runda 2 dystans/wręcz, krytyka Agenta 2): analiza fal — od 5. min ~38% wag to strzelcy 'keep' (keepDist 85–150 px,
+  poza zasięgiem broni wręcz 40–90 px), goniący 2–3× wolniejsi od gracza, wymuszający ruch tylko 11–16%. Zmiany: `BAL.press`
+  (keepDist ×0.75, po salwie nacisk 30 px / 1.5 s, `e.pressT`; snajper też ×0.75), `BAL.trance` (≥3 wrogów w pierścieniu:
+  −15% obrażeń, `run.tranceOn()`, turkusowy pierścień; zabójstwo z bliska `drainHeal(0.002)`), auraRadius 26→32,
+  orbitRadius 30→36, fale: kamikaze/migacz/pajęczarz 20% (170 s) → 30% (460 s), EVENTS pierścienie co 60 s od 330 s.
+  Pomiar (kit 4 bronie, 300 s, 5 runów): bez mierzalnej poprawy wręcz (54 s vs 62 s) i dystansu stojącego (101 vs 103 s) —
+  test kończy się przed 2. minutą, zanim działają fale; 7 bohaterów × 6: mediany −10…+5 s (szum). Cele Agenta 2 niespełnione,
+  do potwierdzenia playtestem człowieka.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

@@ -161,6 +161,11 @@ export const BAL = {
     id: { chain: 0.85 } as Record<string, number>,
   },
   close: { r: 50, bonus: 0.2 },
+  /** 0.49 (runda 2, Agent 2): strzelcy bliżej (keepDist ×0.75) i po salwie naciskają o `step` px przez `t` s (gdy bliżej niż
+   * `near` × keepDist). Trans bitewny: przy ≥ `min` wrogach w pierścieniu bliskiego dystansu −`taken` obrażeń, zabójstwo z bliska
+   * leczy `killHeal` maks. HP (wspólny budżet drainHeal). */
+  press: { keepMul: 0.75, step: 30, t: 1.5, near: 1.5 },
+  trance: { min: 3, taken: 0.15, killHeal: 0.002 },
   /** Zasięg wyboru celu broni naprowadzanych (było 200 / 170): strzelają do wrogów bliżej, nie z drugiego końca ekranu. */
   homing: { bolt: 160, chain: 130 },
   /**

@@ -1622,6 +1622,9 @@ export class Run {
 
   killEnemy(e: Enemy): void {
     e.dead = true;
+    // Trans bitewny: zabójstwo z bliska leczy (wspólny budżet z Sierpem, Piętnem, Nietoperzami).
+    const cr = BAL.close.r + e.radius;
+    if ((e.x - this.player.x) ** 2 + (e.y - this.player.y) ** 2 < cr * cr) this.drainHeal(BAL.trance.killHeal);
     if (e.plague && this.plagueLeft > 0) this.schedule(0, () => this.spreadPlague(e));
     // Włócznia świtu: napiętnowany wybucha światłem (jedna fala, wybuch nie piętnuje).
     if (e.brandT > 0 && e.brandBoom && this.lastHitSrc !== 'Dawn Burst') {
@@ -1858,6 +1861,14 @@ export class Run {
     return true;
   }
 
+  /** Trans bitewny: co najmniej `BAL.trance.min` wrogów w pierścieniu bliskiego dystansu. */
+  tranceOn(): boolean {
+    const p = this.player;
+    let n = 0;
+    this.enemiesInCircle(p.x, p.y, BAL.close.r, (e) => { if (!e.dead && !e.hidden) n++; });
+    return n >= BAL.trance.min;
+  }
+
   hurtPlayer(base: number, bullet?: { x: number; y: number; vx: number; vy: number }): boolean {
     const p = this.player;
     if (this.outcome !== 'none' || p.iframes > 0) return false;
@@ -1879,7 +1890,9 @@ export class Run {
       this.popText(p.x, p.y - 10, 'Nimb!', C.yellow);
       return false;
     }
-    let dmg = base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this) * (this.inBanner && !this.relic('turncoat') ? 1 + BAL.eliteTraits.bannerTaken : 1);
+    // Trans bitewny (0.49): w tłumie przy sobie mniej obrażeń.
+    const trance = this.tranceOn() ? 1 - BAL.trance.taken : 1;
+    let dmg = trance * base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this) * (this.inBanner && !this.relic('turncoat') ? 1 + BAL.eliteTraits.bannerTaken : 1);
     const total = dmg;
     this.takenTotal += total;
     const absorbed = Math.min(p.shield, dmg);
@@ -2246,7 +2259,7 @@ function newEnemy(): Enemy {
     flash: 0, slowT: 0, slowF: 0, stunT: 0, shootT: 0, shootA: 0, age: 0, dead: false, elite: null, boss: false,
     scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0, abilT: 0,
     burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, reactT: 0, brittle: 0, hitStamp: new Int32Array(SLOT_COUNT),
-    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false, sit: 0, summons: 0, traitT: 0, buffT: 0, brandT: 0, brandBoom: false, plague: false, markT: 0,
+    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false, sit: 0, summons: 0, traitT: 0, buffT: 0, brandT: 0, brandBoom: false, plague: false, markT: 0, pressT: 0,
   };
 }
 

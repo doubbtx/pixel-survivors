@@ -563,7 +563,7 @@ function updateBiomeEnemy(run: Run, e: Enemy, dt: number, dist: number, nx: numb
         if (e.dashT <= 0) fireVolley(run, e.x, e.y, { shape: 'fan', count: 1, speed: B.snipeSpeed, sprite: 'eb_big' }, e.shootA, dmg * 1.5);
         break;
       }
-      keep(e.def.keepDist ?? 150, 0.5);
+      keep((e.def.keepDist ?? 150) * BAL.press.keepMul, 0.5);
       e.actT -= dt;
       if (e.actT <= 0 && dist < 260) { e.actT = B.snipeEvery * rng.range(0.85, 1.2); e.dashT = B.snipeAim; }
       break;
@@ -808,7 +808,9 @@ export function updateEnemies(run: Run, dt: number): void {
           updateWarden(run, e, dt, dx, dy, dist, nx, ny, e.speed * (1 - e.slowF));
           break;
         case 'keep': {
-          const k = e.def.keepDist ?? 80;
+          // 0.49: bliżej niż dawniej, a po salwie krótki nacisk (w zasięgu walki wręcz, dystansowiec też musi reagować).
+          if (e.pressT > 0) e.pressT -= dt;
+          const k = (e.def.keepDist ?? 80) * BAL.press.keepMul - (e.pressT > 0 ? BAL.press.step : 0);
           const dir = dist > k + 10 ? 1 : dist < k - 10 ? -0.6 : 0;
           e.x += (nx * dir - ny * 0.4) * sp; e.y += (ny * dir + nx * 0.4) * sp;
           break;
@@ -832,6 +834,7 @@ export function updateEnemies(run: Run, dt: number): void {
         else if (e.shootT <= 0 && run.bullets.count < BAL.enemyBulletSoftCap) {
           if (sh && dist < sh.range) {
             shoot(run, e, sh, dmg);
+            if (e.def.behavior === 'keep' && dist < (e.def.keepDist ?? 80) * BAL.press.near) e.pressT = BAL.press.t;
             e.burstLeft = (sh.burst ?? 1) - 1;
             e.burstT = sh.burstGap ?? 0.2;
           }
