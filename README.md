@@ -493,6 +493,7 @@ src/
 - 0.42.1 (UI review): on wide phones (20:9) the game fills the whole screen instead of a 16:9 box with black bars (menus and HUD stay centred, the world and backgrounds reach the edges). The centre banner no longer collides with kill-streak callouts. Anvil and Risk Pacts use the same Back [Esc] button as other screens, the Endless hero select title is translated, long level-up descriptions shrink slightly before being cut, the Build / Backpack / Synergies buttons during picks are larger, and shop service details are centred.
 - 0.44.1 (player projectiles): your magic bolts, souls, embers and sun shots are now elongated streaks pointing where they fly, so round shots always mean enemy fire.
 - 0.44.2 (readability): with Text size set to Large (the default on phones) the smallest labels are bigger: HUD counters, key badges on skills, map legend, button hints and menu notes. The selected map node's name is no longer hidden under the node below it.
+- 0.44.3 (enemy art): the cultist, shieldbearer, kamikaze, blinker, splitter and reflection are redrawn with the same detail as the newer enemies. The shieldbearer now actually carries a shield, the splitter is a cracked geode and the reflection is a knight made of glass.
 
 ### Jak przetestować
 

@@ -465,24 +465,29 @@ function spinner(f: number): Painter {
   return p.outline();
 }
 
-/** Kultysta: zakapturzona postać w niebieskiej szacie z haftem, świecące oczy i kula mocy (f=1: rozbłysk, f=2/3: szata faluje). */
+/** Kultysta: zakapturzona postać w niebieskiej szacie z rozcięciem i złotym rąbkiem, oczy w cieniu kaptura i kula mocy w dłoniach (f=1: rozbłysk, f=2/3: szata faluje). */
 function cultist(f: number): Painter {
   const p = new Painter(16, 19, HI);
-  const sway = f === 2 ? -1 : f === 3 ? 1 : 0;
-  p.polyShade([[8, 1], [13, 7], [14.5 + sway, 18], [1.5 + sway, 18], [3, 7]], RAMP.blue);
-  p.thin(8, 7, 8 + sway, 17.5, C.navy).thin(2 + sway, 17.5, 14 + sway, 17.5, C.cyan);
-  p.thin(5, 9, 3.5 + sway, 17, C.dblue).thin(11, 9, 12.5 + sway, 17, C.dblue);
-  for (const x of [4.5, 7, 9, 11.5]) p.dot(x + sway, 16.8, C.cyan); // haft przy rąbku
-  // Wnętrze kaptura i oczy.
-  p.sphere(8, 6.5, 3.6, 3.2, [C.black, C.navy, C.navy, C.dblue]);
-  for (const ex of [6.2, 9.6]) p.dot(ex, 6.2, f ? C.white : C.cyan).dot(ex + 0.5, 6.2, C.cyan).dot(ex, 6.7, C.blue);
-  // Rękawy obejmujące kulę mocy.
-  p.thin(3.5, 10, 6, 11.8, C.navy).thin(12.5, 10, 10, 11.8, C.navy);
-  p.sphere(5.6, 12.2, 1, 0.8, [C.slate, C.dgray, C.lavender, C.lgray]).sphere(10.4, 12.2, 1, 0.8, [C.slate, C.dgray, C.lavender, C.lgray]);
-  const orb = f ? 2.6 : 2;
-  p.sphere(8, 12.5, orb, orb, [C.dblue, C.blue, C.cyan, C.white]).dot(7.3, 11.6, C.white);
-  if (f === 1) p.dot(5, 10.5, C.white).dot(11, 10.5, C.white).dot(8, 9.6, C.cyan);
-  return p.outline(C.navy);
+  const sway = f === 2 ? -0.7 : f === 3 ? 0.7 : 0, flare = f === 1;
+  // Szata: płaszcz rozszerzony ku dołowi, w rozcięciu ciemna suknia, złoty rąbek.
+  p.polyShade([[8, 3], [12.6, 7], [14.6 + sway, 18], [1.4 + sway, 18], [3.4, 7]], RAMP.blue);
+  p.polyShade([[8, 12], [10.4 + sway, 18], [5.6 + sway, 18]], [C.black, C.navy, C.navy, C.dblue]);
+  p.thin(4.2, 9, 2.8 + sway, 16.6, C.cyan).thin(11.6, 9, 13.2 + sway, 16.6, C.navy).thin(6, 12, 5.2 + sway, 16.6, C.dblue);
+  p.thin(1.8 + sway, 17.5, 14.2 + sway, 17.5, C.gold).thin(1.8 + sway, 18, 14.2 + sway, 18, C.dbrown);
+  for (const x of [3.2, 12.8]) p.dot(x + sway, 16.8, C.gold).dot(x + sway, 16.2, C.orange);
+  // Kaptur ze szpicem i jasną krawędzią, w środku głęboki cień.
+  p.polyShade([[8, 0.4], [11.8, 3.6], [12.8, 8.6], [3.2, 8.6], [4.2, 3.6]], RAMP.blue);
+  p.thin(4.4, 3.8, 7.8, 0.8, C.cyan).thin(3.6, 8.2, 4.4, 4, C.blue);
+  p.sphere(8, 6.6, 3.1, 2.6, [C.black, C.black, C.navy, C.navy]);
+  for (const ex of [6.4, 9.6]) p.rect(ex - 0.4, 6.2, 1.2, 0.8, C.cyan).dot(ex, 6.2, flare ? C.white : C.cyan).dot(ex, 6.9, C.dblue);
+  // Rękawy zbiegające się przy kuli, blade dłonie.
+  p.polyShade([[3.4, 8.4], [6.8, 11], [6.2, 13], [2.8, 10.6]], RAMP.blue).polyShade([[12.6, 8.4], [9.2, 11], [9.8, 13], [13.2, 10.6]], RAMP.blue);
+  p.sphere(6.2, 12.4, 1, 0.8, RAMP.bone).sphere(9.8, 12.4, 1, 0.8, RAMP.bone);
+  // Kula mocy: przy rozbłysku większa, z pierścieniem i iskrami.
+  const orb = flare ? 2.6 : 2.1;
+  if (flare) p.ring(8, 12.4, orb + 1.2, 0.5, C.cyan).dot(4.4, 10, C.white).dot(11.6, 10, C.white).dot(8, 8.8, C.cyan);
+  p.sphere(8, 12.4, orb, orb, [C.dblue, C.blue, C.cyan, C.white]).dot(7.3, 11.6, C.white).dot(7.8, 11.6, C.white);
+  return p.outline();
 }
 
 /** Strażnik: unoszący się kryształ z fasetami i okiem; runy krążą wokół (4 klatki), rdzeń pulsuje. */
@@ -543,21 +548,36 @@ function stag(f: number): Painter {
   return p.outline();
 }
 
-/** Tarczownik: zbrojny w hełmie z pióropuszem (tarcza rysowana osobno, zgodnie z kierunkiem, w render.ts). */
+/** Tarczownik: zbrojny w hełmie z pióropuszem, czerwony wapenrok, buzdygan i pawęż z herbem (łuk tarczy w kierunku patrzenia rysuje render.ts). */
 function shieldbearer(f: number): Painter {
   const p = new Painter(18, 20, HI);
-  const s = f === 1 ? 1 : 0;
-  p.block(6, 15, 2, 4 + s, RAMP.stone).block(10, 15, 2, 5 - s, RAMP.stone);
-  // Napierśnik z pasem, naramiennikami i nitami.
-  p.sphere(9, 11, 5, 4.4, RAMP.stone);
-  p.rect(4.5, 11.5, 9, 1, C.dbrown).rect(8.5, 11.5, 1, 1, C.gold);
-  p.sphere(4.6, 8.6, 1.8, 1.4, RAMP.stone).sphere(13.4, 8.6, 1.8, 1.4, RAMP.stone);
-  for (const [x, y] of [[6.5, 9.5], [11.5, 9.5], [7, 13.5], [11, 13.5]] as const) p.dot(x, y, C.lgray);
-  // Hełm z przyłbicą, czerwone oczy, pióropusz.
-  p.sphere(9, 5, 3.6, 3.6, RAMP.stone);
-  p.rect(6.6, 4, 5, 1, C.black).dot(7.8, 4, C.red).dot(10.2, 4, C.red).dot(7.8, 4.5, C.dred).dot(10.2, 4.5, C.dred);
-  p.thin(6, 6.4, 12, 6.4, C.lavender);
-  p.polyShade([[8.5, 2], [9.5, 2], [10.5 + s * 0.5, -0.2], [12, 0.6 + s * 0.5], [10, 2.6]], RAMP.red);
+  const [ll, rl] = [[4, 5], [5, 4], [4.5, 4.5]][f] ?? [4, 5], bob = f === 1 ? 0.5 : 0;
+  // Nogi w nagolennikach, ciemne trzewiki.
+  p.block(6, 15, 2.4, ll, RAMP.stone).block(10, 15, 2.4, rl, RAMP.stone);
+  p.rect(5.6, 14 + ll, 3.2, 1, C.slate).rect(9.6, 14 + rl, 3.2, 1, C.slate);
+  // Napierśnik, wapenrok z pasem i naramienniki.
+  p.sphere(9, 11 + bob, 5, 4.6, RAMP.stone);
+  p.polyShade([[7.4, 9 + bob], [10.6, 9 + bob], [11.2, 16 + bob], [6.8, 16 + bob]], RAMP.red);
+  p.thin(9, 9.5 + bob, 9, 15.6 + bob, C.dred).thin(6.8, 15.8 + bob, 11.2, 15.8 + bob, C.gold);
+  p.rect(4.6, 11.6 + bob, 8.8, 1, C.dbrown).rect(8.4, 11.4 + bob, 1.4, 1.4, C.gold).dot(8.6, 11.6 + bob, C.yellow);
+  p.sphere(4.6, 8.4 + bob, 2, 1.5, RAMP.stone).sphere(13.4, 8.4 + bob, 2, 1.5, RAMP.stone).dot(3.8, 7.6 + bob, C.white).dot(12.6, 7.6 + bob, C.white);
+  // Prawa ręka z buzdyganem.
+  p.stroke(13.6, 12.4 + bob, 15.6, 6.4 + bob, C.brown).thin(13.6, 12.4 + bob, 15.6, 6.4 + bob, C.clay);
+  p.sphere(15.8, 5.6 + bob, 1.6, 1.6, RAMP.stone).dot(15.2, 5 + bob, C.white);
+  for (const [x, y] of [[15.8, 3.6], [17.4, 5.6], [14.2, 4.4]] as const) p.dot(x, y + bob, C.lgray);
+  p.sphere(13.8, 12.6 + bob, 1.1, 1, RAMP.stone);
+  // Hełm garnczkowy: wizjer z czerwonym żarem, nity, pióropusz.
+  p.sphere(9, 5 + bob, 3.7, 3.7, RAMP.stone);
+  p.rect(6.4, 4 + bob, 5.2, 1.1, C.black).dot(7.8, 4.2 + bob, C.red).dot(10.2, 4.2 + bob, C.red).dot(7.8, 4.7 + bob, C.dred).dot(10.2, 4.7 + bob, C.dred);
+  p.thin(9, 5.4 + bob, 9, 8 + bob, C.dgray).thin(6, 6.6 + bob, 12, 6.6 + bob, C.lavender).dot(6.6, 2.6 + bob, C.white);
+  p.polyShade([[8.4, 1.8 + bob], [9.6, 1.8 + bob], [10.6, -0.2 + bob], [12.4, 0.6 + bob], [10.2, 2.6 + bob]], RAMP.red);
+  // Pawęż na lewym ramieniu: stalowa obwódka, niebieskie pole, złoty krzyż z guzem.
+  const sy = bob;
+  p.polyShade([[0.6, 7.6 + sy], [7.8, 7.6 + sy], [7.8, 13.6 + sy], [4.2, 18.4 + sy], [0.6, 13.6 + sy]], RAMP.stone);
+  p.polyShade([[1.6, 8.6 + sy], [6.8, 8.6 + sy], [6.8, 13.2 + sy], [4.2, 17 + sy], [1.6, 13.2 + sy]], RAMP.blue);
+  p.thin(4.2, 9 + sy, 4.2, 16.4 + sy, C.gold).thin(2, 11.6 + sy, 6.4, 11.6 + sy, C.gold);
+  p.disc(4.2, 11.6 + sy, 1, C.yellow).dot(3.9, 11.3 + sy, C.white);
+  p.thin(0.8, 7.8 + sy, 7.6, 7.8 + sy, C.white).thin(1.8, 9 + sy, 1.8, 12.6 + sy, C.cyan);
   return p.outline();
 }
 
@@ -581,31 +601,53 @@ function summoner(f: number): Painter {
   return p.outline();
 }
 
-/** Kamikaze: metalowa bomba z obręczą, gniewnymi oczami, lontem z iskrą i nóżkami. */
+/** Kamikaze: żeliwna bomba z nitowaną obręczą, gniewnymi oczami, żarzącymi się pęknięciami, lontem z iskrą-gwiazdką i nóżkami (f=1: żar jaśniej). */
 function kamikaze(f: number): Painter {
   const p = new Painter(14, 15, HI);
-  p.sphere(7, 8, 5, 5, RAMP.night);
-  p.ring(7, 8, 5, 0.5, C.slate).thin(2.2, 9.5, 11.8, 9.5, C.slate).thin(2.4, 10, 11.6, 10, C.dgray);
-  p.dot(4.6, 5.4, C.white).dot(5, 5, C.lavender).dot(4.4, 6, C.lavender); // odblask
-  // Gniewne oczy.
-  p.thin(4.5, 6.6, 6, 7.4, C.black).thin(9.5, 6.6, 8, 7.4, C.black);
-  p.rect(5, 7.6, 1, 1, f ? C.yellow : C.red).rect(8.5, 7.6, 1, 1, f ? C.yellow : C.red);
+  const hot = f === 1;
+  // Nóżki pod spodem.
+  p.rect(3.6, 12.4, 2, 1.4, C.dgray).rect(8.4, 12.4, 2, 1.4, C.dgray).thin(3.6, 13.6, 5.6, 13.6, C.slate).thin(8.4, 13.6, 10.4, 13.6, C.slate);
+  // Kula z połyskiem i obręczą z nitami.
+  p.sphere(7, 8, 5.2, 5, RAMP.night);
+  p.dot(4.4, 5.2, C.white).dot(4.9, 4.8, C.lgray).dot(4, 5.8, C.lavender).dot(5.4, 4.6, C.lavender);
+  p.thin(1.9, 9.4, 12.1, 9.4, C.dgray).thin(2.1, 10.1, 11.9, 10.1, C.slate);
+  for (const x of [3.4, 7, 10.6]) p.dot(x, 9.6, C.lgray);
+  // Żarzące się pęknięcia.
+  const crack = hot ? C.yellow : C.orange;
+  p.thin(9.8, 4.6, 10.8, 6.4, crack).thin(10.8, 6.4, 10.2, 7.6, crack).thin(3.4, 11, 4.6, 12, hot ? C.orange : C.rust);
+  // Gniewne brwi i oczy.
+  p.thin(4.2, 6.2, 6.2, 7.2, C.black).thin(9.8, 6.2, 7.8, 7.2, C.black);
+  p.rect(4.8, 7.6, 1.2, 1.2, hot ? C.yellow : C.red).rect(8.2, 7.6, 1.2, 1.2, hot ? C.yellow : C.red).dot(4.8, 7.6, C.white).dot(8.2, 7.6, C.white);
   // Nasadka, lont i iskra.
-  p.rect(6, 2.6, 2, 1, C.dgray).thin(7, 2.6, 8.6, 1, C.brown).thin(8.6, 1, 9.4, 0.8, C.tan);
-  p.dot(9.8, 0.2, f ? C.yellow : C.orange).dot(10.3, 0.6, f ? C.orange : C.yellow).dot(9.5, -0.2, C.white);
-  p.rect(4, 12.6, 1.5, 1, C.dgray).rect(8.5, 12.6, 1.5, 1, C.dgray);
+  p.block(5.6, 2.2, 2.8, 1.4, RAMP.stone);
+  p.thin(7.2, 2.2, 8.6, 1, C.brown).thin(8.6, 1, 9.6, 1, C.tan);
+  const sx = 10.4, sy = 0.8;
+  p.dot(sx, sy, C.white).dot(sx - 0.7, sy, hot ? C.yellow : C.orange).dot(sx + 0.7, sy, hot ? C.yellow : C.orange).dot(sx, sy - 0.7, C.yellow).dot(sx, sy + 0.7, C.gold);
+  if (hot) p.dot(sx + 1.2, sy - 0.6, C.yellow).dot(sx - 1, sy + 1, C.orange);
   return p.outline();
 }
 
-/** Skoczek: kryształowa zjawa z rozmytym konturem i iskrami teleportu (4 klatki migotania). */
+/** Skoczek: kryształowa zjawa z jasną i ciemną fasetą, szczytem z odblaskiem, odłamkami u dołu i iskrami teleportu (4 klatki migotania). */
 function blinker(f: number): Painter {
   const p = new Painter(16, 18, HI);
-  p.polyShade([[8, 1], [13, 7], [12, 17], [8, 14], [4, 17], [3, 7]], [C.navy, C.dblue, C.cyan, C.white]);
-  p.thin(8, 1.5, 8, 13.5, C.white).thin(3.5, 7, 12.5, 7, C.blue);
-  for (const ex of [5, 9]) p.rect(ex, 6, 2, 2, C.black).dot(ex, 6, C.white).dot(ex + 1.5, 7.5, C.cyan);
+  const lift = f % 2 ? -0.5 : 0;
+  // Ślad teleportu: blady odłamek w tle, przesuwa się z klatkami.
+  const gx = [2, 13, 3, 12][f];
+  p.polyShade([[gx, 9], [gx + 1.2, 11.5], [gx, 14], [gx - 1.2, 11.5]], [C.dblue, C.blue, C.blue, C.cyan]);
+  // Główny kryształ: jasna faseta lewa, ciemna prawa, szczyt z białym odblaskiem.
+  p.polyShade([[8, 1 + lift], [3, 7 + lift], [4.4, 14.6 + lift], [8, 12.6 + lift]], [C.dblue, C.blue, C.cyan, C.white]);
+  p.polyShade([[8, 1 + lift], [13, 7 + lift], [11.6, 14.6 + lift], [8, 12.6 + lift]], [C.navy, C.dblue, C.blue, C.cyan]);
+  p.polyShade([[8, 1 + lift], [5.4, 5 + lift], [8, 6.2 + lift], [10.6, 5 + lift]], [C.blue, C.cyan, C.white, C.white]);
+  p.thin(8, 6.2 + lift, 8, 12.4 + lift, C.navy).thin(3.4, 7 + lift, 4.6, 13.8 + lift, C.white).dot(6.4, 3 + lift, C.white);
+  // Oczy: ciemne szczeliny z cyjanowym żarem.
+  for (const ex of [5.6, 9.4]) p.rect(ex, 7.6 + lift, 1.4, 1.6, C.navy).dot(ex + 0.4, 8 + lift, f === 2 ? C.white : C.cyan);
+  // Odłamki unoszące się pod kryształem.
+  p.polyShade([[5.2, 15.2 + lift], [6.6, 15 + lift], [5.8, 17.6]], [C.dblue, C.blue, C.cyan, C.cyan]);
+  p.polyShade([[9.4, 15 + lift], [10.8, 15.2 + lift], [10.2, 17.6]], [C.navy, C.dblue, C.blue, C.cyan]);
+  // Iskry teleportu.
   for (let k = 0; k < 4; k++) {
-    const x = 1.5 + ((f + k * 3) % 13), y = 2 + ((f * 5 + k * 4) % 14);
-    p.dot(x, y, C.cyan).dot(x + 0.5, y, C.white);
+    const a = f * 0.8 + k * (Math.PI / 2), x = 8 + Math.cos(a) * 6.6, y = 8.6 + Math.sin(a) * 6.6;
+    p.dot(x, y, k % 2 ? C.white : C.cyan);
   }
   return p.outline();
 }
@@ -768,37 +810,57 @@ function scorpion(f: number): Painter {
   return p.outline();
 }
 
-/** Rozszczepieniec: kryształowy zlepek dwóch połówek ze świecącą szczeliną (pęka mocniej w klatkach 2-3). */
+/** Rozszczepieniec: pęknięta geoda — dwie połówki w ciemnej skorupie, w szczelinie kryształy i pulsujący rdzeń (pęka mocniej w klatkach 2-3). */
 function splitter(f: number): Painter {
   const p = new Painter(18, 18, HI);
-  const gap = f >= 2 ? 0.8 : 0.3, ramp = [C.plum, C.dblue, C.lavender, C.cyan];
-  p.polyShade([[9 - gap, 2], [9 - gap, 16], [4, 14], [2, 8], [5, 3]], ramp);
-  p.polyShade([[9 + gap, 2], [13, 3], [16, 8], [14, 14], [9 + gap, 16]], ramp);
-  // Fasetki.
-  p.thin(5, 3.4, 7, 9, C.white).thin(3, 8, 7, 9, C.lavender).thin(13, 3.4, 11.4, 9, C.cyan).thin(15, 8, 11.4, 9, C.lavender);
-  // Świecąca szczelina z ziarnem w środku.
-  p.thin(9, 2.5, 9, 15.5, f % 2 ? C.white : C.hotpink).disc(9, 9, 1.3, C.hotpink).dot(9, 8.6, C.white);
-  for (const ex of [6, 11.6]) p.rect(ex, 7, 1.4, 1.4, C.black).dot(ex + 0.4, 7.2, C.white);
+  const gap = f >= 2 ? 0.9 : 0.4, pulse = f % 2 === 1;
+  const half = (cx: number, side: number): [number, number][] => {
+    const pts: [number, number][] = [];
+    for (let i = 0; i <= 8; i++) {
+      const a = -Math.PI / 2 + (side * i * Math.PI) / 8, r = 7 - (i % 2) * 0.5;
+      pts.push([cx + Math.cos(a) * r, 9 + Math.sin(a) * r]);
+    }
+    return pts;
+  };
+  // Skorupa: lewa jaśniejsza (światło z lewej), prawa w cieniu.
+  p.polyShade(half(9 - gap, -1), [C.navy, C.plum, C.pink, C.salmon]);
+  p.polyShade(half(9 + gap, 1), [C.black, C.navy, C.plum, C.pink]);
+  // Wnętrze geody przy szczelinie: kryształy.
+  for (const [s, cx] of [[-1, 9 - gap], [1, 9 + gap]] as const) {
+    for (const y of [4.5, 8, 11.5]) p.polyShade([[cx, y - 1.4], [cx + s * 2.4, y], [cx, y + 1.4]], [C.dblue, C.blue, C.cyan, C.white]);
+  }
+  // Szczelina i rdzeń.
+  p.thin(9, 2.2, 9, 15.8, pulse ? C.white : C.hotpink);
+  p.disc(9, 9, pulse ? 1.8 : 1.4, C.hotpink).disc(9, 9, 0.8, C.salmon).dot(8.8, 8.6, C.white);
+  // Oczy na połówkach i rysy skorupy.
+  for (const ex of [5.2, 11.6]) p.rect(ex, 6.6, 1.4, 1.6, C.black).dot(ex + 0.4, 6.8, ex < 9 ? C.white : C.salmon);
+  p.thin(3, 11, 5, 13, C.plum).thin(14.4, 5, 13, 7, C.black).dot(4.2, 4.6, C.white).dot(4.6, 4.2, C.salmon);
   return p.outline();
 }
 
-/** Odbicie: lustrzany sobowtór z ostrzem — szklista sylwetka w ramce rys, z migoczącymi odbłyskami. */
+/** Odbicie: lustrzany sobowtór — rycerz z tafli szkła (jasne, ciemne i odbijające niebo), hełm z wizjerem, ukośne refleksy, rysy i szklany miecz. */
 function mirror(f: number): Painter {
   const p = new Painter(18, 22, HI);
-  const ramp = [C.dgray, C.lavender, C.lgray, C.white];
+  const glass = [C.slate, C.lavender, C.lgray, C.white], dark = [C.navy, C.slate, C.lavender, C.lgray], sky = [C.dblue, C.blue, C.cyan, C.white];
   const fl = f % 2 ? 0.4 : 0;
-  // Płaszcz-kształt z rozdarciami.
-  p.polyShade([[9, 3], [14, 9], [15, 20], [12, 18], [9, 21], [6, 18], [3, 20], [4, 9]], ramp);
-  p.thin(9, 9, 9, 20, C.lavender).thin(5, 12, 13, 15, C.white).thin(6, 16, 11, 11, C.lavender);
-  // Głowa-maska bez twarzy z rysą.
-  p.sphere(9, 5.5, 3.2, 3.2, ramp);
-  p.thin(8, 3, 10, 7.5, C.dgray).thin(10, 7.5, 9.4, 8.5, C.dgray);
-  p.dot(7.6, 5, C.cyan).dot(10.4, 5, C.cyan);
-  // Szklane ostrze w wyciągniętej dłoni.
-  p.thin(14, 10, 16.5, 11.5, C.lavender);
-  p.polyShade([[16, 11], [17.6, 2 + fl], [18, 2.4 + fl], [17, 11.6]], [C.dblue, C.blue, C.cyan, C.white]);
-  // Migoczące odbłyski (przesuwają się z klatkami).
-  for (let k = 0; k < 3; k++) p.dot(4.5 + ((f * 3 + k * 4) % 9), 10 + ((f * 2 + k * 5) % 9), C.white);
+  // Płaszcz z tafli: lewa jasna, prawa ciemna, środkowa odbija niebo; poszarpany dół.
+  p.polyShade([[9, 7], [4, 9], [3, 20], [6, 18], [9, 21]], glass);
+  p.polyShade([[9, 7], [14, 9], [15, 20], [12, 18], [9, 21]], dark);
+  p.polyShade([[9, 9], [11.4, 12], [9, 18], [6.6, 12]], sky);
+  // Ukośne refleksy (przesuwają się z klatkami) i rysy.
+  const o = f * 1.2;
+  p.thin(4 + o * 0.5, 15 - o, 7 + o * 0.5, 11 - o, C.white).thin(5 + o * 0.5, 16 - o, 7.6 + o * 0.5, 12.6 - o, C.white);
+  p.thin(12, 10, 13.4, 14, C.slate).thin(13.4, 14, 12.6, 16, C.slate).thin(5, 18, 6.4, 15.6, C.lavender);
+  // Naramienniki-odłamki.
+  p.polyShade([[3, 9.6], [6, 7.6], [5.4, 10.4]], glass).polyShade([[15, 9.6], [12, 7.6], [12.6, 10.4]], dark);
+  // Hełm: fasetowany romb z wizjerem i cyjanowymi oczami.
+  p.polyShade([[9, 1], [12.4, 4.6], [11.6, 8], [6.4, 8], [5.6, 4.6]], glass);
+  p.polyShade([[9, 1], [12.4, 4.6], [11.6, 8], [9, 8]], dark);
+  p.rect(6.4, 4.6, 5.2, 1.2, C.black).dot(7.6, 4.8, C.cyan).dot(10.4, 4.8, C.cyan).dot(6.8, 2.8, C.white);
+  // Szklane ostrze z jelcem w wyciągniętej dłoni.
+  p.thin(13.6, 11, 16, 11.6, C.lavender);
+  p.thin(15, 10.6, 17.6, 11.4, C.gold);
+  p.polyShade([[16, 11], [17.4, 1.6 + fl], [18, 2 + fl], [17, 11.4]], sky).thin(16.8, 10, 17.6, 2.4 + fl, C.white);
   return p.outline();
 }
 

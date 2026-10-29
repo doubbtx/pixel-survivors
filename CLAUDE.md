@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.44.2)
+## Stan (wersja 0.44.3)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -744,6 +744,10 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   stałego 0.75 w etykietach HUD, plakietkach, podpowiedziach klawiszy i menu; `SMALL` (theme, expedition, build) to gettery.
   Wyjątki zostają 0.75: tekst HP w pasku, znak „+” bonusu mapy. Pigułka `label` i plakietka klawisza rosną o 1 px przy Large,
   podpis wybranego węzła mapy rysowany po wszystkich węzłach (nie chowa się pod węzłem niżej).
+- 0.44.3: rzadziej spotykani wrogowie przerysowani w stylu 32-bit (gfx/actors.ts, te same wymiary płócien): kultysta (kaptur
+  ze szpicem, rozcięta szata, złoty rąbek), tarczownik (pawęż z herbem, wapenrok, buzdygan), kamikaze (obręcz z nitami, żarzące
+  się pęknięcia, iskra-gwiazdka), skoczek (jasna i ciemna faseta, odłamki, iskry teleportu po okręgu), rozszczepieniec (geoda:
+  skorupa, kryształy w szczelinie, rdzeń), odbicie (rycerz z tafli szkła, refleksy, hełm z wizjerem, szklany miecz).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
