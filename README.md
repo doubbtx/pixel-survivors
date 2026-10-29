@@ -473,6 +473,7 @@ src/
 **Sound and music (0.34.0, generated part of phase 5)**:
 - Weapon sounds by type and projectile (bolt, arrow, knife, fire, soul, chain lightning, holy nova, laser, meteor, boomerang, mines, cleave), ±6% pitch variation on game sounds, a limit of 22 simultaneous voices (important sounds always play) and ducking: boss, evolution, level up, chest, kill streak and getting hit briefly lower the music.
 - Music themes: menu (major pentatonic), each biome with its own scale, progression, tempo, rhythm and instruments, and a boss theme per biome (bass ostinato, four-on-the-floor, faster tempo). Separate sliders: Sound effects and Music.
+- 0.34.1: passive level-up cards show the evolutions they unlock as pictures (weapon > evolution, for weapons your hero can use) instead of a text line; the Evolution book is also in the pause menu.
 - Not done yet: CC0 recordings (Kenney, OpenGameArt) — the cloud environment's network policy blocks those sites; the licence list and iPhone formats come with them.
 
 ### Jak przetestować

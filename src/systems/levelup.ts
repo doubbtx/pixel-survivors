@@ -38,6 +38,8 @@ export interface Option {
   /** Przepis ewolucji / fuzji do pokazania ikonami na karcie: składniki i wynik. */
   recipe?: Recipe;
   bonus?: WeaponBonus;
+  /** Pasywka: ścieżki ewolucji, które otwiera (ikony broni bazowej i ewolucji) — karta rysuje je obrazkami zamiast napisu. */
+  evolves?: [string, string][];
 }
 
 /** Nowa pasywka daje punkt tagu swojej statystyki (kolejne poziomy już nie). */
@@ -93,6 +95,11 @@ function evolveHint(run: Run, def: WeaponDef): string {
   return `Ewolucja: max poziom + ${names.join(' / ')}`;
 }
 
+/** Ikony ścieżek ewolucji pasywki dla bohatera runu: [broń bazowa, ewolucja]. */
+function evoIcons(run: Run, id: string): [string, string][] {
+  return passiveEvolves(id, run.hero.id).map((x) => [x.base.icon, x.into.icon]);
+}
+
 /** Czy pasywka może ewoluować: maks. poziom i jedna z broni, które ewoluuje, jest już po tej ewolucji. */
 function passiveEvoReady(run: Run, id: string, level: number): boolean {
   const d = PASSIVE_BY_ID[id];
@@ -120,9 +127,7 @@ function fusionHint(run: Run, def: WeaponDef): string {
 /** Podpowiedź dla pasywki: którą posiadaną broń pozwala rozwinąć w ewolucję. */
 function passiveHint(run: Run, id: string): string {
   const w = run.weapons.find((x) => evolvesOf(x.def).some((e) => e.passive === id));
-  if (w) return `Potrzebna do ewolucji: ${w.def.name}`;
-  const all = passiveEvolves(id, run.hero.id).map((x) => x.base.name);
-  return all.length ? `Evolves: ${all.join(', ')}` : '';
+  return w ? `Potrzebna do ewolucji: ${w.def.name}` : '';
 }
 
 /** Wszystkie możliwe ulepszenia w obecnym stanie runu. */
@@ -185,12 +190,12 @@ function candidates(run: Run): Option[] {
       const evIcon = `${d.icon}_evo`, w = run.weapons.find((x) => passiveEvolves(p.id).some((e) => e.into.id === x.def.id))!;
       out.push({ kind: 'passiveEvolve', id: d.id, name: d.evo.name, desc: d.evo.desc, hint: `Upgrades: ${d.name}`, icon: evIcon, tag: 'Ewolucja', color: C.gold, tags: [], recipe: { parts: [d.icon, w.def.icon], result: evIcon } });
     }
-    if (p.level < d.maxLevel) out.push({ kind: 'passiveUp', id: d.id, name: d.name, desc: d.desc, hint: passiveHint(run, d.id), icon: d.icon, tag: `Poziom ${p.level + 1}/${d.maxLevel}`, color: C.white, tags: [], recipe: passiveRecipe(run, d.id) });
+    if (p.level < d.maxLevel) out.push({ kind: 'passiveUp', id: d.id, name: d.name, desc: d.desc, hint: passiveHint(run, d.id), icon: d.icon, tag: `Poziom ${p.level + 1}/${d.maxLevel}`, color: C.white, tags: [], recipe: passiveRecipe(run, d.id), evolves: evoIcons(run, d.id) });
   }
   if (run.passives.length < BAL.passiveSlots) {
     for (const d of PASSIVES) {
       if (ownedP.has(d.id) || run.banished.has(d.id)) continue;
-      out.push({ kind: 'passiveNew', id: d.id, name: d.name, desc: d.desc, hint: passiveHint(run, d.id), icon: d.icon, tag: 'Nowa pasywka', color: C.white, tags: tagsOf(d.stat), recipe: passiveRecipe(run, d.id) });
+      out.push({ kind: 'passiveNew', id: d.id, name: d.name, desc: d.desc, hint: passiveHint(run, d.id), icon: d.icon, tag: 'Nowa pasywka', color: C.white, tags: tagsOf(d.stat), recipe: passiveRecipe(run, d.id), evolves: evoIcons(run, d.id) });
     }
   }
   for (const slot of ['q', 'e', 'ult'] as AbilitySlot[]) {

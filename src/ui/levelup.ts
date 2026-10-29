@@ -51,7 +51,9 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   ly += 4;
   // Z przepisem (ikony) podpowiedź tylko, gdy mieści się w jednej linii — ikony mówią to samo.
   const hintAll = o.hint ? wrapText(o.hint, CARD_W - 12) : [];
-  const big = wrapText(o.desc, CARD_W - 14), room = (o.tags.length ? 5 : 6) - (o.recipe ? 2 : 0);
+  // Pasywka bez posiadanej broni do ewolucji: ścieżki ewolucji obrazkami (broń > ewolucja) w miejscu przepisu.
+  const evoRow = !o.recipe && o.evolves?.length ? o.evolves : null;
+  const big = wrapText(o.desc, CARD_W - 14), room = (o.tags.length ? 5 : 6) - (o.recipe || evoRow ? 2 : 0);
   // Duży tekst (Ustawienia): opis zawsze w pełnym rozmiarze, podpowiedź ustępuje miejsca opisowi.
   let hint = o.recipe ? (hintAll.length === 1 ? hintAll : []) : hintAll.slice(0, 2);
   if (descS() >= 1 && big.length > room - hint.length) hint = [];
@@ -70,8 +72,35 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   }
   // Przepis ewolucji / fuzji ikonami, nad tagami synergii.
   if (o.recipe) drawRecipe(r, o.recipe, cx, y + CARD_H - (o.tags.length ? 38 : 26));
+  else if (evoRow) drawEvoRow(r, evoRow, cx, y + CARD_H - (o.tags.length ? 38 : 26));
   // Tagi synergii, które wzmacnia ta opcja, z postępem po wyborze.
   if (o.tags.length) drawTagGain(r, run, o.tags, cx, y + CARD_H - 14);
+}
+
+/**
+ * Ścieżki ewolucji pasywki: do dwóch par „broń > ewolucja” (ewolucja w złotej ramce), przy większej liczbie same ewolucje.
+ */
+function drawEvoRow(r: Renderer, pairs: [string, string][], cx: number, y: number): void {
+  const S = 18;
+  if (pairs.length <= 2) {
+    const pw = S * 2 + 8, gap = 6, w = pairs.length * pw + (pairs.length - 1) * gap;
+    let x = cx - w / 2;
+    for (const [base, into] of pairs) {
+      slot(r, x, y, S, C.slate);
+      drawSprite(r.g, base, x + S / 2, y + S / 2);
+      drawText(r.g, '>', x + S + 4, y + 4, C.yellow, { align: 'center', outline: C.black });
+      slot(r, x + S + 8, y, S, C.gold);
+      drawSprite(r.g, into, x + S + 8 + S / 2, y + S / 2);
+      x += pw + gap;
+    }
+    return;
+  }
+  const w = pairs.length * (S + 3) - 3;
+  pairs.forEach(([, into], i) => {
+    const x = cx - w / 2 + i * (S + 3);
+    slot(r, x, y, S, C.gold);
+    drawSprite(r.g, into, x + S / 2, y + S / 2);
+  });
 }
 
 /** „A + B → C”: małe gniazda z ikonami składników, plus, strzałka i wynik w złotej ramce. */

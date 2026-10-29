@@ -565,6 +565,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   (bez `STEADY`), limit głosów `MAX_VOICES` (licznik `voices`, `onended`), `IMPORTANT` = ważne dźwięki ponad limit i ducking
   (`sfx.duck` ustawiane przez music.ts). core/music.ts — motywy `THEMES` (menu = biome -1, biomy 0-4) i `bossTheme`;
   zmiana motywu od początku taktu. `window.__sfx` w DEV (test audio: kliknięcie odblokowuje kontekst).
+- 0.34.1: karty pasywek przy awansie — `Option.evolves` (ikony [broń, ewolucja] z `passiveEvolves(id, hero)`), rysowane
+  `drawEvoRow` w ui/levelup.ts zamiast napisu; Księga ewolucji w menu pauzy (CodexScreen z powrotem do GameScreen).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

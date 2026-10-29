@@ -34,6 +34,7 @@ import { music } from '../core/music';
 import { ExpeditionMapView } from './expedition';
 import { Hints } from './hints';
 import { HelpScreen } from './help';
+import { CodexScreen } from './codex';
 import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 import { MetaScreen } from './meta';
@@ -141,6 +142,7 @@ export class GameScreen implements Screen {
       { label: () => 'Ekwipunek', act: () => this.openInventory('pause') },
       { label: () => 'Bronie i pasywki [C]', act: () => this.openBuild('pause') },
       { label: () => 'Synergie', act: () => { this.synergies = new SynergyView(this.run); this.state = 'synergies'; this.delay = 0.1; } },
+      { label: () => 'Evolution book', act: () => app.go(new CodexScreen(app, this)) },
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
       { label: () => 'Zapisz i wyjdź', act: () => { this.saveSlot(this.overlayReturn === 'play'); app.go(new MainMenu(app)); } },
