@@ -114,9 +114,9 @@ export class BuildView {
       drawSprite(g, w ? w.def.icon : passiveIcon(p), x + CELL / 2, y + CELL / 2);
       drawText(g, w ? (w.def.evolved ? '*' : String(w.level)) : String(p.level), x + CELL - 2, y + CELL - 10, C.white, { align: 'right', outline: C.black });
     }
-    drawText(g, 'Strzałki / mysz: wybór', GX, H - 56, C.dgray, SMALL);
-    drawText(g, 'C / Esc: wróć', GX, H - 47, C.dgray, SMALL);
-    button(r, 14, H - 26, 60, 16, 'Wróć');
+    drawText(g, 'Strzałki / mysz: wybór', GX, H - 56, C.lavender, SMALL);
+    drawText(g, 'C / Esc: wróć', GX, H - 47, C.lavender, SMALL);
+    button(r, 14, H - 26, 60, 16, 'Wstecz [Esc]');
     button(r, 80, H - 26, 90, 16, this.elems ? 'Szczegóły' : 'Żywioły [Tab]');
     panel(r, DX, 34, W - DX - 6, H - 40, C.gold);
     if (!this.elems && !this.count) return;
@@ -157,13 +157,13 @@ export class BuildView {
       drawText(g, `${WEAPON_BY_ID[f.a].name} +`, x + 86, y, C.white, SMALL);
       drawText(g, WEAPON_BY_ID[f.b].name, x + 86, y + 9, C.white, SMALL);
       y += 22;
-      text(FUSION_RULES, C.dgray);
+      text(FUSION_RULES, C.lavender);
       if (lost.length) text(`Nie działają tu: ${lost.join(', ')} (inny typ ataku).`, C.salmon);
     }
     // Ewolucja: broń na maks. + pasywka.
     // Ewolucje: broń na maks. + jedna z pasywek (każda daje inną ewolucję).
     const evs = d.evolved ? [] : evolvesOf(WEAPON_BY_ID[base] ?? d);
-    if (evs.length) head(evs.length > 1 ? 'Ewolucje (wybierz jedną)' : 'Ewolucja', C.yellow);
+    if (evs.length) head(evs.length > 1 ? 'Evolutions (pick one)' : 'Evolution', C.yellow);
     evs.forEach((evo, i) => {
       const pas = PASSIVE_BY_ID[evo.passive], into = WEAPON_BY_ID[evo.into], maxed = w.level >= maxLevel(d), has = run.passives.some((p) => p.id === pas.id) || (i === 0 && run.loyal > 0);
       recipe(r, x, y, [d.icon, maxed], [pas.icon, has], into.icon);
@@ -221,7 +221,7 @@ export class BuildView {
       y += 2;
     }
     for (const l of wrapText(`Jasne: twój build ma oba żywioły. Boss jest odporny na żywioł swojego biomu: stan się nie nakłada, obrażenia ${Math.round((1 - BAL.bossResist.mul) * 100)}% mniejsze.`, tw)) {
-      drawText(g, l, x, y, C.dgray, DESC); y += lh;
+      drawText(g, l, x, y, C.lavender, DESC); y += lh;
     }
     return y;
   }

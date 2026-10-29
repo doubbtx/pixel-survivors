@@ -4,16 +4,16 @@ import { C } from '../core/palette';
 import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
 import { rng } from '../core/rng';
-import { drawSprite } from '../gfx/sprites';
 import { RARITY, rollOffer, cardPool, type CardDef, type CardSource, type Rarity } from '../data/cards';
 import type { Run } from '../game/run';
-import { button, dim, panel, inside } from './widgets';
+import { button, dim, inside, cardFrame, cardBadge, cardIcon } from './widgets';
 import { drawTagGain } from './synergies';
 
 const CARD_W = 136;
 const CARD_H = 166;
 const CARD_Y = 34;
-const BTN_Y = 208;
+const BTN_Y = 210;
+const BTN_W = 150;
 const PRISM_CYCLE = [C.pink, C.blue, C.cyan, C.lime, C.yellow, C.orange, C.salmon];
 
 const SOURCE_LABEL: Record<CardSource, string> = { level: 'za awans', fight: 'za walkę', elite: 'za elitę', boss: 'za bossa', shop: 'ze sklepu' };
@@ -25,28 +25,18 @@ export function rarityColor(r: Rarity, step: number): number {
 
 export function drawCard(r: Renderer, c: CardDef, x: number, y: number, selected: boolean, step: number, stacks: number): void {
   const col = rarityColor(c.rarity, step);
-  panel(r, x, y, CARD_W, CARD_H, col);
-  if (c.rarity !== 'silver') r.frame(x + 4, y + 4, CARD_W - 8, CARD_H - 8, col);
-  if (selected) r.frame(x - 2, y - 2, CARD_W + 4, CARD_H + 4, C.white);
+  // Ta sama oprawa co karty awansu (ui/widgets.ts): ramka w kolorze rzadkości, zaznaczenie złotą obwódką.
+  cardFrame(r, x, y, CARD_W, CARD_H, col, selected);
   const g = r.g;
   const cx = x + CARD_W / 2;
-  // Narożne klejnoty w kolorze rzadkości.
-  for (const [gx, gy] of [[x + 4, y + 4], [x + CARD_W - 9, y + 4], [x + 4, y + CARD_H - 9], [x + CARD_W - 9, y + CARD_H - 9]]) {
-    r.rect(gx + 2, gy, 1, 5, C.black); r.rect(gx, gy + 2, 5, 1, C.black);
-    r.rect(gx + 1, gy + 1, 3, 3, col); r.rect(gx + 1, gy + 1, 1, 1, C.white);
-  }
-  drawText(g, c.cursed ? 'Przeklęta' : RARITY[c.rarity].name, cx, y + 9, c.cursed ? C.hotpink : col, { align: 'center', shadow: C.black });
-  // Ikona karty na poświacie w kolorze rzadkości.
-  r.withAlpha(0.22, () => r.circle(cx, y + 40, 21, c.cursed ? C.hotpink : col, true));
-  r.withAlpha(0.6, () => r.circle(cx, y + 40, 17, C.black, true));
-  r.circle(cx, y + 40, 18, c.cursed ? C.plum : col);
-  drawSprite(g, c.icon!, cx, y + 40, { scale: 2 });
+  drawText(g, c.cursed ? 'Przeklęta' : RARITY[c.rarity].name, cx, y + 7, c.cursed ? C.hotpink : col, { align: 'center', shadow: C.black });
+  cardIcon(r, c.icon!, cx, y + 36, c.cursed ? C.hotpink : col, c.cursed ? C.plum : col);
   // Pryzmatyczne: przesuwający się po karcie pas światła.
   if (c.rarity === 'prism') {
     const sx = x + ((step * 3) % (CARD_W + 60)) - 30;
     r.withAlpha(0.12, () => { for (let i = 0; i < 10; i++) r.rect(Math.max(x + 3, Math.min(x + CARD_W - 4, sx + i)), y + 3, 1, CARD_H - 6, C.white); });
   }
-  let ly = y + 64;
+  let ly = y + 60;
   for (const line of wrapText(c.name, CARD_W - 16)) {
     drawText(g, line, cx, ly, C.white, { align: 'center', shadow: C.black });
     ly += 12;
@@ -124,32 +114,36 @@ export class CardPickView {
         this.sel = i;
         if (input.pressed('click')) return this.choose(i);
       }
-      if (input.pressed('click') && inside(m.x, m.y, x + 28, BTN_Y, CARD_W - 56, 20)) this.reroll(i);
     }
+    if (input.pressed('click') && inside(m.x, m.y, W / 2 - BTN_W / 2, BTN_Y, BTN_W, 20)) this.reroll(this.sel);
     return false;
   }
 
   render(r: Renderer): void {
     dim(r);
     const col = rarityColor(this.rarity, this.step);
-    drawText(r.g, `Karta ${RARITY[this.rarity].name.toLowerCase()} - ${SOURCE_LABEL[this.source]}`, W / 2, 10, col, { align: 'center', scale: 2, outline: C.black });
+    drawText(r.g, `${RARITY[this.rarity].name} card - ${SOURCE_LABEL[this.source]}`, W / 2, 10, col, { align: 'center', scale: 2, outline: C.black });
     const t = (performance.now() - this.born) / 1000;
     this.cards.forEach((c, i) => {
       // Wjazd kart od dołu jedna po drugiej; pryzmatyczne z błyskiem.
       const k = Math.max(0, Math.min(1, (t - i * 0.08) / 0.25));
       if (k <= 0) return;
-      const x = this.cardX(i), y = CARD_Y + Math.round((1 - k) ** 3 * 30);
+      const x = this.cardX(i), y = CARD_Y + Math.round((1 - k) ** 3 * 30) - (i === this.sel ? 3 : 0);
       const stacks = this.run.cards.find((kk) => kk.id === c.id)?.stacks ?? 0;
-      r.withAlpha(k, () => drawCard(r, c, x, y, i === this.sel, this.step, stacks));
+      r.withAlpha(k, () => {
+        drawCard(r, c, x, y, i === this.sel, this.step, stacks);
+        drawText(r.g, String(i + 1), x + 8, y + CARD_H - 16, C.slate);
+        // Karta, której nie ma jeszcze w kolekcji: plakietka na górnej krawędzi (jak „Polecane” przy awansie).
+        if (!this.run.knownCards.has(c.id)) cardBadge(r, x + CARD_W / 2, y, 'New!', C.lime);
+      });
       const flash = this.rarity === 'prism' ? 0.7 - (t - i * 0.08 - 0.25) * 2.5 : 0;
       if (flash > 0) r.withAlpha(Math.min(0.7, flash), () => r.rect(x + 2, y + 2, CARD_W - 4, CARD_H - 4, C.white));
-      // Karta, której nie ma jeszcze w kolekcji.
-      if (!this.run.knownCards.has(c.id)) drawText(r.g, 'Nowa!', x + CARD_W - 8, CARD_Y - 4, C.lime, { align: 'right', outline: C.black });
       // Postęp synergii po wyborze (zielony = nowy próg).
-      drawTagGain(r, this.run, c.tags, x + CARD_W / 2, CARD_Y + CARD_H - 13);
-      const can = this.run.cardRerolls > 0;
-      button(r, x + 28, BTN_Y, CARD_W - 56, 20, i === this.sel ? '[R] Losuj' : 'Losuj', { active: i === this.sel && can, accent: C.lavender, col: can ? undefined : C.dgray });
+      drawTagGain(r, this.run, c.tags, x + CARD_W / 2, y + CARD_H - 13);
     });
-    drawText(r.g, `Losowania kart: ${this.run.cardRerolls}    1-3 / klik: wybierz`, W / 2, 238, C.lavender, { align: 'center', shadow: C.black });
+    // Jedno losowanie dla zaznaczonej karty (jak przyciski pod kartami awansu).
+    const can = this.run.cardRerolls > 0;
+    button(r, W / 2 - BTN_W / 2, BTN_Y, BTN_W, 20, `Reroll selected (${this.run.cardRerolls}) [R]`, { col: can ? undefined : C.dgray });
+    drawText(r.g, '1-3 / click: choose', W / 2, 238, C.lavender, { align: 'center', shadow: C.black });
   }
 }

@@ -4,7 +4,7 @@ import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font
 import { sfx } from '../core/audio';
 import { heroRecord, type HeroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
-import { passiveIcon } from '../data/passives';
+import { passiveIcon, PASSIVE_BY_ID } from '../data/passives';
 import { CARD_BY_ID } from '../data/cards';
 import { BAL } from '../data/balance';
 import { Run, type Mode, type RunSnapshot } from '../game/run';
@@ -32,7 +32,7 @@ import { EX_BLESSINGS, CAMP_BUFFS, advanceAct, currentMap, currentNode, isCombat
 import { rng } from '../core/rng';
 import { music } from '../core/music';
 import { ExpeditionMapView } from './expedition';
-import { Hints } from './hints';
+import { Hints, type HintBox } from './hints';
 import { HelpScreen } from './help';
 import { CodexScreen } from './codex';
 import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
@@ -56,8 +56,8 @@ type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'sh
 /** Krótka blokada wejścia po otwarciu nakładki — żeby wciśnięty akurat klawisz nie wybrał karty. */
 const OVERLAY_DELAY = 0.3;
 /** Pauza: lewa kolumna z menu (x, szerokość) i drobny tekst podsumowania. */
-const PL = 8, PLW = 150, SMALL_TXT = { scale: 0.75 } as const;
-const PAUSE_TABS = ['Postać', 'Umiejętności'];
+const PL = 8, PLW = 150;
+const PAUSE_TABS = ['Postać', 'Build', 'Umiejętności'];
 
 /**
  * Ekran rozgrywki: run + nakładki (awans, karta, skrzynia, pauza, ukończenie poziomu, mapa Ekspedycji, koniec runu).
@@ -346,7 +346,7 @@ export class GameScreen implements Screen {
     drawText(g, tut.finished ? '' : `${Math.min(tut.step + 1, tut.total)}/${tut.total}`, x + w - 8, y + 6, C.lavender, { align: 'right', scale: 0.75 });
     lines.forEach((l, i) => drawText(g, l, x + 8, y + 18 + i * 11, C.white));
     if (tut.finished) drawText(g, this.app.input.lastDevice === 'touch' ? 'Tap to continue' : 'Enter: continue', W / 2, y + h - 11, C.lime, { align: 'center', scale: 0.75 });
-    else drawText(g, 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.dgray, { align: 'right', scale: 0.75 });
+    else drawText(g, 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: 0.75 });
   }
 
   /** Koniec albo pominięcie samouczka: zapis i wybór bohatera do pierwszej Ekspedycji. */
@@ -639,8 +639,12 @@ export class GameScreen implements Screen {
       }
       case 'pause':
         if (inp.pressed('pause')) { this.state = this.overlayReturn; return; }
-        if (inp.pressed('left') || inp.pressed('right')) { this.pausePage = 1 - this.pausePage; sfx.play('select'); this.pauseScroll.reset(); }
-        if (this.pausePage === 1) this.pauseScroll.update(inp, ...this.pauseArea());
+        if (inp.pressed('left') || inp.pressed('right')) {
+          this.pausePage = (this.pausePage + (inp.pressed('left') ? PAUSE_TABS.length - 1 : 1)) % PAUSE_TABS.length;
+          sfx.play('select');
+          this.pauseScroll.reset();
+        }
+        if (this.pausePage === 2) this.pauseScroll.update(inp, ...this.pauseArea());
         PAUSE_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.pauseTab(i))) { this.pausePage = i; sfx.play('select'); } });
         this.pauseMenu.update(inp);
         break;
@@ -706,7 +710,7 @@ export class GameScreen implements Screen {
         this.renderEnd();
         break;
     }
-    if (this.state !== 'pause' && this.state !== 'end') this.hints.render(r, this.state !== 'play');
+    if (this.state !== 'pause' && this.state !== 'end') this.hints.render(r, HINT_BOX[this.state] ?? null, this.app.input.lastDevice === 'touch');
   }
 
   /**
@@ -720,30 +724,32 @@ export class GameScreen implements Screen {
     panel(r, PL, 8, PLW, H - 16);
     drawText(g, 'Pauza', PL + PLW / 2, 15, C.yellow, { align: 'center', scale: 2, outline: C.black });
     const where = [ex ? `Akt ${ex.act}, głębia ${run.depth}` : this.mode === 'endless' ? `Endless, głębia ${run.depth}` : `Etap ${run.depth}`, fmtTime(run.totalTime)].join('   ');
-    drawText(g, where, PL + PLW / 2, 37, C.lgray, { align: 'center', scale: 0.75 });
-    if (run.pactLevel) drawText(g, `Pakt ${run.pactLevel}`, PL + PLW / 2, 45, C.red, { align: 'center', scale: 0.75 });
+    drawText(g, where, PL + PLW / 2, 36, C.lgray, { align: 'center' });
+    if (run.pactLevel) drawText(g, `Pakt ${run.pactLevel}`, PL + PLW / 2, 47, C.red, { align: 'center' });
     this.pauseMenu.render(r);
     {
       const warn = `${this.mode === 'expedition' ? 'Ekspedycja' : 'Endless'}: giving up ends the run (essence stays)`;
-      wrapText(warn, (PLW - 16) / 0.75).forEach((l, i) => drawText(g, l, PL + PLW / 2, H - 34 + i * 9, C.salmon, { align: 'center', scale: 0.75 }));
+      const lines = wrapText(warn, PLW - 16);
+      lines.forEach((l, i) => drawText(g, l, PL + PLW / 2, H - 14 - lines.length * 11 + i * 11, C.salmon, { align: 'center' }));
     }
 
-    // Prawa kolumna: postać albo umiejętności (zakładki, strzałki lewo/prawo).
+    // Prawa kolumna: zakładki (strzałki lewo/prawo albo klik) i wspólny nagłówek: bohater, poziom, DPS.
     const px = PL + PLW + 6, pw = W - px - 8, x0 = px + 10, colW = (pw - 20) / 2;
     panel(r, px, 8, pw, H - 16);
-    PAUSE_TABS.forEach((t, i) => button(r, ...this.pauseTab(i), t, { active: i === this.pausePage, accent: C.gold, scale: 0.75 }));
-    if (this.pausePage === 1) { this.renderPauseSkills(px, pw); return; }
+    PAUSE_TABS.forEach((t, i) => button(r, ...this.pauseTab(i), t, { active: i === this.pausePage, accent: C.gold }));
     const time = Math.max(1, run.totalTime);
     let totalDmg = 0;
     for (const v of run.dmgBySource.values()) totalDmg += v;
-    drawText(g, run.hero.name, x0, 15, run.hero.color, { shadow: C.black });
+    drawText(g, run.hero.name, x0, 33, run.hero.color, { shadow: C.black });
     const lvlTxt = `poziom postaci ${run.level}`, lvlX = x0 + textWidth(run.hero.name) + 6;
-    drawText(g, lvlTxt, lvlX, 15, C.lgray);
-    drawText(g, `DPS ${fmt(totalDmg / time)}`, lvlX + textWidth(lvlTxt) + 10, 15, C.gold, { shadow: C.black });
+    drawText(g, lvlTxt, lvlX, 33, C.lgray);
+    drawText(g, `DPS ${fmt(totalDmg / time)}`, lvlX + textWidth(lvlTxt) + 10, 33, C.gold, { shadow: C.black });
+    if (this.pausePage === 2) { this.renderPauseSkills(x0, pw); return; }
     const head = (t: string, y: number) => { drawText(g, t, x0, y, C.lavender); r.withAlpha(0.4, () => r.rect(x0 + textWidth(t) + 4, y + 5, pw - 24 - textWidth(t), 0.5, C.lavender)); };
+    if (this.pausePage === 1) { this.renderPauseBuild(x0, colW, head); return; }
 
     // Statystyki: etykieta po lewej, wartość po prawej; wartość bazowa przygaszona.
-    head('Statystyki', 29);
+    head('Statystyki', 47);
     const pct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`;
     const stats: [string, string, boolean][] = [
       ['HP', fmt(s.maxHp), true], ['Pancerz', fmt(s.armor), s.armor > 0],
@@ -755,59 +761,65 @@ export class GameScreen implements Screen {
       ['Szczęście', pct(run.luck()), run.luck() > 0], ['Karty przy awansie', String(Math.min(4, 3 + s.choices)), s.choices > 0],
     ];
     stats.forEach(([k, v, on], i) => {
-      const cx = x0 + (i % 2) * (colW + 8), y = 41 + Math.floor(i / 2) * 8;
-      drawText(g, k, cx, y, on ? C.lgray : C.dgray, SMALL_TXT);
-      drawText(g, v, cx + colW - 8, y, on ? C.white : C.dgray, { align: 'right', ...SMALL_TXT });
+      const cx = x0 + (i % 2) * (colW + 8), y = 59 + Math.floor(i / 2) * 11;
+      drawText(g, k, cx, y, on ? C.lgray : C.lavender);
+      drawText(g, v, cx + colW - 8, y, on ? C.white : C.lavender, { align: 'right' });
     });
 
     // Bronie: ikona, nazwa, poziom, DPS i udział w obrażeniach.
-    head('Bronie', 98);
+    head('Bronie', 140);
     const best = Math.max(1, ...run.weapons.map((w) => run.dmgBySource.get(w.def.name) ?? 0));
     run.weapons.forEach((w, i) => {
-      const cx = x0 + (i % 2) * (colW + 8), y = 110 + Math.floor(i / 2) * 20;
+      const cx = x0 + (i % 2) * (colW + 8), y = 152 + Math.floor(i / 2) * 22;
       slot(r, cx, y, 18, w.def.evolved ? C.gold : C.slate);
       drawSprite(g, w.def.icon, cx + 9, y + 9);
       const augs = run.augments.filter((id) => augmentWorks(AUGMENT_BY_ID[id], w.def)).length;
       for (let k = 0; k < augs; k++) r.rect(cx + 2 + k * 4, y - 2, 3, 2, C.cyan);
-      drawText(g, w.def.name, cx + 22, y + 1, w.def.color, SMALL_TXT);
-      drawText(g, w.def.fused ? 'fuzja' : w.def.evolved ? 'ewolucja' : `poz. ${w.level}/${maxLevel(w.def)}`, cx + 22, y + 10, C.dgray, SMALL_TXT);
+      drawText(g, w.def.name, cx + 22, y - 1, w.def.color);
+      drawText(g, w.def.fused ? 'fuzja' : w.def.evolved ? 'ewolucja' : `poz. ${w.level}/${maxLevel(w.def)}`, cx + 22, y + 9, C.lavender);
       const dmg = run.dmgBySource.get(w.def.name) ?? 0;
-      drawText(g, fmt(dmg / time), cx + colW - 8, y + 1, C.gold, { align: 'right', ...SMALL_TXT });
-      bar(r, cx + colW - 40, y + 11, 32, 4, dmg / best, RAMP.gold);
+      drawText(g, fmt(dmg / time), cx + colW - 8, y - 1, C.gold, { align: 'right' });
+      bar(r, cx + colW - 40, y + 12, 32, 4, dmg / best, RAMP.gold);
     });
+  }
 
-    // Pasywki i ekwipunek w jednym rzędzie.
-    head('Pasywki i ekwipunek', 172);
+  /** Pauza, zakładka Build: pasywki z poziomami, ekwipunek i karty (pełny rozmiar tekstu). */
+  private renderPauseBuild(x0: number, colW: number, head: (t: string, y: number) => void): void {
+    const r = this.app.r, g = r.g, run = this.run;
+    head('Pasywki', 47);
+    if (!run.passives.length) drawText(g, 'No passives yet', x0, 59, C.lavender);
     run.passives.forEach((p, i) => {
-      const x = x0 + i * 19;
-      slot(r, x, 184, 18);
-      drawSprite(g, passiveIcon(p), x + 9, 193);
-      drawText(g, String(p.level), x + 17, 192, C.white, { align: 'right', outline: C.black, scale: 0.75 });
+      const cx = x0 + (i % 2) * (colW + 8), y = 59 + Math.floor(i / 2) * 21;
+      slot(r, cx, y, 18, p.evo ? C.gold : C.slate);
+      drawSprite(g, passiveIcon(p), cx + 9, y + 9);
+      drawText(g, PASSIVE_BY_ID[p.id].name, cx + 22, y - 1, C.white);
+      drawText(g, `poz. ${p.level}`, cx + 22, y + 9, C.lavender);
     });
-    const ex0 = px + pw - 10 - SLOTS.length * 19;
-    SLOTS.forEach((sl, i) => drawItemSlot(r, run.equipment[sl.id], ex0 + i * 19, 184, 18, false));
-
-    // Karty: nazwy w dwóch kolumnach.
-    const nCards = run.cards.reduce((n, c) => n + c.stacks, 0);
-    head(`Karty (${nCards})`, 208);
-    run.cards.slice(0, 8).forEach((c, i) => {
+    const ey = 59 + Math.ceil(Math.max(1, run.passives.length) / 2) * 21 + 2;
+    head('Ekwipunek', ey);
+    SLOTS.forEach((sl, i) => drawItemSlot(r, run.equipment[sl.id], x0 + i * 22, ey + 12, 20, false));
+    // Karty: nazwy w dwóch kolumnach, reszta jako „+N więcej”.
+    const cy = ey + 38, nCards = run.cards.reduce((n, c) => n + c.stacks, 0);
+    head(`Karty (${nCards})`, cy);
+    const rows = Math.max(1, Math.floor((H - 12 - (cy + 12)) / 11)), max = rows * 2;
+    const shown = run.cards.length > max ? max - 1 : max;
+    run.cards.slice(0, shown).forEach((c, i) => {
       const def = CARD_BY_ID[c.id];
-      drawText(g, `${def.name}${c.stacks > 1 ? ' x' + c.stacks : ''}`, x0 + (i % 2) * (colW + 8), 220 + Math.floor(i / 2) * 9, def.cursed ? C.hotpink : rarityColor(def.rarity, 0), SMALL_TXT);
+      drawText(g, `${def.name}${c.stacks > 1 ? ' x' + c.stacks : ''}`, x0 + (i % 2) * (colW + 8), cy + 12 + Math.floor(i / 2) * 11, def.cursed ? C.hotpink : rarityColor(def.rarity, 0));
     });
-    if (run.cards.length > 8) drawText(g, `+${run.cards.length - 8} więcej`, px + pw - 10, 208, C.dgray, { align: 'right', ...SMALL_TXT });
-    if (!run.cards.length) drawText(g, 'Brak kart', x0, 220, C.dgray, SMALL_TXT);
+    if (run.cards.length > shown) drawText(g, `+${run.cards.length - shown} więcej`, x0 + (shown % 2) * (colW + 8), cy + 12 + Math.floor(shown / 2) * 11, C.lavender);
+    if (!run.cards.length) drawText(g, 'Brak kart', x0, cy + 12, C.lavender);
   }
 
   /** Zakładka `i` prawej kolumny pauzy: [x, y, szerokość, wysokość]. */
   private pauseTab(i: number): [number, number, number, number] {
-    const px = PL + PLW + 6, pw = W - px - 8, tw = 58;
-    return [px + pw - 8 - (PAUSE_TABS.length - i) * (tw + 2), 12, tw, 12];
+    const px = PL + PLW + 6, tw = 80;
+    return [px + 10 + i * (tw + 3), 12, tw, 16];
   }
 
   /** Pauza, zakładka umiejętności: poziom, odnowienie, opis i ewolucja każdej umiejętności; pasywka i zasób bohatera. */
-  private renderPauseSkills(px: number, pw: number): void {
-    const r = this.app.r, g = r.g, run = this.run, x0 = px + 10;
-    drawText(g, run.hero.name, x0, 15, run.hero.color, { shadow: C.black });
+  private renderPauseSkills(x0: number, pw: number): void {
+    const r = this.app.r, g = r.g, run = this.run;
     const slots: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
     // Przewijane (opisy w pełnym rozmiarze przy dużym tekście).
     const area = this.pauseArea(), oy = this.pauseScroll.begin(r, ...area);
@@ -827,7 +839,7 @@ export class GameScreen implements Screen {
   /** Przewijany obszar zakładki Umiejętności w pauzie (pod imieniem bohatera). */
   private pauseArea(): [number, number, number, number] {
     const px = PL + PLW + 6, pw = W - px - 8;
-    return [px + 4, 28, pw - 8, H - 36];
+    return [px + 4, 46, pw - 8, H - 56];
   }
 
   /** Góra i wysokość panelu zakładek na ekranie końca (zależą od liczby linii informacji). */
@@ -872,7 +884,7 @@ export class GameScreen implements Screen {
     // Esencja za run (oba tryby) i wyczyny runu (jeśli są).
     const feats = [...new Set(run.featsRun)].map((id) => FEAT_BY_ID[id].name).join(', ');
     const essence = `+${fmt(this.essence)} esencji dla: ${run.hero.name} (Rozwój w menu głównym)`;
-    const info: [string, number][] = [[modeLine, C.orange], [essence, C.cyan]];
+    const info: [string, number][] = [[modeLine, C.lgray], [essence, C.cyan]];
     if (feats) info.push([`Wyczyny: ${feats}`, C.gold]);
     if (this.unlockedRun.length) info.push([`Unlocked: ${this.unlockedRun.map((u) => u.name).join(', ')}`, C.lime]);
     info.forEach(([t, col], i) => drawText(g, t, W / 2, 69 + i * 10, col, { align: 'center', shadow: C.black }));
@@ -900,7 +912,8 @@ export class GameScreen implements Screen {
     const all = [...run.dmgBySource.entries()].sort((a, b) => b[1] - a[1]);
     const total = all.reduce((sum, x) => sum + x[1], 0) || 1, top = all[0];
     const topW = top ? run.weapons.find((w) => w.def.name === top[0]) : undefined;
-    const peak = Math.max(0, ...run.dpsLog);
+    // Krótki run bez pomiarów: szczyt co najmniej równy średniej.
+    const peak = Math.max(total / Math.max(1, run.totalTime), ...run.dpsLog);
     const cards: { title: string; value: string; note: string; icon?: string; rec: boolean }[] = [
       { title: 'Best weapon', value: top ? top[0] : '-', note: top ? `${Math.round((100 * top[1]) / total)}% of damage` : '', icon: topW?.def.icon, rec: false },
       { title: 'Peak DPS', value: fmt(peak), note: `average ${fmt(total / Math.max(1, run.totalTime))}`, icon: 'cd_tempest', rec: peak > (before.bestDps ?? 0) && peak > 0 },
@@ -916,7 +929,7 @@ export class GameScreen implements Screen {
       drawText(g, c.title, x + cw / 2, y + 3, C.lgray, { align: 'center', scale: 0.75 });
       if (c.icon) drawSprite(g, c.icon, x + cw / 2, y + 18);
       drawText(g, c.value, x + cw / 2, y + 27, c.rec ? C.yellow : C.white, { align: 'center', shadow: C.black, scale: textWidth(c.value) > cw - 6 ? 0.75 : 1 });
-      drawText(g, c.note, x + cw / 2, y + 38, C.dgray, { align: 'center', scale: 0.75 });
+      drawText(g, c.note, x + cw / 2, y + 38, C.lavender, { align: 'center', scale: 0.75 });
       if (c.rec && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: 0.75 });
     });
     // Pobite rekordy bohatera (porównanie z zapisem sprzed runu).
@@ -928,7 +941,7 @@ export class GameScreen implements Screen {
     if (ex && ex.cleared > before.bestExpedition && before.bestExpedition > 0) broke.push(`Expedition: ${ex.cleared} maps`);
     for (const c of cards) if (c.rec && (c.title === 'Peak DPS' ? (before.bestDps ?? 0) : c.title === 'Longest combo' ? (before.bestCombo ?? 0) : (before.bestStreak ?? 0)) > 0) broke.push(`${c.title}: ${c.value}`);
     const ly = y + ch + 5, room = Math.max(0, Math.floor((this.endY + this.endH - ly - 13) / 10)) * 2;
-    drawText(g, broke.length ? 'Records broken' : 'No records broken this time', END_X + 12, ly, broke.length ? C.gold : C.dgray);
+    drawText(g, broke.length ? 'Records broken' : 'No records broken this time', END_X + 12, ly, broke.length ? C.gold : C.lavender);
     if (broke.length > room) broke.splice(room - 1, broke.length, `+${broke.length - room + 1} more`);
     broke.forEach((t, i) => {
       const bx = END_X + 16 + (i % 2) * (END_W / 2 - 10), by = ly + 11 + Math.floor(i / 2) * 10;
@@ -954,13 +967,13 @@ export class GameScreen implements Screen {
       drawText(g, `${Math.round((100 * dmg) / total)}%`, x1 - 55, y, C.lgray, { align: 'right' });
       drawText(g, fmt(dmg / Math.max(1, run.totalTime)), x1, y, C.lgray, { align: 'right' });
     });
-    if (all.length > 7) drawText(g, `+${all.length - 7} więcej`, x1, this.endY + this.endH - 10, C.dgray, { align: 'right', scale: 0.75 });
+    if (all.length > 7) drawText(g, `+${all.length - 7} więcej`, x1, this.endY + this.endH - 10, C.lavender, { align: 'right', scale: 0.75 });
   }
 
   /** Ekran końca: wykres DPS w czasie (pomiar co BAL.dpsEvery s). */
   private renderDpsGraph(): void {
     const r = this.app.r, g = r.g, log = this.run.dpsLog;
-    if (log.length < 2) { drawText(g, 'Za krótki run na wykres.', W / 2, this.endY + this.endH / 2 - 5, C.dgray, { align: 'center' }); return; }
+    if (log.length < 2) { drawText(g, 'Za krótki run na wykres.', W / 2, this.endY + this.endH / 2 - 5, C.lavender, { align: 'center' }); return; }
     const x0 = END_X + 16, x1 = END_X + END_W - 12, y0 = this.endY + 18, y1 = this.endY + this.endH - 14, max = Math.max(1, ...log);
     const avg = log.reduce((a, b) => a + b, 0) / log.length;
     drawText(g, `Najwyżej ${fmt(max)} DPS`, x0, this.endY + 5, C.gold);
@@ -972,8 +985,8 @@ export class GameScreen implements Screen {
     const px = (i: number) => x0 + ((x1 - x0) * i) / (log.length - 1), py = (v: number) => y1 - ((y1 - y0) * v) / max;
     r.withAlpha(0.3, () => { for (let i = 0; i < log.length; i++) r.rect(px(i) - 1, py(log[i]), 2, y1 - py(log[i]), C.dblue); });
     for (let i = 1; i < log.length; i++) r.line(px(i - 1), py(log[i - 1]), px(i), py(log[i]), C.gold);
-    drawText(g, '0:00', x0, y1 + 2, C.dgray, { scale: 0.75 });
-    drawText(g, fmtTime(log.length * BAL.dpsEvery), x1, y1 + 2, C.dgray, { align: 'right', scale: 0.75 });
+    drawText(g, '0:00', x0, y1 + 2, C.lavender, { scale: 0.75 });
+    drawText(g, fmtTime(log.length * BAL.dpsEvery), x1, y1 + 2, C.lavender, { align: 'right', scale: 0.75 });
   }
 
   /** Ekran końca: karta buildu (bohater, bronie, pasywki, przedmioty, karty, sekrety i moc bossa). */
@@ -1015,6 +1028,20 @@ export class GameScreen implements Screen {
     if (extra) drawText(g, extra, x0, this.endY + this.endH - 11, C.hotpink, { scale: 0.75 });
   }
 }
+
+/**
+ * Miejsce podpowiedzi w każdej nakładce: wolny pas pod przyciskami albo obok nich, tak żeby nie zasłaniała tytułu,
+ * legendy ani przycisków (podpis z klawiszami pod spodem może przykryć, podpowiedź mówi to samo).
+ */
+const HINT_BOX: Partial<Record<string, HintBox>> = {
+  levelup: { x: 10, y: 232, w: W - 20 },
+  cards: { x: 10, y: 232, w: W - 20 },
+  power: { x: 10, y: 222, w: W - 20 },
+  loot: { x: 8, y: 212, w: 128 },
+  map: { x: 14, y: H - 8, w: 240, up: true },
+  shop: { x: 6, y: H - 4, w: 196, up: true },
+  anvil: { x: 230, y: H - 4, w: 244, up: true },
+};
 
 /** Zakładki ekranu końca runu i panel pod nimi. */
 const END_TABS = ['Highlights', 'Obrażenia', 'Wykres DPS', 'Build'];

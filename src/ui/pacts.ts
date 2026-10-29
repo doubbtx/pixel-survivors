@@ -58,13 +58,13 @@ export class PactScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g, lvl = pactLevel(this.chosen);
     r.clear(C.black);
-    drawText(g, 'Pakty ryzyka', W / 2, 6, C.salmon, { align: 'center', scale: 2, outline: C.black });
+    drawText(g, 'Pakty ryzyka', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
     drawText(g, `Poziom Paktu: ${lvl}    esencja x${(1 + BAL.pacts.essencePer * lvl).toFixed(2)}`, W / 2, 26, lvl ? C.yellow : C.lavender, { align: 'center' });
     PACTS.forEach((p, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel, cur = this.chosen[p.id] ?? 0;
       panel(r, X, y, RW, ROW_H - 2, on ? C.salmon : cur ? C.dred : C.slate);
       drawText(g, p.name, X + 8, y + 4, cur ? C.white : C.lgray);
-      drawText(g, pactDesc(p, cur), X + 120, y + 4, cur ? C.peach : C.dgray);
+      drawText(g, pactDesc(p, cur), X + 120, y + 4, cur ? C.peach : C.lavender);
       for (let l = 1; l <= p.max; l++) {
         const bx = X + RW - 14 - (p.max - l) * 14;
         r.rect(bx, y + 4, 10, 10, C.black);
@@ -73,7 +73,7 @@ export class PactScreen implements Screen {
       }
     });
     const badges = PACT_BADGES.map((b) => `${b.name} ${b.from}`).join(', ');
-    drawText(g, `Odznaki bohatera za bossa pokonanego z Paktem: ${badges}.`, W / 2, TOP + PACTS.length * ROW_H + 4, C.dgray, { align: 'center' });
+    drawText(g, `Odznaki bohatera za bossa pokonanego z Paktem: ${badges}.`, W / 2, TOP + PACTS.length * ROW_H + 4, C.lavender, { align: 'center' });
     drawText(g, 'Strzałki: wybór i poziom    R: wyzeruj    Esc: wróć', W / 2, H - 40, C.lavender, { align: 'center' });
     button(r, W / 2 - 40, H - 24, 80, 16, 'Gotowe');
   }

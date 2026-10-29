@@ -179,7 +179,7 @@ export class CodexScreen implements Screen {
       y += h + 2;
     }
     this.scroll.end(r, y + oy - AREA[1], ...AREA);
-    button(r, W / 2 - 40, H - 22, 80, 16, 'Wróć');
-    drawText(g, '< > page   up/down scroll', W - 14, H - 18, C.dgray, { align: 'right', scale: 0.75 });
+    button(r, W / 2 - 40, H - 22, 80, 16, 'Wstecz [Esc]');
+    drawText(g, '< > page   up/down scroll', W - 14, H - 18, C.lavender, { align: 'right', scale: 0.75 });
   }
 }

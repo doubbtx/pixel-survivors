@@ -1,9 +1,10 @@
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C, PAL, type Ramp } from '../core/palette';
-import { drawText, LINE_H } from '../core/font';
+import { drawText, textWidth, LINE_H } from '../core/font';
 import { sfx } from '../core/audio';
 import { UI, tile } from './theme';
+import { drawSprite } from '../gfx/sprites';
 
 /**
  * Okno (wspólny styl z HUD-em, ui/theme.ts): delikatny cień, płaskie grafitowo-granatowe wypełnienie i jedna cienka ramka
@@ -97,6 +98,31 @@ export function button(r: Renderer, x: number, y: number, w: number, h: number, 
   if (o.pulse && !o.active) r.withAlpha(0.35 + 0.35 * Math.sin(performance.now() / 160), () => r.roundFrame(x - 1, y - 1, w + 2, h + 2, UI.radius + 1, C.yellow, 0.75));
   const sc = o.scale ?? 1;
   drawText(r.g, label, x + w / 2, y + Math.round((h - 11 * sc) / 2), o.col ?? (o.active || hot ? C.yellow : C.white), { align: 'center', shadow: C.black, scale: sc });
+}
+
+/**
+ * Wspólna oprawa kart wyboru (awans, karty, moc bossa, kolekcja): okno z ramką w kolorze kategorii (jakość, rzadkość),
+ * zaznaczona karta dostaje złotą obwódkę na zewnątrz (ekrany unoszą ją też o kilka pikseli).
+ */
+export function cardFrame(r: Renderer, x: number, y: number, w: number, h: number, accent: number, selected: boolean): void {
+  panel(r, x, y, w, h, accent);
+  if (selected) r.roundFrame(x - 2, y - 2, w + 4, h + 4, UI.radius + 2, C.gold, 1);
+}
+
+/** Plakietka na środku górnej krawędzi karty („Recommended”, „New!”). */
+export function cardBadge(r: Renderer, cx: number, y: number, text: string, col: number): void {
+  const bw = textWidth(text) * 0.75 + 10;
+  r.roundRect(cx - bw / 2, y - 5, bw, 10, 3, C.navy, C.black);
+  r.roundFrame(cx - bw / 2 + 0.5, y - 4.5, bw - 1, 9, 3, col, 0.75);
+  drawText(r.g, text, cx, y - 3, col, { align: 'center', scale: 0.75 });
+}
+
+/** Ikona karty (×2) w ciemnym kole z poświatą i obręczą w kolorze kategorii. */
+export function cardIcon(r: Renderer, icon: string, cx: number, cy: number, col: number, ring: number = col): void {
+  r.withAlpha(0.2, () => r.circle(cx, cy, 20, col, true));
+  r.withAlpha(0.6, () => r.circle(cx, cy, 16, C.black, true));
+  r.circle(cx, cy, 17, ring);
+  drawSprite(r.g, icon, cx, cy, { scale: 2 });
 }
 
 /** Pulsująca strzałka-trójkąt: w tym kierunku jest więcej treści (`dir` 1 = w prawo, -1 = w lewo). */

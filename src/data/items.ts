@@ -708,19 +708,25 @@ export function itemStats(it: Item | null): Partial<Record<keyof Stats, number>>
 }
 
 /** Różnice statystyk nowego przedmiotu względem założonego: [opis, czy lepiej]. */
-export function compareItems(next: Item, cur: Item | null): { text: string; better: boolean }[] {
+/**
+ * Różnica statystyk po zamianie `cur` na `next`: `stat` ('mul' = mnożnik obrażeń broni), pełny opis zmiany i krótka
+ * wielkość bez znaku (`short`, np. "2.1%", "x1.15") do pokazania przy wierszu bonusu.
+ */
+export interface StatDiff { stat: keyof Stats | 'mul'; text: string; short: string; better: boolean }
+
+export function compareItems(next: Item, cur: Item | null): StatDiff[] {
   const a = itemStats(next), b = itemStats(cur);
   const keys = new Set([...Object.keys(a), ...Object.keys(b)] as (keyof Stats)[]);
-  const out: { text: string; better: boolean }[] = [];
+  const out: StatDiff[] = [];
   for (const k of keys) {
     const d = (a[k] ?? 0) - (b[k] ?? 0);
     if (Math.abs(d) < 1e-6) continue;
     const line = statLine(k, Math.abs(d));
-    out.push({ text: (d > 0 ? line : line.replace(/^[+-]/, '-')), better: d > 0 });
+    out.push({ stat: k, text: (d > 0 ? line : line.replace(/^[+-]/, '-')), short: line.split(' ')[0].replace(/^[+-]/, ''), better: d > 0 });
   }
   const ma = next.implicit.mode === 'mul' ? implicitOf(next) : 1;
   const mb = cur?.implicit.mode === 'mul' ? implicitOf(cur) : 1;
-  if (Math.abs(ma - mb) > 1e-6) out.unshift({ text: `Obrażenia x${(ma / mb).toFixed(2)}`, better: ma > mb });
+  if (Math.abs(ma - mb) > 1e-6) out.unshift({ stat: 'mul', text: `Obrażenia x${(ma / mb).toFixed(2)}`, short: `x${(ma / mb).toFixed(2)}`, better: ma > mb });
   return out;
 }
 

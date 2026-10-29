@@ -476,6 +476,15 @@ src/
 - 0.34.1: passive level-up cards show the evolutions they unlock as pictures (weapon > evolution, for weapons your hero can use) instead of a text line; the Evolution book is also in the pause menu.
 - Not done yet: CC0 recordings (Kenney, OpenGameArt) — the cloud environment's network policy blocks those sites; the licence list and iPhone formats come with them.
 
+**UI pass (0.34.3)**:
+- Hints never cover a screen's title, the map legend or buttons: each screen has its own spot (under the level-up and card buttons, next to the loot menu, bottom left of the map panel, beside the shop and anvil). In game the hint sits above the ability bar instead of near the hero.
+- One card style for level-up, cards, boss powers and the collection: frame in the category color, the selected card lifts with a gold outline, badges ("Recommended", "New!") on the top edge. Cards have a single "Reroll selected" button. Level-up cards are taller, so descriptions shrink less.
+- Item comparison in one list: each bonus shows ↑ / ↓ and how much better or worse it is than the equipped item; only stats the equipped item alone has are listed below. An item for an empty slot gets one wide panel.
+- Pause has three tabs at full text size: Character (stats, weapons), Build (passives, equipment, cards) and Abilities. Bigger tabs and difficulty buttons for touch.
+- Collection: a row of tabs at the top instead of the Tab-only button. Arsenal fits all weapons and passives.
+- Readability: descriptions at full size by default (Text size: Large, existing saves switched once; Normal still in Settings), lighter secondary text (better contrast), one title color, "Back [Esc]" buttons everywhere.
+- Fixes: Polish "Ewolucje" header in English, Progression no longer says "Expedition only", "1 pt", peak DPS never below the average, "Silver card" capitalized, Expedition and Endless screens without an empty panel and "not played yet" instead of zeros.
+
 ### Jak przetestować
 
 1. `npm run dev` → Endless → Nowy run → bohater (albo Ekspedycja → Nowa ekspedycja).

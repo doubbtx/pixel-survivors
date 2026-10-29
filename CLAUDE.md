@@ -23,7 +23,7 @@ HTML5 Canvas 2D + TypeScript + Vite. Logika ekranu 480×270 (W, H): UI rysuje w 
 (K 2-4, transformacja ×K, więc dostępne są linie ułamkowe: `roundRect`, `roundFrame`, tekst `scale: 0.75`). Świat rysuje się
 między `r.beginWorld()` i `r.endWorld()` na osobnym płótnie VW × VH (piksele logiczne świata, ZOOM 1.5 na jednostkę) i jest
 wklejany powiększony o VIEW_S (przybliżenie z Ustawień, K·VIEW_S całkowite). VIEW_W/VIEW_H/VW/VH/VIEW_S to żywe eksporty renderer.ts.
-Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 7; nowe pola bez migracji dostają wartości domyślne w `loadSave`).
+Stały krok symulacji 60 Hz. Zapis w localStorage z wersjami i migracjami (`core/save.ts`, SAVE_VERSION 10; nowe pola bez migracji dostają wartości domyślne w `loadSave`).
 Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków).
 
 ## Struktura `src/`
@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.30.0)
+## Stan (wersja 0.34.3)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -569,6 +569,15 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   `drawEvoRow` w ui/levelup.ts zamiast napisu; Księga ewolucji w menu pauzy (CodexScreen z powrotem do GameScreen).
 - 0.34.2: Rytm przebudowany (w grze nie ma walki „poza walką”, więc dawny zanik nie działał): budowanie → Przepływ
   (`Run.flowT/flowMax`, flaga `rhythm.flow`), potem od zera; Takezo tymczasowo w START_HEROES.
+- 0.34.3 (przegląd UI): podpowiedzi w miejscu wskazanym przez ekran (`HINT_BOX` w ui/game-screen.ts, `HintBox` w ui/hints.ts:
+  `y` górna krawędź albo dolna przy `up`); w grze nad paskiem umiejętności (dotyk: u góry). Wspólna oprawa kart
+  `cardFrame` / `cardBadge` / `cardIcon` (ui/widgets.ts) dla awansu, kart, mocy bossa i kolekcji; zaznaczenie = złota
+  obwódka + uniesienie. Porównanie przedmiotów: `compareItems` zwraca `StatDiff` (`stat`, `short`), karta przedmiotu
+  pokazuje ↑/↓ przy wierszu bonusu (sumy w nawiasach tylko bez porównania). Pauza: zakładki Postać / Build / Umiejętności
+  (`renderPauseBuild`), pełny rozmiar tekstu. Kolekcja: rząd zakładek (`tabRect`, `TAB_COL`). Tekst opisów domyślnie duży
+  (migracja 9 → 10 ustawia `textLarge`). Tekst drugorzędny `C.lavender` zamiast `C.dgray` (kontrast ~4.9:1 na `C.navy`;
+  `C.dgray` tylko dla wyłączonych przycisków i grafiki). Tytuły ekranów `C.yellow` (kolorowe tylko ze znaczeniem: rzadkość,
+  wynik runu). Przyciski powrotu „Wstecz [Esc]”, etykiety „Nazwa (n) [klawisz]”.
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

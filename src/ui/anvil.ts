@@ -260,7 +260,7 @@ export class AnvilView {
       panel(r, DET_X + 4, y, DET_W - 8, CRAFT_H - 2, on ? C.gold : C.slate);
       drawSprite(g, out.icon, DET_X + 18, y + 13);
       drawText(g, out.name, DET_X + 30, y + 3, out.color);
-      drawText(g, `${Math.round(craftChance(run, c) * 100)}%   ${fmt(craftGold(run, c))} zł`, DET_X + DET_W - 10, y + 3, block ? C.dgray : C.yellow, { align: 'right' });
+      drawText(g, `${Math.round(craftChance(run, c) * 100)}%   ${fmt(craftGold(run, c))} zł`, DET_X + DET_W - 10, y + 3, block ? C.lavender : C.yellow, { align: 'right' });
       // Składniki: ikona i zapas/potrzeba, odłamki jako katalizator.
       let x = DET_X + 30;
       for (const [id, n] of Object.entries(c.need) as [MatId, number][]) {
@@ -271,7 +271,7 @@ export class AnvilView {
       if (c.shards) { drawSprite(g, 'sh_shard', x + 6, y + 24); drawText(g, `${run.shards}/${c.shards}`, x + 15, y + 19, run.shards >= c.shards ? C.white : C.salmon); }
     });
     for (const sp of this.sparks) r.rect(sp.x, sp.y, 2, 2, sp.t > 0.3 ? C.yellow : C.orange);
-    drawText(g, 'Enter: przetop   Esc: wróć   Porażka: połowa składników przepada   Szansa rośnie z poziomem kowadła', W / 2, 234, C.dgray, { align: 'center' });
+    drawText(g, 'Enter: przetop   Esc: wróć   Porażka: połowa składników przepada   Szansa rośnie z poziomem kowadła', W / 2, 234, C.lavender, { align: 'center' });
   }
 
   /** Zwraca true, gdy kowadło ma zostać zamknięte. */
@@ -325,7 +325,7 @@ export class AnvilView {
   render(r: Renderer): void {
     const g = r.g, run = this.run;
     dim(r);
-    drawText(g, 'Kowadło', W / 2, 10, C.orange, { align: 'center', scale: 2, outline: C.black });
+    drawText(g, 'Kowadło', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
     drawText(g, '[Esc] wróć', 10, 12, C.lgray, { outline: C.black });
     drawSprite(g, 'coin', W - 118, 18);
     drawText(g, fmt(run.gold), W - 110, 13, C.yellow, { outline: C.black });
@@ -334,11 +334,11 @@ export class AnvilView {
     // Zapasy kuźni: materiały (lewo) i zwoje (przy tytule).
     MATERIALS.forEach((m, i) => {
       drawSprite(g, m.icon, 64 + i * 25, 18);
-      drawText(g, String(run.mats[m.id]), 72 + i * 25, 13, run.mats[m.id] ? m.color : C.dgray, { outline: C.black });
+      drawText(g, String(run.mats[m.id]), 72 + i * 25, 13, run.mats[m.id] ? m.color : C.lavender, { outline: C.black });
     });
     SCROLLS.forEach((s, i) => {
       drawSprite(g, s.icon, 296 + i * 22, 18);
-      drawText(g, String(run.scrolls[s.id]), 304 + i * 22, 13, run.scrolls[s.id] ? s.color : C.dgray, { outline: C.black });
+      drawText(g, String(run.scrolls[s.id]), 304 + i * 22, 13, run.scrolls[s.id] ? s.color : C.lavender, { outline: C.black });
     });
 
     panel(r, 6, 32, 216, 152, this.stage === 'target' ? C.yellow : C.lavender);
@@ -374,7 +374,7 @@ export class AnvilView {
     } else {
       this.affixY = [];
       panel(r, DET_X, 32, DET_W, DET_H, C.slate);
-      drawText(g, 'Pusty slot', DET_X + DET_W / 2, 126, C.dgray, { align: 'center' });
+      drawText(g, 'Pusty slot', DET_X + DET_W / 2, 126, C.lavender, { align: 'center' });
     }
 
     if (this.stage === 'ops' && it) this.menu.render(r);
@@ -382,7 +382,7 @@ export class AnvilView {
       const max = run.anvilLevel >= BAL.anvilUpgrade.max;
       button(r, 14, 192, 200, 18, max ? `Kowadło poziom ${run.anvilLevel} (max)` : `[R] Ulepsz kowadło (poz. ${run.anvilLevel}): ${costText(anvilUpgradeCost(run))}`, { accent: C.orange, col: max ? C.gold : undefined });
       button(r, 14, WORKSHOP_Y, 200, 16, '[B] Warsztat: przetapianie materiałów', { accent: C.orange });
-      drawText(g, 'Enter / klik: wybierz przedmiot', 114, 232, C.dgray, { align: 'center' });
+      drawText(g, 'Enter / klik: wybierz przedmiot', 114, 232, C.lavender, { align: 'center' });
     }
     // Wynik ostatniej próby kucia (także po wyjściu z panelu, np. po zniszczeniu przedmiotu).
     if (this.result && this.stage !== 'forge') drawText(g, this.result.text, W / 2, H - 26, OUTCOME_COL[this.result.outcome], { align: 'center', outline: C.black });
@@ -430,8 +430,8 @@ export class AnvilView {
       if (i === this.optSel) r.roundFrame(x + 4, y - 1, DET_W - 8, OPT_H - 1, 2, C.yellow, 0.5);
       r.rect(x + 8, y + 2, 7, 7, C.black);
       if (on) r.rect(x + 9, y + 3, 5, 5, k === 'risk' ? C.red : C.lime);
-      drawText(g, `${i + 1}`, x + 18, y, C.dgray);
-      drawText(g, label, x + 26, y, on ? (k === 'risk' ? C.red : C.white) : k !== 'risk' && !run.scrolls[k] ? C.dgray : C.lgray);
+      drawText(g, `${i + 1}`, x + 18, y, C.lavender);
+      drawText(g, label, x + 26, y, on ? (k === 'risk' ? C.red : C.white) : k !== 'risk' && !run.scrolls[k] ? C.lavender : C.lgray);
     });
     // Najbliższy próg kuźni (Przebudzenie z opisem dla typu przedmiotu).
     const tier = FORGE_TIERS.find((t) => t.at > lvl);

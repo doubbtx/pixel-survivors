@@ -9,7 +9,7 @@ import { ALL_UNLOCKS } from '../data/unlocks';
  * która przekształca dane do wersji o 1 wyższej. Ładowanie aplikuje migracje po kolei.
  */
 const KEY = 'pixel-survivors-save';
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 export interface HeroRecord {
   bestTime: number;
@@ -195,6 +195,8 @@ const MIGRATIONS: Record<number, Migration> = {
     const played = records.some((r) => (r.bestTime ?? 0) > 0) || ((old.achievements as unknown[] | undefined)?.length ?? 0) > 0;
     return { ...old, version: 9, unlocks: played ? [...ALL_UNLOCKS] : [], tutorialDone: played };
   },
+  // 9 → 10 (0.34.3): opisy w pełnym rozmiarze dla wszystkich (mniejszy tekst bywał nieczytelny); można wrócić w Ustawieniach.
+  9: (old) => ({ ...old, version: 10, settings: { ...(old.settings as object), textLarge: true } }),
 };
 
 function defaults(): SaveData {
@@ -204,7 +206,7 @@ function defaults(): SaveData {
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
       playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en',
-      textLarge: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches, reduceFlash: false, flashWarned: false, keys: {} },
+      textLarge: true, reduceFlash: false, flashWarned: false, keys: {} },
     records: {},
     slots: { endless: null, expedition: null },
     notice: '',

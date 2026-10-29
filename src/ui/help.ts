@@ -187,7 +187,7 @@ export class HelpScreen implements Screen {
       y += gap;
     }
     this.scroll.end(r, y + oy - AREA[1], ...AREA);
-    button(r, W / 2 - 40, H - 22, 80, 16, 'Wróć');
+    button(r, W / 2 - 40, H - 22, 80, 16, 'Wstecz [Esc]');
     // Kolejna strona: strzałka i podpis.
     if (this.page < PAGES.length - 1) {
       moreArrow(r, W - 16, H - 14, 1);

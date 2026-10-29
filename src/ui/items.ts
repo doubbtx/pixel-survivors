@@ -8,7 +8,7 @@ import { BAL } from '../data/balance';
 import { fmt } from '../util/format';
 import {
   RARITIES, BASE_BY_ID, SLOTS, itemAbout, UNIQUE_BY_ID, forgeMul, UNIQUE_COLOR, implicitLine, statLine, statTotal, superLine, compareItems, salvageGold, salvageShards, itemColor,
-  type Item, type LootSource, type SlotId,
+  type Item, type StatDiff, type LootSource, type SlotId,
 } from '../data/items';
 import type { Run } from '../game/run';
 import type { Stats } from '../entities/types';
@@ -70,26 +70,37 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
     drawText(g, line, x + 40, ly, col, { shadow: C.black });
     ly += 11;
   }
-  drawText(g, `${uniq ? 'Unikat:' : R.name[base.gender]} ${base.name.toLowerCase()}, poz. ${it.ilvl}${it.upg ? `, +${it.upg}` : ''}`, x + 40, Math.max(ly, y + 19), C.dgray);
+  drawText(g, `${uniq ? 'Unikat:' : R.name[base.gender]} ${base.name.toLowerCase()}, poz. ${it.ilvl}${it.upg ? `, +${it.upg}` : ''}`, x + 40, Math.max(ly, y + 19), C.lavender);
   ly = y + 40;
   const tags = itemTags(it);
   if (tags.length) drawTagIcons(r, tags, x + w - 14 - ((tags.length - 1) * 18) / 2, y + h - 14);
   const bottom = y + h - (tags.length ? 30 : 14);
   const affixY: number[] = [];
-  const line = (s: string, col: number, tw = w - 16) => {
-    for (const l of wrapText(s, tw)) {
+  // Porównanie z założonym przedmiotem: zmiana przy wierszu bonusu (↑ lepiej, ↓ gorzej) zamiast drugiej listy;
+  // osobno tylko statystyki, które ma wyłącznie założony przedmiot. Sumy w nawiasach wtedy pomijane (za długie wiersze).
+  const diffs = cmp ? compareItems(it, cmp) : [];
+  const totals = stats && !cmp;
+  const shown = new Set<StatDiff['stat']>();
+  const diffOf = (k: StatDiff['stat']): StatDiff | undefined => {
+    if (shown.has(k)) return undefined;
+    shown.add(k);
+    return diffs.find((d) => d.stat === k);
+  };
+  const line = (s: string, col: number, tw = w - 16, d?: StatDiff) => {
+    for (const [i, l] of wrapText(s, d ? tw - 30 : tw).entries()) {
       if (ly > bottom) return;
       drawText(g, l, x + 8, ly, col);
+      if (i === 0 && d) drawText(g, `${d.better ? '↑' : '↓'}${d.short}`, x + w - 8, ly, d.better ? C.lime : C.red, { align: 'right' });
       ly += 11;
     }
   };
-  line(implicitLine(it) + (stats ? ` (${statTotal(it.implicit.stat, stats)})` : ''), C.white);
+  line(implicitLine(it) + (totals ? ` (${statTotal(it.implicit.stat, stats)})` : ''), C.white, w - 16, diffOf(it.implicit.mode === 'mul' ? 'mul' : it.implicit.stat));
   r.rect(x + 8, ly + 1, w - 16, 1, C.slate);
   ly += 4;
   const k = forgeMul(it);
   for (const a of it.affixes) {
     if (ly <= bottom) affixY.push(ly);
-    line(statLine(a.stat, a.value * (a.stat === 'amount' ? 1 : k)) + (stats ? ` (${statTotal(a.stat, stats)})` : ''), C.cyan, rerollButtons ? w - 34 : w - 16);
+    line(statLine(a.stat, a.value * (a.stat === 'amount' ? 1 : k)) + (totals ? ` (${statTotal(a.stat, stats)})` : ''), C.cyan, rerollButtons ? w - 34 : w - 16, diffOf(a.stat));
   }
   if (it.super) {
     ly += 2;
@@ -109,12 +120,10 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
   if (it.cracked) line(`Pęknięty: wartości -${Math.round((1 - BAL.forge.crackMul) * 100)}%, napraw w kowadle`, C.red);
   if (cmp === undefined) return affixY;
   ly += 3;
-  r.rect(x + 8, ly, w - 16, 1, C.slate);
-  ly += 3;
   if (!cmp) { line('Pusty slot: czysty zysk.', C.lime); return affixY; }
-  const diff = compareItems(it, cmp);
-  if (!diff.length) line('Bez zmian w statystykach.', C.lgray);
-  for (const d of diff) line(d.text, d.better ? C.lime : C.red);
+  const rest = diffs.filter((d) => !shown.has(d.stat));
+  if (!diffs.length) line('Bez zmian w statystykach.', C.lavender);
+  for (const d of rest) line(d.text, d.better ? C.lime : C.red);
   if (cmp.super && cmp.super.id !== it.super?.id) line(`Tracisz: ${superLine(cmp).split(':')[0]}`, C.red);
   if (cmp.unique && cmp.unique !== it.unique) line(`Tracisz efekt: ${cmp.name}`, C.red);
   return affixY;
@@ -164,13 +173,13 @@ export class LootView {
     const title = it.unique ? 'Unikat!' : this.source === 'boss' ? 'Łup bossa!' : this.source === 'elite' ? 'Skrzynia elity!' : 'Przedmiot!';
     drawText(r.g, title, W / 2, 10, it.super ? C.yellow : itemColor(it), { align: 'center', scale: 2, outline: C.black });
     const cur = run.equipment[run.slotFor(it)];
-    drawItemCard(r, it, 18, 40, 216, 168, cur, false, run.stats);
-    if (cur) {
-      drawText(r.g, 'Założone', 246 + 108, 30, C.dgray, { align: 'center' });
-      drawItemCard(r, cur, 246, 40, 216, 168, undefined, false, run.stats);
+    // Pusty slot: jeden szerszy panel (nie ma z czym porównać), inaczej nowy obok założonego.
+    if (!cur) {
+      drawItemCard(r, it, W / 2 - 150, 40, 300, 168, null, false, run.stats);
     } else {
-      panel(r, 246, 40, 216, 168, C.slate);
-      drawText(r.g, `Slot "${SLOTS.find((s) => s.id === run.slotFor(it))!.name}" jest pusty`, 246 + 108, 118, C.dgray, { align: 'center' });
+      drawItemCard(r, it, 18, 40, 216, 168, cur, false, run.stats);
+      drawText(r.g, 'Założone', 246 + 108, 30, C.lavender, { align: 'center' });
+      drawItemCard(r, cur, 246, 40, 216, 168, undefined, false, run.stats);
     }
     this.menu.render(r);
   }
@@ -295,7 +304,7 @@ export class InventoryView {
         const c = this.cellAt(cx, cy);
         const on = cx === this.cx && cy === this.cy;
         drawItemSlot(r, this.itemAt(c), x, y, CELL, on, c.kind === 'eq' ? SLOT_GHOST[c.slot] : '');
-        if (c.kind === 'eq') drawText(g, SLOT_LABEL[c.slot], x + CELL / 2, y + CELL + 1, on ? C.yellow : C.dgray, { align: 'center' });
+        if (c.kind === 'eq') drawText(g, SLOT_LABEL[c.slot], x + CELL / 2, y + CELL + 1, on ? C.yellow : C.lavender, { align: 'center' });
       }
     }
     drawText(g, `Plecak ${run.bag.length}/${BAL.bagSize}`, BAG_X, 148, C.lavender);
@@ -318,12 +327,12 @@ export class InventoryView {
       drawItemCard(r, it, DET_X, 34, DET_W, 196, cmp, false, run.stats);
     } else {
       panel(r, DET_X, 34, DET_W, 196, C.slate);
-      drawText(g, sel.kind === 'eq' ? 'Pusty slot' : 'Puste miejsce', DET_X + DET_W / 2, 124, C.dgray, { align: 'center' });
+      drawText(g, sel.kind === 'eq' ? 'Pusty slot' : 'Puste miejsce', DET_X + DET_W / 2, 124, C.lavender, { align: 'center' });
     }
     const btn = (x: number, w: number, label: string, col: number) => {
       button(r, x, 236, w, 16, label, { col });
     };
-    btn(14, 60, 'Wróć', C.lgray);
+    btn(14, 60, 'Wstecz [Esc]', C.lgray);
     if (it) {
       btn(DET_X, BTN_W, sel.kind === 'eq' ? 'Zdejmij' : 'Załóż', C.white);
       btn(DET_X + BTN_W + 6, BTN_W, `Rozłóż +${fmt(salvageGold(it, run.stats.greed))}`, C.gold);
