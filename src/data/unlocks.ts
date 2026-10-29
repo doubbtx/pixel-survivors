@@ -43,7 +43,8 @@ export const UNLOCKS: UnlockDef[] = [
 export const UNLOCK_BY_ID: Record<string, UnlockDef> = Object.fromEntries(UNLOCKS.map((u) => [u.id, u]));
 
 /** Bohaterowie dostępni od początku. */
-export const START_HEROES = ['kestra', 'borgun'];
+/** Takezo tymczasowo od początku (prośba gracza, 0.34.2); warunek 'hero:takezo' zostaje w UNLOCKS na później. */
+export const START_HEROES = ['kestra', 'borgun', 'takezo'];
 
 export const unlocked = (s: SaveData, id: string): boolean => s.unlocks.includes(id);
 export const heroUnlocked = (s: SaveData, hero: string): boolean => START_HEROES.includes(hero) || unlocked(s, `hero:${hero}`);

@@ -213,7 +213,7 @@ export const HERO_TREES: Record<string, MetaNode[]> = {
     N('t_power', 'Void', 'Tempo', 'ab_t_flurry', 5, 30, flag('res.power', 0.06), 'Rhythm gives {v} more attack speed', true),
     N('t_idmg', 'Void', 'One Cut', 'ab_t_iai', 5, 25, flag('t_iai.damage', 20), '+{v} Iai damage', false),
     N('t_ult', 'Void', 'Stillness', 'ab_t_iai_evo', 5, 35, flag('ultGain', 0.06), 'Ultimate charges {v} faster', true),
-    KEY('t_max', 'Void', 'No Mind', 'ab_t_iai_evo', 600, flag('res.max', 15), '+15 max Rhythm.'),
+    KEY('t_max', 'Void', 'No Mind', 'ab_t_iai_evo', 600, flag('rhythm.flow', 1), 'Flow lasts 1 s longer.'),
     ...EXPEDITION,
   ],
 };

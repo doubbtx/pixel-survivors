@@ -43,6 +43,7 @@ export function resourceDamageMul(run: Run, src: string): number {
   if (k === 'fury') return 1 + (run.rageT > 0 ? R.fury.rageMight : R.fury.might * resFrac(run)) * power(run);
   if (k === 'streak') return 1 + R.streak.might * resFrac(run) * power(run);
   if (k === 'heat' && isSpell(run, src)) return 1 + R.heat.spell * resFrac(run) * power(run);
+  if (k === 'rhythm' && run.flowT > 0) return 1 + R.rhythm.flowDmg * power(run);
   return 1;
 }
 
@@ -62,7 +63,6 @@ export function resourceOnHit(run: Run, e: Enemy): void {
   if ((k !== 'focus' && k !== 'fury' && k !== 'streak' && k !== 'rhythm') || run.resGap > 0) return;
   if (k === 'rhythm') {
     run.resGap = R.rhythm.gap;
-    run.resIdle = 0;
     rhythmGain(run, 1);
     return;
   }
@@ -118,25 +118,36 @@ export function resourceOnHurt(run: Run, dmg: number): void {
   }
   else if (k === 'fury') furyGain(run, (R.fury.hurt * 100 * dmg) / run.stats.maxHp);
   else if (k === 'streak') run.res = 0;
-  else if (k === 'rhythm') run.res *= 1 - R.rhythm.hurtLoss;
+  else if (k === 'rhythm' && run.flowT <= 0) run.res *= 1 - R.rhythm.hurtLoss;
 }
 
-/** Przyrost rytmu (Takezo); przy pierwszym zapełnieniu napis. */
+/** Przyrost rytmu (Takezo, poza Przepływem); pełny pasek wyzwala Przepływ. */
 export function rhythmGain(run: Run, v: number): void {
-  if (run.hero.resource.kind !== 'rhythm') return;
-  const was = run.res;
+  if (run.hero.resource.kind !== 'rhythm' || run.flowT > 0) return;
   gain(run, v);
-  if (was < resMax(run) && run.res >= resMax(run)) run.popText(run.player.x, run.player.y - 14, 'Flow!', C.cyan);
+  if (run.res < resMax(run)) return;
+  // Przepływ: duża szybkość ataku i obrażenia, Tysiąc cięć od razu gotowy; pasek odlicza czas do zera.
+  const p = run.player;
+  run.flowT = run.flowMax = R.rhythm.flow + run.flag('rhythm.flow');
+  run.abilities.e.cd = 0;
+  run.popText(p.x, p.y - 16, 'Flow!', C.cyan);
+  const f = run.addFx('ring', p.x, p.y, C.cyan, 0.4);
+  if (f) f.r = 36;
+  run.burst(p.x, p.y, C.cyan, 20, 80);
+  sfx.play('streak');
 }
 
-/** Szybkość ataku z rytmu (dodawana do statystyki broni w systems/weapons.ts i do liczby cięć Tysiąca cięć). */
+/** Szybkość ataku z rytmu: przy budowaniu za punkt, w Przepływie stały duży bonus (broń w systems/weapons.ts, liczba cięć). */
 export function rhythmAtk(run: Run): number {
-  return run.hero.resource.kind === 'rhythm' ? run.res * R.rhythm.atk * power(run) : 0;
+  if (run.hero.resource.kind !== 'rhythm') return 0;
+  return (run.flowT > 0 ? R.rhythm.flowAtk : run.res * R.rhythm.atk) * power(run);
 }
 
-/** Iai zużywa cały rytm: mnożnik obrażeń cięcia. */
+/** Iai: poza Przepływem zużywa cały rytm (mnożnik za punkt), w Przepływie stały mnożnik i Przepływ trwa. */
 export function spendRhythm(run: Run): number {
-  if (run.hero.resource.kind !== 'rhythm' || run.res < 1) return 1;
+  if (run.hero.resource.kind !== 'rhythm') return 1;
+  if (run.flowT > 0) return R.rhythm.flowIai * power(run);
+  if (run.res < 1) return 1;
   const n = run.res;
   run.res = 0;
   if (n >= 5) run.popText(run.player.x, run.player.y - 16, `Rhythm x${Math.floor(n)}`, C.cyan);
@@ -243,7 +254,10 @@ export function updateResource(run: Run, dt: number): void {
       if (run.rageT <= 0) run.recomputeStats();
     } else if (run.resIdle > R.fury.idle && run.flag('furyHold') <= 0) run.res = Math.max(0, run.res - R.fury.decay * dt);
   }
-  if (k === 'rhythm' && run.resIdle > R.rhythm.idle) run.res = Math.max(0, run.res - R.rhythm.decay * dt);
+  if (k === 'rhythm' && run.flowT > 0) {
+    run.flowT = Math.max(0, run.flowT - dt);
+    run.res = (resMax(run) * run.flowT) / run.flowMax;
+  }
   if (k !== 'heat') return;
   const H = R.heat, p = run.player;
   run.res = Math.max(0, run.res - H.decay * dt);

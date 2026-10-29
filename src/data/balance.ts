@@ -85,10 +85,15 @@ export const BAL = {
      * jako ułamek HP, sługi +minionLife s) i zużycie `grace`. Sąd: +judgDmg obrażeń za punkt, +1 cel za judgExtra punktów, Sąd ostateczny zostawia `keep`.
      * Strażnicy leczą `guardHeal` maks. HP trafieniem; Opiekun: tarcza shieldPer za sługę (do shieldCap); Uświęcona ziemia przedłuża sługi o sanctLife s na sekundę.
      */
-    /** Rytm (Takezo): +1 za trafienie co `gap` s, +atk szybkości ataku za punkt; po `idle` s bez trafień opada `decay`/s; oberwanie zabiera hurtLoss; Iai +iai obrażeń za punkt. */
-    rhythm: { max: 30, gap: 0.1, atk: 0.015, idle: 1.5, decay: 8, hurtLoss: 0.4, iai: 0.03 },
+    /**
+     * Rytm (Takezo, 0.34.2): +1 za trafienie co `gap` s (odbicie: BAL.resource.parry.rhythm), +atk szybkości ataku za punkt w trakcie budowania;
+     * oberwanie zabiera hurtLoss. Pełny: Przepływ na `flow` s (+flowAtk szybkości ataku, +flowDmg obrażeń, Tysiąc cięć
+     * odnowiony), pasek opada do zera, potem budowanie od nowa. Iai: poza Przepływem +iai obrażeń za punkt (zużywa Rytm),
+     * w Przepływie ×flowIai i Przepływ trwa dalej.
+     */
+    rhythm: { max: 40, gap: 0.06, atk: 0.0075, hurtLoss: 0.3, iai: 0.02, flow: 5, flowAtk: 0.6, flowDmg: 0.2, flowIai: 2 },
     /** Mikiri (pasywka Takezo): szansa na odbicie base + perLevel × (poziom − 1), najwyżej max (razem z flagą passive.parry); po odbiciu iframes s nietykalności (tylko to trafienie); kontra wokół (riposteR), +rhythm rytmu, odbity pocisk: reflect × obrażenia kart. */
-    parry: { base: 0.05, perLevel: 0.006, max: 0.35, riposteR: 26, rhythm: 3, reflect: 1.5, iframes: 0.1 },
+    parry: { base: 0.05, perLevel: 0.006, max: 0.35, riposteR: 26, rhythm: 6, reflect: 1.5, iframes: 0.1 },
     faith: { max: 100, range: 150, heal: 0.5, graceHeal: 0.15, graceShield: 0.1, minionLife: 3, grace: 60, judgDmg: 0.01, judgExtra: 10, keep: 0.3, guardHeal: 0.004, shieldPer: 0.03, shieldCap: 0.18, sanctLife: 0.5 },
   },
   /**

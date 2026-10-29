@@ -343,6 +343,9 @@ export class Run {
   /** Szał Borguna (pełna furia): pozostały i pełny czas. */
   rageT = 0;
   rageMax = 1;
+  /** Przepływ (Rytm Takezo): pozostały czas i pełny czas (flaga rhythm.flow wydłuża). */
+  flowT = 0;
+  flowMax = 1;
   /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej). */
   reactions = 0;
   /** Błysk paska XP po zebraniu kryształu (s). */
@@ -533,6 +536,7 @@ export class Run {
     // Dusze zostają między poziomami, pozostałe zasoby budują się od nowa.
     if (this.hero.resource.kind !== 'souls') this.res = 0;
     this.rageT = 0;
+    this.flowT = 0;
     delete this.cardState['sec.berserk'];
     // Błogosławieństwo kapliczki Ekspedycji na kolejne mapy (trwa cały poziom).
     const bless = this.expedition?.blessing ? EX_BLESSINGS.find((b) => b.id === this.expedition!.blessing!.id) : null;

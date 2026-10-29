@@ -322,8 +322,8 @@ export const HEROES: HeroDef[] = [
     base: { maxHp: 105, speed: 60, atkSpeed: 0.1 },
     weapon: 'katana',
     tags: ['Szybkość', 'Krytyk'],
-    passive: { name: 'Mikiri', desc: '5% chance to parry a hit or a projectile at level 1, +0.6% per level (max 35%, cards included): no damage, a counter cut around you and +3 Rhythm. Parried projectiles fly back at enemies.', kind: 'parry', value: 20 },
-    resource: { kind: 'rhythm', name: 'Rhythm', color: C.cyan, desc: 'Every hit adds Rhythm: each point is attack speed. It fades out of combat, getting hit costs some. Iai (R) spends it all on a stronger cut.' },
+    passive: { name: 'Mikiri', desc: '5% chance to parry a hit or a projectile at level 1, +0.6% per level (max 35%, cards included): no damage, a counter cut around you and +6 Rhythm. Parried projectiles fly back at enemies.', kind: 'parry', value: 20 },
+    resource: { kind: 'rhythm', name: 'Rhythm', color: C.cyan, desc: 'Every hit builds Rhythm and attack speed. Full Rhythm starts Flow: a few seconds of very fast, stronger attacks, then it builds again from zero. Iai (R) spends it on a stronger cut.' },
     abilities: [
       {
         id: 't_slam', name: 'Helm Splitter', icon: 'ab_t_slam', desc: 'An overhead strike into the ground in front of you: damage and a short stun in a circle.', slot: 'q', kind: 'overhead', color: C.lgray,
@@ -395,10 +395,10 @@ export function resourceDetails(kind: ResourceKind): string[] {
       `Sąd (R) zużywa całą: +${pc(R.faith.judgDmg)} obrażeń za punkt, +1 cel za każde ${R.faith.judgExtra}.`,
     ];
     case 'rhythm': return [
-      `Max ${R.rhythm.max}. Every hit: +1 (at most every ${R.rhythm.gap} s).`,
-      `Each point: +${pc(R.rhythm.atk)} attack speed (full: +${pc(R.rhythm.atk * R.rhythm.max)}).`,
-      `Fades after ${R.rhythm.idle} s without hits. Getting hit costs ${pc(R.rhythm.hurtLoss)}.`,
-      `Iai (R) spends it all: +${pc(R.rhythm.iai)} damage per point.`,
+      `Max ${R.rhythm.max}. Every hit: +1 (at most every ${R.rhythm.gap} s), a parry: +${R.parry.rhythm}.`,
+      `While it builds: +${pc(R.rhythm.atk)} attack speed per point. Getting hit costs ${pc(R.rhythm.hurtLoss)}.`,
+      `Full: Flow for ${R.rhythm.flow} s: +${pc(R.rhythm.flowAtk)} attack speed, +${pc(R.rhythm.flowDmg)} damage, Thousand Cuts ready. Then it starts from zero.`,
+      `Iai (R): outside Flow spends it all (+${pc(R.rhythm.iai)} damage per point), in Flow deals x${R.rhythm.flowIai} and Flow goes on.`,
     ];
   }
 }
