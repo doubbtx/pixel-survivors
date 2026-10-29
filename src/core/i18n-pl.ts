@@ -679,4 +679,11 @@ export const PL: Record<string, string> = {
   "The first map of an Expedition is gentler: fewer enemies dealing less damage, a shorter goal, and no situations, quests or events in the first 90 seconds.": "Pierwsza mapa Ekspedycji jest łagodniejsza: mniej wrogów zadających mniej obrażeń, krótszy cel, a przez pierwsze 90 sekund bez sytuacji, zadań i wydarzeń.",
   "After two early defeats in a row the end screen offers Easy mode with one button. The end screen says 'Your first records!' on a hero's first run.": "Po dwóch wczesnych porażkach pod rząd ekran końca proponuje tryb łatwy jednym przyciskiem. Przy pierwszym runie bohatera ekran końca pokazuje „Twoje pierwsze rekordy!”.",
   "Smaller fixes: whole numbers for HP and gold, item totals read 'now', brighter 1-3 keys on cards, the pause menu says 'Tutorial' in the tutorial, map messages no longer cover the buttons.": "Drobne poprawki: HP i złoto jako liczby całkowite, sumy przedmiotów jako „obecnie”, jaśniejsze klawisze 1-3 na kartach, pauza w samouczku pokazuje „Samouczek”, komunikaty mapy nie zasłaniają przycisków.",
+  "Full: Flow until you take damage: +{} attack speed, +{} damage, Thousand Cuts ready. A hit ends it and the bar drains to zero.": "Pełny: Przepływ do momentu oberwania: +{} szybkości ataku, +{} obrażeń, Tysiąc cięć gotowy. Trafienie go kończy, a pasek opada do zera.",
+  "Every hit builds Rhythm and attack speed, and it stays until you take damage: then it drains to zero and builds again. Full Rhythm starts Flow: very fast, stronger attacks that last until you are hit. Iai (R) spends it on a stronger cut.": "Każde trafienie buduje Rytm i szybkość ataku, a Rytm trzyma się, dopóki nie oberwiesz: wtedy opada do zera i buduje się od nowa. Pełny Rytm uruchamia Przepływ: bardzo szybkie, mocniejsze ataki, które trwają, dopóki cię nie trafią. Iai (R) zużywa go na mocniejsze cięcie.",
+  "After a hit, Flow lasts 1 s more.": "Po trafieniu Przepływ trwa jeszcze 1 s.",
+  "After a hit, Flow lasts 1.5 s more.": "Po trafieniu Przepływ trwa jeszcze 1.5 s.",
+  "After a hit, Flow lasts 2.5 s more, +10% damage.": "Po trafieniu Przepływ trwa jeszcze 2,5 s, +10% obrażeń.",
+  "Flow": "Przepływ",
+  "Takezo's Flow (full Rhythm) now lasts until you take damage instead of a few seconds.": "Przepływ Takezo (pełny Rytm) trwa teraz do momentu oberwania zamiast kilku sekund.",
 };

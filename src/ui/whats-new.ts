@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.43.3',
+    lines: [
+      "Takezo's Flow (full Rhythm) now lasts until you take damage instead of a few seconds.",
+    ],
+  },
+  {
     version: '0.43.2',
     lines: [
       "The first map of an Expedition is gentler: fewer enemies dealing less damage, a shorter goal, and no situations, quests or events in the first 90 seconds.",

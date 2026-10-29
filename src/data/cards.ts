@@ -437,7 +437,7 @@ export const CARDS: CardDef[] = [
   { id: 'h_t_step', name: 'Open Guard', rarity: 'silver', tags: ['Szybkość', 'Krytyk'], hero: 'takezo', desc: 'Mikiri: +5% parry chance, and Footwork recharges 10% faster.', flags: { 'passive.parry': 0.05, 'cd.dash': 0.1 } },
   { id: 'h_t_flurry', name: 'Flowing Water', rarity: 'gold', tags: ['Szybkość', 'Umiejętności'], hero: 'takezo', desc: 'Thousand Cuts: +2 slashes, +6 damage per slash.', stackable: true, flags: { 't_flurry.slashes': 2, 't_flurry.damage': 6 } },
   { id: 'h_t_iai', name: 'Single Stroke', rarity: 'gold', tags: ['Krytyk', 'Umiejętności'], hero: 'takezo', desc: 'Iai: +60 damage, +30 dash length.', stackable: true, flags: { 't_iai.damage': 60, 't_iai.dist': 30 } },
-  { id: 'h_t_max', name: 'Deep Focus', rarity: 'gold', tags: ['Szybkość'], hero: 'takezo', desc: 'Flow lasts 1.5 s longer.', stackable: true, flags: { 'rhythm.flow': 1.5 } },
+  { id: 'h_t_max', name: 'Deep Focus', rarity: 'gold', tags: ['Szybkość'], hero: 'takezo', desc: 'After a hit, Flow lasts 1.5 s more.', stackable: true, flags: { 'rhythm.flow': 1.5 } },
   { id: 'h_t_niten', name: 'Niten Ichi', rarity: 'prism', tags: ['Krytyk', 'Szybkość'], hero: 'takezo', desc: 'Helm Splitter strikes a second time a moment later, and Mikiri gets +10% parry chance.', flags: { 'echo.q': 1, 'passive.parry': 0.1 } },
   // Karty z osiągnięć (data/achievements.ts): w ofertach dopiero po zdobyciu osiągnięcia.
   { id: 'u_trophy', name: 'Trofeum', rarity: 'silver', tags: ['Krytyk'], unlock: 'first_boss', desc: '+10% obrażeń przeciw elitom i bossom.', stackable: true, flags: { bossDmg: 0.1 } },

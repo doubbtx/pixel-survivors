@@ -118,11 +118,20 @@ export function resourceOnHurt(run: Run, dmg: number): void {
   }
   else if (k === 'fury') furyGain(run, (R.fury.hurt * 100 * dmg) / run.stats.maxHp);
   else if (k === 'streak') run.res = 0;
-  else if (k === 'rhythm' && run.flowT <= 0 && run.res > 0 && !run.rhythmDrain) {
-    // Rytm trzyma się, dopóki nie oberwiesz; po trafieniu opada do zera (BAL.resource.rhythm.drain na sekundę).
-    run.rhythmDrain = true;
-    run.popText(run.player.x, run.player.y - 16, 'Rhythm broken', C.salmon);
-  }
+  else if (k === 'rhythm' && run.flowT === Infinity) {
+    // Przepływ trwa do pierwszego trafienia; flaga rhythm.flow: jeszcze tyle sekund po trafieniu, potem opadanie.
+    const grace = run.flag('rhythm.flow');
+    run.flowT = run.flowMax = Math.max(0, grace);
+    if (grace > 0) run.popText(run.player.x, run.player.y - 16, `Flow ${grace}s`, C.cyan);
+    else breakRhythm(run);
+  } else if (k === 'rhythm' && run.flowT <= 0 && run.res > 0 && !run.rhythmDrain) breakRhythm(run);
+}
+
+/** Rytm (0.43.3): trzyma się, dopóki nie oberwiesz — wtedy opada do zera (BAL.resource.rhythm.drain na sekundę), bez przyrostu. */
+function breakRhythm(run: Run): void {
+  run.flowT = 0;
+  run.rhythmDrain = true;
+  run.popText(run.player.x, run.player.y - 16, 'Rhythm broken', C.salmon);
 }
 
 /** Przyrost rytmu (Takezo, poza Przepływem); pełny pasek wyzwala Przepływ. */
@@ -130,9 +139,9 @@ export function rhythmGain(run: Run, v: number): void {
   if (run.hero.resource.kind !== 'rhythm' || run.flowT > 0 || run.rhythmDrain) return;
   gain(run, v);
   if (run.res < resMax(run)) return;
-  // Przepływ: duża szybkość ataku i obrażenia, Tysiąc cięć od razu gotowy; pasek odlicza czas do zera.
+  // Przepływ: duża szybkość ataku i obrażenia, Tysiąc cięć od razu gotowy; pełny pasek trzyma się do trafienia (0.43.3).
   const p = run.player;
-  run.flowT = run.flowMax = R.rhythm.flow + run.flag('rhythm.flow');
+  run.flowT = run.flowMax = Infinity;
   run.abilities.e.cd = 0;
   run.popText(p.x, p.y - 16, 'Flow!', C.cyan);
   const f = run.addFx('ring', p.x, p.y, C.cyan, 0.4);
@@ -257,9 +266,11 @@ export function updateResource(run: Run, dt: number): void {
       if (run.rageT <= 0) run.recomputeStats();
     } else if (run.resIdle > R.fury.idle && run.flag('furyHold') <= 0) run.res = Math.max(0, run.res - R.fury.decay * dt);
   }
-  if (k === 'rhythm' && run.flowT > 0) {
+  if (k === 'rhythm' && run.flowT === Infinity) run.res = resMax(run);
+  else if (k === 'rhythm' && run.flowT > 0) {
+    // Ostatnie sekundy Przepływu po trafieniu (flaga rhythm.flow); potem pasek opada od pełnego.
     run.flowT = Math.max(0, run.flowT - dt);
-    run.res = (resMax(run) * run.flowT) / run.flowMax;
+    if (run.flowT <= 0) { run.res = resMax(run); run.rhythmDrain = true; }
   } else if (k === 'rhythm' && run.rhythmDrain) {
     run.res = Math.max(0, run.res - R.rhythm.drain * dt);
     if (run.res <= 0) run.rhythmDrain = false;

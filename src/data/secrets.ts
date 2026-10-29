@@ -143,7 +143,7 @@ export const SECRETS: SecretDef[] = [
   {
     id: 'ganryu', name: 'Ganryū', riddle: 'Piętnaście ciosów zatrzymanych, żadnej rany — jak na wyspie pojedynku.',
     hint: 'Takezo: odbij (Mikiri) 15 ataków pod rząd bez oberwania.', hero: 'takezo',
-    desc: 'Przepływ trwa 2,5 s dłużej, +10% obrażeń.',
+    desc: 'After a hit, Flow lasts 2.5 s more, +10% damage.',
     check: (run) => (run.cardState['sec.ganryu'] ?? 0) >= 15,
     flags: { 'rhythm.flow': 2.5 }, stats: { might: 0.1 },
   },
