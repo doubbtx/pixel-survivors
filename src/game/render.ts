@@ -532,10 +532,19 @@ function drawWorld(run: Run, r: Renderer): void {
   // Ograniczenie błysków: zamiast migania stałe półprzezroczyste.
   const blink = (p.hurtCd > 0 || p.iframes > 0) && !run.reduceFlash && run.step % 6 < 3;
   const ghost = (p.hurtCd > 0 || p.iframes > 0) && run.reduceFlash;
+  const anim = heroAnim(run, px, py);
+  // Powidoki uniku i kurz spod stóp (pod bohaterem).
+  for (const t of anim.trail) r.withAlpha(0.32 * (t.life / TRAIL_LIFE), () => drawSprite(g, `${run.heroSprite}@${t.frame}`, t.x, t.y, { flipX: t.flip }));
+  for (const d of anim.dust) {
+    const k = d.life / DUST_LIFE;
+    r.withAlpha(0.55 * k, () => r.circle(d.x, d.y - (1 - k) * 2, 1.5 + (1 - k) * 2.5, C.lgray, true));
+  }
   if (!blink && run.outcome !== 'dead') r.withAlpha(ghost ? 0.55 : 1, () => {
     const scale = ult.def.kind === 'titan' && ult.activeT > 0 ? 2 : 1;
     const frame = p.moving || p.dashT > 0 ? animFrame(run.heroSprite, run.step, 0) : 0;
-    drawSprite(g, `${run.heroSprite}@${frame}`, px, py, { flash: p.flash > 0 && !run.reduceFlash, scale, flipX: p.fx < 0 });
+    // Drgnięcie przy trafieniu (o piksel w bok), ściśnięcie przy użyciu umiejętności, oddech w miejscu.
+    const jx = p.flash > 0 && !run.reduceFlash ? (run.step % 4 < 2 ? 1 : -1) : 0;
+    drawSprite(g, `${run.heroSprite}@${frame}`, px + jx, py, { flash: p.flash > 0 && !run.reduceFlash, scale, flipX: p.fx < 0, squash: heroSquash(run, anim, p.moving) });
   });
   if (p.shield > 0) {
     // Tarcza: jeden czytelny pierścień (bez nakładających się poświat).
@@ -849,4 +858,63 @@ function drawTell(r: Renderer, run: Run, e: Enemy, ex: number, ey: number): void
       return;
     }
   }
+}
+
+/**
+ * Animacja bohatera tylko do rysowania (bez wpływu na symulację, czas z `run.time`, więc staje w pauzie):
+ * przysiad i wyprost po użyciu umiejętności, powidoki uniku, kurz spod stóp w biegu i oddech w miejscu.
+ */
+interface HeroAnim {
+  t: number;
+  /** Czas od ostatniego użycia umiejętności (s); duża liczba = dawno. */
+  cast: number;
+  cds: Record<string, number>;
+  ultT: number;
+  trail: { x: number; y: number; frame: number; flip: boolean; life: number }[];
+  dust: { x: number; y: number; life: number }[];
+  trailAcc: number;
+  dustAcc: number;
+}
+const heroAnims = new WeakMap<Run, HeroAnim>();
+const TRAIL_LIFE = 0.22, DUST_LIFE = 0.4, CAST_T = 0.22;
+
+function heroAnim(run: Run, px: number, py: number): HeroAnim {
+  let a = heroAnims.get(run);
+  if (!a) { a = { t: run.time, cast: 9, cds: {}, ultT: 0, trail: [], dust: [], trailAcc: 0, dustAcc: 0 }; heroAnims.set(run, a); }
+  const dt = Math.max(0, Math.min(0.1, run.time - a.t));
+  a.t = run.time;
+  a.cast += dt;
+  const p = run.player;
+  // Użycie umiejętności: odnowienie Q/E skoczyło w górę albo ultimate właśnie się włączył.
+  for (const sl of ['q', 'e'] as const) {
+    const cd = run.abilities[sl].cd;
+    if (cd > (a.cds[sl] ?? 0) + 0.05) a.cast = 0;
+    a.cds[sl] = cd;
+  }
+  const ut = run.abilities.ult.activeT;
+  if (ut > a.ultT + 0.05) a.cast = 0;
+  a.ultT = ut;
+  for (const t of a.trail) t.life -= dt;
+  for (const d of a.dust) d.life -= dt;
+  a.trail = a.trail.filter((t) => t.life > 0);
+  a.dust = a.dust.filter((d) => d.life > 0);
+  if (dt > 0 && p.dashT > 0) {
+    a.trailAcc += dt;
+    if (a.trailAcc >= 0.035) { a.trailAcc = 0; a.trail.push({ x: px, y: py, frame: animFrame(run.heroSprite, run.step, 0), flip: p.fx < 0, life: TRAIL_LIFE }); }
+  }
+  if (dt > 0 && p.moving && p.dashT <= 0) {
+    a.dustAcc += dt;
+    if (a.dustAcc >= 0.2) { a.dustAcc = 0; a.dust.push({ x: px + (p.fx < 0 ? 3 : -3), y: py + 9, life: DUST_LIFE }); }
+  }
+  return a;
+}
+
+/** Ściśnięcie sprite'a: po umiejętności przysiad i wyprost, w miejscu powolny oddech. */
+function heroSquash(run: Run, a: HeroAnim, moving: boolean): readonly [number, number] | undefined {
+  if (a.cast < CAST_T) {
+    const k = a.cast / CAST_T;
+    return k < 0.4 ? [1.12, 0.88] : [0.94 + 0.06 * k, 1.08 - 0.08 * k];
+  }
+  if (!moving) return [1, 1 + Math.sin(run.time * 2.6) * 0.03];
+  return undefined;
 }

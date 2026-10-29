@@ -652,6 +652,11 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   obręczami, pasem ostrzegawczym i lontem; kuta płyta kolców z nitami; fontanna dwupiętrowa z kroplami (klatka); cztery
   różne znaki run (`GLYPHS`) z poświatą po zapaleniu; mural w ramie ze strzałkami kolejności; grzyb, schody, kurhan z
   portalem i gniazdami kluczy, gaj z kwiatami i kryształem.
+- 0.38.1 (praca równoległa z drugą sesją): wrogie pociski jako świecąca energia (`orb` w gfx/sprites.ts: ciemna krawędź,
+  nasycony kolor, jaśniejące pierścienie przez `soft` do białego rdzenia; `eb_big` z koroną kolców — pociski bossów mają
+  inną sylwetkę). Animacje bohatera tylko w rysowaniu (`heroAnim` / `heroSquash` w game/render.ts, stan w WeakMap per run,
+  czas z `run.time`): przysiad i wyprost po Q/E/ultimate (skok odnowienia albo `activeT`), powidoki uniku, kurz spod stóp
+  w biegu, oddech w miejscu, drgnięcie o piksel przy trafieniu. `DrawOpts.squash` = [szerokość, wysokość] względem stóp.
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
