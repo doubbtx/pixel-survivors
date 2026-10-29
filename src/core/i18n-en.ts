@@ -3,6 +3,9 @@
  * Nowy napis w grze: dopisz tu jego angielską wersję (kolejność `{}` taka sama).
  */
 export const EN: Record<string, string> = {
+  "Piętnaście ciosów zatrzymanych, żadnej rany — jak na wyspie pojedynku.": "Fifteen blows stopped, not a single wound, as on the island of the duel.",
+  "Takezo: odbij (Mikiri) 15 ataków pod rząd bez oberwania.": "Takezo: parry (Mikiri) 15 attacks in a row without getting hit.",
+  "Przepływ trwa 2,5 s dłużej, +10% obrażeń.": "Flow lasts 2.5 s longer, +10% damage.",
   "pierścień": "ring",
   "+{}% otrzymywanych obrażeń": "+{}% damage taken",
   "Klucz": "Keystone",

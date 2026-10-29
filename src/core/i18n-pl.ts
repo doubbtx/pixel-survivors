@@ -3,6 +3,7 @@
  * `{}` = wstawka (liczba, nazwa — tłumaczona osobno). Nowy napis w grze: dopisz tu jego polską wersję.
  */
 export const PL: Record<string, string> = {
+  "Takezo has his own secret: Ganryū (parry 15 attacks in a row without getting hit).": "Takezo ma własny sekret: Ganryū (odbij 15 ataków pod rząd bez oberwania).",
   "New elite traits from the second act on: Commander (nearby enemies get faster and stronger), Splitting (breaks into three on death), Bannerman (plants a banner: enemies inside heal, you take more damage) and Phasing (vanishes for a moment, your shots pass through, then reappears closer).": "Nowe cechy elit od drugiego aktu: Dowódca (pobliscy wrogowie szybsi i silniejsi), Rozszczepiający (po śmierci pęka na trzy), Chorąży (wbija sztandar: wrogowie w nim się leczą, Ty dostajesz więcej obrażeń) i Cień (na chwilę znika, Twoje pociski przez niego przelatują, potem pojawia się bliżej).",
   "Takezo: his swords reach further (larger area).": "Takezo: miecze sięgają dalej (większy obszar).",
   "Commander": "Dowódca",

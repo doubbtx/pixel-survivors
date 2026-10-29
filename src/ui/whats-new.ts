@@ -20,6 +20,7 @@ const NOTES: { version: string; lines: string[] }[] = [
   {
     version: '0.41',
     lines: [
+      "Takezo has his own secret: Ganryū (parry 15 attacks in a row without getting hit).",
       "New elite traits from the second act on: Commander (nearby enemies get faster and stronger), Splitting (breaks into three on death), Bannerman (plants a banner: enemies inside heal, you take more damage) and Phasing (vanishes for a moment, your shots pass through, then reappears closer).",
       "Takezo: his swords reach further (larger area).",
     ],

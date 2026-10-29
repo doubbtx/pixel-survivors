@@ -1657,6 +1657,8 @@ export class Run {
     this.popText(p.x, p.y - 12, 'Parry!', C.cyan);
     sfx.play('hit');
     this.cardState['sec.parry'] = (this.cardState['sec.parry'] ?? 0) + 1;
+    // Sekret Ganryū (Takezo): odbicia pod rząd bez oberwania (zerowane przy trafieniu w hurtPlayer).
+    this.cardState['sec.ganryu'] = (this.cardState['sec.ganryu'] ?? 0) + 1;
     return true;
   }
 
@@ -1688,6 +1690,7 @@ export class Run {
     p.shield -= absorbed;
     dmg -= absorbed;
     p.hp -= dmg;
+    this.cardState['sec.ganryu'] = 0;
     p.hurtCd = BAL.hurtFlash;
     this.hurtFx = 0.25;
     p.flash = 6;

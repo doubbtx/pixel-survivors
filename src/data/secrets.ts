@@ -139,6 +139,13 @@ export const SECRETS: SecretDef[] = [
     check: (run) => run.minions.count >= 12 && run.player.hp >= run.stats.maxHp * 0.95,
     flags: { minionLife: 0.3 }, stats: { regen: 1.5 },
   },
+  {
+    id: 'ganryu', name: 'Ganryū', riddle: 'Piętnaście ciosów zatrzymanych, żadnej rany — jak na wyspie pojedynku.',
+    hint: 'Takezo: odbij (Mikiri) 15 ataków pod rząd bez oberwania.', hero: 'takezo',
+    desc: 'Przepływ trwa 2,5 s dłużej, +10% obrażeń.',
+    check: (run) => (run.cardState['sec.ganryu'] ?? 0) >= 15,
+    flags: { 'rhythm.flow': 2.5 }, stats: { might: 0.1 },
+  },
 ];
 
 export const SECRET_BY_ID: Record<string, SecretDef> = Object.fromEntries(SECRETS.map((s) => [s.id, s]));
