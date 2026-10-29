@@ -1,6 +1,6 @@
 import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText, wrapText, DESC, descS, descLH } from '../core/font';
+import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
@@ -37,10 +37,12 @@ const U_SAMPLES: Item[] = UNIQUES.map((u) => rollUnique(1, u.id));
 type Tab = 'cards' | 'arsenal' | 'uniques' | 'secrets' | 'bestiary' | 'achievements' | 'feats';
 const TABS: Tab[] = ['cards', 'arsenal', 'uniques', 'secrets', 'bestiary', 'achievements', 'feats'];
 const TAB_NAME: Record<Tab, string> = { cards: 'Karty', arsenal: 'Arsenał', uniques: 'Unikaty', secrets: 'Sekrety', bestiary: 'Bestiariusz', achievements: 'Osiągnięcia', feats: 'Wyczyny' };
+const TAB_COL: Record<Tab, number> = { cards: C.gold, arsenal: C.cyan, uniques: UNIQUE_COLOR, secrets: C.hotpink, bestiary: C.lavender, achievements: C.lime, feats: C.gold };
 
 /** Arsenał: bronie bazowe i pasywki (siatka 7 kolumn, dwie grupy). */
 const ARS_WEAPONS = WEAPONS.filter((w) => !w.evolved);
-const A_COLS = 7, A_TILE = 24, A_STEP = 28, A_X = 16, A_WY = 50, A_PY = 50 + 2 * A_STEP + 22;
+// Pasywki zaczynają się pod ostatnim rzędem broni (liczba broni rośnie z kolejnymi wersjami).
+const A_COLS = 7, A_TILE = 22, A_STEP = 26, A_X = 16, A_WY = 50, A_PY = A_WY + Math.ceil(ARS_WEAPONS.length / A_COLS) * A_STEP + 14;
 const ARS_N = ARS_WEAPONS.length + PASSIVES.length;
 /** Przewijany obszar opisu w Arsenale (x, y, w, h). */
 const ARS_AREA = [230, 34, W - 236, 208] as const;
@@ -86,6 +88,12 @@ export class CollectionScreen implements Screen {
     return TABS.filter((t) => has[t]);
   }
 
+  /** Zakładka `i` z `n` w górnym rzędzie (obok przycisku Wstecz): [x, y, szerokość, wysokość]. */
+  private tabRect(i: number, n: number): [number, number, number, number] {
+    const x0 = 74, tw = (W - 8 - x0 - (n - 1) * 3) / n;
+    return [x0 + i * (tw + 3), 8, tw, 16];
+  }
+
   private get col() {
     return this.app.save.collection;
   }
@@ -116,11 +124,15 @@ export class CollectionScreen implements Screen {
     this.noteT = Math.max(0, this.noteT - dt);
     const inp = this.app.input, n = ORDERED.length;
     if (inp.pressed('back')) { this.app.go(this.back); return; }
-    if (inp.pressed('inventory') || (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, W - 116, 8, 108, 18))) {
-      const tabs = this.tabs();
+    const tabs = this.tabs();
+    if (inp.pressed('inventory')) {
       this.tab = tabs[(tabs.indexOf(this.tab) + 1) % tabs.length];
       sfx.play('select');
       return;
+    }
+    if (inp.pressed('click')) {
+      const hit = tabs.findIndex((_, i) => inside(inp.mouse.x, inp.mouse.y, ...this.tabRect(i, tabs.length)));
+      if (hit >= 0) { this.tab = tabs[hit]; sfx.play('select'); return; }
     }
     if (this.tab === 'uniques') { this.updateUniques(); return; }
     if (this.tab === 'arsenal') { this.updateArsenal(); return; }
@@ -210,7 +222,7 @@ export class CollectionScreen implements Screen {
       drawSprite(g, w.icon, X + 20, y + 10, { scale: 2 });
       drawText(g, w.name, X + 40, y + 1, w.color, { shadow: C.black });
       const el = WEAPON_ELEMENT[w.id];
-      drawText(g, `${w.hero ? `only ${HERO_BY_ID[w.hero].name}, ` : ''}max lv. ${maxLevel(w)}${el ? `, ${ELEMENTS[el].name.toLowerCase()}` : ''}`, X + 40, y + 12, C.dgray);
+      drawText(g, `${w.hero ? `only ${HERO_BY_ID[w.hero].name}, ` : ''}max lv. ${maxLevel(w)}${el ? `, ${ELEMENTS[el].name.toLowerCase()}` : ''}`, X + 40, y + 12, C.lavender);
       y += 26;
       text(el ? `${w.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : w.desc, C.white);
       for (const e of evolvesOf(w)) {
@@ -221,7 +233,7 @@ export class CollectionScreen implements Screen {
       const fus = FUSIONS.filter((f) => f.a === w.id || f.b === w.id);
       if (fus.length) {
         head('Fuzje (obie bronie na maks. albo po ewolucji)', C.pink);
-        text(FUSION_RULES, C.dgray);
+        text(FUSION_RULES, C.lavender);
         for (const f of fus) {
           const into = WEAPON_BY_ID[f.into], { kept, lost } = fusionAugments(into);
           text(`+ ${WEAPON_BY_ID[f.a === w.id ? f.b : f.a].name}: ${into.name}. ${into.desc}`);
@@ -239,7 +251,7 @@ export class CollectionScreen implements Screen {
     const p = PASSIVES[this.wSel - ARS_WEAPONS.length];
     drawSprite(g, p.icon, X + 20, y + 10, { scale: 2 });
     drawText(g, p.name, X + 40, y + 1, C.lime, { shadow: C.black });
-    drawText(g, `Pasywka, poz. maks. ${p.maxLevel}`, X + 40, y + 12, C.dgray);
+    drawText(g, `Pasywka, poz. maks. ${p.maxLevel}`, X + 40, y + 12, C.lavender);
     y += 26;
     text(`${p.desc} na każdy poziom.`, C.white);
     const evo = passiveEvolves(p.id);
@@ -300,21 +312,21 @@ export class CollectionScreen implements Screen {
       const x = B_X + (i % B_COLS) * B_STEP, y = B_Y + Math.floor(i / B_COLS) * B_STEP, n = kills[b.id] ?? 0;
       slot(r, x, y, B_TILE, loreBonus(b, n) > 0 ? C.gold : n >= b.know ? C.lavender : C.slate);
       if (n > 0) drawSprite(g, `${b.sprite}@0`, x + B_TILE / 2, y + B_TILE / 2, { scale: b.id === 'boss' ? 0.6 : 1, flash: n < b.know });
-      else drawText(g, '?', x + B_TILE / 2, y + 9, C.dgray, { align: 'center' });
+      else drawText(g, '?', x + B_TILE / 2, y + 9, C.lavender, { align: 'center' });
       if (i === this.bSel) r.frame(x - 2, y - 2, B_TILE + 4, B_TILE + 4, C.white);
     });
     const b = BESTIARY[this.bSel], n = kills[b.id] ?? 0, known = n >= b.know;
     panel(r, 218, 40, W - 228, 186, known ? C.lavender : C.slate);
-    drawText(g, n > 0 ? (b.id === 'boss' ? 'Bossowie' : ENEMIES[b.id].name) : '???', 228, 48, known ? C.white : C.dgray, { scale: 2 });
+    drawText(g, n > 0 ? (b.id === 'boss' ? 'Bossowie' : ENEMIES[b.id].name) : '???', 228, 48, known ? C.white : C.lavender, { scale: 2 });
     drawText(g, `Zabitych: ${fmt(n)}`, 228, 70, C.lgray);
     let y = 86;
     if (known) for (const l of wrapText(b.lore, W - 248)) { drawText(g, l, 228, y, C.white); y += 11; }
-    else drawText(g, `Zabij ${b.know}, żeby poznać opis.`, 228, y, C.dgray);
+    else drawText(g, `Zabij ${b.know}, żeby poznać opis.`, 228, y, C.lavender);
     y = 150;
     for (const [lbl, need, v] of [['Mistrz', b.master, BAL.bestiary.master], ['Legenda', b.legend, BAL.bestiary.legend]] as const) {
       const ok = n >= need;
-      drawText(g, `${lbl}: ${fmt(need)} zabójstw`, 228, y, ok ? C.gold : C.dgray);
-      drawText(g, `+${Math.round(v * 100)}% obrażeń przeciw ${b.id === 'boss' ? 'bossom' : 'temu wrogowi'}`, 238, y + 11, ok ? C.yellow : C.dgray);
+      drawText(g, `${lbl}: ${fmt(need)} zabójstw`, 228, y, ok ? C.gold : C.lavender);
+      drawText(g, `+${Math.round(v * 100)}% obrażeń przeciw ${b.id === 'boss' ? 'bossom' : 'temu wrogowi'}`, 238, y + 11, ok ? C.yellow : C.lavender);
       y += 26;
     }
   }
@@ -342,7 +354,7 @@ export class CollectionScreen implements Screen {
       const y = 32 + i * 20, n = got[f.id] ?? 0;
       panel(r, 10, y, W - 20, 19, n ? C.gold : C.slate);
       drawText(g, f.name, 16, y, n ? C.gold : C.lgray);
-      drawText(g, n ? `zdobyty ${n}x` : 'jeszcze nie', W - 16, y, n ? C.yellow : C.dgray, { align: 'right' });
+      drawText(g, n ? `zdobyty ${n}x` : 'jeszcze nie', W - 16, y, n ? C.yellow : C.lavender, { align: 'right' });
       drawText(g, f.desc, 112, y, C.white);
       drawText(g, `Nagroda: ${f.reward}`, 112, y + 9, C.lavender);
     });
@@ -354,13 +366,13 @@ export class CollectionScreen implements Screen {
     SECRETS.forEach((s, i) => {
       const y = 40 + i * 14, known = found.includes(s.id), on = i === this.sSel;
       panel(r, 10, y, 200, 13, on ? C.hotpink : C.slate);
-      drawText(g, s.name, 18, y + 1, known ? C.white : C.dgray);
+      drawText(g, s.name, 18, y + 1, known ? C.white : C.lavender);
       if (s.hero) drawText(g, HERO_BY_ID[s.hero].name, 204, y + 1, HERO_BY_ID[s.hero].color, { align: 'right' });
     });
     const s = SECRETS[this.sSel], known = found.includes(s.id);
     panel(r, 220, 40, W - 230, 186, known ? C.hotpink : C.slate);
-    drawText(g, s.name, 230, 48, known ? C.hotpink : C.dgray, { scale: 2 });
-    if (!known) drawText(g, 'jeszcze nieodkryty', W - 18, 52, C.dgray, { align: 'right' });
+    drawText(g, s.name, 230, 48, known ? C.hotpink : C.lavender, { scale: 2 });
+    if (!known) drawText(g, 'jeszcze nieodkryty', W - 18, 52, C.lavender, { align: 'right' });
     let y = 76;
     drawText(g, 'Zagadka:', 230, y, C.lavender); y += 12;
     for (const l of wrapText(s.riddle, W - 250)) { drawText(g, l, 230, y, C.lgray); y += 11; }
@@ -382,53 +394,36 @@ export class CollectionScreen implements Screen {
       const x = U_X + (i % U_COLS) * U_STEP, y = U_Y + Math.floor(i / U_COLS) * U_STEP, known = found.includes(u.id);
       slot(r, x, y, U_TILE, known ? UNIQUE_COLOR : C.slate);
       if (known) drawSprite(g, BASE_BY_ID[u.base].icon, x + U_TILE / 2, y + U_TILE / 2);
-      else drawText(g, '?', x + U_TILE / 2, y + 8, C.dgray, { align: 'center' });
+      else drawText(g, '?', x + U_TILE / 2, y + 8, C.lavender, { align: 'center' });
       if (i === this.uSel) r.frame(x - 2, y - 2, U_TILE + 4, U_TILE + 4, C.white);
     });
     wrapText('Unikaty wypadają rzadko z bossów i elit. Mają stały efekt, który łamie zasady gry, i nie da się ich przekuć.', 216).forEach((l, i) =>
-      drawText(g, l, U_X - 10, 132 + i * 11, C.dgray));
+      drawText(g, l, U_X - 10, 132 + i * 11, C.lavender));
     const u = UNIQUES[this.uSel];
     if (found.includes(u.id)) drawItemCard(r, U_SAMPLES[this.uSel], 250, 40, 220, 170);
     else {
       panel(r, 250, 40, 220, 170, C.slate);
-      drawText(g, '???', 360, 100, C.dgray, { align: 'center', scale: 2 });
-      drawText(g, 'Nieodkryty unikat', 360, 130, C.dgray, { align: 'center' });
+      drawText(g, '???', 360, 100, C.lavender, { align: 'center', scale: 2 });
+      drawText(g, 'Nieodkryty unikat', 360, 130, C.lavender, { align: 'center' });
     }
   }
 
   render(): void {
     const r = this.app.r, g = r.g, col = this.col;
     r.clear(C.black);
-    button(r, W - 116, 8, 108, 18, `[Tab] ${TAB_NAME[this.tabs()[(this.tabs().indexOf(this.tab) + 1) % this.tabs().length]]} >`, { pulse: true, accent: this.tab === 'uniques' ? UNIQUE_COLOR : this.tab === 'secrets' ? C.hotpink : C.gold });
-    if (this.tab === 'bestiary' || this.tab === 'achievements' || this.tab === 'feats') {
-      const head = { bestiary: ['Bestiariusz', C.lavender], achievements: ['Osiągnięcia', C.lime], feats: ['Wyczyny', C.gold] }[this.tab] as [string, number];
-      drawText(g, head[0], W / 2, 10, head[1], { align: 'center', scale: 2, outline: C.black });
-      drawText(g, '[Esc] wróć', 12, 12, C.lgray);
-      if (this.tab === 'bestiary') this.renderBestiary();
-      else if (this.tab === 'achievements') this.renderAchievements();
-      else this.renderFeats();
-      return;
-    }
-    if (this.tab === 'secrets') {
-      drawText(g, 'Księga sekretów', W / 2, 10, C.hotpink, { align: 'center', scale: 2, outline: C.black });
-      drawText(g, '[Esc] wróć', 12, 12, C.lgray);
-      this.renderSecrets();
-      return;
-    }
-    if (this.tab === 'arsenal') {
-      drawText(g, 'Arsenał', W / 2, 10, C.cyan, { align: 'center', scale: 2, outline: C.black });
-      drawText(g, '[Esc] wróć', 12, 12, C.lgray);
-      this.renderArsenal();
-      return;
-    }
-    if (this.tab === 'uniques') {
-      drawText(g, 'Kolekcja unikatów', W / 2, 10, UNIQUE_COLOR, { align: 'center', scale: 2, outline: C.black });
-      drawText(g, '[Esc] wróć', 12, 12, C.lgray);
-      this.renderUniques();
-      return;
-    }
-    drawText(g, 'Kolekcja kart', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    drawText(g, '[Esc] wróć', 12, 12, C.lgray);
+    // Górny rząd: Wstecz i wszystkie dostępne zakładki (zakładka pełni rolę tytułu; Tab przełącza po kolei).
+    button(r, 8, 8, 60, 16, 'Wstecz [Esc]');
+    const tabs = this.tabs();
+    tabs.forEach((t, i) => {
+      const [x, y, w, h] = this.tabRect(i, tabs.length), label = TAB_NAME[t];
+      button(r, x, y, w, h, label, { active: t === this.tab, accent: TAB_COL[t], scale: Math.min(1, (w - 6) / textWidth(label)) });
+    });
+    if (this.tab === 'bestiary') { this.renderBestiary(); return; }
+    if (this.tab === 'achievements') { this.renderAchievements(); return; }
+    if (this.tab === 'feats') { this.renderFeats(); return; }
+    if (this.tab === 'secrets') { this.renderSecrets(); return; }
+    if (this.tab === 'arsenal') { this.renderArsenal(); return; }
+    if (this.tab === 'uniques') { this.renderUniques(); return; }
     const found = ORDERED.filter((c) => col.seen.includes(c.id)).length;
     panel(r, 6, 32, 282, 176, C.slate);
     drawText(g, `Odkryte ${found}/${ORDERED.length}    bany ${col.banned.length}/${BAL.cardBanSlots}`, GRID_X, 37, C.lavender);
@@ -454,7 +449,7 @@ export class CollectionScreen implements Screen {
     } else {
       // Nieodkryta: opis widać, karta wyblakła (odkryje się w ofercie kart).
       r.withAlpha(0.5, () => drawCard(r, c, CARD_X, CARD_Y, false, this.step, 0));
-      drawText(g, 'Jeszcze nie widziana', CARD_X + 68, CARD_Y - 10, C.dgray, { align: 'center' });
+      drawText(g, 'Jeszcze nie widziana', CARD_X + 68, CARD_Y - 10, C.lavender, { align: 'center' });
     }
     const info = [
       known ? `Wybrana ${col.picks[c.id] ?? 0} razy` : '',
@@ -464,7 +459,7 @@ export class CollectionScreen implements Screen {
     ].filter(Boolean);
     info.forEach((l, i) => drawText(g, l, GRID_X, 213 + i * 10, banned && i === info.length - 1 ? C.salmon : C.lgray));
     button(r, CARD_X + 18, 214, 100, 16, banned ? 'Odbanuj [B]' : 'Zbanuj [B]', { active: banned, accent: C.red, col: known ? undefined : C.dgray });
-    drawText(g, 'Zbanowane karty nie wypadają w ofertach. Banować można tylko odkryte (widziane w ofercie).', W / 2, 244, C.dgray, { align: 'center' });
+    drawText(g, 'Zbanowane karty nie wypadają w ofertach. Banować można tylko odkryte (widziane w ofercie).', W / 2, 244, C.lavender, { align: 'center' });
     if (this.noteT > 0) drawText(g, this.note, W / 2, H - 14, C.salmon, { align: 'center', outline: C.black });
   }
 }

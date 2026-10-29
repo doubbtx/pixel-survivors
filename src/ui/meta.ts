@@ -19,7 +19,7 @@ const TAB_Y = 24, TAB_W = 62;
 const BTN_Y = 240;
 
 /**
- * Rozwój bohaterów (tylko Ekspedycja): zakładka bohatera (Q/E albo klik), 4 gałęzie tematyczne + Wyprawa.
+ * Rozwój bohaterów (Ekspedycja i Endless): zakładka bohatera (Q/E albo klik), 4 gałęzie tematyczne + Wyprawa.
  * Węzeł wymaga poprzedniego w gałęzi; ostatni węzeł gałęzi tematycznej to klucz zmieniający umiejętność.
  * Strzałki / mysz: wybór, Enter / klik: kup poziom, B: przydziel pulę esencji (z migracji) temu bohaterowi,
  * X: prestiż bohatera (dwa razy, potwierdzenie), Esc: wróć.
@@ -148,13 +148,12 @@ export class MetaScreen implements Screen {
     const r = this.app.r, g = r.g, h = this.hm, tree = this.tree, meta = this.app.save.meta;
     r.clear(C.black);
     drawText(g, 'Rozwój', W / 2, 4, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    drawText(g, 'tylko Ekspedycja', W - 10, 8, C.dgray, { align: 'right' });
+    drawText(g, 'Q / E: bohater', W - 10, 8, C.lavender, { align: 'right' });
     // Zakładki bohaterów.
     HEROES.forEach((hero, i) => {
       const x = 8 + i * (TAB_W + 4), on = i === this.hero;
       button(r, x, TAB_Y, TAB_W, 14, hero.name, { active: on, accent: hero.color });
     });
-    drawText(g, 'Q / E: bohater', 8 + HEROES.length * (TAB_W + 4) + 4, TAB_Y + 1, C.dgray);
     const par = paragonLevel(h.total);
     const bonusPct = Math.round((BAL.meta.paragonPct * par + BAL.meta.prestigePct * h.prestige) * 100);
     drawText(g, `Esencja: ${fmt(h.essence)}`, 10, 42, C.cyan, { shadow: C.black });
@@ -170,12 +169,12 @@ export class MetaScreen implements Screen {
         panel(r, x, y, COL_W, NODE_H, sel ? C.yellow : maxed ? C.gold : n.key ? C.pink : lvl > 0 ? C.lavender : C.slate);
         if (open) drawSprite(g, n.icon, x + 12, y + 14);
         else r.withAlpha(0.3, () => drawSprite(g, n.icon, x + 12, y + 14));
-        drawText(g, n.name, x + 22, y + 3, open ? (n.key ? C.pink : C.white) : C.dgray);
+        drawText(g, n.name, x + 22, y + 3, open ? (n.key ? C.pink : C.white) : C.lavender);
         if (n.max > 1) drawText(g, `${lvl}/${n.max}`, x + COL_W - 5, y + 14, maxed ? C.gold : C.lgray, { align: 'right' });
         // Zablokowany węzeł: ile poziomów poprzedniego jeszcze potrzeba (połowa jego maksimum).
         const prev = prevNode(tree, n);
         const costTxt = maxed ? 'MAX' : !open && prev ? `wymaga ${unlockLevel(prev)}/${prev.max}` : fmt(cost);
-        drawText(g, costTxt, x + 22, y + 14, maxed ? C.gold : !open ? C.dgray : h.essence >= cost ? C.cyan : C.salmon);
+        drawText(g, costTxt, x + 22, y + 14, maxed ? C.gold : !open ? C.lavender : h.essence >= cost ? C.cyan : C.salmon);
       });
     });
     // Opis zaznaczonego węzła.
@@ -186,11 +185,11 @@ export class MetaScreen implements Screen {
     const next = !n.key && lvl < n.max ? `   ${tr('Następny poziom')}: ${tr(nodeLine(n, lvl + 1))}` : '';
     drawText(g, `${tr(n.name)}. ${now}${next}`, W / 2, 222, C.lgray, { align: 'center' });
     // Przyciski.
-    button(r, 8, BTN_Y, 70, 16, 'Wróć');
+    button(r, 8, BTN_Y, 70, 16, 'Wstecz [Esc]');
     if (meta.unassigned > 0) {
       button(r, W / 2 - 80, BTN_Y, 160, 16, `[B] Przydziel ${fmt(meta.unassigned)} esencji`, { accent: C.cyan, pulse: true });
     } else {
-      drawText(g, 'Essence: end of every Expedition and Endless run', W / 2, BTN_Y + 2, C.dgray, { align: 'center' });
+      drawText(g, 'Essence: end of every Expedition and Endless run', W / 2, BTN_Y + 2, C.lavender, { align: 'center' });
     }
     const canPrestige = spentEssence(h, tree) >= BAL.meta.prestigeCost;
     button(r, W - 128, BTN_Y, 120, 16, this.confirmPrestige ? 'Na pewno? [X]' : '[X] Prestiż', { active: this.confirmPrestige, accent: this.confirmPrestige ? C.red : C.pink, col: canPrestige ? undefined : C.dgray });

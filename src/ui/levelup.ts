@@ -7,13 +7,13 @@ import { drawSprite } from '../gfx/sprites';
 import { RARITIES } from '../data/items';
 import { generateOptions, applyOption, canBanish, optionScore, type Option, type Recipe } from '../systems/levelup';
 import type { Run } from '../game/run';
-import { button, panel, dim, inside, slot } from './widgets';
+import { button, dim, inside, slot, cardFrame, cardBadge, cardIcon } from './widgets';
 import { drawTagGain } from './synergies';
 
 const CARD_W = 108;
-const CARD_H = 150;
+const CARD_H = 160;
 const CARD_Y = 42;
-const BTN_Y = 204;
+const BTN_Y = 210;
 const BTN_W = 120;
 
 /**
@@ -24,25 +24,16 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   const q = o.quality ?? 0;
   // Jakość ulepszenia broni: ramka w kolorze jakości, Epickie i Legendarne pulsują jaśniej.
   const qCol = q >= 3 && !run.reduceFlash && Math.floor(performance.now() / 250) % 2 ? C.white : RARITIES[q].color;
-  panel(r, x, y, CARD_W, CARD_H, warn ? C.red : selected ? C.gold : q ? qCol : recommended ? C.yellow : C.slate);
   const cx = x + CARD_W / 2;
   const isNew = o.kind === 'weaponNew' || o.kind === 'passiveNew';
   const evolve = o.kind === 'evolve' || o.kind === 'abilityEvolve' || o.kind === 'passiveEvolve' || o.kind === 'fusion';
+  cardFrame(r, x, y, CARD_W, CARD_H, warn ? C.red : q ? qCol : evolve ? C.gold : C.slate, selected);
   const augment = o.kind === 'augment';
   const tagCol = q ? RARITIES[q].color : evolve ? C.yellow : isNew ? C.white : augment ? C.cyan : C.lavender;
   drawText(r.g, o.tag, cx, y + 7, tagCol, { align: 'center', shadow: C.black });
   // Znaczek "Polecane" na górnej krawędzi karty (plakietka zamiast napisu nad kartą, który wchodził na wstęgę tytułu).
-  if (recommended) {
-    const bw = textWidth('Polecane') * 0.75 + 10;
-    r.roundRect(cx - bw / 2, y - 5, bw, 10, 3, C.dbrown, C.black);
-    r.roundFrame(cx - bw / 2 + 0.5, y - 4.5, bw - 1, 9, 3, C.yellow, 0.75);
-    drawText(r.g, 'Polecane', cx, y - 3, C.yellow, { align: 'center', scale: 0.75 });
-  }
-  const glow = q ? RARITIES[q].color : evolve ? C.gold : isNew ? C.lgray : augment ? C.cyan : C.dgray;
-  r.withAlpha(0.2, () => r.circle(cx, y + 36, 20, glow, true));
-  r.withAlpha(0.6, () => r.circle(cx, y + 36, 16, C.black, true));
-  r.circle(cx, y + 36, 17, glow);
-  drawSprite(r.g, o.icon, cx, y + 36, { scale: 2 });
+  if (recommended) cardBadge(r, cx, y, 'Polecane', C.yellow);
+  cardIcon(r, o.icon, cx, y + 36, q ? RARITIES[q].color : evolve ? C.gold : isNew ? C.lgray : augment ? C.cyan : C.dgray);
   let ly = y + 60;
   for (const line of wrapText(o.name, CARD_W - 12)) {
     drawText(r.g, line, cx, ly, o.color, { align: 'center', shadow: C.black });
@@ -155,9 +146,9 @@ export class LevelUpView {
   private buttons(): { label: string; x: number; act: () => boolean }[] {
     const run = this.run;
     return [
-      { label: `[R] Losuj ponownie (${run.rerolls})`, x: W / 2 - BTN_W * 1.5 - 10, act: () => this.reroll() },
-      { label: `[X] Pomiń (${run.skips})`, x: W / 2 - BTN_W / 2, act: () => this.skip() },
-      { label: `[B] Wygnaj (${run.banishes})`, x: W / 2 + BTN_W / 2 + 10, act: () => this.toggleBanish() },
+      { label: `Reroll (${run.rerolls}) [R]`, x: W / 2 - BTN_W * 1.5 - 10, act: () => this.reroll() },
+      { label: `Skip (${run.skips}) [X]`, x: W / 2 - BTN_W / 2, act: () => this.skip() },
+      { label: `Banish (${run.banishes}) [B]`, x: W / 2 + BTN_W / 2 + 10, act: () => this.toggleBanish() },
     ];
   }
 
@@ -245,12 +236,12 @@ export class LevelUpView {
       if (flash > 0) r.withAlpha(Math.min(0.7, flash), () => r.rect(x + 2, y + 2, CARD_W - 4, CARD_H - 4, C.white));
     });
     for (const b of this.buttons()) {
-      const on = b.label.includes('Wygnaj') && this.banishMode;
+      const on = b.label.startsWith('Banish') && this.banishMode;
       button(r, b.x, BTN_Y, BTN_W, 20, b.label, { active: on, accent: on ? C.red : C.gold, col: on ? C.salmon : undefined });
     }
     // Podpis na ciemnym tle: pod nim są sloty HUD.
     const note = 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', nw = textWidth(note) + 12;
-    r.withAlpha(0.85, () => r.roundRect(W / 2 - nw / 2, 233, nw, 14, 4, C.black));
-    drawText(r.g, note, W / 2, 236, C.lavender, { align: 'center', shadow: C.black });
+    r.withAlpha(0.85, () => r.roundRect(W / 2 - nw / 2, 235, nw, 14, 4, C.black));
+    drawText(r.g, note, W / 2, 238, C.lavender, { align: 'center', shadow: C.black });
   }
 }

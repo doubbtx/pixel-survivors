@@ -33,7 +33,7 @@ function btnX(i: number): number {
 const LEGEND: NodeKind[] = ['fight', 'elite', 'dungeon', 'treasure', 'shop', 'anvil', 'rest', 'shrine', 'boss'];
 
 /** Przyciski poziomu trudności w prawym górnym rogu panelu szczegółów (lewy górny róg przycisku). */
-const TIER_W = 46;
+const TIER_W = 50, TIER_H = 14;
 /** Lista modyfikatorów w panelu mapy (x, y, w, h): pod nazwą mapy, do przycisków. */
 const MODS_AREA = [MAP_X + 8, DET_Y + 38, 250, BTN_Y - DET_Y - 40] as const;
 const tierPos = (i: number): [number, number] => [MAP_X + MAP_W - 8 - (4 - i) * (TIER_W + 3) + 3, DET_Y + 6];
@@ -102,7 +102,7 @@ export class ExpeditionMapView {
     const keys = ['n1', 'n2', 'n3', 'n4'] as const;
     keys.forEach((key, t) => {
       const [bx, by] = tierPos(t);
-      if (!input.pressed(key) && !(tiered && input.pressed('click') && inside(m.x, m.y, bx, by, TIER_W, 11))) return;
+      if (!input.pressed(key) && !(tiered && input.pressed('click') && inside(m.x, m.y, bx, by, TIER_W, TIER_H))) return;
       if (!chooseTier(ex, t)) return;
       sfx.play('select');
       this.onTier(t);
@@ -259,7 +259,7 @@ export class ExpeditionMapView {
           my += lh;
         });
       }
-      if (!mods.length) { drawText(g, 'Bez modyfikatorów', ax, my, C.dgray, DESC); my += lh; }
+      if (!mods.length) { drawText(g, 'Bez modyfikatorów', ax, my, C.lavender, DESC); my += lh; }
       this.modScroll.end(r, my + oy - ay, ax, ay, aw, ah);
       // Poziom trudności wyprawy (przyciski 1-4) w prawym górnym rogu.
       const rx = MAP_X + MAP_W - 8;
@@ -269,16 +269,16 @@ export class ExpeditionMapView {
           const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i];
           // Poziom jeszcze niezdobyty (data/unlocks.ts): przygaszony, z opisem, jak go odblokować.
           if (i > (this.run.expedition!.maxTier ?? 3)) {
-            r.withAlpha(0.5, () => r.roundRect(bx, by, TIER_W, 11, UI.radius, C.black));
-            drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 2, C.dgray, { align: 'center', ...SMALL });
-            drawText(g, 'locked', bx + TIER_W / 2, by + 13, C.dgray, { align: 'center', ...SMALL });
+            r.withAlpha(0.5, () => r.roundRect(bx, by, TIER_W, TIER_H, UI.radius, C.black));
+            drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 3.5, C.lavender, { align: 'center', ...SMALL });
+            drawText(g, 'locked', bx + TIER_W / 2, by + TIER_H + 2, C.lavender, { align: 'center', ...SMALL });
             return;
           }
-          const hot = hovered(bx, by, TIER_W, 11);
-          r.roundRect(bx, by, TIER_W, 11, UI.radius, on ? C.navy : hot ? C.slate : C.black);
-          r.roundFrame(bx, by, TIER_W, 11, UI.radius, on || hot ? rr.color : C.slate, on ? 1 : 0.5);
-          drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 2, on || hot ? rr.color : C.dgray, { align: 'center', ...SMALL });
-          drawText(g, t.length ? `${t.length} mod.` : 'bez mod.', bx + TIER_W / 2, by + 13, C.dgray, { align: 'center', ...SMALL });
+          const hot = hovered(bx, by, TIER_W, TIER_H);
+          r.roundRect(bx, by, TIER_W, TIER_H, UI.radius, on ? C.navy : hot ? C.slate : C.black);
+          r.roundFrame(bx, by, TIER_W, TIER_H, UI.radius, on || hot ? rr.color : C.slate, on ? 1 : 0.5);
+          drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 3.5, on || hot ? rr.color : C.lavender, { align: 'center', ...SMALL });
+          drawText(g, t.length ? `${t.length} mod.` : 'bez mod.', bx + TIER_W / 2, by + TIER_H + 2, C.lavender, { align: 'center', ...SMALL });
         });
       }
       // Bonus i nagroda pod przyciskami.

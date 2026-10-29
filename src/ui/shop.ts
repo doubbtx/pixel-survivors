@@ -148,7 +148,7 @@ export class ShopView {
     if (this.cardPick) { this.cardPick.render(r); return; }
     const g = r.g, run = this.run, shop = this.shop;
     dim(r);
-    drawText(g, 'Sklep', W / 2, 10, C.gold, { align: 'center', scale: 2, outline: C.black });
+    drawText(g, 'Sklep', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
     drawSprite(g, 'coin', W - 70, 18);
     drawText(g, fmt(run.gold), W - 62, 13, C.yellow, { outline: C.black });
 
@@ -172,14 +172,14 @@ export class ShopView {
         }
         const price = this.price(e);
         const label = avail ? String(price) : '-';
-        drawText(g, label, x + CELL / 2, y + CELL + 2, !avail ? C.dgray : run.gold >= price ? C.yellow : C.red, { align: 'center' });
+        drawText(g, label, x + CELL / 2, y + CELL + 2, !avail ? C.lavender : run.gold >= price ? C.yellow : C.red, { align: 'center' });
       });
     }
     const lines = [
       `HP ${Math.ceil(run.player.hp)}/${Math.ceil(run.stats.maxHp)}  plecak ${run.bag.length}/${BAL.bagSize}  odł. ${run.shards}  losowania ${run.rerolls}/${run.banishes}/${run.cardRerolls}`,
       'Enter/klik: kup  R: odśwież  I: ekwipunek  K: kowadło',
     ];
-    lines.forEach((l, i) => drawText(g, l, 14, 206 + i * 11, i < 1 ? C.lgray : C.dgray));
+    lines.forEach((l, i) => drawText(g, l, 14, 206 + i * 11, i < 1 ? C.lgray : C.lavender));
 
     this.renderDetails(r);
 
@@ -204,7 +204,7 @@ export class ShopView {
       drawItemCard(r, it, DET_X, 34, DET_W, 196, run.equipment[run.slotFor(it)], false, run.stats);
     } else if (e.kind === 'item') {
       panel(r, DET_X, 34, DET_W, 196, C.slate);
-      drawText(g, 'Sprzedane', DET_X + DET_W / 2, 124, C.dgray, { align: 'center' });
+      drawText(g, 'Sprzedane', DET_X + DET_W / 2, 124, C.lavender, { align: 'center' });
     } else if (e.kind === 'upgrade') {
       // Rozbudowa sklepu: co daje następny poziom.
       const U = BAL.shopUpgrade, lvl = run.shopLevel, cx = DET_X + DET_W / 2;
@@ -235,8 +235,8 @@ export class ShopView {
         ly += 11;
       }
       const left = shop.stock[svc ? svc.id : `elixir:${el!.id}`] ?? 0;
-      drawText(g, `Zostało: ${left}`, cx, 160, C.dgray, { align: 'center' });
-      if (el) drawText(g, `Kupione eliksiry: ${run.elixirsBought}`, cx, 174, C.dgray, { align: 'center' });
+      drawText(g, `Zostało: ${left}`, cx, 160, C.lavender, { align: 'center' });
+      if (el) drawText(g, `Kupione eliksiry: ${run.elixirsBought}`, cx, 174, C.lavender, { align: 'center' });
     }
     if (!avail) return;
     button(r, DET_X, BTN_Y, DET_W, 16, `Kup za ${price} zł`, { col: run.gold >= price ? C.yellow : C.red, accent: C.gold, pulse: run.gold >= price });

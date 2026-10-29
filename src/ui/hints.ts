@@ -1,10 +1,10 @@
-import { W, type Renderer } from '../core/renderer';
+import { W, H, type Renderer } from '../core/renderer';
 import { C } from '../core/palette';
 import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
 import type { SaveData } from '../core/save';
 import { panel } from './widgets';
-import { tile } from './theme';
+import { tile, UI } from './theme';
 
 /**
  * Podpowiedzi kontekstowe: każda pokazuje się raz (zapis `save.seenHints`), w chwili gdy gracz pierwszy raz
@@ -14,7 +14,7 @@ export const HINTS = {
   move: 'Ruszasz się WASD albo strzałkami. Broń strzela sama, ty unikaj wrogów i ich pocisków.',
   abilities: 'Q i E to umiejętności, Spacja to unik z nietykalnością. Celujesz myszą.',
   gems: 'Zbieraj niebieskie kryształy z pokonanych wrogów: dają doświadczenie i awans.',
-  levelup: 'Awans: wybierz jedno ulepszenie (1-4 albo klik). R losuje ponownie, X pomija, B wygania opcję z puli.',
+  levelup: 'Level up: pick one upgrade (1-4 or click). Icons at the bottom of a card: evolution recipe (weapon + passive > evolution) and synergy tags. R rerolls, X skips, B banishes an option from the pool.',
   ult: 'Ultimate gotowy! Wciśnij R. Ładuje się zabójstwami.',
   chest: 'Skrzynia na ziemi! Podejdź, żeby ją podnieść. Kolor poświaty to jakość przedmiotu.',
   loot: 'Nowy przedmiot: załóż go albo schowaj do plecaka. I otwiera ekwipunek w każdej chwili.',
@@ -38,6 +38,9 @@ export const HINTS = {
 } as const;
 
 export type HintId = keyof typeof HINTS;
+
+/** Miejsce na podpowiedź: lewy górny róg i szerokość; `up`: `y` to dolna krawędź. */
+export interface HintBox { x: number; y: number; w: number; up?: boolean }
 
 /** Ekran, na którym pokazuje się podpowiedź (stan GameScreen); pozostałe dotyczą samej gry ('play'). Inne czekają w kolejce. */
 const HINT_SCREEN: Partial<Record<HintId, string>> = {
@@ -82,19 +85,21 @@ export class Hints {
   }
 
   /**
-   * Ramka z podpowiedzią: w grze u góry pod celem poziomu (dół ekranu to pole walki przy postaci), w nakładkach (i na mapie
-   * Ekspedycji) u samej góry, na wstędze tytułu: dół nakładek zajmują przyciski i opisy klawiszy.
+   * Ramka z podpowiedzią w miejscu `box`, które ekran trzyma wolne (nigdy na tytule, legendzie ani przyciskach):
+   * `y` to górna krawędź albo, przy `up`, dolna (ramka rośnie w górę). Bez `box`: w grze nad paskiem umiejętności
+   * (na dotyku u góry pod celem poziomu, dół zajmują przyciski dotykowe). W nakładkach pełne okno, w grze lekka płytka.
    */
-  render(r: Renderer, overlay: boolean): void {
+  render(r: Renderer, box: HintBox | null, touch: boolean): void {
     if (!this.cur || !this.save.settings.hints) return;
-    const lines = wrapText(HINTS[this.cur], (overlay ? 290 : 180) / HINT_SCALE);
-    const w = overlay ? 302 : 192, h = 9 + lines.length * 9, x = (W - w) / 2, y = overlay ? 3 : 52;
+    const overlay = box !== null;
+    const b = box ?? (touch ? { x: (W - 192) / 2, y: 52, w: 192 } : { x: (W - 240) / 2, y: H - UI.edge - UI.ability - 8, w: 240, up: true });
+    const lines = wrapText(HINTS[this.cur], (b.w - 12) / HINT_SCALE);
+    const h = 9 + lines.length * 9, y = b.up ? b.y - h : b.y;
     const a = Math.min(1, this.t * 3, (SHOW - this.t) * 6);
     r.withAlpha(a, () => {
-      // W grze lekka płytka HUD-u (nie zasłania walki ciężką ramką), w nakładkach pełne okno.
-      if (overlay) panel(r, x, y, w, h, C.cyan);
-      else tile(r, x, y, w, h, C.teal, 0.78);
-      lines.forEach((l, i) => drawText(r.g, l, x + 6, y + 4 + i * 9, C.white, { shadow: C.black, scale: HINT_SCALE }));
+      if (overlay) panel(r, b.x, y, b.w, h, C.cyan);
+      else tile(r, b.x, y, b.w, h, C.teal, 0.78);
+      lines.forEach((l, i) => drawText(r.g, l, b.x + 6, y + 4 + i * 9, C.white, { shadow: C.black, scale: HINT_SCALE }));
     });
   }
 }

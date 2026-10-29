@@ -64,6 +64,6 @@ export class ControlsScreen implements Screen {
     panel(r, W / 2 - 160, 34, 320, (REBIND.length + 2) * 13 + 10, C.gold);
     this.menu.render(r);
     const tip = this.waiting ? 'Press a new key (Esc: cancel)' : 'Enter: change key. Arrows, Enter, Esc, Tab and 1-4 always work in menus.';
-    drawText(g, tip, W / 2, H - 16, this.waiting ? C.yellow : C.dgray, { align: 'center', scale: 0.75 });
+    drawText(g, tip, W / 2, H - 16, this.waiting ? C.yellow : C.lavender, { align: 'center', scale: 0.75 });
   }
 }

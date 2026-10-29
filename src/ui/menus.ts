@@ -151,7 +151,7 @@ export class MainMenu implements Screen {
     for (const l of wrapText(desc, dw - 22)) { drawText(g, l, dx + 11, ly, C.lgray); ly += 11; }
     ly += 4;
     for (const [l, col] of this.info(m.sel)) { drawText(g, l, dx + 11, ly, col, { scale: 0.75 }); ly += 9; }
-    drawText(g, 'Strzałki / mysz: wybór   Enter: wejdź   F: pełny ekran', dx + dw / 2, 148, C.dgray, { align: 'center', scale: 0.75 });
+    drawText(g, 'Strzałki / mysz: wybór   Enter: wejdź   F: pełny ekran', dx + dw / 2, 148, C.lavender, { align: 'center', scale: 0.75 });
     if (this.app.save.notice) {
       panel(r, dx, 166, dw, 44, C.orange);
       wrapText(this.app.save.notice, dw - 22).slice(0, 3).forEach((l, i) => drawText(g, l, dx + 11, 172 + i * 11, C.orange));
@@ -165,7 +165,7 @@ export class MainMenu implements Screen {
     if (slotMode === 'endless' && !unlocked(s, 'endless')) return [];
     if (slotMode) {
       const snap = s.slots[slotMode];
-      return snap ? [[`Zapisany run: ${HERO_BY_ID[snap.hero]?.name ?? snap.hero}, LV ${snap.level}`, C.lime], ...slotLines(slotMode, snap).slice(0, 1).map((l): [string, number] => [l, C.lgray])] : [['Brak zapisanego runu.', C.dgray]];
+      return snap ? [[`Zapisany run: ${HERO_BY_ID[snap.hero]?.name ?? snap.hero}, LV ${snap.level}`, C.lime], ...slotLines(slotMode, snap).slice(0, 1).map((l): [string, number] => [l, C.lgray])] : [['Brak zapisanego runu.', C.lavender]];
     }
     if (sel === 2) return [[s.meta.unassigned > 0 ? `Esencja do rozdania: ${fmt(s.meta.unassigned)}` : 'You earn essence in Expeditions and in Endless.', C.cyan]];
     if (sel === 3) return [[`Karty ${s.collection.seen.length}, sekrety ${s.collection.secrets.length}, osiągnięcia ${s.achievements.length}`, C.lgray]];
@@ -226,7 +226,12 @@ export class SlotScreen implements Screen {
     ] : [
       { label: () => SLOT_NEW[mode], act: () => app.go(new HeroSelect(app, mode)) },
       { label: () => 'Wstecz', act: () => app.go(new MainMenu(app)) },
-    ], 124, 196, 220);
+    ], 124, run ? 196 : this.panelH() + 50, 220);
+  }
+
+  /** Wysokość panelu po lewej: zapisany run albo opis zasad (wtedy menu tuż pod nim, bez pustego pola). */
+  private panelH(): number {
+    return this.app.save.slots[this.mode] ? 146 : 24 + wrapText(SLOT_RULES[this.mode], 200).length * 13;
   }
 
   update(): void {
@@ -238,8 +243,8 @@ export class SlotScreen implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     const col = SLOT_COLOR[this.mode];
-    drawText(g, SLOT_TITLE[this.mode], W / 2, 10, col, { align: 'center', scale: 2, outline: C.black });
-    panel(r, 12, 40, 224, 146, col);
+    drawText(g, SLOT_TITLE[this.mode], W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    panel(r, 12, 40, 224, this.panelH(), col);
     const s = this.app.save.slots[this.mode];
     if (s) {
       const h = HERO_BY_ID[s.hero];
@@ -279,8 +284,9 @@ function renderHeroBests(app: App, mode: SlotMode, x: number, y: number, w: numb
     const rec = heroRecord(app.save, h.id);
     const yy = y + 24 + i * 13;
     drawText(g, h.name, x + 12, yy, h.color);
-    const v = mode === 'endless' ? fmtTime(rec.bestEndless) : `węzły ${rec.bestExpedition}   ukończone ${rec.expeditionWins}`;
-    drawText(g, v, x + w - 12, yy, C.white, { align: 'right' });
+    const none = mode === 'endless' ? rec.bestEndless <= 0 : rec.bestExpedition <= 0 && rec.expeditionWins <= 0;
+    const v = none ? 'not played yet' : mode === 'endless' ? fmtTime(rec.bestEndless) : `węzły ${rec.bestExpedition}   ukończone ${rec.expeditionWins}`;
+    drawText(g, v, x + w - 12, yy, none ? C.lavender : C.white, { align: 'right' });
   });
 }
 
@@ -375,7 +381,7 @@ export class HeroSelect implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     const m = this.mode;
-    drawText(g, `${SLOT_TITLE[m]}: wybierz bohatera`, W / 2, 10, SLOT_COLOR[m], { align: 'center', scale: 2, outline: C.black });
+    drawText(g, `${SLOT_TITLE[m]}: wybierz bohatera`, W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
     // Lista bohaterów.
     HEROES.forEach((h, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel;
@@ -383,9 +389,9 @@ export class HeroSelect implements Screen {
       const spr = this.spriteOf(h.id), open = heroUnlocked(this.app.save, h.id);
       // Zablokowany bohater: przygaszony, zamiast roli warunek odblokowania.
       r.withAlpha(open ? 1 : 0.3, () => drawSprite(g, `${spr}@${on && open ? animFrame(spr, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 11.5));
-      drawText(g, h.name, LIST_X + 34, y + 2, open ? h.color : C.dgray, { shadow: C.black });
+      drawText(g, h.name, LIST_X + 34, y + 2, open ? h.color : C.lavender, { shadow: C.black });
       if (open) drawText(g, h.role, LIST_X + 34, y + 12, C.lavender);
-      else drawText(g, UNLOCK_BY_ID[`hero:${h.id}`]?.how ?? "", LIST_X + 34, y + 14, C.dgray, { scale: 0.75 });
+      else drawText(g, UNLOCK_BY_ID[`hero:${h.id}`]?.how ?? "", LIST_X + 34, y + 14, C.lavender, { scale: 0.75 });
       // Odznaka Paktu: najwyższy poziom Paktu z pokonanym bossem.
       const best = this.app.save.pacts.best[h.id] ?? 0, badge = pactBadge(best);
       if (badge) drawText(g, `${badge.name} ${best}`, LIST_X + LIST_W - 6, y + 3, badge.color, { align: 'right' });
@@ -419,7 +425,7 @@ export class HeroSelect implements Screen {
     if (this.page !== 0) { this.renderButtons(h); return; }
     const rec = heroRecord(this.app.save, h.id);
     const best = m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}` : `Rekord: ${fmtTime(rec.bestEndless)}`;
-    drawText(g, best, x + 12, y + DET_H - 14, C.dgray);
+    drawText(g, best, x + 12, y + DET_H - 14, C.lavender);
     {
       const hm = heroMeta(this.app.save.meta, h.id);
       drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
@@ -433,7 +439,7 @@ export class HeroSelect implements Screen {
     button(r, LIST_X, BTN_Y, BACK_W, BTN_H, 'Wstecz [Esc]');
     if (heroUnlocked(this.app.save, h.id)) button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, `Start: ${h.name} [Enter]`, { accent: C.gold, col: C.yellow, pulse: true });
     else button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, 'Locked', { col: C.dgray });
-    drawText(g, 'Góra/dół: bohater    Lewo/prawo: zakładki', (LIST_X + BACK_W + W - 12 - START_W) / 2, BTN_Y + 2, C.dgray, { align: 'center', scale: 0.75 });
+    drawText(g, 'Góra/dół: bohater    Lewo/prawo: zakładki', (LIST_X + BACK_W + W - 12 - START_W) / 2, BTN_Y + 2, C.lavender, { align: 'center', scale: 0.75 });
   }
 
   /** Strona ogólna: broń, pasywka, zasób w skrócie, umiejętności. */
@@ -455,7 +461,7 @@ export class HeroSelect implements Screen {
     // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa (klik: strona z opisami).
     this.skillsAt = ly;
     if (hovered(x + 8, ly, DET_W - 16, 40)) r.withAlpha(0.15, () => r.roundRect(x + 8, ly - 2, DET_W - 16, 42, 2, C.white));
-    drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 41, C.dgray, { align: 'right', scale: 0.75 });
+    drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 41, C.lavender, { align: 'right', scale: 0.75 });
     h.abilities.forEach((a, i) => {
       const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
       const ax = x + 12 + (i % 2) * 140, ay = ly + Math.floor(i / 2) * 20;
@@ -505,7 +511,7 @@ export class RecordsScreen implements Screen {
     panel(r, 30, 40, 420, 30 + HEROES.length * 16, C.slate);
     const cols = [42, 110, 176, 242, 300, 370];
     ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Endless', 'Ekspedycja'].forEach((s, i) => drawText(g, s, cols[i], 48, C.lavender));
-    drawText(g, 'Expedition: most maps (expeditions won)', W / 2, 54 + HEROES.length * 16 + 26, C.dgray, { align: 'center', scale: 0.75 });
+    drawText(g, 'Expedition: most maps (expeditions won)', W / 2, 54 + HEROES.length * 16 + 26, C.lavender, { align: 'center', scale: 0.75 });
     HEROES.forEach((h, i) => {
       const rec = heroRecord(this.app.save, h.id);
       const y = 64 + i * 16;
@@ -643,7 +649,7 @@ export class SettingsScreen implements Screen {
     SET_TABS.forEach((t, i) => button(r, setTabX(i), SET_TAB_Y, SET_TAB_W, 16, t, { active: i === this.tab, accent: C.gold }));
     panel(r, W / 2 - 180, SET_LIST_Y - 6, 360, this.menu.items.length * SET_ROW + 10, C.slate);
     this.menu.render(r);
-    drawText(g, 'Tab / Q / E: kategoria    Lewo/prawo: zmień', W / 2, H - 14, C.dgray, { align: 'center' });
+    drawText(g, 'Tab / Q / E: kategoria    Lewo/prawo: zmień', W / 2, H - 14, C.lavender, { align: 'center' });
     wrapText(this.hints[this.menu.sel](), 420).forEach((l, i) => drawText(g, l, W / 2, 222 + i * 11, C.lavender, { align: 'center' }));
   }
 }

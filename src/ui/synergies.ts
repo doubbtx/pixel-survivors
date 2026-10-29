@@ -6,7 +6,7 @@ import { drawSprite } from '../gfx/sprites';
 import { SYNERGIES, SYNERGY_BY_TAG, VERSATILITY, tierOf, type SynergyDef } from '../data/synergies';
 import type { Tag } from '../data/cards';
 import type { Run } from '../game/run';
-import { dim, panel, inside, hovered, Scroll } from './widgets';
+import { dim, panel, inside, hovered, button, Scroll } from './widgets';
 import { UI, tile, iconSlot, cornerTag } from './theme';
 
 const OUT = { outline: C.black } as const;
@@ -95,14 +95,14 @@ export class SynergyView {
   update(input: Input): boolean {
     this.scroll.update(input, ...LIST_AREA, true);
     if (input.pressed('back') || input.pressed('pause') || input.pressed('confirm')) return true;
-    return input.pressed('click') && inside(input.mouse.x, input.mouse.y, W - 70, 6, 64, 22);
+    return input.pressed('click') && inside(input.mouse.x, input.mouse.y, W - 70, 8, 62, 16);
   }
 
   render(r: Renderer): void {
     const g = r.g, run = this.run;
     dim(r);
     drawText(g, 'Synergie', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    drawText(g, 'Esc: wróć', W - 10, 10, C.lgray, { align: 'right', ...OUT });
+    button(r, W - 70, 8, 62, 16, 'Wstecz [Esc]');
     // Wszechstronność: nagroda za liczbę aktywnych synergii (pasek u góry, progi w dwóch kolumnach).
     const vt = run.versTier;
     panel(r, 6, 28, 468, 30, vt > 0 ? C.pink : C.slate);
@@ -111,7 +111,7 @@ export class SynergyView {
     drawText(g, `aktywne synergie: ${run.versCount}`, 30, 43, C.lgray);
     VERSATILITY.tiers.forEach((t, k) => {
       const x = 140 + (k % 2) * 166, y = 33 + Math.floor(k / 2) * 11;
-      drawText(g, `${VERSATILITY.thresholds[k]}: ${t.desc}`, x, y, k < vt ? C.lime : C.dgray, SMALL);
+      drawText(g, `${VERSATILITY.thresholds[k]}: ${t.desc}`, x, y, k < vt ? C.lime : C.lavender, SMALL);
     });
     // Synergie w dwóch kolumnach; wysokość rzędu z najdłuższego opisu progów (przy dużym tekście lista się przewija).
     const lh = descLH() - 1, tw = (232 - 30) / descS();
@@ -127,9 +127,9 @@ export class SynergyView {
         panel(r, x, y, 232, rowH, tier > 0 ? C.gold : C.slate);
         drawSprite(g, `tag:${d.tag}`, x + 12, y + 10);
         drawText(g, d.tag, x + 24, y + 3, tier > 0 ? C.yellow : C.white, { shadow: C.black });
-        drawText(g, `${pts} pkt`, x + 224, y + 3, tier > 0 ? C.yellow : C.lgray, { align: 'right' });
+        drawText(g, pts === 1 ? '1 pt' : `${pts} pts`, x + 224, y + 3, tier > 0 ? C.yellow : C.lgray, { align: 'right' });
         let ty = y + 14;
-        lines[j].forEach((ls, k) => { for (const l of ls) { drawText(g, l, x + 24, ty, k < tier ? C.lime : C.dgray, DESC); ty += lh; } });
+        lines[j].forEach((ls, k) => { for (const l of ls) { drawText(g, l, x + 24, ty, k < tier ? C.lime : C.lavender, DESC); ty += lh; } });
       }
       y += rowH + 1;
     }
