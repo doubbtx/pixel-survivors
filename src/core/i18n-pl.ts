@@ -666,4 +666,6 @@ export const PL: Record<string, string> = {
   "In the pause menu (Build tab) click or point at a card to see what it does.": "W pauzie (zakładka Build) kliknij albo wskaż kartę, żeby zobaczyć, co robi.",
   "Max {}. Every hit: +{} (at most every {} s), a parry: +{}.": "Maks. {}. Każde trafienie: +{} (najwyżej co {} s), odbicie: +{}.",
   "While it builds: +{} attack speed per point. Getting hit drains it to zero ({} per second).": "W trakcie budowania: +{} szybkości ataku za punkt. Oberwanie sprawia, że opada do zera ({} na sekundę).",
+  "Spear of Light [Q]": "Włócznia światła [Q]",
+  "Dawn Spear [Q]": "Włócznia świtu [Q]",
 };
