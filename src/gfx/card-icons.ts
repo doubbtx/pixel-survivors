@@ -1,5 +1,6 @@
 import { C, RAMP } from '../core/palette';
 import type { Painter } from './painter';
+import { netIcon } from './icons';
 
 /**
  * Ikony 16×16 dla kart o unikalnych efektach (cd_<nazwa>) i ewolucji umiejętności (ab_<id>_evo).
@@ -77,9 +78,9 @@ export const CARD_ICONS_GFX: Record<string, (p: Painter) => void> = {
     p.ring(3, 13, 2.5, 1, C.yellow);
   },
   ab_k_net_evo: (p) => {
-    p.ring(8, 8, 7, 1, C.cyan);
-    for (let i = 0; i < 4; i++) { p.line(2 + i * 4, 1, 2 + i * 4, 15, C.lgray); p.line(1, 2 + i * 4, 15, 2 + i * 4, C.lgray); }
-    p.sphere(8, 8, 2.5, 2.5, [C.dblue, C.blue, C.cyan, C.white]);
+    // Lodowa sieć: ta sama sieć w kolorach lodu, w środku kryształ.
+    p.sphere(8, 9, 4.6, 3.8, RAMP.blue).px(6.5, 8, C.navy).px(9.5, 8, C.navy).px(6, 7, C.white);
+    netIcon(p, [C.dblue, C.cyan, C.white, C.blue], C.lgray);
   },
   ab_k_rain_evo: (p) => {
     p.sphere(8, 3, 6, 2.5, RAMP.night).px(5, 2, C.slate);

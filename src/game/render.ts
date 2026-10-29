@@ -702,7 +702,7 @@ function drawWorld(run: Run, r: Renderer): void {
 }
 
 /**
- * Sieć (E Kestry, Sidła): rozwija się przy rzucie, ukośne oczka ze sznurka przycięte do koła, węzły na skrzyżowaniach,
+ * Sieć (E Kestry, Sidła; kolory jak na ikonie ab_k_net): rozwija się przy rzucie, ukośne oczka ze sznurka przycięte do koła, węzły na skrzyżowaniach,
  * grubsza lina na obwodzie z obciążnikami; cień pod spodem i wygaszenie pod koniec.
  */
 function drawNet(r: Renderer, x: number, y: number, R0: number, t: number, life: number): void {
@@ -710,15 +710,15 @@ function drawNet(r: Renderer, x: number, y: number, R0: number, t: number, life:
   const a = Math.min(1, (life - t) / 0.3, 0.25 + open);
   r.withAlpha(a, () => {
     r.withAlpha(0.22, () => r.circle(x, y + 2, R, C.black, true));
-    r.withAlpha(0.1, () => r.circle(x, y, R, C.tan, true));
+    r.withAlpha(0.1, () => r.circle(x, y, R, C.lgray, true));
     // Dwie rodziny ukośnych linek (±35°): cięciwy koła w stałych odstępach.
     const sp = Math.max(6, R / 3.2), dirs = [0.6, -0.6].map((q) => [Math.cos(q), Math.sin(q)] as const);
     for (const [dx, dy] of dirs) {
       const nx = -dy, ny = dx;
       for (let k = -R + sp / 2; k < R; k += sp) {
         const h = Math.sqrt(Math.max(0, R * R - k * k)) * 0.96, cx = x + nx * k, cy = y + ny * k;
-        r.line(cx - dx * h, cy - dy * h, cx + dx * h, cy + dy * h, C.dbrown, 2);
-        r.line(cx - dx * h, cy - dy * h, cx + dx * h, cy + dy * h, C.tan, 1);
+        r.line(cx - dx * h, cy - dy * h, cx + dx * h, cy + dy * h, C.slate, 2);
+        r.line(cx - dx * h, cy - dy * h, cx + dx * h, cy + dy * h, C.lgray, 1);
       }
     }
     // Węzły: przecięcia linek wewnątrz koła.
@@ -728,13 +728,13 @@ function drawNet(r: Renderer, x: number, y: number, R0: number, t: number, life:
         // Punkt P - c spełnia n1·P = i, n2·P = j (n = prostopadła do kierunku).
         const px = (i * bx - ax * j) / det, py = ((-ay) * j - (-by) * i) / det;
         if (px * px + py * py > R * R * 0.85) continue;
-        r.rect(x + px - 1, y + py - 1, 2, 2, C.dbrown);
-        r.rect(x + px - 0.5, y + py - 1, 1, 1, C.cream);
+        r.rect(x + px - 1, y + py - 1, 2, 2, C.slate);
+        r.rect(x + px - 0.5, y + py - 1, 1, 1, C.white);
       }
     }
     // Lina na obwodzie i obciążniki.
-    r.circle(x, y, R + 0.5, C.dbrown);
-    r.circle(x, y, R - 0.5, C.clay);
+    r.circle(x, y, R + 0.5, C.slate);
+    r.circle(x, y, R - 0.5, C.lavender);
     for (let k = 0; k < 8; k++) {
       const q = (k / 8) * Math.PI * 2 + 0.2, wx = x + Math.cos(q) * R, wy = y + Math.sin(q) * R;
       r.rect(wx - 1.5, wy - 1.5, 3, 3, C.dgray);

@@ -453,6 +453,8 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     kwadraty, obiekty kółka; tło 0.88), wybuch (`gfx/world.ts boom`: chmura kul ognia z iskrami zamiast jednej sfery),
     deszcz strzał (spadające strzały z lotkami w cyklach 0.35 s, pył przy wbiciu). Bot `bot=gallery`: każdy bohater
     używa Q, E, uniku i R w tłumie, `scripts/bot.cjs` robi zrzut po każdej (gra stoi do zrzutu: `Bot.frozen`), /tmp/bot-shots/gallery.
+  - 0.29.2: ikona Sieci (`ab_k_net`, `netIcon` w gfx/icons.ts: złapany szlam pod jasną linką, obciążniki) i Lodowej sieci
+    (`ab_k_net_evo`, niebieski szlam, kolory lodu); sieć w grze w tych samych kolorach (szara linka).
   - Nie zrobione: szersza logiczna rozdzielczość na ekranach 20:9 (telefon ma pasy po bokach, interfejs nie zajmuje więcej miejsca).
 ## Plan dalej (przed wydaniem)
 

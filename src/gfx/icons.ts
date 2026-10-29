@@ -20,6 +20,35 @@ function arrow(p: Painter, x0: number, y0: number, x1: number, y1: number, head:
   p.px(x0, y0, fletch).px(x0 + dx, y0, fletch).px(x0, y0 + dy, fletch);
 }
 
+/**
+ * Sieć (E Kestry i jej ewolucja): koło z ukośnych linek (oczka co 3 px), jasne węzły na skrzyżowaniach,
+ * grubsza lina na obwodzie z obciążnikami. `rope`: [cień, linka, węzeł, lina brzegu], `weight`: kolor obciążników.
+ */
+export function netIcon(p: Painter, rope: readonly number[], weight: number): void {
+  const [dark, mid, knot, rim] = rope, cx = 8, cy = 8, R = 6.3;
+  // Rzadkie ukośne linki w dwóch kierunkach (cięciwy koła co 4 px): przez oczka widać tło.
+  for (const sgn of [1, -1]) {
+    for (let k = -8; k <= 8; k += 4) {
+      const d = k / Math.SQRT2, h = Math.sqrt(Math.max(0, R * R - d * d)) - 0.6;
+      if (h < 1) continue;
+      const ux = 1 / Math.SQRT2, uy = sgn / Math.SQRT2, nx = -uy, ny = ux;
+      // Cienka linka (2 piksele obrazu): oczka zostają otwarte, widać złapanego wroga.
+      p.stroke(cx + nx * d - ux * h, cy + ny * d - uy * h, cx + nx * d + ux * h, cy + ny * d + uy * h, mid);
+    }
+  }
+  // Węzły: przecięcia linek wewnątrz koła.
+  for (let i = -8; i <= 8; i += 4) for (let j = -8; j <= 8; j += 4) {
+    const x = cx + (i + j) / 2, y = cy + (j - i) / 2;
+    if ((x - cx) ** 2 + (y - cy) ** 2 < (R - 1.2) ** 2) p.spot(x, y, knot);
+  }
+  // Lina brzegu: ciemny dół, jasna góra (światło z lewej góry), obciążniki po skosach.
+  for (let a = 0; a < Math.PI * 2; a += 0.05) p.spot(cx + Math.cos(a) * R, cy + Math.sin(a) * R, Math.sin(a - 0.8) < -0.3 ? rim : dark);
+  for (const a of [0.25, 0.75, 1.25, 1.75]) {
+    const x = cx + Math.cos(a * Math.PI) * R, y = cy + Math.sin(a * Math.PI) * R;
+    p.px(x, y, weight).px(x - 0.5, y - 0.5, C.lgray);
+  }
+}
+
 function sparkle(p: Painter, x: number, y: number, c: number = C.white): void {
   p.px(x, y, c).px(x - 1, y, C.yellow).px(x + 1, y, C.yellow).px(x, y - 1, C.yellow).px(x, y + 1, C.yellow);
 }
@@ -345,9 +374,9 @@ export const ICON_FNS: Record<string, IconFn> = {
   // ===================== umiejętności =====================
   ab_k_volley: (p) => { arrow(p, 2, 14, 9, 2); arrow(p, 2, 14, 14, 7); arrow(p, 2, 14, 14, 13); },
   ab_k_net: (p) => {
-    p.ring(8, 8, 7, 1, C.lgray);
-    for (let k = -4; k <= 4; k += 4) { p.line(8 + k, 2, 8 + k, 14, C.lavender); p.line(2, 8 + k, 14, 8 + k, C.lavender); }
-    p.px(4, 4, C.white).px(12, 12, C.white).px(8, 8, C.white);
+    // Złapany szlam pod siecią (od razu widać, do czego służy), na nim jasna linka.
+    p.sphere(8, 9, 4.6, 3.8, RAMP.green).px(6.5, 8, C.black).px(9.5, 8, C.black).px(6, 7, C.white);
+    netIcon(p, [C.slate, C.lgray, C.white, C.lavender], C.dgray);
   },
   ab_k_roll: (p) => {
     for (let a = Math.PI * 0.6; a < Math.PI * 2.1; a += 0.08) p.px(8 + Math.cos(a) * 5.5, 8 + Math.sin(a) * 5.5, C.blue);
