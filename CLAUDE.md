@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.44.1)
+## Stan (wersja 0.45.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -710,6 +710,13 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   backpack” (`takeAll`, bez unikatów/legend). Strzelają tylko widoczni wrogowie (`BAL.shootMargin`, boss zawsze),
   `enemyBulletSoftCap` 500 → 320, `bulletDmg` 1.1 → 1.35 (A/B bot: mediana przeżycia 64.5 vs 61.5 s; pociski w 3 min ~340
   zamiast 400-580); telemetria `bul`. Render: bohater drugi raz nad efektami gracza (`drawHero`), 'boom' skala ≥3 z alfą 0.5.
+- 0.45.0 (R4 + analiza skalowania Agenta 2): `HeroDef.altUlt` (to samo `id` co pierwszy ult → flagi drzewka i kart, `alt: true`
+  pomija EVO_EXTRA; ewolucja w samym zachowaniu), `heroAbilities(h, alt)`, `save.altUlt[hero]`, snapshot `altUlt`, R na
+  ekranie bohatera. Kinds: falcon (linia przez wszystkich, Celność), quake (fale, ogłuszenie bez bossów, furia), flare (zużywa
+  Żar, wybuch), plague (trucizna na widocznych, `spreadPlague` w killEnemy z budżetem), deathmark (`markT`, cięcie + egzekucja
+  'Death Mark: execute' w PCT_SOURCES), bastion (`bastionT` niszczy wrogie pociski, wybuch na koniec), mushin (`mushinT`:
+  Mikiri pewne, kontry z limitem/s). `BAL.altUlt`, `updateAltUlts`. Bot `&ult=alt|mix`. `BAL.collectLevels` 3: collectAll
+  daje najwyżej 3 awanse (nadwyżka XP do 90% paska) — analiza: skok L18→L45 przy bossie podbijał floor HP i lawinę okien.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

@@ -7,9 +7,15 @@ import { abilityParam, abilityCooldown, type AbilityKind, type AbilitySlot } fro
 import { SLOT, type AbilityInst, type Enemy } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnMinion } from './minions';
-import { resourceOnCast, spendSouls, spendStreak, spendFaith, furyGain, rhythmAtk, spendRhythm } from './resource';
+import { resourceOnCast, spendSouls, spendStreak, spendFaith, furyGain, rhythmAtk, spendRhythm, rhythmGain, resFrac } from './resource';
+import { VIEW_W, VIEW_H } from '../core/renderer';
 
 const ORDER: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
+
+/** Wróg w kadrze (R4: ulty na „wszystkich widocznych”). */
+function onScreen(run: Run, e: Enemy): boolean {
+  return e.x > run.camX && e.x < run.camX + VIEW_W && e.y > run.camY && e.y < run.camY + VIEW_H;
+}
 
 /** Kierunek od gracza do punktu celowania (znormalizowany). */
 function aimDir(run: Run): [number, number] {
@@ -447,6 +453,114 @@ const CASTS: Record<AbilityKind, Cast> = {
     iaiCut(run, a, P, dx, dy, mul, a.def.evolved ? () => run.schedule(0.1, () => iaiCut(run, a, P, -dx, -dy, mul)) : undefined);
   },
 
+  // ===== R4: drugie ultimate (to samo id co pierwsze — flagi drzewka i kart; ewolucja w samym zachowaniu) =====
+
+  falcon(run, a, P) {
+    // Strzał sokoła (Kestra): jedna potężna strzała po linii celowania, przebija wszystko; Celność zużyta = mocniej.
+    const p = run.player, U = BAL.altUlt, focus = run.hero.resource.kind === 'focus' ? run.res : 0;
+    if (focus > 0) run.res = 0;
+    const dmg = P('damage') * (P('duration') / 3.5) * (1 + U.falconFocus * focus) * run.stats.might;
+    const w = (U.falconW + P('radius') * 0.1) * run.stats.area, [dx, dy] = aimDir(run), base = Math.atan2(dy, dx);
+    for (const off of a.def.evolved ? [-0.18, 0, 0.18] : [0]) {
+      const ux = Math.cos(base + off), uy = Math.sin(base + off), L = U.falconLen;
+      for (const e of run.enemies.items) {
+        if (e.dead) continue;
+        const t = Math.max(0, Math.min(L, (e.x - p.x) * ux + (e.y - p.y) * uy));
+        if (Math.hypot(e.x - p.x - ux * t, e.y - p.y - uy * t) <= w + e.radius) run.damageEnemy(e, dmg, a.def.name, { kx: ux, ky: uy, knock: 4 });
+      }
+      const f = run.addFx('line', p.x, p.y, C.gold, 0.35);
+      if (f) { f.x2 = p.x + ux * L; f.y2 = p.y + uy * L; f.w = w * 0.6; }
+      for (let k = 1; k <= 4; k++) { const r = run.addFx('ring', p.x + ux * L * k / 4, p.y + uy * L * k / 4, C.yellow, 0.3); if (r) r.r = w * 1.5; }
+    }
+    run.addShake(4);
+    run.showBanner(a.def.name + '!');
+  },
+
+  quake(run, a, P) {
+    // Trzęsienie ziemi (Borgun): fale uderzeniowe coraz szersze; ogłuszenie (bez bossów) dłuższe z furią.
+    const p = run.player, U = BAL.altUlt, waves = a.def.evolved ? U.quakeWavesEvo : U.quakeWaves;
+    const fury = run.hero.resource.kind === 'fury' ? resFrac(run) : 0;
+    const stun = U.quakeStun + P('duration') * 0.05 + fury * U.quakeFuryStun;
+    for (let i = 0; i < waves; i++) run.schedule(i * U.quakeGap, () => {
+      const r = P('radius') * (1.4 + i * 0.7) * run.stats.area;
+      run.enemiesInCircle(p.x, p.y, r, (e) => run.damageEnemy(e, P('damage') * U.quakeDmg * run.stats.might, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 5, stun: e.boss ? 0 : stun }));
+      const f = run.addFx('ring', p.x, p.y, C.brown, 0.35);
+      if (f) f.r = r;
+      run.burst(p.x, p.y, C.brown, 14, 90);
+      run.addShake(4);
+      sfx.play('explode');
+    });
+    run.showBanner(a.def.name + '!');
+  },
+
+  flare(run, a, P) {
+    // Rozbłysk słońca (Ignara): zużywa cały żar; po chwili ogromny wybuch wokół bohatera, bez przegrzania.
+    const p = run.player, U = BAL.altUlt, heat = run.hero.resource.kind === 'heat' ? resFrac(run) : 0;
+    if (heat > 0) run.res = 0;
+    const r = (P('radius') + P('blast')) * (1 + U.flareHeatR * heat) * run.stats.area, dmg = P('damage') * U.flareDmg * (1 + U.flareHeat * heat) * run.stats.might;
+    const f = run.addFx('ring', p.x, p.y, C.gold, U.flareDelay);
+    if (f) f.r = r;
+    const boom = () => {
+      run.enemiesInCircle(p.x, p.y, r, (e) => run.damageEnemy(e, dmg, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 6 }));
+      const ring = run.addFx('ring', p.x, p.y, C.yellow, 0.4);
+      if (ring) ring.r = r;
+      run.burst(p.x, p.y, C.orange, 30, 140);
+      run.addShake(6);
+      sfx.play('explode');
+    };
+    run.schedule(U.flareDelay, boom);
+    if (a.def.evolved) run.schedule(U.flareDelay + 0.6, boom);
+    run.showBanner(a.def.name + '!');
+  },
+
+  plague(run, a, P) {
+    // Zaraza (Morwen): trucizna na wszystkich widocznych; zmarły zaraża sąsiadów (Run.killEnemy, budżet na rzucenie).
+    const souls = spendSouls(run), U = BAL.altUlt;
+    run.plagueDmg = P('damage') * U.plagueDmg * souls.mul * run.stats.might;
+    run.plagueSpread = Math.max(1, Math.floor(P('count') / 2.5)) + (a.def.evolved ? 1 : 0);
+    run.plagueLeft = U.plagueBudget + souls.extra * 10;
+    run.plagueSlow = !!a.def.evolved;
+    for (const e of run.enemies.items) if (onScreen(run, e)) run.plagueInfect(e, run.plagueSlow);
+    run.burst(run.player.x, run.player.y, C.lime, 24, 120);
+    run.showBanner(a.def.name + '!');
+  },
+
+  deathmark(run, a, P) {
+    // Znak śmierci (Vesper): znakuje widocznych; po chwili każdy dostaje cięcie, poniżej progu ginie (bez bossów).
+    const U = BAL.altUlt;
+    // Ewolucja: mocniejsze cięcie i wyższy próg egzekucji.
+    const evo = a.def.evolved ? 1.5 : 1;
+    run.markDmg = P('damage') * U.markDmg * evo * run.stats.might;
+    run.markExec = U.markExec + P('duration') * 0.015 + (a.def.evolved ? 0.05 : 0) + (run.hero.resource.kind === 'streak' ? resFrac(run) * U.markStreak : 0);
+    run.markSrc = a.def.name;
+    for (const e of run.enemies.items) if (!e.dead && onScreen(run, e)) e.markT = U.markDelay;
+    run.showBanner(a.def.name + '!');
+  },
+
+  bastion(run, a, P) {
+    // Bastion światła (Aurel): kopuła wokół bohatera niszczy pociski wrogów; Wiara ją wydłuża; na koniec wybuch światła.
+    const faith = spendFaith(run, false), U = BAL.altUlt;
+    run.bastionT = (U.bastionTime + P('count') * U.bastionPerCount) * faith.mul * run.stats.duration;
+    run.bastionR = (P('radius') + P('blast')) * run.stats.area;
+    run.bastionDmg = P('damage') * run.stats.might;
+    run.bastionSrc = a.def.name;
+    run.bastionEvo = !!a.def.evolved;
+    run.showBanner(a.def.name + '!');
+  },
+
+  mushin(run, a, P) {
+    // Mushin (Takezo): kilka sekund pewnego odbicia (Mikiri), kontry z limitem na sekundę; Rytm od razu pełny.
+    const U = BAL.altUlt;
+    run.mushinT = Math.min(U.mushinMax, P('dist') / 30) * run.stats.duration;
+    run.mushinDmg = P('damage') * U.mushinDmg * run.stats.might;
+    run.mushinSrc = a.def.name;
+    run.mushinEvo = !!a.def.evolved;
+    rhythmGain(run, 999);
+    const f = run.addFx('ring', run.player.x, run.player.y, C.cyan, 0.4);
+    if (f) f.r = 30;
+    run.showBanner(a.def.name + '!');
+  },
+
   inferno(run, a, P) {
     a.activeT = P('duration') * run.stats.duration;
     run.showBanner(a.def.name + '!');
@@ -490,7 +604,7 @@ export function castAbility(run: Run, slot: AbilitySlot, free = false): void {
     }
   }
   CASTS[a.def.kind](run, a, P);
-  if (a.def.evolved) EVO_EXTRA[a.def.id]?.(run, a, P);
+  if (a.def.evolved && !a.def.alt) EVO_EXTRA[a.def.id]?.(run, a, P);
   if (a.def.kind !== 'dash') sfx.play('ability');
   if (free) return;
   // Wyczyny Twardziel i Czysta broń.

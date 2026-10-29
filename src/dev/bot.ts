@@ -21,7 +21,7 @@ import { spawnEnemy } from '../systems/spawner';
  * i skrzynie, używa umiejętności, losowo wybiera awanse, karty i węzły mapy. Raport w `window.__bot` (dla Playwright):
  * przebieg runów, błędy, najwolniejsze kroki, odwiedzone stany i brakujące tłumaczenia.
  */
-export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; relics?: string[]; parries?: number; tl?: TelemetrySample[]; maps?: { t: number; goal: string }[]; bosses?: number[]; statOnly?: number; offers?: number; statOffers?: number; sits?: { id: string; result: string; dur: number; taken: number }[] }
+export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; relics?: string[]; ult?: string; ultUses?: number; parries?: number; tl?: TelemetrySample[]; maps?: { t: number; goal: string }[]; bosses?: number[]; statOnly?: number; offers?: number; statOffers?: number; sits?: { id: string; result: string; dur: number; taken: number }[] }
 export interface BotReport {
   done: boolean;
   runs: BotRun[];
@@ -60,6 +60,7 @@ export class Bot {
   /** Styl ruchu (`&style=kite|melee|auto`): auto = melee dla bohaterów z bronią wręcz (cięcie), inaczej kite. */
   private readonly style: string;
   private runIdx = 0;
+  private ultMode = 'base';
   private cur: GameScreen | null = null;
   private wander = Math.random() * Math.PI * 2;
   private wait = 0;
@@ -89,6 +90,8 @@ export class Bot {
     this.turbo = Math.max(1, Number(params.get('turbo') ?? 1));
     this.god = params.get('god') === '1';
     this.style = params.get('style') ?? 'auto';
+    // R4: `&ult=alt` (drugi ultimate), `&ult=mix` (na zmianę w kolejnych runach).
+    this.ultMode = params.get('ult') ?? 'base';
     // Pomiar balansu: `&pmax=1e6` zdejmuje sufit mnożnika siły (BAL.power.max), żeby telemetria pokazała prawdziwy zakres.
     if (params.has('pmax')) (BAL.power as { max: number }).max = Number(params.get('pmax'));
     this.tier = Math.max(1, Math.min(4, Number(params.get('tier') ?? 1)));
@@ -251,7 +254,7 @@ export class Bot {
   private finish(run: any, result: string): void { // eslint-disable-line @typescript-eslint/no-explicit-any
     this.report.runs.push({
       hero: run.hero.id, mode: this.mode, result, time: Math.round(run.totalTime), level: run.level, kills: run.kills,
-      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, sits: run.sitLog, maps: this.maps, bosses: this.bosses, statOnly: this.statOnly, offers: this.offers, statOffers: this.statOffers, relics: [...run.relics], build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
+      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, sits: run.sitLog, maps: this.maps, bosses: this.bosses, statOnly: this.statOnly, offers: this.offers, statOffers: this.statOffers, relics: [...run.relics], ult: run.altUlt ? 'alt' : 'base', ultUses: run.ultUses, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     this.steps = [];
     this.maps = []; this.bosses = []; this.lastLt = 0; this.bossT = 0; this.statOnly = this.offers = this.statOffers = 0;
@@ -273,6 +276,8 @@ export class Bot {
     const hero = this.heroes[this.runIdx % this.heroes.length];
     this.runIdx++;
     this.app.save.slots[this.mode] = null;
+    const alt = this.ultMode === 'alt' || (this.ultMode === 'mix' && this.runIdx % 2 === 1);
+    this.app.save.altUlt = { ...this.app.save.altUlt, [hero]: alt };
     this.cur = new GameScreen(this.app, this.tutorial ? 'kestra' : hero, this.mode, undefined, this.tutorial);
     this.app.go(this.cur);
   }

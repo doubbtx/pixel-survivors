@@ -218,3 +218,55 @@ export const HERO_ICONS: Record<string, (p: Painter) => void> = {
     p.thin(0.5, 1.5, 15.5, 7, C.white).thin(0.5, 7, 15.5, 1.5, C.white).thin(0.5, 1.9, 15.5, 7.4, C.red).thin(0.5, 7.4, 15.5, 1.9, C.red);
   },
 };
+
+// ===================== R4: drugie ultimate (0.45) =====================
+const ALT_ULT_ICONS: Record<string, (p: Painter) => void> = {
+  ab_k_falcon: (p) => {
+    // Strzał sokoła: długa złota strzała po skosie z falą uderzeniową przy grocie.
+    p.stroke(1, 15, 12, 4, C.dbrown).thin(1.5, 14.5, 12, 4, C.tan);
+    p.poly([[11, 3], [15.5, 0.5], [13, 5]], C.white).poly([[11.5, 3.5], [14.5, 1.2], [12.5, 4.5]], C.yellow);
+    p.poly([[1, 15], [0.5, 12], [3, 13]], C.gold).poly([[1, 15], [4, 15.5], [3, 13]], C.gold);
+    halo(p, 13, 3, 3, C.yellow);
+  },
+  ab_b_quake: (p) => {
+    // Trzęsienie ziemi: pęknięta ziemia i trzy łuki fali.
+    p.polyShade([[0.5, 11], [15.5, 11], [15.5, 15.5], [0.5, 15.5]], RAMP.wood);
+    p.thin(8, 11, 6, 13.5, C.black).thin(6, 13.5, 8.5, 15.5, C.black).thin(8, 11, 11, 13, C.black);
+    halo(p, 8, 10, 3, C.orange);
+    halo(p, 8, 10, 5.5, C.brown);
+    halo(p, 8, 10, 7.5, C.tan);
+  },
+  ab_i_flare: (p) => {
+    // Rozbłysk słońca: jasne słońce z promieniami.
+    for (let k = 0; k < 8; k++) { const a = (k / 8) * TAU; p.thin(8 + Math.cos(a) * 4, 8 + Math.sin(a) * 4, 8 + Math.cos(a) * 7.5, 8 + Math.sin(a) * 7.5, k % 2 ? C.orange : C.yellow); }
+    p.sphere(8, 8, 4, 4, [C.orange, C.gold, C.yellow, C.white]);
+  },
+  ab_m_plague: (p) => {
+    // Zaraza: zielona chmura z czaszką.
+    p.sphere(5, 9, 4, 3.5, RAMP.green).sphere(11, 9, 4, 3.5, RAMP.green).sphere(8, 6, 4.5, 4, RAMP.green);
+    p.sphere(8, 9, 2.6, 2.4, RAMP.bone).px(7, 9, C.black).px(9, 9, C.black).px(8, 11, C.dgray);
+    p.px(2, 3, C.lime).px(14, 2, C.lime).px(13, 14, C.lime);
+  },
+  ab_v_mark: (p) => {
+    // Znak śmierci: czerwony krzyż nad czaszką.
+    p.sphere(8, 10, 4, 3.6, RAMP.bone).px(6.5, 10, C.black).px(9.5, 10, C.black).rect(7, 12.5, 2, 1, C.dgray);
+    p.stroke(2, 1, 14, 7, C.red).stroke(14, 1, 2, 7, C.red).thin(2.5, 1, 14, 6.5, C.salmon);
+  },
+  ab_a_bastion: (p) => {
+    // Bastion światła: złota kopuła nad postacią, pociski się rozbijają.
+    halo(p, 8, 12, 7, C.gold);
+    p.thin(1, 12, 3, 6, C.yellow).thin(3, 6, 8, 3, C.yellow).thin(8, 3, 13, 6, C.yellow).thin(13, 6, 15, 12, C.yellow);
+    p.rect(7, 8, 2, 5, C.white).px(8, 7, C.yellow);
+    p.px(1, 3, C.red).px(15, 2, C.red).px(2, 2, C.white).px(14, 3, C.white);
+  },
+  ab_t_mushin: (p) => {
+    // Mushin: pusty krąg (ensō) i miecz w środku.
+    halo(p, 8, 8, 6.5, C.lgray);
+    p.thin(8, 2, 8, 14, C.white).thin(8.5, 2, 8.5, 13, C.cyan).rect(6, 11, 5, 1, C.gold);
+  },
+};
+for (const [id, fn] of Object.entries(ALT_ULT_ICONS)) {
+  HERO_ICONS[id] = fn;
+  // Ewolucja: ta sama ikona ze złotą gwiazdką w rogu.
+  HERO_ICONS[`${id}_evo`] = (p) => { fn(p); p.disc(13, 3, 2.6, C.black); p.poly([[13, 0.4], [13.8, 2.2], [15.6, 3], [13.8, 3.8], [13, 5.6], [12.2, 3.8], [10.4, 3], [12.2, 2.2]], C.gold).px(13, 3, C.white); };
+}

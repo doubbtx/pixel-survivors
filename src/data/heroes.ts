@@ -10,7 +10,8 @@ import type { Tag } from './cards';
  */
 export type AbilitySlot = 'q' | 'e' | 'dash' | 'ult';
 export type AbilityKind = 'volley' | 'net' | 'dash' | 'rain' | 'charge' | 'slam' | 'titan' | 'fireball' | 'firering' | 'inferno' | 'summon' | 'curse' | 'legion'
-  | 'shadowstep' | 'execute' | 'bladedance' | 'guardian' | 'lance' | 'sanctum' | 'judgment' | 'overhead' | 'flurry' | 'iai';
+  | 'shadowstep' | 'execute' | 'bladedance' | 'guardian' | 'lance' | 'sanctum' | 'judgment' | 'overhead' | 'flurry' | 'iai'
+  | 'falcon' | 'quake' | 'flare' | 'plague' | 'deathmark' | 'bastion' | 'mushin';
 
 export interface AbilityDef {
   id: string;
@@ -36,6 +37,8 @@ export interface AbilityDef {
   evo?: { tag: Tag; name: string; desc: string; icon: string; bonus: Record<string, number> };
   /** Wersja po ewolucji (tworzona przez evolveAbility). */
   evolved?: boolean;
+  /** Drugi ultimate (R4): to samo `id` co pierwszy (flagi drzewka i kart), własna ewolucja w swoim zachowaniu. */
+  alt?: boolean;
 }
 
 /**
@@ -157,6 +160,10 @@ export const HEROES: HeroDef[] = [
         evo: { tag: 'Umiejętności', name: 'Nawałnica z nieba', desc: 'Większy i dłuższy grad, a drugi spada wokół ciebie.', icon: 'ab_k_rain_evo', bonus: { radius: 25, duration: 2, damage: 10 } },
       },
     ],
+    altUlt: { id: 'k_rain', alt: true, name: 'Falcon Shot', icon: 'ab_k_falcon', desc: 'One huge arrow along your aim that pierces everything in a long line. Spends all Focus for more damage.', slot: 'ult', kind: 'falcon', color: C.gold,
+      cooldown: 0, cdPerLevel: 0, charge: 110, maxLevel: 5,
+      p: { damage: 90, radius: 52, duration: 3.5 }, pl: { damage: 40, radius: 6 },
+      evo: { tag: 'Umiejętności', name: 'Falcon Storm', desc: 'Three huge arrows in a fan.', icon: 'ab_k_falcon_evo', bonus: { damage: 30 } } },
   },
   {
     id: 'borgun', name: 'Borgun', role: 'Wojownik', sprite: 'borgun', color: C.red,
@@ -190,6 +197,10 @@ export const HEROES: HeroDef[] = [
         evo: { tag: 'Życie', name: 'Awatar', desc: 'Dłuższy gniew, większa aura i leczenie 2% HP na sekundę.', icon: 'ab_b_titan_evo', bonus: { duration: 3, damage: 15, radius: 15 } },
       },
     ],
+    altUlt: { id: 'b_titan', alt: true, name: 'Earthquake', icon: 'ab_b_quake', desc: 'Three ever wider shockwaves around you: damage, knockback and a short stun (not on bosses). Fury makes the stun longer.', slot: 'ult', kind: 'quake', color: C.brown,
+      cooldown: 0, cdPerLevel: 0, charge: 140, maxLevel: 5,
+      p: { duration: 7, damage: 40, radius: 40 }, pl: { duration: 1, damage: 15, radius: 4 },
+      evo: { tag: 'Życie', name: 'World Breaker', desc: 'Five shockwaves instead of three.', icon: 'ab_b_quake_evo', bonus: { damage: 15, radius: 10 } } },
   },
   {
     id: 'ignara', name: 'Ignara', role: 'Mag ognia', sprite: 'ignara', color: C.orange,
@@ -223,6 +234,10 @@ export const HEROES: HeroDef[] = [
         evo: { tag: 'Umiejętności', name: 'Kataklizm', desc: 'Dłuższy deszcz meteorów, które spadają dwa razy gęściej.', icon: 'ab_i_inferno_evo', bonus: { duration: 2, damage: 15 } },
       },
     ],
+    altUlt: { id: 'i_inferno', alt: true, name: 'Solar Flare', icon: 'ab_i_flare', desc: 'Spends all Heat (no overheating): after a moment a huge explosion around you. More Heat = bigger and stronger.', slot: 'ult', kind: 'flare', color: C.gold,
+      cooldown: 0, cdPerLevel: 0, charge: 130, maxLevel: 5,
+      p: { duration: 5, damage: 60, radius: 90, blast: 22 }, pl: { damage: 25, blast: 4 },
+      evo: { tag: 'Umiejętności', name: 'Twin Suns', desc: 'A second explosion right after the first.', icon: 'ab_i_flare_evo', bonus: { damage: 20 } } },
   },
   {
     id: 'morwen', name: 'Morwen', role: 'Przywoływaczka', sprite: 'morwen', color: C.pink,
@@ -256,6 +271,10 @@ export const HEROES: HeroDef[] = [
         evo: { tag: 'Umiejętności', name: 'Nieśmiertelny legion', desc: 'Więcej wojowników, a każdy na koniec wybucha (3x obrażeń).', icon: 'ab_m_legion_evo', bonus: { count: 2, damage: 15 } },
       },
     ],
+    altUlt: { id: 'm_legion', alt: true, name: 'Plague', icon: 'ab_m_plague', desc: 'Poisons and slows every enemy on screen. An infected enemy that dies passes the plague to its neighbours. Souls make the poison stronger.', slot: 'ult', kind: 'plague', color: C.lime,
+      cooldown: 0, cdPerLevel: 0, charge: 110, maxLevel: 5,
+      p: { count: 5, damage: 40, duration: 12 }, pl: { count: 1, damage: 15 },
+      evo: { tag: 'Umiejętności', name: 'Black Death', desc: 'The plague spreads further and slows the infected.', icon: 'ab_m_plague_evo', bonus: { count: 2, damage: 15 } } },
   },
   {
     id: 'vesper', name: 'Vesper', role: 'Zabójczyni', sprite: 'vesper', color: C.salmon,
@@ -289,6 +308,10 @@ export const HEROES: HeroDef[] = [
         evo: { tag: 'Umiejętności', name: 'Burza ostrzy', desc: 'Dłuższy taniec, a cienie tną dwa razy częściej.', icon: 'ab_v_dance_evo', bonus: { duration: 1.5, damage: 15 } },
       },
     ],
+    altUlt: { id: 'v_dance', alt: true, name: 'Death Mark', icon: 'ab_v_mark', desc: 'Marks every enemy on screen. A moment later each one is cut, and those below a share of their HP die at once (not bosses). Combo raises the share.', slot: 'ult', kind: 'deathmark', color: C.red,
+      cooldown: 0, cdPerLevel: 0, charge: 130, maxLevel: 5,
+      p: { duration: 3.5, damage: 30 }, pl: { duration: 0.4, damage: 12 },
+      evo: { tag: 'Umiejętności', name: 'Reaper Mark', desc: 'A stronger cut and a higher kill threshold.', icon: 'ab_v_mark_evo', bonus: { damage: 15 } } },
   },
   {
     id: 'aurel', name: 'Aurel', role: 'Kapłan', sprite: 'aurel', color: C.yellow,
@@ -323,6 +346,10 @@ export const HEROES: HeroDef[] = [
         evo: { tag: 'Umiejętności', name: 'Sąd ostateczny', desc: 'Po chwili spada druga fala słupów, a wiara nie przepada w całości.', icon: 'ab_a_judge_evo', bonus: { count: 4, damage: 25 } },
       },
     ],
+    altUlt: { id: 'a_judge', alt: true, name: 'Bastion of Light', icon: 'ab_a_bastion', desc: 'A dome of light around you destroys enemy projectiles for a few seconds, then bursts and hurts nearby enemies. Faith makes it last longer.', slot: 'ult', kind: 'bastion', color: C.yellow,
+      cooldown: 0, cdPerLevel: 0, charge: 130, maxLevel: 5,
+      p: { count: 8, damage: 70, radius: 60, blast: 0 }, pl: { count: 2, damage: 25 },
+      evo: { tag: 'Umiejętności', name: 'Fortress of Dawn', desc: 'Every destroyed projectile heals you a little.', icon: 'ab_a_bastion_evo', bonus: { count: 4, damage: 25 } } },
   },
   {
     // Takezo (0.32): szermierz na wzór Miyamoto Musashiego — dwa miecze (Niten Ichi-ryū), rytm walki (hyōshi), cięcie iai.
@@ -357,6 +384,10 @@ export const HEROES: HeroDef[] = [
         evo: { tag: 'Krytyk', name: 'Final Cut', desc: 'After the cut you dash back along the path and cut it again.', icon: 'ab_t_iai_evo', bonus: { damage: 60, width: 6 } },
       },
     ],
+    altUlt: { id: 't_iai', alt: true, name: 'Mushin', icon: 'ab_t_mushin', desc: 'For a few seconds you parry every hit and projectile, answering with counter cuts. Rhythm fills at once (Flow).', slot: 'ult', kind: 'mushin', color: C.cyan,
+      cooldown: 0, cdPerLevel: 0, charge: 120, maxLevel: 5,
+      p: { damage: 120, dist: 150 }, pl: { damage: 45, dist: 10 },
+      evo: { tag: 'Krytyk', name: 'Empty Mind', desc: 'Twice as many counter cuts per second.', icon: 'ab_t_mushin_evo', bonus: { damage: 60 } } },
   },
 ];
 

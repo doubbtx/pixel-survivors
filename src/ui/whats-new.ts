@@ -18,6 +18,13 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.45',
+    lines: [
+      "Every hero now has a second ultimate to choose from: press R on the hero screen. Kestra: Falcon Shot, Borgun: Earthquake, Ignara: Solar Flare, Morwen: Plague, Vesper: Death Mark, Aurel: Bastion of Light, Takezo: Mushin. Your Progress upgrades and cards for the ultimate work with both.",
+      "After a boss you gain at most 3 levels at once from the collected crystals (it used to be up to 27 level ups in a row).",
+    ],
+  },
+  {
     version: '0.44',
     lines: [
       "After a boss the most important choices come first (relic, boss power, cards), then level ups, loot last. A counter in the corner shows how many rewards are left, and level ups in a row open faster.",

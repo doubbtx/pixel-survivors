@@ -557,6 +557,18 @@ export const BAL = {
   /** Powyżej tej liczby pocisków zwykli wrogowie wstrzymują ogień (boss strzela zawsze) — czytelność. */
   /** 0.44: 500 → 320 (playtest 2: 400-580 pocisków w 3-6 min); strzelają tylko widoczni (margines shootMargin), a pocisk mocniejszy (bulletDmg). */
   enemyBulletSoftCap: 320,
+  /** R4 (0.45): drugie ultimate — liczby (parametry z poziomu ulta: damage, radius, duration, count, blast, dist). */
+  altUlt: {
+    falconLen: 300, falconW: 10, falconFocus: 0.02,
+    quakeWaves: 3, quakeWavesEvo: 5, quakeGap: 0.45, quakeStun: 0.5, quakeFuryStun: 0.6, quakeDmg: 1.6,
+    flareDelay: 0.8, flareDmg: 4, flareHeat: 1.5, flareHeatR: 0.5,
+    plagueDmg: 1.2, plagueBudget: 60, plagueR: 60, plagueStacks: 4, plagueSlowT: 5,
+    markDelay: 1.5, markDmg: 2.5, markExec: 0.15, markStreak: 0.1,
+    bastionTime: 3, bastionPerCount: 0.125, bastionHeal: 0.002,
+    mushinDmg: 0.4, mushinCounters: 6, mushinMax: 5,
+  },
+  /** Maks. awansów z zebrania kryształów całej mapy po bossie / końcu poziomu (0.45, analiza Agenta 2). */
+  collectLevels: 3,
   shootMargin: 10,
   projectileCap: 2600,
 

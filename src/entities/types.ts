@@ -110,6 +110,9 @@ export interface Enemy extends Poolable {
   /** Piętno Aurela (0.43): pozostały czas; trafienia gracza w napiętnowanego leczą (wspólny budżet). brandBoom: wybuch przy śmierci (Włócznia świtu). */
   brandT: number;
   brandBoom: boolean;
+  /** R4: Zaraza (Morwen) — zarażony przekazuje truciznę przy śmierci; Znak śmierci (Vesper) — czas do cięcia (s, 0 = brak). */
+  plague: boolean;
+  markT: number;
   tx: number;
   ty: number;
   /** Pozostałe salwy serii i czas do następnej. */

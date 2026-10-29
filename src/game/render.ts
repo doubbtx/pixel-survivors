@@ -481,6 +481,12 @@ function drawWorld(run: Run, r: Renderer): void {
     }
     // Wzmocniony przez dowódcę: złota kropka nad wrogiem.
     if (e.buffT > 0 && !e.elite) drawSprite(g, 'buffmark', ex, ey - (e.radius * e.scale + 5) * ZOOM);
+    // Znak śmierci (R4): czerwony krzyżyk nad wrogiem do chwili cięcia.
+    if (e.markT > 0) {
+      const my = ey - (e.radius * e.scale + 8) * ZOOM, ms = 3 * ZOOM;
+      r.line(ex - ms, my - ms, ex + ms, my + ms, C.red, 2);
+      r.line(ex + ms, my - ms, ex - ms, my + ms, C.red, 2);
+    }
     // Piętno Aurela: złoty krzyżyk z białym środkiem pod wrogiem (miga w ostatniej sekundzie).
     if (e.brandT > 0 && (e.brandT > 1 || (run.step >> 3) % 2 === 0)) {
       const by = ey + (e.radius * e.scale + 3) * ZOOM, bs = 3 * ZOOM;
@@ -585,6 +591,12 @@ function drawWorld(run: Run, r: Renderer): void {
     });
   };
   drawHero(ghost ? 0.55 : 1);
+  // Bastion światła (R4): złota kopuła wokół bohatera (pociski wrogów w niej znikają).
+  if (run.bastionT > 0) {
+    const rr = run.bastionR * ZOOM;
+    r.withAlpha(0.12, () => r.circle(px, py, rr, C.yellow, true));
+    r.withAlpha(0.6 + 0.2 * Math.sin(run.time * 8), () => r.circle(px, py, rr, C.gold));
+  }
   if (p.shield > 0) {
     // Tarcza: jeden czytelny pierścień (bez nakładających się poświat).
     r.withAlpha(0.6, () => r.circle(px, py + 1, 13, C.cyan));

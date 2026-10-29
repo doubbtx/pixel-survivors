@@ -79,7 +79,7 @@ const ROMAN_TIER = ['', 'I', 'II', 'III', 'IV'];
  * Źródła zadające procent HP wroga — pomijane w pomiarze siły buildu (inaczej mocniejsi wrogowie podbijaliby DPS),
  * razem z obrażeniami wywołanymi przez ich trafienia (hooki onHit); takie trafienia nie nakładają żywiołów.
  */
-const PCT_SOURCES = new Set(['Egzekucja', 'Ognista dusza', 'Wybuchowe zgony', 'Synergia: Ogień', 'Supernowa']);
+const PCT_SOURCES = new Set(['Egzekucja', 'Ognista dusza', 'Wybuchowe zgony', 'Synergia: Ogień', 'Supernowa', 'Death Mark: execute']);
 
 export interface DamageOpts {
   /** Kierunek odrzutu (nie musi być znormalizowany) i jego siła. */
@@ -364,6 +364,25 @@ export class Run {
   /** Przepływ (Rytm Takezo): pozostały czas i pełny czas (flaga rhythm.flow wydłuża). */
   flowT = 0;
   flowMax = 1;
+  /** R4: stan drugich ultów — Zaraza, Znak śmierci, Bastion światła, Mushin (ustawiane w systems/abilities.ts). */
+  plagueDmg = 0;
+  plagueSpread = 0;
+  plagueLeft = 0;
+  plagueSlow = false;
+  markDmg = 0;
+  markExec = 0;
+  markSrc = '';
+  bastionT = 0;
+  bastionR = 0;
+  bastionDmg = 0;
+  bastionSrc = '';
+  bastionEvo = false;
+  mushinT = 0;
+  mushinDmg = 0;
+  mushinSrc = '';
+  mushinEvo = false;
+  private mushinWin = 0;
+  private mushinCnt = 0;
   /** Rytm opada (0.43): po otrzymaniu obrażeń pasek spada do zera (bez przyrostu), potem buduje się od nowa. */
   rhythmDrain = false;
   /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej). */
@@ -624,6 +643,7 @@ export class Run {
     this.rageT = 0;
     this.flowT = 0;
     this.rhythmDrain = false;
+    this.bastionT = 0; this.mushinT = 0; this.markDmg = 0; this.plagueLeft = 0;
     delete this.cardState['sec.berserk'];
     // Błogosławieństwo kapliczki Ekspedycji na kolejne mapy (trwa cały poziom).
     const bless = this.expedition?.blessing ? EX_BLESSINGS.find((b) => b.id === this.expedition!.blessing!.id) : null;
@@ -786,6 +806,7 @@ export class Run {
     if (!this.scripted) updateLevelEvents(this, dt);
     updateAbilities(this, input, dt);
     updateResource(this, dt);
+    this.updateAltUlts(dt);
     updateWeapons(this, dt);
     updateTurrets(this, dt);
     updateMinions(this, dt);
@@ -1054,6 +1075,71 @@ export class Run {
   }
 
   /** Tekst unoszący się nad światem (np. "Egzekucja!"). */
+  /** R4: Znak śmierci (cięcie po czasie, egzekucja poniżej progu), Bastion światła (kopuła niszczy pociski), Mushin (czas). */
+  private updateAltUlts(dt: number): void {
+    const p = this.player, U = BAL.altUlt;
+    if (this.markDmg > 0) {
+      let any = false;
+      for (const e of this.enemies.items) {
+        if (e.dead || e.markT <= 0) continue;
+        any = true;
+        e.markT -= dt;
+        if (e.markT > 0) continue;
+        e.markT = 0;
+        this.damageEnemy(e, this.markDmg, this.markSrc, { forceCrit: true });
+        if (!e.dead && !e.boss && e.hp < e.maxHp * this.markExec) this.damageEnemy(e, e.hp + 1, 'Death Mark: execute');
+        const f = this.addFx('line', e.x - 8, e.y - 8, C.red, 0.15);
+        if (f) { f.x2 = e.x + 8; f.y2 = e.y + 8; f.w = 2; }
+      }
+      if (!any) this.markDmg = 0;
+    }
+    if (this.bastionT > 0) {
+      this.bastionT -= dt;
+      const r2 = this.bastionR * this.bastionR, items = this.bullets.items;
+      for (let i = items.length - 1; i >= 0; i--) {
+        const b = items[i];
+        if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 > r2) continue;
+        this.bullets.release(b);
+        if (this.bastionEvo) this.drainHeal(U.bastionHeal);
+      }
+      if (this.bastionT <= 0) {
+        this.enemiesInCircle(p.x, p.y, this.bastionR * 1.3, (e) => this.damageEnemy(e, this.bastionDmg, this.bastionSrc, { kx: e.x - p.x, ky: e.y - p.y, knock: 5 }));
+        const f = this.addFx('ring', p.x, p.y, C.yellow, 0.4);
+        if (f) f.r = this.bastionR * 1.3;
+        this.addShake(4);
+      }
+    }
+    if (this.mushinT > 0) {
+      this.mushinT -= dt;
+      this.mushinWin -= dt;
+      if (this.mushinWin <= 0) { this.mushinWin = 1; this.mushinCnt = 0; }
+    }
+  }
+
+  /** Zaraza (R4): zarażenie — kilka stosów trucizny naraz; odporny na truciznę pominięty (nie zużywa budżetu). */
+  plagueInfect(e: Enemy, slow: boolean): boolean {
+    if (e.dead || e.plague || this.resistOf(e) === 'poison') return false;
+    e.plague = true;
+    this.applyElement(e, 'poison', this.plagueDmg);
+    e.poisonStacks = Math.min(ELEM.poisonMaxStacks, e.poisonStacks + BAL.altUlt.plagueStacks - 1);
+    // Zarażeni zawsze spowolnieni (Czarna śmierć: mocniej) — Zaraza ma też chronić, nie tylko ranić.
+    e.slowT = Math.max(e.slowT, BAL.altUlt.plagueSlowT);
+    e.slowF = Math.max(e.slowF, slow ? 0.5 : 0.3);
+    return true;
+  }
+
+  /** Zaraza (R4): zmarły zarażony przekazuje truciznę `plagueSpread` najbliższym (globalny budżet na rzucenie). */
+  private spreadPlague(e: Enemy): void {
+    const U = BAL.altUlt;
+    let n = this.plagueSpread;
+    this.enemiesInCircle(e.x, e.y, U.plagueR, (o) => {
+      if (n <= 0 || this.plagueLeft <= 0 || !this.plagueInfect(o, this.plagueSlow)) return;
+      n--; this.plagueLeft--;
+      const f = this.addFx('line', e.x, e.y, C.lime, 0.2);
+      if (f) { f.x2 = o.x; f.y2 = o.y; f.w = 1; }
+    });
+  }
+
   /** Leczenie z trafienia Sierpa krwi: ułamek maks. HP, w ramach sekundowego budżetu (nie skaluje się z obrażeniami). */
   drainHeal(frac: number, faith = 1): void {
     if (this.relic('chalice')) return;
@@ -1239,6 +1325,21 @@ export class Run {
       }
       this.emit('onLevelUp');
     }
+  }
+
+  /**
+   * XP z zebrania całej mapy (koniec poziomu, wejście do lochu): najwyżej BAL.collectLevels awansów, porcjami do końca paska
+   * (połączone kryształy niosą XP na wiele poziomów); nadwyżka zostaje do 90% paska, reszta przepada.
+   */
+  addXpCapped(raw: number): void {
+    let left = raw * this.stats.growth;
+    const cap = this.level + BAL.collectLevels;
+    while (left > 0 && this.level < cap) {
+      const need = this.xpNext - this.xp, part = Math.min(left, need);
+      left -= part;
+      this.addXp(part / this.stats.growth);
+    }
+    if (left > 0) this.xp = Math.min(this.xpNext * 0.9, this.xp + left);
   }
 
   /** Stopień Wierności broni (BAL.loyal); 0, gdy gracz ma więcej niż jedną broń. */
@@ -1504,6 +1605,7 @@ export class Run {
 
   killEnemy(e: Enemy): void {
     e.dead = true;
+    if (e.plague && this.plagueLeft > 0) this.schedule(0, () => this.spreadPlague(e));
     // Włócznia świtu: napiętnowany wybucha światłem (jedna fala, wybuch nie piętnuje).
     if (e.brandT > 0 && e.brandBoom && this.lastHitSrc !== 'Dawn Burst') {
       const B = BAL.brand, dmg = (this.cardState.lanceDmg ?? 0) * B.boom;
@@ -1683,8 +1785,12 @@ export class Run {
 
   /** Klejnoty, monety i skrzynie z całej mapy trafiają od razu do gracza; pociski wrogów znikają. */
   private collectAll(): void {
-    for (const g of this.gems.items) this.addXp(g.value);
+    // Najwyżej BAL.collectLevels awansów z zebrania całej mapy (0.45: przy bossie bywało 27 naraz — lawina okien i skok
+    // poziomu podbijający HP wrogów); nadwyżka XP zostaje do następnego poziomu (do 90% paska), reszta przepada.
+    let total = 0;
+    for (const g of this.gems.items) total += g.value;
     this.gems.clear();
+    this.addXpCapped(total);
     for (const it of this.pickups.items) {
       if (it.kind === 'coin') this.gold += it.value * this.stats.greed;
       if (it.kind === 'chest' && it.item) this.pendingLoot.push({ source: it.source, item: it.item });
@@ -1711,10 +1817,14 @@ export class Run {
    * Zwraca true, gdy trafienie zostało odbite.
    */
   private tryParry(bullet?: { x: number; y: number; vx: number; vy: number }): boolean {
-    const ch = this.parryChance();
+    // Mushin (R4): każde trafienie odbite; kontry (cięcie, odbity pocisk) z limitem na sekundę (wydajność).
+    const mushin = this.mushinT > 0;
+    const ch = mushin ? 1 : this.parryChance();
     if (ch <= 0 || !rng.chance(ch)) return false;
-    const p = this.player, P = BAL.resource.parry, dmg = this.cardDamage(this.hero.passive.value);
+    const p = this.player, P = BAL.resource.parry, dmg = mushin ? this.mushinDmg : this.cardDamage(this.hero.passive.value);
     p.iframes = Math.max(p.iframes, P.iframes);
+    if (mushin && this.mushinCnt >= BAL.altUlt.mushinCounters * (this.mushinEvo ? 2 : 1)) return true;
+    if (mushin) this.mushinCnt++;
     this.enemiesInCircle(p.x, p.y, P.riposteR * this.stats.area, (e) => this.damageEnemy(e, dmg, this.hero.passive.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 3 }));
     const f = this.addFx('arc', p.x, p.y, C.white, 0.18);
     if (f) { const a = bullet ? Math.atan2(bullet.y - p.y, bullet.x - p.x) : rng.range(0, Math.PI * 2); f.r = 14; f.a0 = a - 1.2; f.a1 = a + 1.2; }
@@ -2119,7 +2229,7 @@ function newEnemy(): Enemy {
     flash: 0, slowT: 0, slowF: 0, stunT: 0, shootT: 0, shootA: 0, age: 0, dead: false, elite: null, boss: false,
     scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0, abilT: 0,
     burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, reactT: 0, brittle: 0, hitStamp: new Int32Array(SLOT_COUNT),
-    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false, sit: 0, summons: 0, traitT: 0, buffT: 0, brandT: 0, brandBoom: false,
+    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false, sit: 0, summons: 0, traitT: 0, buffT: 0, brandT: 0, brandBoom: false, plague: false, markT: 0,
   };
 }
 
