@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.47.1)
+## Stan (wersja 0.48.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -734,6 +734,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   wroga, bez stanów i PCT_SOURCES; pierścień przy bohaterze `run.closeAt`, telemetria `close` w bocie). `BAL.homing` zasięg wyboru
   celu bolt 200→160, chain 170→130. Bot: `&kit=a,b` (tylko te bronie na maks., bez awansów) i `&style=idle`. Pomiar (god, 180 s,
   1 broń): wręcz ≈ pociski (2000–2900 zabójstw); A/B 7 bohaterów: Borgun 140→172 s, reszta w szumie.
+- 0.48.0 (playtest 4 + gracz: „na telefonie nie da się zmienić ulta”): audyt dotyku (Explore) → HeroSelect: przycisk ultimate
+  (ULT_X/ULT_W między Wstecz a Start, każda zakładka) i skórki (`skinAt`); PowerPick przycisk Pomiń (SKIP_BTN); Pakty Resetuj;
+  ControlsScreen: dotknięcie anuluje `input.capture`; items/shop/meta/cards: przy `lastDevice === 'touch'` pierwsze dotknięcie
+  zaznacza, drugie działa; mapa: dotknięcie dalszego węzła = podgląd. Playtest 4: drugi węzeł aktu 1 z połową ulgi
+  (`gentle.second`), okienko zasad Udręki 3 s po zmianie (`torAt`), plakietka esencji z mnożnikiem Udręki, pierścień bliskiego
+  dystansu biały + podpowiedź 'close', przy ≥ flashCrowd wrogach połowa wybuchów i krytyki do `juice.numbersCrowd` (24),
+  Rozbłysk z 12 promieniami. Bot `&kit=` naprawiony (xpNext = ∞, awans → skip), `&easy=1`. Pomiar: Kestra god 15 min 1–440 mln
+  DPS (0.46.3: 0.2–327 mln) — rozrzut sprzed 0.47, nie regresja.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula
