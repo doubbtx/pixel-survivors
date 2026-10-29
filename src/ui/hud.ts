@@ -55,6 +55,8 @@ interface HudAnim {
   level: number;
   levelFlash: number;
   gold: number;
+  /** Wyświetlane złoto: dolicza się płynnie do `run.gold` (spadki od razu). */
+  goldShown: number;
   goldFlash: number;
   combo: number;
   comboText: string;
@@ -73,7 +75,7 @@ function animFor(run: Run): HudAnim {
     const hp = Math.max(0, run.player.hp / run.stats.maxHp);
     a = {
       last: performance.now(), hp, hpTrail: hp, trailHold: 0, hitFlash: 0, hitT: 0, hitAmt: 0, hpAbs: run.player.hp, xp: run.xp / run.xpNext, level: run.level, levelFlash: 0,
-      gold: run.gold, goldFlash: 0, combo: 0, comboText: '',
+      gold: run.gold, goldShown: run.gold, goldFlash: 0, combo: 0, comboText: '',
       ready: { q: abilityReady(run, 'q'), e: abilityReady(run, 'e'), dash: abilityReady(run, 'dash'), ult: abilityReady(run, 'ult') },
       readyFlash: { q: 0, e: 0, dash: 0, ult: 0 },
     };
@@ -109,6 +111,8 @@ function tickAnim(run: Run, a: HudAnim): void {
   // Złoto: krótki błysk licznika przy zdobyciu.
   if (run.gold > a.gold) a.goldFlash = 0.45;
   a.gold = run.gold;
+  a.goldShown = run.gold <= a.goldShown ? run.gold : a.goldShown + Math.max(1, (run.gold - a.goldShown) * Math.min(1, dt * 8));
+  if (a.goldShown > run.gold) a.goldShown = run.gold;
   a.goldFlash = Math.max(0, a.goldFlash - dt);
   // Kombo: etykieta pojawia się i wygasza płynnie (tekst zostaje na czas wygaszania).
   const comboOn = run.combo >= 10;
@@ -358,7 +362,7 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): number {
 /** Zabójstwa i złoto w jednym wierszu (prawy górny róg, szerokość minimapy). Zwraca dolną krawędź. */
 function drawCounters(r: Renderer, run: Run, a: HudAnim): number {
   const g = r.g, y = UI.edge + UI.xpH, right = W - UI.edge;
-  const kills = fmt(run.kills), gold = fmt(Math.floor(run.gold));
+  const kills = fmt(run.kills), gold = fmt(Math.floor(a.goldShown));
   const kw = textWidth(kills) * smallS(), gw = textWidth(gold) * smallS();
   const x = right - Math.max(kw + gw + 34, UI.minimap.w);
   tile(r, x, y, right - x, 11);
@@ -538,13 +542,23 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
     r.rect(P.x + 6, P.y + 5, 3, 10, C.white);
     r.rect(P.x + 11, P.y + 5, 3, 10, C.white);
     const s = input.stick;
+    // Joystick: obręcz z kreskami kierunków i kulka z odblaskiem; bez palca blady zarys w lewym dolnym rogu (gdzie dotknąć).
+    const stick = (ox: number, oy: number, kx: number, ky: number, a: number) => r.withAlpha(a, () => {
+      r.withAlpha(0.35, () => r.circle(ox, oy, STICK_R, C.black, true));
+      r.circle(ox, oy, STICK_R, C.lavender);
+      r.circle(ox, oy, STICK_R - 3, C.slate);
+      for (const [ux, uy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) r.rect(ox + ux * (STICK_R - 5) - 1, oy + uy * (STICK_R - 5) - 1, 2, 2, C.lgray);
+      if (kx || ky) r.withAlpha(0.5, () => r.line(ox, oy, ox + kx, oy + ky, C.cyan, 2));
+      r.circle(ox + kx, oy + ky, 9, C.dgray, true);
+      r.circle(ox + kx, oy + ky - 1, 8, C.lgray, true);
+      r.withAlpha(0.8, () => r.circle(ox + kx - 3, oy + ky - 4, 2.5, C.white, true));
+      r.circle(ox + kx, oy + ky, 9, C.black);
+    });
     if (s) {
-      r.withAlpha(0.35, () => r.circle(s.ox, s.oy, STICK_R, C.black, true));
-      r.circle(s.ox, s.oy, STICK_R, C.lavender);
       const dx = s.x - s.ox, dy = s.y - s.oy, d = Math.hypot(dx, dy), k = d > STICK_R ? STICK_R / d : 1;
-      r.circle(s.ox + dx * k, s.oy + dy * k, 9, C.white, true);
-      r.circle(s.ox + dx * k, s.oy + dy * k, 9, C.slate);
-    } else if (run.time < 6) {
+      stick(s.ox, s.oy, dx * k, dy * k, 1);
+    } else stick(UI.edge + STICK_R + 14, H - 74, 0, 0, 0.3); // nad slotami broni
+    if (!s && run.time < 6) {
       drawText(g, 'Dotknij lewej połowy ekranu i przesuń, żeby chodzić', W / 2, H - 60, C.lavender, { align: 'center', ...OUT });
     }
   }

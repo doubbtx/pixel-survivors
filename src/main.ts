@@ -127,9 +127,12 @@ app.loop = startLoop(
     pointer.x = mouse ? input.mouse.x : -1;
     pointer.y = mouse ? input.mouse.y : -1;
     pointer.hit = false;
+    pointer.down = mouse && input.mouse.down;
     screen.render();
     updateQuality();
     canvas.style.cursor = pointer.hit ? 'pointer' : '';
     if (fadeT > 0) renderer.withAlpha(fadeT / FADE, () => renderer.cover(C.black));
   },
 );
+// Ekran ładowania z index.html znika, gdy gra rysuje pierwszą klatkę.
+document.getElementById('splash')?.remove();

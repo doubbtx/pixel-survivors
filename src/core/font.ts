@@ -1,5 +1,6 @@
 import { PAL } from './palette';
 import { tr } from './i18n';
+import { keyGlyphs } from './input';
 
 /**
  * Czcionka gry: pikselowa, wąska Jersey 10 (licencja OFL, pakiet @fontsource/jersey-10, ładowana w main.ts, z polskimi znakami)
@@ -37,7 +38,7 @@ function rawWidth(s: string, scale = 1): number {
 
 /** Szerokość napisu po przetłumaczeniu (core/i18n.ts) — tak, jak go narysuje drawText. */
 export function textWidth(s: string, scale = 1): number {
-  return rawWidth(tr(s), scale);
+  return rawWidth(keyGlyphs(tr(s)), scale);
 }
 
 /**
@@ -71,7 +72,7 @@ export interface TextOpts {
 
 /** Rysuje tekst. `y` to górna krawędź linii (łącznie z miejscem na akcenty wersalików). */
 export function drawText(g: CanvasRenderingContext2D, s: string, x: number, y: number, col: number, o: TextOpts = {}): void {
-  s = tr(s);
+  s = keyGlyphs(tr(s));
   if (!s) return;
   const scale = o.scale ?? 1;
   const w = rawWidth(s, scale);

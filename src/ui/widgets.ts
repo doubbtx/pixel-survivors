@@ -70,7 +70,8 @@ export function inside(px: number, py: number, x: number, y: number, w: number, 
  * Wskaźnik myszy do podświetleń przy rysowaniu (main.ts ustawia go przed każdą klatką; dotyk/pad = poza ekranem).
  * `hit`: w tej klatce mysz jest nad czymś klikalnym — main.ts zmienia wtedy kursor na rączkę.
  */
-export const pointer = { x: -1, y: -1, hit: false };
+/** Mysz w tej klatce (main.ts): pozycja, czy coś klikalnego jest pod kursorem, czy przycisk myszy jest wciśnięty. */
+export const pointer = { x: -1, y: -1, hit: false, down: false };
 
 /** Czy mysz jest nad prostokątem (i oznacza go jako klikalny). */
 export function hovered(x: number, y: number, w: number, h: number): boolean {
@@ -93,6 +94,8 @@ export interface ButtonOpts {
 /** Przycisk: płaski, cienka ramka; pod myszą jaśniejszy, wybrany z ramką w kolorze akcentu. */
 export function button(r: Renderer, x: number, y: number, w: number, h: number, label: string, o: ButtonOpts = {}): void {
   const hot = hovered(x, y, w, h), acc = o.accent ?? C.gold;
+  // Wciśnięty pod kursorem: przycisk „siada” o piksel (napis i ramka niżej, ciemniejsze tło).
+  if (hot && pointer.down) { y += 1; h -= 1; }
   if (o.active && acc === C.gold) ember(r, x, y, w, h);
   r.withAlpha(o.active ? 0.95 : 0.85, () => r.roundRect(x, y, w, h, UI.radius, o.active ? C.ddbrown : hot ? C.slate : C.navy));
   r.roundFrame(x, y, w, h, UI.radius, o.active || hot ? acc : UI.border, o.active ? 1 : UI.line * 1.5);

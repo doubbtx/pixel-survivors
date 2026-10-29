@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.47.1)
+## Stan (wersja 0.47.2)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -792,6 +792,15 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   i mgła, pustkowie popiół i iskry, Otchłań drobiny, Pustka gwiazdy; w lochu bez). Stany żywiołów na wrogach czytelniejsze
   (języki ognia, odłamki lodu, zygzak, bąbelki). Ultimate: `Run.ultAt` + fala i ramka w kolorze bohatera przez 0.7 s.
   Uwaga: `fancy` (pełne efekty) jest wyłączone od 0.30.1 — nowe efekty rysuj poza tym blokiem.
+- 0.47.2: UI i wydanie. Moc bossa: karty wjeżdżają jak przy awansie. Przycisk wciśnięty pod kursorem siada o piksel
+  (`pointer.down`, main.ts). Złoto w HUD dolicza się płynnie (`HudAnim.goldShown`). Pad: `Input.lastDevice` jest akcesorem
+  (ustawia `padActive` w core/input.ts); `actionKey` przy padzie daje przycisk pada (A/B/X/Y/LB/RB/LT/RT/View), napisy z klawiszem
+  w nawiasach zamienia `keyGlyphs` (core/font.ts woła po tłumaczeniu w `drawText` i `textWidth`; kolejność `GLYPH_ORDER`: R = losuj,
+  nie ultimate; akcja bez przycisku pada traci oznaczenie); ekran Sterowania pokazuje klawisze (`keyboardKey`). Test układu:
+  wariant `pad=1`. Dotyk: joystick z obręczą i kulką, bez palca blady zarys nad slotami broni. Ikony (`npm run icons` →
+  public/icon-512/192, apple-touch-icon, favicon-32), manifest PWA (pełny ekran, poziomo), ekran ładowania w index.html (usuwa
+  main.ts). `npm run store` (out=/tmp/store): zrzuty 1920×1080 (menu, bohaterowie, mapa, walka w biomach z bossem, awans),
+  kapsuły Steam z tła menu (`menuBackdrop` eksportowane) i nagranie webm bota (video=sekundy).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

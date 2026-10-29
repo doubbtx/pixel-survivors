@@ -60,8 +60,39 @@ export function keyName(code: string): string {
   return side + (named[base] ?? base);
 }
 
-/** Klawisz akcji do wyświetlenia (HUD, opisy umiejętności, samouczek). */
-export const actionKey = (a: Action): string => keyName(keyOf(a));
+/** Klawisz akcji na klawiaturze (ekran Sterowania). */
+export const keyboardKey = (a: Action): string => keyName(keyOf(a));
+
+/** Gra padem (ostatnie urządzenie): podpowiedzi pokazują przyciski pada zamiast klawiszy (Input.lastDevice). */
+let padActive = false;
+const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'View', 'Start', 'L3', 'R3'];
+/** Przycisk pada dla akcji (pierwszy z PADMAP) albo null (ruch, akcje bez przycisku). */
+function padButton(a: Action): string | null {
+  for (const [i, acts] of Object.entries(PADMAP)) if (acts.includes(a) && PAD_NAMES[+i]) return PAD_NAMES[+i];
+  return null;
+}
+
+/** Klawisz akcji do wyświetlenia (HUD, opisy umiejętności, samouczek): przy padzie nazwa przycisku pada. */
+export const actionKey = (a: Action): string => (padActive && padButton(a)) || keyboardKey(a);
+
+/** Klawisze menu w napisach („[Esc]”, „[Enter]”) — stałe, poza przypisaniami. */
+const MENU_KEYS: Record<string, Action> = { Esc: 'back', Enter: 'confirm' };
+/** Kolejność dopasowania klawisza do akcji: napisy w nawiasach są w menu, więc R to najpierw „losuj”, nie ultimate. */
+const GLYPH_ORDER: Action[] = ['reroll', 'skip', 'banish', 'inventory', 'build', 'synergies', 'anvil', 'pause', 'q', 'e', 'dash', 'ult'];
+/**
+ * Napis z klawiszami w nawiasach („Reroll (3) [R]”) przy grze padem: klawisz zamieniony na przycisk pada tej samej akcji
+ * („[LB]”); akcja bez przycisku pada traci oznaczenie. Bez pada albo bez dopasowania napis zostaje bez zmian.
+ * Wołane raz, po tłumaczeniu (core/font.ts).
+ */
+export function keyGlyphs(s: string): string {
+  if (!padActive || !s.includes('[')) return s;
+  return s.replace(/ ?\[([^\]]+)\]/g, (m, k: string) => {
+    const a = MENU_KEYS[k] ?? GLYPH_ORDER.find((x) => keyboardKey(x) === k || Object.entries(FIXED).some(([c, acts]) => acts.includes(x) && keyName(c) === k));
+    if (!a) return m;
+    const b = padButton(a);
+    return b ? m.replace(`[${k}]`, `[${b}]`) : '';
+  });
+}
 
 
 /** Gniazda umiejętności w HUD (prawy dół) — na telefonie są też przyciskami dotykowymi. Kolejność: Q, E, unik, R. */
@@ -92,7 +123,10 @@ export class Input {
   private padMove = { x: 0, y: 0 };
   /** Prawa gałka pada (celowanie). */
   padAim = { x: 0, y: 0 };
-  lastDevice: 'kbm' | 'pad' | 'touch' = 'kbm';
+  private device: 'kbm' | 'pad' | 'touch' = 'kbm';
+  /** Ostatnio używane urządzenie (podświetlenia, podpowiedzi klawiszy / przycisków pada). */
+  get lastDevice(): 'kbm' | 'pad' | 'touch' { return this.device; }
+  set lastDevice(d: 'kbm' | 'pad' | 'touch') { this.device = d; padActive = d === 'pad'; }
   /**
    * Sterowanie dotykowe w grze: lewa połowa ekranu = wirtualny joystick, gniazda umiejętności = przyciski.
    * Włącza je ekran gry w stanie rozgrywki (app.go wyłącza); poza tym dotyk działa jak klik myszą.

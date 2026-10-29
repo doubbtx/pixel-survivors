@@ -31,8 +31,8 @@ import { PactScreen } from './pacts';
 
 const PARADE = ['slime', 'boar', 'bat', 'shieldbearer', 'golem', 'kamikaze', 'eye', 'wisp'];
 
-/** Tło menu: nocne niebo z gradientem, gwiazdy, księżyc, dwa pasma wzgórz, przewijany pas łąki i defilada potworów goniących bohaterów. */
-function menuBackdrop(app: App, t: number): void {
+/** Tło menu (eksport: scripts/store.cjs rysuje z niego kapsuły sklepu): nocne niebo z gradientem, gwiazdy, księżyc, dwa pasma wzgórz, przewijany pas łąki i defilada potworów goniących bohaterów. */
+export function menuBackdrop(app: App, t: number): void {
   const r = app.r, g = r.g;
   const groundY = H - 58;
   // Szeroki ekran: tło od lewej do prawej krawędzi okna (L..R), interfejs zostaje na środku.

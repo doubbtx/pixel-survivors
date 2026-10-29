@@ -2,7 +2,7 @@ import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
 import { drawText, smallS } from '../core/font';
 import { sfx } from '../core/audio';
-import { REBIND, actionKey, keyOf, setBindings, type Action } from '../core/input';
+import { REBIND, keyboardKey, keyOf, setBindings, type Action } from '../core/input';
 import type { App, Screen } from './app';
 import { Menu, panel, titleBar } from './widgets';
 
@@ -24,7 +24,7 @@ export class ControlsScreen implements Screen {
 
   constructor(private readonly app: App, private readonly back: Screen) {
     this.menu = new Menu([
-      ...REBIND.map(([a]) => ({ label: () => ACTION_NAME[a] ?? a, value: () => (this.waiting === a ? '...' : actionKey(a)), act: () => this.listen(a) })),
+      ...REBIND.map(([a]) => ({ label: () => ACTION_NAME[a] ?? a, value: () => (this.waiting === a ? '...' : keyboardKey(a)), act: () => this.listen(a) })),
       { label: () => 'Reset to defaults', act: () => { this.save({}); sfx.play('select'); } },
       { label: () => 'Wróć', act: () => app.go(back) },
     ], W / 2, 38, 300, 12.5);

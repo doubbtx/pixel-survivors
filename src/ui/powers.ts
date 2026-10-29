@@ -20,6 +20,7 @@ const CARD_W = 132, CARD_H = 150, CARD_Y = 50;
 export class PowerPickView {
   private readonly options: BossPowerDef[];
   private sel = 0;
+  private readonly born = performance.now();
 
   constructor(private readonly run: Run) {
     this.options = rollPowerOffer(run);
@@ -63,16 +64,22 @@ export class PowerPickView {
     dim(r);
     drawText(g, 'Moc bossa', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
     drawText(g, 'Ukradnij jeden z ataków bossa. Strzela sam, w twoich wrogów.', W / 2, 37, C.lavender, { align: 'center', shadow: C.black });
+    const t = (performance.now() - this.born) / 1000;
     this.options.forEach((o, i) => {
-      const x = this.cardX(i), on = i === this.sel, up = own?.id === o.id;
-      cardFrame(r, x, CARD_Y, CARD_W, CARD_H, on ? C.pink : C.slate, on);
-      r.withAlpha(0.3, () => r.circle(x + CARD_W / 2, CARD_Y + 30, 20, C.plum, true));
-      drawSprite(g, o.icon, x + CARD_W / 2, CARD_Y + 30, { scale: 2 });
-      drawText(g, o.name, x + CARD_W / 2, CARD_Y + 54, up ? C.yellow : C.white, { align: 'center', shadow: C.black });
-      drawText(g, up ? `Ulepszenie: poziom ${own!.level + 1}/${BAL.bossPowers.maxLevel}` : `Faza ${o.phase + 1} bossa`, x + CARD_W / 2, CARD_Y + 66, up ? C.lime : C.lavender, { align: 'center' });
-      wrapText(o.desc, CARD_W - 16).forEach((l, k) => drawText(g, l, x + 8, CARD_Y + 82 + k * 11, C.lgray));
-      if (up) drawText(g, `+${Math.round(BAL.bossPowers.perLevel * 100)}% obrażeń`, x + CARD_W / 2, CARD_Y + CARD_H - 16, C.lime, { align: 'center' });
-      drawText(g, String(i + 1), x + 6, CARD_Y + 4, on ? C.yellow : C.lavender);
+      // Wjazd kart od dołu jedna po drugiej (jak przy awansie); zaznaczona lekko uniesiona.
+      const k = Math.max(0, Math.min(1, (t - i * 0.08) / 0.25));
+      if (k <= 0) return;
+      const x = this.cardX(i), on = i === this.sel, up = own?.id === o.id, cy = CARD_Y + Math.round((1 - k) ** 3 * 30) - (on ? 3 : 0);
+      r.withAlpha(k, () => {
+        cardFrame(r, x, cy, CARD_W, CARD_H, on ? C.pink : C.slate, on);
+        r.withAlpha(0.3, () => r.circle(x + CARD_W / 2, cy + 30, 20, C.plum, true));
+        drawSprite(g, o.icon, x + CARD_W / 2, cy + 30, { scale: 2 });
+        drawText(g, o.name, x + CARD_W / 2, cy + 54, up ? C.yellow : C.white, { align: 'center', shadow: C.black });
+        drawText(g, up ? `Ulepszenie: poziom ${own!.level + 1}/${BAL.bossPowers.maxLevel}` : `Faza ${o.phase + 1} bossa`, x + CARD_W / 2, cy + 66, up ? C.lime : C.lavender, { align: 'center' });
+        wrapText(o.desc, CARD_W - 16).forEach((l, j) => drawText(g, l, x + 8, cy + 82 + j * 11, C.lgray));
+        if (up) drawText(g, `+${Math.round(BAL.bossPowers.perLevel * 100)}% obrażeń`, x + CARD_W / 2, cy + CARD_H - 16, C.lime, { align: 'center' });
+        drawText(g, String(i + 1), x + 6, cy + 4, on ? C.yellow : C.lavender);
+      });
     });
     const cur = own ? `Obecna: ${BOSS_POWER_BY_ID[own.id].name} (poz. ${own.level}). Inna moc ją zastąpi.` : 'Nie masz jeszcze mocy bossa.';
     drawText(g, cur, W / 2, CARD_Y + CARD_H + 10, C.lavender, { align: 'center', shadow: C.black });

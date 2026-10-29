@@ -7,7 +7,7 @@
  *   npm run dev                      (w drugim terminalu)
  *   node scripts/layout.cjs                  (oba języki)
  *   node scripts/layout.cjs lang=pl only=menu   (only: menu | game)
- *   warianty: hints=1 (podpowiedzi włączone), small=1 (Text size Normal), wide=1 (ekran 20:9), touch=1 (sterowanie dotykiem)
+ *   warianty: hints=1 (podpowiedzi włączone), small=1 (Text size Normal), wide=1 (ekran 20:9), touch=1 (sterowanie dotykiem), pad=1 (przyciski pada w napisach)
  *
  * Zrzuty sprawdzanych ekranów: /tmp/layout-shots/<język>/. Podpowiedzi wyłączone (mają własne miejsca, HINT_BOX).
  * Celowe nakładanie nie jest zgłaszane: napis przemalowany na początku innego (np. czerwona nazwa modyfikatora mapy)
@@ -110,7 +110,7 @@ async function run(lang, name, steps, report, errs, misses) {
     }));
   }, { lang, ...args });
   await p.reload(); await p.waitForTimeout(1500);
-  const tag = ['hints', 'small', 'wide', 'touch'].filter((k) => args[k]).join('-'), dir = `/tmp/layout-shots/${tag ? tag + '-' : ''}${lang}`, ox = args.wide ? (1800 / 3 - 480) / 2 : 0;
+  const tag = ['hints', 'small', 'wide', 'touch', 'pad'].filter((k) => args[k]).join('-'), dir = `/tmp/layout-shots/${tag ? tag + '-' : ''}${lang}`, ox = args.wide ? (1800 / 3 - 480) / 2 : 0;
   fs.mkdirSync(dir, { recursive: true });
   for (const st of steps) {
     if (st.k) for (const key of st.k.split(' ')) { await p.keyboard.press(key, { delay: 50 }); await p.waitForTimeout(st.w ?? 250); }
@@ -118,6 +118,7 @@ async function run(lang, name, steps, report, errs, misses) {
     if (st.wait) await p.waitForTimeout(st.wait);
     if (!st.chk) continue;
     if (args.touch) await p.evaluate(() => { const i = window.__screen().app.input; i.lastDevice = 'touch'; i.touchControls = true; });
+    if (args.pad) await p.evaluate(() => { window.__screen().app.input.lastDevice = 'pad'; });
     const items = await p.evaluate(() => new Promise((res) => requestAnimationFrame(() => { const o = window.__ov; o.items = []; o.seq = 0; o.on = true; requestAnimationFrame(() => { o.on = false; res(o.items); }); })));
     await p.screenshot({ path: `${dir}/${name}_${st.chk}.png` });
       const texts = items.filter((x) => x.k === 't'), rects = items.filter((x) => x.k === 'r');
