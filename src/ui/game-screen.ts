@@ -1,6 +1,6 @@
 import { W, H } from '../core/renderer';
 import { C, RAMP } from '../core/palette';
-import { drawText, wrapText, textWidth } from '../core/font';
+import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { heroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
@@ -12,7 +12,7 @@ import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
-import { button, Menu, dim, panel, inside, slot, bar } from './widgets';
+import { button, Menu, dim, panel, inside, slot, bar, Scroll } from './widgets';
 import { renderHud } from './hud';
 import { drawSkills } from './skills';
 import type { AbilitySlot } from '../data/heroes';
@@ -102,6 +102,7 @@ export class GameScreen implements Screen {
   private unlockQueue: UnlockDef[] = [];
   private unlockedRun: UnlockDef[] = [];
   private bossSeen = 0;
+  private pauseScroll = new Scroll();
   private pauseMenu: Menu;
   private endMenu: Menu;
   /** Zakładka ekranu końca: obrażenia, wykres DPS, karta buildu. */
@@ -624,7 +625,8 @@ export class GameScreen implements Screen {
       }
       case 'pause':
         if (inp.pressed('pause')) { this.state = this.overlayReturn; return; }
-        if (inp.pressed('left') || inp.pressed('right')) { this.pausePage = 1 - this.pausePage; sfx.play('select'); }
+        if (inp.pressed('left') || inp.pressed('right')) { this.pausePage = 1 - this.pausePage; sfx.play('select'); this.pauseScroll.reset(); }
+        if (this.pausePage === 1) this.pauseScroll.update(inp, ...this.pauseArea());
         PAUSE_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.pauseTab(i))) { this.pausePage = i; sfx.play('select'); } });
         this.pauseMenu.update(inp);
         break;
@@ -793,16 +795,25 @@ export class GameScreen implements Screen {
     const r = this.app.r, g = r.g, run = this.run, x0 = px + 10;
     drawText(g, run.hero.name, x0, 15, run.hero.color, { shadow: C.black });
     const slots: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
+    // Przewijane (opisy w pełnym rozmiarze przy dużym tekście).
+    const area = this.pauseArea(), oy = this.pauseScroll.begin(r, ...area);
     let y = drawSkills(r, slots.map((sl) => {
       const a = run.abilities[sl];
       const cd = sl === 'ult' ? `ładunek ${Math.min(run.ultCharge, run.ultNeed())}/${run.ultNeed()}` : `odnowienie ${abilityMaxCd(run, sl).toFixed(1)} s`;
       return { def: a.def, level: a.level, cd, evo: true };
-    }), x0, 32, pw - 20);
-    const tw = (pw - 20) / 0.75;
+    }), x0, area[1] + 4 - oy, pw - 22);
+    const tw = (pw - 22) / descS();
     for (const [t, col] of [[`Pasywka: ${run.hero.passive.name}. ${run.hero.passive.desc}`, C.yellow], [`Zasób: ${run.hero.resource.name}. ${run.hero.resource.desc}`, run.hero.resource.color]] as const) {
-      for (const line of wrapText(t, tw)) { if (y < H - 18) drawText(g, line, x0, y, col, SMALL_TXT); y += 8; }
+      for (const line of wrapText(t, tw)) { drawText(g, line, x0, y, col, DESC); y += descLH(); }
       y += 3;
     }
+    this.pauseScroll.end(r, y + oy - area[1], ...area);
+  }
+
+  /** Przewijany obszar zakładki Umiejętności w pauzie (pod imieniem bohatera). */
+  private pauseArea(): [number, number, number, number] {
+    const px = PL + PLW + 6, pw = W - px - 8;
+    return [px + 4, 28, pw - 8, H - 36];
   }
 
   /** Góra i wysokość panelu zakładek na ekranie końca (zależą od liczby linii informacji). */

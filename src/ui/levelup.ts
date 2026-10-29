@@ -1,7 +1,7 @@
 import { W, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText, textWidth } from '../core/font';
+import { drawText, wrapText, textWidth, descS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { RARITIES } from '../data/items';
@@ -51,11 +51,15 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   ly += 4;
   // Z przepisem (ikony) podpowiedź tylko, gdy mieści się w jednej linii — ikony mówią to samo.
   const hintAll = o.hint ? wrapText(o.hint, CARD_W - 12) : [];
-  const hint = o.recipe ? (hintAll.length === 1 ? hintAll : []) : hintAll.slice(0, 2);
-  const descMax = (o.tags.length ? 5 : 6) - hint.length - (o.recipe ? 2 : 0);
-  // Opis, który się nie mieści, małym tekstem (więcej linii w tym samym miejscu).
-  const big = wrapText(o.desc, CARD_W - 14), small = big.length > descMax;
-  const lines = small ? wrapText(o.desc, (CARD_W - 14) / 0.75).slice(0, Math.floor((descMax * 11) / 9)) : big;
+  const big = wrapText(o.desc, CARD_W - 14), room = (o.tags.length ? 5 : 6) - (o.recipe ? 2 : 0);
+  // Duży tekst (Ustawienia): opis zawsze w pełnym rozmiarze, podpowiedź ustępuje miejsca opisowi.
+  let hint = o.recipe ? (hintAll.length === 1 ? hintAll : []) : hintAll.slice(0, 2);
+  if (descS() >= 1 && big.length > room - hint.length) hint = [];
+  const descMax = room - hint.length;
+  // Opis, który się nie mieści: zwykle małym tekstem (więcej linii w tym samym miejscu), przy dużym tekście ucięty z „...”.
+  const small = big.length > descMax && descS() < 1;
+  const lines = small ? wrapText(o.desc, (CARD_W - 14) / 0.75).slice(0, Math.floor((descMax * 11) / 9))
+    : big.length > descMax ? [...big.slice(0, descMax - 1), `${big[descMax - 1]}...`] : big;
   for (const line of lines) {
     drawText(r.g, line, cx, ly, C.lgray, { align: 'center', scale: small ? 0.75 : 1 });
     ly += small ? 9 : 11;

@@ -1,7 +1,7 @@
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText, textWidth } from '../core/font';
+import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
@@ -12,7 +12,7 @@ import {
 } from '../data/expedition';
 import type { Run } from '../game/run';
 import { fmt } from '../util/format';
-import { panel, inside, hovered, button } from './widgets';
+import { panel, inside, hovered, button, Scroll } from './widgets';
 import { tile, iconSlot, UI } from './theme';
 import { CHUNK, groundChunk, groundBase, groundFrame } from '../gfx/ground';
 
@@ -34,6 +34,8 @@ const LEGEND: NodeKind[] = ['fight', 'elite', 'dungeon', 'treasure', 'shop', 'an
 
 /** Przyciski poziomu trudności w prawym górnym rogu panelu szczegółów (lewy górny róg przycisku). */
 const TIER_W = 46;
+/** Lista modyfikatorów w panelu mapy (x, y, w, h): pod nazwą mapy, do przycisków. */
+const MODS_AREA = [MAP_X + 8, DET_Y + 38, 250, BTN_Y - DET_Y - 40] as const;
 const tierPos = (i: number): [number, number] => [MAP_X + MAP_W - 8 - (4 - i) * (TIER_W + 3) + 3, DET_Y + 6];
 /** Mały tekst panelu szczegółów. */
 const SMALL = { scale: 0.75 } as const;
@@ -58,6 +60,9 @@ const nodeColor = (m: MapNode) => (isCombat(m.kind) && m.kind !== 'boss' && m.ra
 export class ExpeditionMapView {
   private sel = 0;
   private lastMouse = 0;
+  /** Przewijanie listy modyfikatorów zaznaczonej mapy (zerowane przy zmianie zaznaczenia). */
+  private modScroll = new Scroll();
+  private modKey = '';
 
   /** `onTier`: gracz zmienił poziom trudności (zapamiętanie na następne wyprawy). */
   constructor(private readonly run: Run, private readonly onTier: (tier: number) => void) {}
@@ -68,6 +73,7 @@ export class ExpeditionMapView {
 
   update(input: Input): MapAction {
     const lanes = this.lanes;
+    this.modScroll.update(input, ...MODS_AREA);
     const n = lanes.length;
     if (input.pressed('back') || input.pressed('pause')) return 'menu';
     if (input.pressed('inventory')) return 'inventory';
@@ -164,9 +170,9 @@ export class ExpeditionMapView {
     }
     // Podpowiedź plakietki pod myszą (nad legendą mapy).
     if (tip) {
-      const lines = wrapText(tip.text, 200 / 0.75), tw = 208, tx = Math.min(tip.x, MAP_X + MAP_W) - tw;
-      tile(r, tx, 19, tw, lines.length * 8 + 4, C.cyan, 0.95);
-      lines.forEach((l, i) => drawText(g, l, tx + 4, 20 + i * 8, C.white, { scale: 0.75 }));
+      const tw = descS() >= 1 ? 260 : 208, lines = wrapText(tip.text, (tw - 8) / descS()), lh = descLH() - 1, tx = Math.min(tip.x, MAP_X + MAP_W) - tw;
+      tile(r, tx, 19, tw, lines.length * lh + 4, C.cyan, 0.95);
+      lines.forEach((l, i) => drawText(g, l, tx + 4, 20 + i * lh, C.white, DESC));
     }
 
     const cur = exRow(ex);
@@ -221,6 +227,8 @@ export class ExpeditionMapView {
     if (target === undefined) return;
     const m = ex.map[cur + 1][target]!;
     const kind = NODE_INFO[m.kind];
+    const key = `${ex.act}:${cur}:${target}:${m.rarity ?? 0}`;
+    if (key !== this.modKey) { this.modKey = key; this.modScroll.reset(); }
     const x0 = MAP_X + 8, y0 = DET_Y + 6;
     drawSprite(g, kind.icon, x0 + 10, y0 + 10, { scale: 2 });
     if (isCombat(m.kind)) {
@@ -230,20 +238,20 @@ export class ExpeditionMapView {
       drawText(g, m.kind === 'boss' ? `${kind.name}: ${lv.bossName}` : `${kind.name}, ${rar.name.toLowerCase()}`, x0 + 26, y0 + 11, C.lavender);
       const goal = lv.dungeon ? `Fale lochu: ${BAL.events.dungeonWaves}` : `Cel: ${objectiveLabel(lv.objective)}`;
       drawText(g, `${goal}   głębokość ${lv.depth}`, x0 + 26, y0 + 22, C.lgray);
-      // Modyfikatory (ryzyko) po lewej: do 3 w liniach, więcej w dwóch kolumnach (nazwa nad opisem).
+      // Modyfikatory (ryzyko) po lewej: „nazwa: opis” zawijane, przewijane przy wielu modyfikatorach albo dużym tekście.
       const mods = (m.mods ?? []).map((id) => MAP_MOD_BY_ID[id]);
-      const wide = mods.length > 3;
-      mods.forEach((mod, i) => {
-        if (!wide) {
-          drawText(g, `${mod.name}:`, x0, y0 + 36 + i * 10, C.salmon, SMALL);
-          drawText(g, mod.desc, x0 + 3 + textWidth(`${mod.name}:`, SMALL.scale), y0 + 36 + i * 10, C.lgray, SMALL);
-          return;
-        }
-        const mx = x0 + (i % 2) * 124, my = y0 + 33 + Math.floor(i / 2) * 17;
-        drawText(g, mod.name, mx, my, C.salmon, SMALL);
-        drawText(g, mod.desc, mx, my + 8, C.lgray, SMALL);
-      });
-      if (!mods.length) drawText(g, 'Bez modyfikatorów', x0, y0 + 36, C.dgray, SMALL);
+      const [ax, ay, aw, ah] = MODS_AREA, lh = descLH(), oy = this.modScroll.begin(r, ax, ay, aw, ah);
+      let my = ay + 1 - oy;
+      for (const mod of mods) {
+        wrapText(`${mod.name}: ${mod.desc}`, (aw - 6) / descS()).forEach((l, i) => {
+          drawText(g, l, ax, my, C.lgray, DESC);
+          // Nazwa w pierwszej linii na czerwono (rysowana na wierzchu tym samym krojem).
+          if (i === 0) drawText(g, `${mod.name}:`, ax, my, C.salmon, DESC);
+          my += lh;
+        });
+      }
+      if (!mods.length) { drawText(g, 'Bez modyfikatorów', ax, my, C.dgray, DESC); my += lh; }
+      this.modScroll.end(r, my + oy - ay, ax, ay, aw, ah);
       // Poziom trudności wyprawy (przyciski 1-4) w prawym górnym rogu.
       const rx = MAP_X + MAP_W - 8;
       if (m.tiers) {

@@ -6,7 +6,7 @@ export type Action =
   | 'q' | 'e' | 'dash' | 'ult'
   | 'pause' | 'confirm' | 'back' | 'click' | 'inventory' | 'fullscreen'
   | 'reroll' | 'skip' | 'banish' | 'anvil' | 'build'
-  | 'n1' | 'n2' | 'n3' | 'n4'
+  | 'n1' | 'n2' | 'n3' | 'n4' | 'pageUp' | 'pageDown'
   | 'debug' | 'debugTime' | 'debugLevel' | 'debugLoot';
 
 const KEYMAP: Record<string, Action[]> = {
@@ -15,7 +15,7 @@ const KEYMAP: Record<string, Action[]> = {
   KeyQ: ['q'], KeyE: ['e'], Space: ['dash', 'confirm'], KeyR: ['ult', 'reroll'],
   Enter: ['confirm'], Escape: ['pause', 'back'], KeyP: ['pause'],
   KeyF: ['fullscreen'], KeyX: ['skip'], KeyB: ['banish'], KeyI: ['inventory'], Tab: ['inventory'], KeyK: ['anvil'], KeyC: ['build'],
-  Digit1: ['n1'], Digit2: ['n2'], Digit3: ['n3'], Digit4: ['n4'],
+  Digit1: ['n1'], Digit2: ['n2'], Digit3: ['n3'], Digit4: ['n4'], PageUp: ['pageUp'], PageDown: ['pageDown'],
   F3: ['debug'], Backquote: ['debug'], F4: ['debugTime'], F6: ['debugLevel'], F7: ['debugLoot'],
 };
 
@@ -59,6 +59,8 @@ export class Input {
   private touchHeld = new Map<number, Action>();
   /** Okno straciło fokus od ostatniego kroku (dla auto-pauzy); czyszczone jak zbocza. */
   focusLost = false;
+  /** Przewinięcie w pikselach logicznych od ostatniego kroku (kółko myszy, przeciąganie palcem; dodatnie = w dół). */
+  scroll = 0;
   /** Dowolny klawisz (także bez przypisanej akcji) naciśnięty od ostatniego kroku. */
   private anyKey = false;
 
@@ -85,7 +87,10 @@ export class Input {
       this.lastDevice = 'kbm';
     };
     canvas.addEventListener('pointermove', (e) => {
+      const py = this.mouse.y;
       pos(e);
+      // Przeciąganie palcem poza rozgrywką przewija panele (ui/widgets.ts Scroll).
+      if (e.pointerType === 'touch' && this.mouse.down && !this.touchControls) this.scroll += py - this.mouse.y;
       if (this.stick && this.stick.id === e.pointerId) { this.stick.x = this.mouse.x; this.stick.y = this.mouse.y; }
     });
     canvas.addEventListener('pointerdown', (e) => {
@@ -103,6 +108,7 @@ export class Input {
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    canvas.addEventListener('wheel', (e) => { this.scroll += Math.sign(e.deltaY) * Math.min(40, Math.abs(e.deltaY) / 4 + 8); e.preventDefault(); }, { passive: false });
   }
 
   /** Dotyk w trakcie gry: przycisk umiejętności, pauza albo start joysticka (lewa połowa). True = obsłużony. */
@@ -190,6 +196,7 @@ export class Input {
   endStep(): void {
     this.pressedSet.clear();
     this.anyKey = false;
+    this.scroll = 0;
     this.focusLost = false;
   }
 

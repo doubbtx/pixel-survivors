@@ -118,7 +118,8 @@ function translate(s: string, depth: number): string {
       if (bare !== core.slice(0, -1)) cands.push(bare + punct);
     }
     // Zdania osobno (opis + „Żywioł: …” + „Zostają: …”): kandydat obok podziału na separatorach niżej.
-    const sents = core.split(/(?<=[.!?])( )/);
+    // Tylko przed wielką literą: skróty („maks. 30”, „poz. maks.”) nie kończą zdania.
+    const sents = core.split(/(?<=[.!?])( )(?=[A-ZĄĆĘŁŃÓŚŹŻ])/);
     if (sents.length > 1) {
       const t = sents.map((x, i) => (i % 2 ? x : translate(x, depth + 1))).join('');
       if (t !== core) cands.push(t);
@@ -160,9 +161,12 @@ function translate(s: string, depth: number): string {
 /** Diagnostyka (bot testowy, tylko wersja deweloperska): napisy bez tłumaczenia w bieżącym języku. */
 export const trMisses = new Set<string>();
 const EN_WORDS = /\b(the|and|your|with|you|of|for|is|are|when|each|every)\b/i;
+/** Polskie słowa bez znaków diakrytycznych, których nie ma w angielskim (resztki po tłumaczeniu). */
+const PL_LEFT = /\b(tylko|oraz|albo|przez|jest|nie|dla|lub|poziom|razem|wroga|wrogowie|ataku|pancerza|szansy|maks)\b/i;
 function checkMiss(s: string, t: string): void {
   if (trMisses.size > 500) return;
-  if (lang === 'en' ? /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(t) : t === s && !/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(t) && EN_WORDS.test(t)) trMisses.add(`${lang}: ${s}`);
+  const miss = lang === 'en' ? /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(t) || PL_LEFT.test(t) : t === s && !/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(t) && EN_WORDS.test(t);
+  if (miss) trMisses.add(`${lang}: ${s}`);
 }
 
 /** Napis w bieżącym języku: nowe angielskie przez słownik EN → PL, stare polskie przez słownik PL → EN. */

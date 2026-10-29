@@ -1,6 +1,6 @@
 import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { drawText, wrapText, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
@@ -8,7 +8,7 @@ import { CARDS, type CardDef } from '../data/cards';
 import { HERO_BY_ID } from '../data/heroes';
 import type { App, Screen } from './app';
 import { drawCard, rarityColor } from './cards';
-import { button, panel, slot, inside } from './widgets';
+import { button, panel, slot, inside, Scroll } from './widgets';
 import { UNIQUES, UNIQUE_COLOR, BASE_BY_ID, rollUnique, type Item } from '../data/items';
 import { drawItemCard } from './items';
 import { SECRETS } from '../data/secrets';
@@ -41,7 +41,8 @@ const TAB_NAME: Record<Tab, string> = { cards: 'Karty', arsenal: 'Arsenał', uni
 const ARS_WEAPONS = WEAPONS.filter((w) => !w.evolved);
 const A_COLS = 7, A_TILE = 24, A_STEP = 28, A_X = 16, A_WY = 50, A_PY = 50 + 2 * A_STEP + 22;
 const ARS_N = ARS_WEAPONS.length + PASSIVES.length;
-const SMALL = { scale: 0.75 } as const;
+/** Przewijany obszar opisu w Arsenale (x, y, w, h). */
+const ARS_AREA = [230, 34, W - 236, 208] as const;
 const arsPos = (i: number): [number, number] => {
   const p = i >= ARS_WEAPONS.length, k = p ? i - ARS_WEAPONS.length : i;
   return [A_X + (k % A_COLS) * A_STEP, (p ? A_PY : A_WY) + Math.floor(k / A_COLS) * A_STEP];
@@ -66,6 +67,7 @@ export class CollectionScreen implements Screen {
   private aSel = 0;
   private uSel = 0;
   private wSel = 0;
+  private arsScroll = new Scroll();
   private step = 0;
   private lastMouse = 0;
   private note = '';
@@ -158,7 +160,8 @@ export class CollectionScreen implements Screen {
   }
 
   private updateArsenal(): void {
-    const inp = this.app.input, n = ARS_N;
+    const inp = this.app.input, n = ARS_N, before = this.wSel;
+    this.arsScroll.update(inp, ...ARS_AREA);
     if (inp.pressed('left')) this.wSel = (this.wSel + n - 1) % n;
     if (inp.pressed('right')) this.wSel = (this.wSel + 1) % n;
     if (inp.pressed('up')) this.wSel = (this.wSel + n - A_COLS) % n;
@@ -170,6 +173,7 @@ export class CollectionScreen implements Screen {
     }
     if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
+    if (this.wSel !== before) this.arsScroll.reset();
   }
 
   /**
@@ -187,17 +191,25 @@ export class CollectionScreen implements Screen {
       drawSprite(g, w ? w.icon : p.icon, x + A_TILE / 2, y + A_TILE / 2);
       if (i === this.wSel) r.frame(x - 2, y - 2, A_TILE + 4, A_TILE + 4, C.white);
     }
-    const X = 228, PW = W - X - 6, TW = (PW - 20) / SMALL.scale;
+    const X = 228, PW = W - X - 6;
     panel(r, X, 32, PW, 212, C.gold);
-    let y = 40;
+    // Opis zaznaczonego: przewijany (długie opisy przy dużym tekście).
+    const oy = this.arsScroll.begin(r, ...ARS_AREA);
+    const end = this.arsenalDetails(X, PW, 40 - oy);
+    this.arsScroll.end(r, end + oy - 36, ...ARS_AREA);
+  }
+
+  /** Opis broni albo pasywki w Arsenale od wysokości `y`; zwraca dolną krawędź. */
+  private arsenalDetails(X: number, PW: number, y: number): number {
+    const r = this.app.r, g = r.g, TW = (PW - 24) / descS();
     const head = (s: string, col: number = C.lavender) => { y += 3; drawText(g, s, X + 10, y, col); y += 11; };
-    const text = (s: string, col: number = C.lgray) => { for (const l of wrapText(s, TW)) { if (y > 236) return; drawText(g, l, X + 10, y, col, SMALL); y += 8.5; } };
+    const text = (s: string, col: number = C.lgray) => { for (const l of wrapText(s, TW)) { drawText(g, l, X + 10, y, col, DESC); y += descLH(); } };
     const w = ARS_WEAPONS[this.wSel];
     if (w) {
       drawSprite(g, w.icon, X + 20, y + 10, { scale: 2 });
       drawText(g, w.name, X + 40, y + 1, w.color, { shadow: C.black });
       const el = WEAPON_ELEMENT[w.id];
-      drawText(g, `${w.hero ? `tylko ${HERO_BY_ID[w.hero].name}, ` : ''}poz. maks. ${maxLevel(w)}${el ? `, ${ELEMENTS[el].name.toLowerCase()}` : ''}`, X + 40, y + 12, C.dgray);
+      drawText(g, `${w.hero ? `only ${HERO_BY_ID[w.hero].name}, ` : ''}max lv. ${maxLevel(w)}${el ? `, ${ELEMENTS[el].name.toLowerCase()}` : ''}`, X + 40, y + 12, C.dgray);
       y += 26;
       text(el ? `${w.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : w.desc, C.white);
       if (w.evolve) {
@@ -221,7 +233,7 @@ export class CollectionScreen implements Screen {
         head(`Augmenty (od poz. ${BAL.augmentMinLevel})`, C.cyan);
         for (const a of augs) text(`${a.name}: ${a.desc}${a.elem ? ` Żywioł: ${ELEMENTS[a.elem].name}.` : ''}`);
       }
-      return;
+      return y;
     }
     const p = PASSIVES[this.wSel - ARS_WEAPONS.length];
     drawSprite(g, p.icon, X + 20, y + 10, { scale: 2 });
@@ -234,6 +246,7 @@ export class CollectionScreen implements Screen {
       head('Ewoluuje bronie', C.yellow);
       for (const x of evo) text(`${x.name} > ${WEAPON_BY_ID[x.evolve!.into].name}`);
     }
+    return y;
   }
 
   private updateSecrets(): void {

@@ -16,6 +16,51 @@ export function panel(r: Renderer, x: number, y: number, w: number, h: number, a
   r.roundFrame(x, y, w, h, UI.radius + 1, accent, 1);
 }
 
+/**
+ * Przewijany obszar (teksty opisowe przy dużym tekście): kółko myszy albo przeciąganie palcem nad obszarem, opcjonalnie
+ * klawisze góra/dół. Rysowanie: `begin` przycina i zwraca przesunięcie, `end` zapamiętuje wysokość treści i rysuje pasek.
+ */
+export class Scroll {
+  y = 0;
+  private max = 0;
+
+  /** `keys`: strzałki góra/dół też przewijają (gdy ekran nie używa ich do wyboru). */
+  update(inp: Input, x: number, y: number, w: number, h: number, keys = false): void {
+    if (inside(inp.mouse.x, inp.mouse.y, x, y, w, h)) this.y += inp.scroll;
+    if (keys && inp.isDown('down')) this.y += 3;
+    if (keys && inp.isDown('up')) this.y -= 3;
+    // PageUp / PageDown i prawa gałka pada działają zawsze.
+    if (inp.isDown('pageDown')) this.y += 4;
+    if (inp.isDown('pageUp')) this.y -= 4;
+    if (Math.abs(inp.padAim.y) > 0.3) this.y += inp.padAim.y * 4;
+    this.y = Math.max(0, Math.min(this.max, this.y));
+  }
+
+  reset(): void {
+    this.y = 0;
+  }
+
+  begin(r: Renderer, x: number, y: number, w: number, h: number): number {
+    r.g.save();
+    r.g.beginPath();
+    r.g.rect(x, y, w, h);
+    r.g.clip();
+    return Math.round(this.y);
+  }
+
+  /** `contentH`: wysokość narysowanej treści (bez przesunięcia). */
+  end(r: Renderer, contentH: number, x: number, y: number, w: number, h: number): void {
+    r.g.restore();
+    this.max = Math.max(0, contentH - h);
+    this.y = Math.min(this.y, this.max);
+    if (this.max <= 0) return;
+    // Pasek: tor i suwak przy prawej krawędzi.
+    const th = Math.max(10, (h * h) / contentH), ty = y + (h - th) * (this.y / this.max);
+    r.withAlpha(0.35, () => r.rect(x + w - 2, y, 1.5, h, C.slate));
+    r.rect(x + w - 2, ty, 1.5, th, C.lavender);
+  }
+}
+
 export function inside(px: number, py: number, x: number, y: number, w: number, h: number): boolean {
   return px >= x && px < x + w && py >= y && py < y + h;
 }

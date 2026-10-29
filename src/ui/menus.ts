@@ -1,6 +1,6 @@
 import { W, H } from '../core/renderer';
 import { C, PAL } from '../core/palette';
-import { drawText, wrapText, textWidth } from '../core/font';
+import { drawText, wrapText, textWidth, setTextSize, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
 import { drawSprite, drawShadow, blit, TILE } from '../gfx/sprites';
@@ -12,7 +12,7 @@ import { endSlotRun } from '../game/campaign';
 import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { Menu, panel, inside, slot, button, hovered, type MenuItem } from './widgets';
+import { Menu, panel, inside, slot, button, hovered, Scroll, type MenuItem } from './widgets';
 import { drawSkills } from './skills';
 import { setLang, type Lang } from '../core/i18n';
 import { music, MENU_MOOD } from '../core/music';
@@ -285,12 +285,14 @@ const TABS = ['Ogólne', 'Umiejętności', 'Zasób'];
 const TAB_Y = TOP + 43;
 /** Przyciski na dole ekranu wyboru bohatera: Wstecz (lewo) i Start (prawo). */
 const BTN_Y = H - 18, BTN_H = 15, BACK_W = 70, START_W = 110;
-/** Mały tekst szczegółów. */
-const SMALL = { scale: 0.75 } as const;
+/** Przewijany obszar szczegółów na stronach Umiejętności i Zasób (x, y, w, h). */
+const DET_AREA = [DET_X + 4, TOP + 60, DET_W - 8, DET_H - 63] as const;
 
 /** Wybór bohatera: lista po lewej (do 6 bohaterów), szczegóły zaznaczonego po prawej. */
 export class HeroSelect implements Screen {
   private sel = 0;
+  private scroll = new Scroll();
+  private scrollKey = -1;
   /** Strona szczegółów: 0 ogólne (broń, pasywka, umiejętności), 1 umiejętności z opisami, 2 zasób z liczbami. */
   private page = 0;
   /** Lewy górny róg przycisku „Szczegóły” na stronie ogólnej (ustawiany przy rysowaniu). */
@@ -314,6 +316,7 @@ export class HeroSelect implements Screen {
   update(): void {
     const inp = this.app.input;
     const n = HEROES.length;
+    this.scroll.update(inp, ...DET_AREA);
     if (inp.pressed('up')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
     if (inp.pressed('down')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
     if (inp.pressed('left') || inp.pressed('right')) { this.page = (this.page + (inp.pressed('left') ? TABS.length - 1 : 1)) % TABS.length; sfx.play('select'); }
@@ -385,8 +388,9 @@ export class HeroSelect implements Screen {
     const pl = pactLevel(this.app.save.pacts.chosen);
     if (unlocked(this.app.save, 'pacts')) button(r, LIST_X, this.pactY(), LIST_W, 18, pl ? `Pakty: poziom ${pl} [Tab]` : 'Pakty ryzyka [Tab]', { accent: C.salmon, col: pl ? C.salmon : undefined });
     else button(r, LIST_X, this.pactY(), LIST_W, 18, 'Risk Pacts (locked)', { col: C.dgray });
-    // Szczegóły zaznaczonego.
+    // Szczegóły zaznaczonego (inny bohater albo zakładka: przewijanie od góry).
     const h = HEROES[this.sel], x = DET_X, y = TOP;
+    if (this.sel * 10 + this.page !== this.scrollKey) { this.scrollKey = this.sel * 10 + this.page; this.scroll.reset(); }
     panel(r, x, y, DET_W, DET_H, C.gold);
     r.withAlpha(0.5, () => r.circle(x + 32, y + 34, 22, C.black, true));
     drawShadow(g, x + 32, y + 56, 30);
@@ -399,8 +403,15 @@ export class HeroSelect implements Screen {
     drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 31, C.lavender);
     TABS.forEach((t, i) => button(r, this.tabX(i), TAB_Y, TAB_W, 13, t, { active: i === this.page, accent: C.gold }));
     if (this.page === 0) this.renderGeneral(h, x, y);
-    else if (this.page === 1) drawSkills(r, h.abilities.map((a) => ({ def: a, cd: a.slot === 'ult' ? 'ładowane zabójstwami' : `odnowienie ${a.cooldown} s`, evo: false })), x + 12, y + 66, DET_W - 24);
-    else this.renderResource(h, x, y);
+    else {
+      // Umiejętności i zasób: przewijany obszar do dołu panelu (dłuższe opisy przy dużym tekście).
+      const [ax, ay, aw, ah] = DET_AREA, oy = this.scroll.begin(r, ax, ay, aw, ah);
+      const end = this.page === 1
+        ? drawSkills(r, h.abilities.map((a) => ({ def: a, cd: a.slot === 'ult' ? 'ładowane zabójstwami' : `odnowienie ${a.cooldown} s`, evo: false })), x + 12, ay + 4 - oy, DET_W - 26)
+        : this.renderResource(h, x, ay + 2 - oy);
+      this.scroll.end(r, end + oy - ay, ax, ay, aw, ah);
+    }
+    if (this.page !== 0) { this.renderButtons(h); return; }
     const rec = heroRecord(this.app.save, h.id);
     const best = m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}` : `Rekord: ${fmtTime(rec.bestEndless)}`;
     drawText(g, best, x + 12, y + DET_H - 14, C.dgray);
@@ -408,7 +419,12 @@ export class HeroSelect implements Screen {
       const hm = heroMeta(this.app.save.meta, h.id);
       drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
     }
-    // Przyciski: Wstecz i Start (myszą lub klawiszami Esc / Enter).
+    this.renderButtons(h);
+  }
+
+  /** Przyciski: Wstecz i Start (myszą lub klawiszami Esc / Enter). */
+  private renderButtons(h: HeroDef): void {
+    const r = this.app.r, g = r.g;
     button(r, LIST_X, BTN_Y, BACK_W, BTN_H, 'Wstecz [Esc]');
     if (heroUnlocked(this.app.save, h.id)) button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, `Start: ${h.name} [Enter]`, { accent: C.gold, col: C.yellow, pulse: true });
     else button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, 'Locked', { col: C.dgray });
@@ -445,26 +461,27 @@ export class HeroSelect implements Screen {
     });
   }
 
-  /** Strona zasobu: pasywka i zasób z liczbami z balansu (małym tekstem). */
-  private renderResource(h: HeroDef, x: number, y: number): void {
-    const g = this.app.r.g, w = (DET_W - 30) / SMALL.scale;
-    let ly = y + 64;
+  /** Strona zasobu: pasywka i zasób z liczbami z balansu (tekst opisowy). Zwraca dolną krawędź. */
+  private renderResource(h: HeroDef, x: number, y: number): number {
+    const g = this.app.r.g, w = (DET_W - 32) / descS(), lh = descLH();
+    let ly = y;
     drawText(g, `Pasywka: ${h.passive.name}`, x + 12, ly, C.yellow);
     ly += 12;
-    for (const line of wrapText(h.passive.desc, w)) { drawText(g, line, x + 12, ly, C.lgray, SMALL); ly += 9; }
+    for (const line of wrapText(h.passive.desc, w)) { drawText(g, line, x + 12, ly, C.lgray, DESC); ly += lh; }
     ly += 6;
     drawText(g, `Zasób: ${h.resource.name}`, x + 12, ly, h.resource.color);
     ly += 12;
-    for (const line of wrapText(h.resource.desc, w)) { drawText(g, line, x + 12, ly, C.white, SMALL); ly += 9; }
+    for (const line of wrapText(h.resource.desc, w)) { drawText(g, line, x + 12, ly, C.white, DESC); ly += lh; }
     ly += 3;
     for (const item of resourceDetails(h.resource.kind)) {
       wrapText(item, w).forEach((line, i) => {
-        if (i === 0) drawText(g, '-', x + 12, ly, h.resource.color, SMALL);
-        drawText(g, line, x + 18, ly, C.lgray, SMALL);
-        ly += 9;
+        if (i === 0) drawText(g, '-', x + 12, ly, h.resource.color, DESC);
+        drawText(g, line, x + 18, ly, C.lgray, DESC);
+        ly += lh;
       });
       ly += 2;
     }
+    return ly;
   }
 }
 
@@ -576,6 +593,7 @@ export class SettingsScreen implements Screen {
         sw('Zatrzymanie klatki przy trafieniach', () => yes(s.hitstop), toggle('hitstop'), 'Gra na ułamek sekundy staje przy zabiciu elity, bossa i mocnym trafieniu.'),
       ],
       [
+        sw('Text size', () => (s.textLarge ? 'Large' : 'Normal'), () => { s.textLarge = !s.textLarge; setTextSize(s.textLarge); app.persist(); }, 'Large: descriptions (abilities, cards, items, map, pause) at full size instead of smaller text. Longer texts scroll or split into pages.'),
         opt('Przyciemnienie tła', () => DIM_LABEL[Math.max(0, DIM_LEVELS.indexOf(s.bgDim))], dim, () => 'Ciemniejsze podłoże i dekoracje: postacie, wrogowie i pociski bardziej odcinają się od tła.'),
         sw('Wyraźne pociski wrogów', () => yes(s.bulletOutline), toggle('bulletOutline'), 'Pociski wrogów dostają ciemną obwódkę, lepiej odcinają się od tła i efektów.'),
         sw('Znacznik gracza', () => yes(s.playerMarker), toggle('playerMarker'), 'Pulsujący krąg pod twoją postacią, łatwo ją znaleźć w tłumie.'),

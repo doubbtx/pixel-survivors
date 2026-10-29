@@ -1,9 +1,9 @@
 import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText, wrapText, textWidth } from '../core/font';
+import { drawText, wrapText, textWidth, descS } from '../core/font';
 import { sfx } from '../core/audio';
 import type { App, Screen } from './app';
-import { moreArrow, button, panel, inside } from './widgets';
+import { moreArrow, button, panel, inside, Scroll } from './widgets';
 
 /** Strony pomocy: tytuł i akapity (pierwsze słowa przed dwukropkiem wyróżnione). */
 const PAGES: { title: string; lines: string[] }[] = [
@@ -122,14 +122,18 @@ const PAGES: { title: string; lines: string[] }[] = [
   },
 ];
 
+/** Przewijany obszar strony (x, y, w, h) w ramce pod zakładkami. */
+const AREA = [12, 54, W - 24, H - 84] as const;
+
 /** Szerokość zakładki: wszystkie strony w jednym rzędzie. */
 const TAB_W = Math.floor((W - 20) / PAGES.length) - 3;
 
 /**
- * Pomoc (menu główne i pauza): strony ze sterowaniem i zasadami. Strzałki lewo/prawo albo klik w zakładkę: strona, Esc: wróć.
+ * Pomoc (menu główne i pauza): strony ze sterowaniem i zasadami. Strzałki lewo/prawo albo klik w zakładkę: strona, góra/dół: przewijanie, Esc: wróć.
  */
 export class HelpScreen implements Screen {
   private page = 0;
+  private scroll = new Scroll();
 
   constructor(private readonly app: App, private readonly back: Screen) {}
 
@@ -140,12 +144,16 @@ export class HelpScreen implements Screen {
   update(): void {
     const inp = this.app.input, n = PAGES.length;
     if (inp.pressed('back') || inp.pressed('pause')) { this.app.go(this.back); return; }
-    if (inp.pressed('left') || inp.pressed('up')) { this.page = (this.page - 1 + n) % n; sfx.play('select'); }
-    if (inp.pressed('right') || inp.pressed('down') || inp.pressed('confirm')) { this.page = (this.page + 1) % n; sfx.play('select'); }
+    // Lewo/prawo: strona; góra/dół, kółko, palec: przewijanie strony, gdy się nie mieści.
+    this.scroll.update(inp, ...AREA, true);
+    const before = this.page;
+    if (inp.pressed('left')) { this.page = (this.page - 1 + n) % n; sfx.play('select'); }
+    if (inp.pressed('right') || inp.pressed('confirm')) { this.page = (this.page + 1) % n; sfx.play('select'); }
     if (inp.pressed('click')) {
       PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, this.tabX(i), 30, TAB_W, 16)) { this.page = i; sfx.play('select'); } });
       if (inside(inp.mouse.x, inp.mouse.y, W / 2 - 40, H - 22, 80, 16)) this.app.go(this.back);
     }
+    if (this.page !== before) this.scroll.reset();
   }
 
   render(): void {
@@ -157,11 +165,12 @@ export class HelpScreen implements Screen {
       button(r, this.tabX(i), 30, TAB_W, 16, p.title, { active: on, accent: C.gold });
     });
     panel(r, 10, 52, W - 20, H - 80, C.gold);
-    // Strona, która nie mieści się w ramce, rysuje się mniejszym tekstem.
+    // Strona, która nie mieści się w ramce: mniejszym tekstem, a przy dużym tekście (Ustawienia) przewijana.
     const lines = PAGES[this.page].lines;
     const fits = lines.reduce((h, l) => h + wrapText(l, W - 44).length * 11 + 5, 0) <= H - 92;
-    const sc = fits ? 1 : 0.75, lh = fits ? 11 : 8.5, gap = fits ? 5 : 3;
-    let y = 62;
+    const sc = fits || descS() >= 1 ? 1 : 0.75, lh = sc >= 1 ? 11 : 8.5, gap = sc >= 1 ? 5 : 3;
+    const oy = this.scroll.begin(r, ...AREA);
+    let y = 62 - oy;
     for (const line of lines) {
       const wrapped = wrapText(line, (W - 44) / sc), cut = wrapped[0].indexOf(':');
       wrapped.forEach((l, k) => {
@@ -175,6 +184,7 @@ export class HelpScreen implements Screen {
       });
       y += gap;
     }
+    this.scroll.end(r, y + oy - AREA[1], ...AREA);
     button(r, W / 2 - 40, H - 22, 80, 16, 'Wróć');
     // Kolejna strona: strzałka i podpis.
     if (this.page < PAGES.length - 1) {

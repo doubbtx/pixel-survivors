@@ -11,7 +11,7 @@ import { GameScreen } from './ui/game-screen';
 import { pointer } from './ui/widgets';
 import { setLang } from './core/i18n';
 import { music } from './core/music';
-import { resetFontCache } from './core/font';
+import { resetFontCache, setTextSize } from './core/font';
 import '@fontsource/jersey-10/400.css';
 
 /**
@@ -28,6 +28,7 @@ renderer.setFill(save.settings.scaleFill);
 renderer.setZoom(save.settings.zoom);
 renderer.setWorldRes(save.settings.lowFx ? 2 : 3);
 setLang(save.settings.lang);
+setTextSize(save.settings.textLarge);
 // Czcionka: wymuszenie wczytania (płótno samo jej nie zażąda), potem nowe pomiary szerokości napisów.
 const SAMPLE = 'Aa ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ';
 Promise.all([document.fonts.load('12px "Jersey 10"', SAMPLE), document.fonts.load('24px "Jersey 10"', SAMPLE)]).then(resetFontCache, () => undefined);

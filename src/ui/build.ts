@@ -1,7 +1,7 @@
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { drawText, wrapText, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel, describeLevel } from '../data/weapons';
@@ -12,10 +12,12 @@ import { BAL } from '../data/balance';
 import { buildElements } from '../systems/tasks';
 import { bonusLines } from '../data/upgrades';
 import type { Run } from '../game/run';
-import { dim, panel, slot, inside, hovered, button } from './widgets';
+import { dim, panel, slot, inside, hovered, button, Scroll } from './widgets';
 
 const CELL = 22, STEP = 26, GX = 16, WY = 50, PY = 116, COLS = 6;
 const DX = 186, SMALL = { scale: 0.75 } as const;
+/** Przewijany panel opisu (x, y, w, h). */
+const AREA = [DX + 2, 36, W - DX - 10, H - 44] as const;
 
 /** Reakcje żywiołów (game/run.ts react) z opisem skutku; liczby z BAL.reactions. */
 function reactions(): { a: Element; b: Element; name: string; col: number; desc: string }[] {
@@ -60,6 +62,7 @@ function recipe(r: Renderer, x: number, y: number, a: [string, boolean], b: [str
  */
 export class BuildView {
   private sel = 0;
+  private scroll = new Scroll();
   private lastMouse = 0;
   /** Prawa strona: szczegóły zaznaczonego albo tabela żywiołów i reakcji (Tab). */
   private elems = false;
@@ -78,7 +81,8 @@ export class BuildView {
   /** Zwraca true, gdy ekran ma zostać zamknięty. */
   update(input: Input): boolean {
     if (input.pressed('back') || input.pressed('pause') || input.pressed('build') || input.pressed('confirm')) return true;
-    const m = input.mouse;
+    const m = input.mouse, before = this.sel * 2 + Number(this.elems);
+    this.scroll.update(input, ...AREA);
     if (input.pressed('inventory') || (input.pressed('click') && inside(m.x, m.y, 80, H - 26, 90, 16))) { this.elems = !this.elems; sfx.play('select'); }
     const n = this.count;
     if (n) {
@@ -90,6 +94,7 @@ export class BuildView {
       if (inside(m.x, m.y, x, y, CELL, CELL) && (m.lastMove !== this.lastMouse || input.pressed('click'))) { this.sel = i; if (input.pressed('click')) this.elems = false; }
     }
     this.lastMouse = m.lastMove;
+    if (this.sel * 2 + Number(this.elems) !== before) this.scroll.reset();
     return input.pressed('click') && inside(m.x, m.y, 14, H - 26, 60, 16);
   }
 
@@ -113,22 +118,22 @@ export class BuildView {
     button(r, 14, H - 26, 60, 16, 'Wróć');
     button(r, 80, H - 26, 90, 16, this.elems ? 'Szczegóły' : 'Żywioły [Tab]');
     panel(r, DX, 34, W - DX - 6, H - 40, C.gold);
-    if (this.elems) { this.renderElements(r); return; }
-    if (!this.count) return;
-    this.sel = Math.min(this.sel, this.count - 1);
-    if (this.sel < nw) this.renderWeapon(r, this.sel);
-    else this.renderPassive(r, this.sel - nw);
+    if (!this.elems && !this.count) return;
+    this.sel = Math.min(this.sel, Math.max(0, this.count - 1));
+    // Opis: przewijany panel (dłuższe opisy przy dużym tekście).
+    const oy = this.scroll.begin(r, ...AREA);
+    const end = this.elems ? this.renderElements(r, 40 - oy) : this.sel < nw ? this.renderWeapon(r, this.sel, 42 - oy) : this.renderPassive(r, this.sel - nw, 42 - oy);
+    this.scroll.end(r, end + oy - AREA[1] + 4, ...AREA);
   }
 
-  private renderWeapon(r: Renderer, i: number): void {
-    const g = r.g, run = this.run, w = run.weapons[i], d = w.def, base = weaponBase(d), x = DX + 10, tw = (W - DX - 26) / SMALL.scale;
-    let y = 42;
+  private renderWeapon(r: Renderer, i: number, y: number): number {
+    const g = r.g, run = this.run, w = run.weapons[i], d = w.def, base = weaponBase(d), x = DX + 10, tw = (W - DX - 28) / descS();
     drawSprite(g, d.icon, x + 10, y + 10, { scale: 2 });
     drawText(g, d.name, x + 28, y, d.color, { shadow: C.black });
     const el = WEAPON_ELEMENT[d.id];
     drawText(g, `${d.fused ? 'Fuzja' : d.evolved ? 'Ewolucja' : `Poziom ${w.level}/${maxLevel(d)}`}${el ? `   ${ELEMENTS[el].name}` : ''}`, x + 28, y + 11, C.lavender);
     y += 26;
-    const text = (s: string, col: number = C.lgray) => { for (const l of wrapText(s, tw)) { drawText(g, l, x, y, col, SMALL); y += 8.5; } };
+    const text = (s: string, col: number = C.lgray) => { for (const l of wrapText(s, tw)) { drawText(g, l, x, y, col, DESC); y += descLH(); } };
     const head = (s: string, col: number) => { y += 3; drawText(g, s, x, y, col); y += 11; };
     text(d.desc, C.white);
     if (!d.evolved && w.level < maxLevel(d)) text(`Następny poziom: ${describeLevel(d, w.level + 1)}`);
@@ -171,7 +176,6 @@ export class BuildView {
       const ready = (id: string) => run.weapons.find((v) => weaponBase(v.def) === id);
       const done = (v?: { def: { evolved?: boolean }; level: number; }, id?: string) => !!v && (v.def.evolved || v.level >= maxLevel(WEAPON_BY_ID[id!]));
       for (const f of fus) {
-        if (y > H - 30) break;
         const other = f.a === base ? f.b : f.a, ow = ready(other), into = WEAPON_BY_ID[f.into];
         recipe(r, x, y, [d.icon, done(w, base)], [WEAPON_BY_ID[other].icon, done(ow, other)], into.icon);
         drawText(g, into.name, x + 86, y, C.white, SMALL);
@@ -181,18 +185,20 @@ export class BuildView {
         if (lost.length) text(`Przepadną: ${lost.join(', ')}`, C.salmon);
       }
     }
+    return y;
   }
 
   /** Żywioły i reakcje: stany, pary z opisem skutku; jasne są te, które twój build potrafi wywołać. */
-  private renderElements(r: Renderer): void {
-    const g = r.g, x = DX + 10, tw = (W - DX - 26) / SMALL.scale, own = new Set(buildElements(this.run));
-    let y = 40;
+  private renderElements(r: Renderer, y: number): number {
+    const g = r.g, x = DX + 10, tw = (W - DX - 28) / descS(), lh = descLH(), own = new Set(buildElements(this.run));
     drawText(g, 'Żywioły', x, y, C.yellow);
     y += 11;
     for (const [el, desc] of STATES) {
       const d = ELEMENTS[el], a = own.has(el) ? 1 : 0.5;
-      r.withAlpha(a, () => { drawText(g, d.name, x, y, d.color, SMALL); drawText(g, desc, x + 46, y, C.lgray, SMALL); });
-      y += 8.5;
+      r.withAlpha(a, () => {
+        drawText(g, d.name, x, y, d.color, DESC);
+        for (const l of wrapText(desc, tw - 46 / descS())) { drawText(g, l, x + 46, y, C.lgray, DESC); y += lh; }
+      });
     }
     y += 4;
     drawText(g, 'Reakcje (drugi żywioł na wrogu)', x, y, C.yellow);
@@ -202,42 +208,42 @@ export class BuildView {
       r.withAlpha(ok ? 1 : 0.5, () => {
         const A = ELEMENTS[re.a], B = ELEMENTS[re.b];
         let lx = x;
-        drawText(g, re.name, lx, y, re.col, SMALL);
+        drawText(g, re.name, lx, y, re.col, DESC);
         lx += 62;
-        drawText(g, A.name, lx, y, A.color, SMALL);
-        drawText(g, '+', lx + 42, y, C.lgray, SMALL);
-        drawText(g, B.name, lx + 49, y, B.color, SMALL);
-        y += 8.5;
-        for (const l of wrapText(re.desc, tw - 8)) { drawText(g, l, x + 6, y, C.lgray, SMALL); y += 8.5; }
+        drawText(g, A.name, lx, y, A.color, DESC);
+        drawText(g, '+', lx + 42, y, C.lgray, DESC);
+        drawText(g, B.name, lx + 49, y, B.color, DESC);
+        y += lh;
+        for (const l of wrapText(re.desc, tw - 8)) { drawText(g, l, x + 6, y, C.lgray, DESC); y += lh; }
       });
       y += 2;
     }
     for (const l of wrapText(`Jasne: twój build ma oba żywioły. Boss jest odporny na żywioł swojego biomu: stan się nie nakłada, obrażenia ${Math.round((1 - BAL.bossResist.mul) * 100)}% mniejsze.`, tw)) {
-      drawText(g, l, x, y, C.dgray, SMALL); y += 8.5;
+      drawText(g, l, x, y, C.dgray, DESC); y += lh;
     }
+    return y;
   }
 
-  private renderPassive(r: Renderer, i: number): void {
-    const g = r.g, run = this.run, p = run.passives[i], d = PASSIVE_BY_ID[p.id], x = DX + 10, tw = (W - DX - 26) / SMALL.scale;
-    let y = 42;
+  private renderPassive(r: Renderer, i: number, y: number): number {
+    const g = r.g, run = this.run, p = run.passives[i], d = PASSIVE_BY_ID[p.id], x = DX + 10, tw = (W - DX - 28) / descS();
     drawSprite(g, d.icon, x + 10, y + 10, { scale: 2 });
     drawText(g, d.name, x + 28, y, C.lime, { shadow: C.black });
     drawText(g, `Poziom ${p.level}/${d.maxLevel}`, x + 28, y + 11, C.lavender);
     y += 26;
-    for (const l of wrapText(`${d.desc} na każdy poziom.`, tw)) { drawText(g, l, x, y, C.white, SMALL); y += 8.5; }
+    for (const l of wrapText(`${d.desc} na każdy poziom.`, tw)) { drawText(g, l, x, y, C.white, DESC); y += descLH(); }
     // Bronie, które ta pasywka ewoluuje (zielona ramka: masz tę broń).
     const evo = WEAPONS.filter((w) => w.evolve?.passive === p.id);
-    if (!evo.length) return;
+    if (!evo.length) return y;
     y += 3;
     drawText(g, 'Potrzebna do ewolucji', x, y, C.yellow);
     y += 12;
     for (const w of evo) {
-      if (y > H - 30) break;
       const own = run.weapons.find((v) => weaponBase(v.def) === w.id), into = WEAPON_BY_ID[w.evolve!.into];
       recipe(r, x, y, [w.icon, !!own && own.level >= maxLevel(w)], [d.icon, true], into.icon);
       drawText(g, into.name, x + 86, y, C.white, SMALL);
       drawText(g, own ? (own.def.evolved ? 'już ewoluowała' : `masz: ${w.name} (${own.level}/${maxLevel(w)})`) : `brak: ${w.name}`, x + 86, y + 9, own ? C.lime : C.salmon, SMALL);
       y += 22;
     }
+    return y;
   }
 }

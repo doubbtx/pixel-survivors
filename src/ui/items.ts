@@ -1,7 +1,7 @@
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { drawText, wrapText, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
@@ -12,7 +12,7 @@ import {
 } from '../data/items';
 import type { Run } from '../game/run';
 import type { Stats } from '../entities/types';
-import { button, Menu, dim, panel, slot, inside } from './widgets';
+import { button, Menu, dim, panel, slot, inside, Scroll } from './widgets';
 import { itemTags } from '../data/synergies';
 import { AWAKENINGS } from '../data/forge';
 import { drawTagIcons } from './synergies';
@@ -179,6 +179,8 @@ export class LootView {
 const CELL = 24;
 const EQ_X = 14, EQ_Y = 44, EQ_DX = 40;
 const BAG_X = 108, BAG_Y = 44, BAG_COLS = 6;
+/** Obszar opisu przedmiotu pod plecakiem (x, y, w, h). */
+const ABOUT_AREA = [BAG_X - 2, 173, BAG_COLS * (CELL + 1) + 2, 52] as const;
 const DET_X = 270, DET_W = 202;
 /** Szerokość przycisku pod szczegółami (dwa obok siebie). */
 const BTN_W = (DET_W - 6) / 2;
@@ -195,6 +197,9 @@ type Cell = { kind: 'eq'; slot: SlotId } | { kind: 'bag'; i: number };
  * Przekuwanie bonusów jest w kowadle (między poziomami).
  */
 export class InventoryView {
+  /** Opis zaznaczonego przedmiotu pod plecakiem: przewijany. */
+  private about = new Scroll();
+  private aboutKey = '';
   private cx = 0;
   private cy = 0;
   private note = '';
@@ -243,6 +248,7 @@ export class InventoryView {
 
   /** Zwraca true, gdy ekran ma zostać zamknięty. */
   update(input: Input, dt: number): boolean {
+    this.about.update(input, ...ABOUT_AREA);
     this.noteT = Math.max(0, this.noteT - dt);
     if (input.pressed('back') || input.pressed('inventory') || input.pressed('pause')) return this.close();
     if (input.pressed('up')) this.cy = (this.cy + 3) % 4;
@@ -295,17 +301,18 @@ export class InventoryView {
     drawText(g, `Plecak ${run.bag.length}/${BAL.bagSize}`, BAG_X, 148, C.lavender);
     drawText(g, `${fmt(run.gold)} zł   ${fmt(run.shards)} odł.`, BAG_X + BAG_COLS * (CELL + 1) - 1, 148, C.gold, { align: 'right' });
     // Opis zaznaczonego przedmiotu (albo slotu) małym tekstem pod plecakiem.
-    const it = this.itemAt(sel), aw = (BAG_COLS * (CELL + 1) - 2) / 0.75;
+    const it = this.itemAt(sel), aw = (BAG_COLS * (CELL + 1) - 4) / descS();
     drawText(g, it ? 'O przedmiocie' : 'Wskazówka', BAG_X, 162, C.yellow);
     const about = it ? itemAbout(it) : [sel.kind === 'eq' ? 'Pusty slot: najedź na przedmiot w plecaku i kliknij, żeby go założyć.' : 'Najedź na przedmiot, żeby zobaczyć opis. Klik: załóż / zdejmij, X: rozłóż na złoto.'];
-    let ay = 174;
+    // Opis przewijany (kółko / palec / PageUp-PageDown), od góry przy zmianie zaznaczenia.
+    const key = `${sel.kind}:${this.cx}:${this.cy}`;
+    if (key !== this.aboutKey) { this.aboutKey = key; this.about.reset(); }
+    const oy = this.about.begin(r, ...ABOUT_AREA);
+    let ay = ABOUT_AREA[1] + 1 - oy;
     for (const para of about) {
-      for (const l of wrapText(para, aw)) {
-        if (ay > 220) break;
-        drawText(g, l, BAG_X, ay, C.lgray, { scale: 0.75 });
-        ay += 8;
-      }
+      for (const l of wrapText(para, aw)) { drawText(g, l, BAG_X, ay, C.lgray, DESC); ay += descLH() - 1; }
     }
+    this.about.end(r, ay + oy - ABOUT_AREA[1], ...ABOUT_AREA);
     if (it) {
       const cmp = sel.kind === 'bag' ? run.equipment[run.slotFor(it)] : undefined;
       drawItemCard(r, it, DET_X, 34, DET_W, 196, cmp, false, run.stats);

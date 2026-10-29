@@ -1,17 +1,19 @@
-import { W, type Renderer } from '../core/renderer';
+import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, textWidth } from '../core/font';
+import { drawText, textWidth, wrapText, DESC, descS, descLH } from '../core/font';
 import { drawSprite } from '../gfx/sprites';
 import { SYNERGIES, SYNERGY_BY_TAG, VERSATILITY, tierOf, type SynergyDef } from '../data/synergies';
 import type { Tag } from '../data/cards';
 import type { Run } from '../game/run';
-import { dim, panel, inside, hovered } from './widgets';
+import { dim, panel, inside, hovered, Scroll } from './widgets';
 import { UI, tile, iconSlot, cornerTag } from './theme';
 
 const OUT = { outline: C.black } as const;
 /** Mały tekst progów (ekran synergii). */
 const SMALL = { scale: 0.75 } as const;
+/** Przewijana lista synergii (x, y, w, h). */
+const LIST_AREA = [4, 60, W - 8, H - 62] as const;
 
 /** Następny próg albo ostatni (gdy wszystkie osiągnięte). */
 function nextThreshold(def: SynergyDef, tier: number): number {
@@ -85,10 +87,13 @@ export function drawSynergyHud(r: Renderer, run: Run, x: number, y: number, maxW
  * Ekran synergii (z pauzy): wszystkie tagi, punkty i progi z opisami; osiągnięte progi na zielono.
  */
 export class SynergyView {
+  private scroll = new Scroll();
+
   constructor(private readonly run: Run) {}
 
   /** Zwraca true, gdy ekran ma zostać zamknięty. */
   update(input: Input): boolean {
+    this.scroll.update(input, ...LIST_AREA, true);
     if (input.pressed('back') || input.pressed('pause') || input.pressed('confirm')) return true;
     return input.pressed('click') && inside(input.mouse.x, input.mouse.y, W - 70, 6, 64, 22);
   }
@@ -108,17 +113,26 @@ export class SynergyView {
       const x = 140 + (k % 2) * 166, y = 33 + Math.floor(k / 2) * 11;
       drawText(g, `${VERSATILITY.thresholds[k]}: ${t.desc}`, x, y, k < vt ? C.lime : C.dgray, SMALL);
     });
-    SYNERGIES.forEach((d, i) => {
-      const x = 6 + (i % 2) * 236, y = 60 + Math.floor(i / 2) * 42;
-      const pts = run.tagPts[d.tag], tier = run.synTiers[d.tag] ?? 0;
-      panel(r, x, y, 232, 41, tier > 0 ? C.gold : C.slate);
-      drawSprite(g, `tag:${d.tag}`, x + 12, y + 10);
-      drawText(g, d.tag, x + 24, y + 3, tier > 0 ? C.yellow : C.white, { shadow: C.black });
-      drawText(g, `${pts} pkt`, x + 224, y + 3, tier > 0 ? C.yellow : C.lgray, { align: 'right' });
-      d.tiers.forEach((t, k) => {
-        const on = k < tier;
-        drawText(g, `${d.thresholds[k]}: ${t.desc}`, x + 24, y + 14 + k * 8.5, on ? C.lime : C.dgray, SMALL);
-      });
-    });
+    // Synergie w dwóch kolumnach; wysokość rzędu z najdłuższego opisu progów (przy dużym tekście lista się przewija).
+    const lh = descLH() - 1, tw = (232 - 30) / descS();
+    const lines = SYNERGIES.map((d) => d.tiers.map((t, k) => wrapText(`${d.thresholds[k]}: ${t.desc}`, tw)));
+    const oy = this.scroll.begin(r, ...LIST_AREA);
+    let y = LIST_AREA[1] + 1 - oy;
+    for (let i = 0; i < SYNERGIES.length; i += 2) {
+      const rowH = Math.max(...[i, i + 1].filter((j) => j < SYNERGIES.length).map((j) => 17 + lines[j].flat().length * lh));
+      for (const j of [i, i + 1]) {
+        const d = SYNERGIES[j];
+        if (!d) continue;
+        const x = 6 + (j % 2) * 236, pts = run.tagPts[d.tag], tier = run.synTiers[d.tag] ?? 0;
+        panel(r, x, y, 232, rowH, tier > 0 ? C.gold : C.slate);
+        drawSprite(g, `tag:${d.tag}`, x + 12, y + 10);
+        drawText(g, d.tag, x + 24, y + 3, tier > 0 ? C.yellow : C.white, { shadow: C.black });
+        drawText(g, `${pts} pkt`, x + 224, y + 3, tier > 0 ? C.yellow : C.lgray, { align: 'right' });
+        let ty = y + 14;
+        lines[j].forEach((ls, k) => { for (const l of ls) { drawText(g, l, x + 24, ty, k < tier ? C.lime : C.dgray, DESC); ty += lh; } });
+      }
+      y += rowH + 1;
+    }
+    this.scroll.end(r, y + oy - LIST_AREA[1], ...LIST_AREA);
   }
 }

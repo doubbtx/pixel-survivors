@@ -68,6 +68,8 @@ export interface Settings {
   playerMarker: boolean;
   /** Język (core/i18n.ts); domyślnie angielski. */
   lang: Lang;
+  /** Rozmiar tekstów opisowych (core/font.ts `setTextSize`): duży domyślnie na dotyku. */
+  textLarge: boolean;
 }
 
 /** Kolekcja kart (między runami): odkryte, liczba wyborów i bany (wykluczone z ofert); odkryte unikaty (nowe pole bez migracji). */
@@ -191,7 +193,8 @@ function defaults(): SaveData {
     settings: { volume: 0.5, music: 0.4, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
-      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en' },
+      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en',
+      textLarge: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches },
     records: {},
     slots: { endless: null, expedition: null },
     notice: '',

@@ -98,4 +98,12 @@ export const PL: Record<string, string> = {
   "Gradual unlocks: new players begin with the Expedition and two heroes. Bosses, acts and wins unlock the Anvil, heroes, Endless, Pacts and harder map difficulties.": "Stopniowe odblokowania: nowi gracze zaczynają od Ekspedycji i dwóch bohaterów. Bossowie, akty i wygrane odblokowują Kowadło, bohaterów, Endless, Pakty i trudniejsze mapy.",
   "Your current save keeps everything unlocked.": "Twój obecny zapis ma wszystko odblokowane.",
   "Collection tabs appear once they have something in them.": "Zakładki Kolekcji pojawiają się, gdy coś w nich jest.",
+  "Text size": "Rozmiar tekstu",
+  "Large": "Duży",
+  "Normal": "Normalny",
+  "Large: descriptions (abilities, cards, items, map, pause) at full size instead of smaller text. Longer texts scroll or split into pages.": "Duży: opisy (umiejętności, karty, przedmioty, mapa, pauza) w pełnym rozmiarze zamiast pomniejszonego tekstu. Dłuższe teksty przewijają się albo dzielą na strony.",
+  "only {}, max lv. {}, {}": "tylko {}, poz. maks. {}, {}",
+  "only {}, max lv. {}": "tylko {}, poz. maks. {}",
+  "max lv. {}, {}": "poz. maks. {}, {}",
+  "max lv. {}": "poz. maks. {}",
 };
