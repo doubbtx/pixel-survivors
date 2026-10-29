@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.45.0)
+## Stan (wersja 0.46.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -718,6 +718,10 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   'Death Mark: execute' w PCT_SOURCES), bastion (`bastionT` niszczy wrogie pociski, wybuch na koniec), mushin (`mushinT`:
   Mikiri pewne, kontry z limitem/s). `BAL.altUlt`, `updateAltUlts`. Bot `&ult=alt|mix`. `BAL.collectLevels` 3: collectAll
   daje najwyżej 3 awanse (nadwyżka XP do 90% paska) — analiza: skok L18→L45 przy bossie podbijał floor HP i lawinę okien.
+- 0.46.0 (prośba gracza: Koszmar za łatwy dla doświadczonych): Udręka 1–10 (`TORMENT` w data/expedition.ts, `tormentFlags`
+  sumowane do flag każdej mapy w `levelAt(..., torment)`, bez łagodnego startu). Odblokowanie: wygrana wyprawy na najwyższym
+  poziomie map albo na Udręce N → `save.tormentMax` N+1 (do `BAL.torment.max`). Wybór: T / przycisk na mapie tylko przed
+  pierwszą walką aktu 1 (`ex.torment`, `save.exTorment`), zasady w okienku po wskazaniu. Esencja ×(1 + 0.15·N). Bot `&torment=N`.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

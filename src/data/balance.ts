@@ -567,6 +567,8 @@ export const BAL = {
     bastionTime: 3, bastionPerCount: 0.125, bastionHeal: 0.002,
     mushinDmg: 0.4, mushinCounters: 6, mushinMax: 5,
   },
+  /** Udręka (0.46): esencja ×(1 + essence × poziom), maks. poziom. */
+  torment: { essence: 0.15, max: 10 },
   /** Maks. awansów z zebrania kryształów całej mapy po bossie / końcu poziomu (0.45, analiza Agenta 2). */
   collectLevels: 3,
   shootMargin: 10,

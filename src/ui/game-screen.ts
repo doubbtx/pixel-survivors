@@ -29,7 +29,7 @@ import { AnvilView } from './anvil';
 import { rollShop } from '../data/shop';
 import { metaBonus, runEssence, heroMeta, heroTree } from '../data/meta';
 import { rollItem } from '../data/items';
-import { advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth, rollOffer } from '../data/expedition';
+import { advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth, rollOffer, MAP_RARITY } from '../data/expedition';
 import { music } from '../core/music';
 import { ExpeditionMapView } from './expedition';
 import { Hints, type HintBox } from './hints';
@@ -176,6 +176,8 @@ export class GameScreen implements Screen {
     ], W / 2, 216, 200, 15);
     if (mode === 'expedition' && !snapshot) {
       this.run.expedition = newExpedition(app.save.exTier, maxTier(app.save), !unlocked(app.save, 'forge'));
+      this.run.expedition.tormentMax = app.save.tormentMax ?? 0;
+      this.run.expedition.torment = Math.min(app.save.exTorment ?? 0, this.run.expedition.tormentMax);
       this.openMap();
     } else if (mode === 'expedition' && !snapshot!.inProgress) {
       // Zapis z mapy: sklep, w którym gracz wyszedł, albo mapa.
@@ -261,7 +263,7 @@ export class GameScreen implements Screen {
     const ex = this.run.expedition;
     if (this.mode === 'endless') mul *= BAL.meta.endlessEssenceMul;
     // Modyfikatory ukończonych map podnoszą esencję (BAL.expedition.rewardEssence na punkt nagrody).
-    const mapMul = 1 + (ex?.bonus ?? 0) * BAL.expedition.rewardEssence / 100;
+    const mapMul = (1 + (ex?.bonus ?? 0) * BAL.expedition.rewardEssence / 100) * (1 + (ex?.torment ?? 0) * BAL.torment.essence);
     this.essence = runEssence(this.run, ex?.cleared ?? 0, this.run.essenceMul * mul * mapMul);
     h.essence += this.essence;
     h.total += this.essence;
@@ -336,6 +338,17 @@ export class GameScreen implements Screen {
   /** Ostatni boss pokonany: wyprawa ukończona — rekord, więcej esencji, slot czyszczony. */
   private onExpeditionWon(): void {
     heroRecord(this.app.save, this.heroId).expeditionWins++;
+    // Udręka: wygrana na Koszmarze (najwyższy poziom map) albo na Udręce N odblokowuje następny poziom.
+    const ex0 = this.run.expedition!, s0 = this.app.save;
+    if ((ex0.tier ?? 0) >= MAP_RARITY.length - 1 || (ex0.torment ?? 0) > 0) {
+      const next = Math.min(BAL.torment.max, (ex0.torment ?? 0) + 1);
+      if (next > (s0.tormentMax ?? 0)) {
+        s0.tormentMax = next;
+        const u: UnlockDef = { id: `torment${next}`, name: `${tr('Torment')} ${next}`, how: '', hint: 'A harder Expedition level is open: press T on the map before the first fight.', check: () => true };
+        this.unlockQueue.push(u);
+        this.unlockedRun.push(u);
+      }
+    }
     this.unlock({ boss: true, acts: this.run.expedition!.act, won: true });
     const X = BAL.expedition;
     this.awardEssence(X.winEssenceMul * (this.run.expedition!.act > X.acts ? X.voidEssenceMul : 1));
@@ -361,7 +374,7 @@ export class GameScreen implements Screen {
     this.unlockQueue.push(...fresh);
     this.unlockedRun.push(...fresh);
     // Trwająca wyprawa korzysta od razu (kowadła od następnego aktu, trudność od teraz).
-    if (ex) { ex.maxTier = maxTier(s); ex.noForge = !unlocked(s, 'forge'); }
+    if (ex) { ex.maxTier = maxTier(s); ex.noForge = !unlocked(s, 'forge'); ex.tormentMax = s.tormentMax ?? 0; }
   }
 
   /** Samouczek: krok po kroku; gracz nie ginie (wskrzeszenie z pełnym życiem); na końcu Enter / klik → pierwsza Ekspedycja. */
@@ -405,7 +418,7 @@ export class GameScreen implements Screen {
   /** Mapa Ekspedycji między węzłami (zapis pozycji). */
   private openMap(): void {
     this.hints.show('map');
-    this.map ??= new ExpeditionMapView(this.run, (t) => { this.app.save.exTier = t; this.app.persist(); }, (text) => { this.showToast(text); this.saveSlot(false); });
+    this.map ??= new ExpeditionMapView(this.run, (t) => { this.app.save.exTier = t; this.app.persist(); }, (n) => { this.app.save.exTorment = n; this.app.persist(); }, (text) => { this.showToast(text); this.saveSlot(false); });
     this.overlayReturn = 'map';
     this.state = 'map';
     this.delay = 0.1;

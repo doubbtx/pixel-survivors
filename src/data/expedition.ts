@@ -166,6 +166,33 @@ export interface ExpeditionState {
   /** Odblokowania (data/unlocks.ts) przeniesione do wyprawy: najwyższy dostępny poziom trudności i brak kowadła/kuźni. */
   maxTier?: number;
   noForge?: boolean;
+  /** Udręka (0.46): poziom ponad Koszmarem wybrany na start wyprawy (0 = brak) i najwyższy odblokowany. */
+  torment?: number;
+  tormentMax?: number;
+}
+
+/**
+ * Udręka (0.46, dla doświadczonych): poziomy ponad Koszmarem, odblokowywane kolejno wygraną wyprawą (Koszmar → Udręka 1,
+ * Udręka N → N+1). Zasady się sumują: poziom N = flagi poziomów 1..N na każdej mapie. Więcej esencji (BAL.torment.essence).
+ */
+export const TORMENT: { name: string; flags: Record<string, number> }[] = [
+  { name: 'Enemies +30% HP', flags: { enemyHp: 0.3 } },
+  { name: 'Elites 50% more often', flags: { eliteRate: 0.5 } },
+  { name: 'Enemies +30% damage', flags: { enemyDmg: 0.3 } },
+  { name: 'Healing -30%', flags: { healCut: 0.3 } },
+  { name: 'Enemies 15% faster', flags: { enemySpeed: 0.15 } },
+  { name: 'Bosses +50% HP and +30% damage', flags: { bossHp: 0.5, bossDmg: 0.3 } },
+  { name: 'Enemy bullets faster and denser', flags: { bulletSpeed: 0.25, bulletDensity: 0.3 } },
+  { name: 'Elites get an extra trait', flags: { eliteMods: 1 } },
+  { name: 'More enemies', flags: { enemyCount: 0.3 } },
+  { name: 'Enemies +50% HP, +30% damage', flags: { enemyHp: 0.5, enemyDmg: 0.3 } },
+];
+
+/** Suma flag Udręki do poziomu `n`. */
+export function tormentFlags(n: number): Record<string, number> {
+  const f: Record<string, number> = {};
+  for (const t of TORMENT.slice(0, n)) for (const [k, v] of Object.entries(t.flags)) f[k] = (f[k] ?? 0) + v;
+  return f;
 }
 
 /** Mapa z walką: nazwa z biomu, poziom trudności wybrany przez gracza, modyfikatory i bonus. */
@@ -301,7 +328,7 @@ function mapFlags(m: MapNode): Record<string, number> {
 }
 
 /** Poziom dla węzła z walką: biom aktu, krótszy cel bez bossa (mapa, elita), loch albo pełny poziom z bossem. */
-export function levelAt(act: number, row: number, m: MapNode): LevelDef {
+export function levelAt(act: number, row: number, m: MapNode, torment = 0): LevelDef {
   const X = BAL.expedition;
   const depth = depthAt(act, row);
   // Rozdarcie: walka w Pustce, silniejsi wrogowie, częste elity i więcej łupu.
@@ -309,7 +336,7 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
   const b = BIOMES[biome];
   const boss = m.kind === 'boss';
   const short = boss ? 1 : X.fightScale;
-  const gentle = act === 1 && row === 0 && m.kind === 'fight';
+  const gentle = act === 1 && row === 0 && m.kind === 'fight' && !torment;
   const objective: Objective = gentle ? { kind: 'kills', count: X.gentle.kills }
     : m.kind === 'hunt' ? { kind: 'hunt', time: X.huntLimit }
     : m.kind === 'ambush' ? { kind: 'survive', time: Math.round(X.objTime(act) * short * X.ambushScale / 10) * 10 }
@@ -317,7 +344,10 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
       // Zwykła walka „przetrwaj”: albo zabij tylu, ilu na mapie „pokonaj” (silny build kończy szybciej, 0.40).
       ? { kind: 'survive', time: Math.round(X.objTime(act) * (boss ? 1 : X.surviveScale) / 10) * 10, kills: boss ? undefined : Math.round(X.objKills(act) * short * X.surviveKills / 10) * 10 }
       : { kind: 'kills', count: Math.round(X.objKills(act) * short / 10) * 10 };
-  const f = m.kind === 'secret' ? { enemyHp: 0.5, enemyDmg: 0.3, mapLoot: 1, mapGold: 1 } : mapFlags(m);
+  const f0 = m.kind === 'secret' ? { enemyHp: 0.5, enemyDmg: 0.3, mapLoot: 1, mapGold: 1 } : mapFlags(m);
+  // Udręka: zasady dodane do flag każdej mapy (łagodny start wyprawy tylko bez Udręki).
+  const f: Record<string, number> = { ...f0 };
+  for (const [k, v] of Object.entries(tormentFlags(torment))) f[k] = (f[k] ?? 0) + v;
   return {
     depth,
     name: m.name ?? `${b.name}, akt ${act}`,
@@ -339,7 +369,7 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
   };
 }
 
-export const nodeLevel = (ex: ExpeditionState): LevelDef => levelAt(ex.act, exRow(ex), currentMap(ex) ?? { kind: 'fight' });
+export const nodeLevel = (ex: ExpeditionState): LevelDef => levelAt(ex.act, exRow(ex), currentMap(ex) ?? { kind: 'fight' }, ex.torment ?? 0);
 
 const AFFINITY_KINDS = new Set<NodeKind>(['fight', 'elite', 'ambush', 'hunt']);
 const ELEMS: Element[] = ['fire', 'ice', 'lightning', 'poison'];

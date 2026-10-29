@@ -10,8 +10,7 @@ import { BIOME_WAVES } from '../data/waves';
 import { ENEMIES, BIOME_MINIBOSS } from '../data/enemies';
 import {
   NODE_INFO, actBiome, chooseTier, tierOpen, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, CAMP_BUFFS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
-  type MapNode, type NodeKind,
-} from '../data/expedition';
+  type MapNode, TORMENT, type NodeKind } from '../data/expedition';
 import type { Run } from '../game/run';
 import { fmt } from '../util/format';
 import { panel, inside, hovered, button, Scroll } from './widgets';
@@ -46,6 +45,8 @@ const offerPos = (i: number, n = 2): [number, number] => [MAP_X + 60 + i * (offe
 
 /** Przyciski poziomu trudności w prawym górnym rogu panelu szczegółów (lewy górny róg przycisku). */
 const TIER_W = 50, TIER_H = 14;
+/** Przycisk Udręki (lewy dolny róg panelu szczegółów). */
+const TOR_X = MAP_X + 8, TOR_W = 92;
 /** Lista modyfikatorów w panelu mapy (x, y, w, h): pod nazwą mapy, do przycisków. */
 const MODS_AREA = [MAP_X + 8, DET_Y + 38, 250, BTN_Y - DET_Y - 40] as const;
 const tierPos = (i: number): [number, number] => [MAP_X + MAP_W - 8 - (4 - i) * (TIER_W + 3) + 3, DET_Y + 6];
@@ -94,7 +95,13 @@ export class ExpeditionMapView {
    * `onTier`: gracz zmienił poziom trudności (zapamiętanie na następne wyprawy).
    * `onChosen`: wybrano bonus obozu albo kapliczki (komunikat, zapis).
    */
-  constructor(private readonly run: Run, private readonly onTier: (tier: number) => void, private readonly onChosen: (text: string) => void) {}
+  constructor(private readonly run: Run, private readonly onTier: (tier: number) => void, private readonly onTorment: (n: number) => void, private readonly onChosen: (text: string) => void) {}
+
+  /** Udręka: zmiana tylko przed pierwszą walką wyprawy (akt 1, pusta ścieżka). */
+  private tormentOpen(): boolean {
+    const ex = this.run.expedition!;
+    return (ex.tormentMax ?? 0) > 0 && ex.act === 1 && ex.path.length === 0;
+  }
 
   /** Wybór obozu / kapliczki: zwraca true, gdy nakładka wyboru przejęła wejście. */
   private updateOffer(input: Input): boolean {
@@ -183,6 +190,13 @@ export class ExpeditionMapView {
       sfx.play('select');
       this.onTier(t);
     });
+    // Udręka (0.46): T albo klik w przycisk — kolejny poziom (0..odblokowany), tylko przed pierwszą walką.
+    if (this.tormentOpen() && (input.pressed('torment') || (input.pressed('click') && inside(m.x, m.y, TOR_X, BTN_Y, TOR_W, BTN_H)))) {
+      const ex = this.run.expedition!;
+      ex.torment = ((ex.torment ?? 0) + 1) % ((ex.tormentMax ?? 0) + 1);
+      this.onTorment(ex.torment);
+      sfx.play('select');
+    }
     // Przyciski: Plecak, Menu, Wyrusz.
     if (input.pressed('click')) {
       for (let i = 0; i < BTNS.length; i++) {
@@ -195,7 +209,22 @@ export class ExpeditionMapView {
     return null;
   }
 
+  /** Zasady Udręki pod kursorem (rysowane na końcu, nad panelem szczegółów). */
+  private renderTormentTip(r: Renderer): void {
+    const n = this.run.expedition!.torment ?? 0;
+    if (!n || !hovered(TOR_X, BTN_Y, TOR_W, BTN_H)) return;
+    const lines = TORMENT.slice(0, n).map((t, i) => `${i + 1}. ${tr(t.name)}`), h = lines.length * 9 + 6;
+    r.rect(TOR_X, BTN_Y - h - 2, 170, h, C.black);
+    panel(r, TOR_X, BTN_Y - h - 2, 170, h);
+    lines.forEach((l, i) => drawText(r.g, l, TOR_X + 4, BTN_Y - h + 1 + i * 9, C.salmon, { scale: smallS() }));
+  }
+
   render(r: Renderer): void {
+    this.renderMap(r);
+    this.renderTormentTip(r);
+  }
+
+  private renderMap(r: Renderer): void {
     const g = r.g, run = this.run, ex = run.expedition!;
     const X = BAL.expedition;
     r.withAlpha(0.82, () => r.cover(C.black));
@@ -323,6 +352,11 @@ export class ExpeditionMapView {
 
     // Szczegóły zaznaczonego węzła i przyciski.
     panel(r, MAP_X, DET_Y, MAP_W, H - DET_Y - 4);
+    // Udręka: przycisk (zmiana przed pierwszą walką) i zasady obecnego poziomu.
+    if ((ex.tormentMax ?? 0) > 0 || (ex.torment ?? 0) > 0) {
+      const n = ex.torment ?? 0, open = this.tormentOpen();
+      button(r, TOR_X, BTN_Y, TOR_W, BTN_H, n ? `${tr('Torment')} ${n}/${ex.tormentMax}${open ? ' [T]' : ''}` : `${tr('Torment')}: ${tr('off')}${open ? ' [T]' : ''}`, { accent: C.red, col: n ? C.salmon : C.lavender, active: n > 0, scale: smallS() });
+    }
     BTNS.forEach((b, i) => button(r, btnX(i), BTN_Y, b.w, BTN_H, b.label, b.act === 'go' ? { accent: C.gold, col: C.yellow, pulse: target !== undefined && !ex.offer, scale: smallS() } : { scale: smallS() }));
     if (ex.offer) { this.renderOffer(r); return; }
     const [drow, dlane] = this.peek ?? [cur + 1, target];
@@ -335,7 +369,7 @@ export class ExpeditionMapView {
     drawSprite(g, kind.icon, x0 + 10, y0 + 10, { scale: 2 });
     // Rozdarcie w podglądzie: tylko „???” i opis (tajemnica do wejścia).
     if (isCombat(m.kind) && !(m.kind === 'secret' && this.peek)) {
-      const lv = levelAt(ex.act, drow, m);
+      const lv = levelAt(ex.act, drow, m, ex.torment ?? 0);
       const rar = MAP_RARITY[m.rarity ?? 0];
       drawText(g, m.name ?? kind.name, x0 + 26, y0, m.kind === 'boss' ? kind.color : rar.color, { shadow: C.black });
       const sub = m.kind === 'boss' ? `${kind.name}: ${lv.bossName}` : `${kind.name}, ${rar.name.toLowerCase()}`;

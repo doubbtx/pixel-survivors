@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.46',
+    lines: [
+      "Torment: levels above Nightmare for experienced players. Win an Expedition on Nightmare to open Torment 1, then each win opens the next (up to 10). Press T on the map before the first fight; every level adds one rule and more essence.",
+    ],
+  },
+  {
     version: '0.45',
     lines: [
       "Every hero now has a second ultimate to choose from: press R on the hero screen. Kestra: Falcon Shot, Borgun: Earthquake, Ignara: Solar Flare, Morwen: Plague, Vesper: Death Mark, Aurel: Bastion of Light, Takezo: Mushin. Your Progress upgrades and cards for the ultimate work with both.",

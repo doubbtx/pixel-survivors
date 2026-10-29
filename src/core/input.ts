@@ -5,14 +5,14 @@ export type Action =
   | 'up' | 'down' | 'left' | 'right'
   | 'q' | 'e' | 'dash' | 'ult'
   | 'pause' | 'confirm' | 'back' | 'click' | 'inventory' | 'fullscreen'
-  | 'reroll' | 'skip' | 'banish' | 'anvil' | 'build' | 'synergies'
+  | 'reroll' | 'skip' | 'banish' | 'anvil' | 'build' | 'synergies' | 'torment'
   | 'n1' | 'n2' | 'n3' | 'n4' | 'pageUp' | 'pageDown'
   | 'debug' | 'debugTime' | 'debugLevel' | 'debugLoot';
 
 /** Klawisze stałe (menu: strzałki, Enter, Esc, Tab, cyfry, przewijanie, debug) — zawsze działają, niezależnie od przypisań. */
 const FIXED: Record<string, Action[]> = {
   ArrowUp: ['up'], ArrowDown: ['down'], ArrowLeft: ['left'], ArrowRight: ['right'],
-  Space: ['confirm'], KeyR: ['reroll'], Enter: ['confirm'], Escape: ['pause', 'back'], KeyF: ['fullscreen'], Tab: ['inventory'],
+  Space: ['confirm'], KeyR: ['reroll'], Enter: ['confirm'], Escape: ['pause', 'back'], KeyF: ['fullscreen'], Tab: ['inventory'], KeyT: ['torment'],
   Digit1: ['n1'], Digit2: ['n2'], Digit3: ['n3'], Digit4: ['n4'], PageUp: ['pageUp'], PageDown: ['pageDown'],
   F3: ['debug'], Backquote: ['debug'], F4: ['debugTime'], F6: ['debugLevel'], F7: ['debugLoot'],
 };
