@@ -76,7 +76,7 @@ function fusionPage(): Page {
 function abilityPage(): Page {
   const entries: Entry[] = [];
   for (const h of HEROES) {
-    for (const a of h.abilities) {
+    for (const a of [...h.abilities, ...(h.altUlt ? [h.altUlt] : [])]) {
       if (!a.evo) continue;
       entries.push({
         parts: [a.icon, `tag:${a.evo.tag}`], result: a.evo.icon, title: `${a.evo.name} (${h.name})`, color: h.color,

@@ -90,8 +90,10 @@ export function startDungeon(run: Run): void {
 /** Wejście do lochu: świat zwykłej mapy odkładamy (kryształy i łupy zebrane), gracz trafia na arenę. */
 export function enterDungeon(run: Run, kind: DungeonKind): void {
   const p = run.player;
-  for (const g of run.gems.items) run.addXp(g.value);
+  let xp = 0;
+  for (const g of run.gems.items) xp += g.value;
   run.gems.clear();
+  run.addXpCapped(xp);
   for (const it of run.pickups.items) {
     if (it.kind === 'coin') run.gold += it.value * run.stats.greed;
     if (it.kind === 'chest' && it.item) run.pendingLoot.push({ source: it.source, item: it.item });
