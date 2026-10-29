@@ -3,6 +3,7 @@ import { C } from './core/palette';
 import { Input, setBindings } from './core/input';
 import { startLoop } from './core/loop';
 import { sfx } from './core/audio';
+import { spawnEnemy } from './systems/spawner';
 import { loadSave, writeSave } from './core/save';
 import { grantUnlocks } from './data/unlocks';
 import type { App, Screen } from './ui/app';
@@ -77,7 +78,9 @@ const bot = import.meta.env.DEV && botParams.has('bot') ? new (await import('./d
 // Podgląd stanu w konsoli i w testach (tylko serwer deweloperski): window.__screen(), telemetria bieżącego runu
 // window.__telemetry() (JSON do skopiowania z prawdziwej gry).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-if (import.meta.env.DEV) Object.assign(window, { __screen: () => screen, __sfx: sfx, __telemetry: () => JSON.stringify((screen as any).run?.telemetry ?? []), __quality: quality, __loop: () => app.loop });
+if (import.meta.env.DEV) Object.assign(window, { __screen: () => screen, __sfx: sfx, __telemetry: () => JSON.stringify((screen as any).run?.telemetry ?? []), __quality: quality, __loop: () => app.loop,
+  // Testy: wróg (opcjonalnie elita z cechami) obok gracza bieżącego runu.
+  __spawn: (id: string, dx: number, dy: number, elite?: string[]) => { const run = (screen as any).run; return run && spawnEnemy(run, id, run.player.x + dx, run.player.y + dy, elite ? { elite } : {}); } });
 
 /**
  * Automatyczna jakość (0.38): gdy praca klatki (logika + render) przez `downAfter` s przekracza `slowMs`, świat rysuje się

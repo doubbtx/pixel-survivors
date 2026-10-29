@@ -2,7 +2,7 @@ import { C } from '../core/palette';
 import { rng } from '../core/rng';
 import { sfx } from '../core/audio';
 import { BAL } from '../data/balance';
-import { ENEMIES, ELITE_MODS, BIOME_MINIBOSS } from '../data/enemies';
+import { ENEMIES, ELITE_MODS, BIOME_MINIBOSS, eliteCompatible } from '../data/enemies';
 import { WAVES, EVENTS, BIOME_WAVES } from '../data/waves';
 import type { Enemy } from '../entities/types';
 import type { Run } from '../game/run';
@@ -39,13 +39,13 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   e.age = 0; e.dead = false; e.elite = null; e.boss = false; e.scale = 1;
   e.dr = 0; e.regen = 0; e.extraRing = false; e.burstLeft = 0; e.burstT = 0; e.touchCd = 0; e.abilT = 0;
   e.hitStamp.fill(-9999);
-  e.phase = 0; e.invuln = 0; e.actT = 3; e.dashT = 0; e.dvx = 0; e.dvy = 0; e.z = 0; e.hidden = false; e.tx = 0; e.ty = 0; e.nextAlt = 0; e.told = false; e.sit = 0; e.summons = 0;
+  e.phase = 0; e.invuln = 0; e.actT = 3; e.dashT = 0; e.dvx = 0; e.dvy = 0; e.z = 0; e.hidden = false; e.tx = 0; e.ty = 0; e.nextAlt = 0; e.told = false; e.sit = 0; e.summons = 0; e.traitT = 2; e.buffT = 0;
 
   if (o.elite) {
     // Pakt „Elity z cechami”: dodatkowe, różne cechy.
     const mods = [...o.elite];
     for (let i = 0; i < run.flag('eliteMods'); i++) {
-      const left = Object.keys(ELITE_MODS).filter((k) => !mods.includes(k));
+      const left = Object.keys(ELITE_MODS).filter((k) => eliteCompatible(mods, k));
       if (left.length) mods.push(rng.pick(left));
     }
     e.elite = mods;
@@ -181,12 +181,15 @@ export function updateSpawner(run: Run, dt: number): void {
   run.eliteT -= dt;
   if (run.eliteT <= 0) {
     run.eliteT = BAL.eliteEvery * run.levelInfo.eliteMul * BAL.eliteGap(waveT) / (1 + run.flag('eliteRate'));
-    const mods = Object.keys(ELITE_MODS);
+    // Cechy zachowania (R3) dopiero w późniejszych falach; pary zakazane pomijane.
+    // Ekspedycja: cechy zachowania od aktu 2 (czas fal zawiera przesunięcie głębokości).
+    const traitsOn = run.expedition ? run.expedition.act >= 2 : waveT >= BAL.eliteTraits.from;
+    const mods = Object.keys(ELITE_MODS).filter((k) => traitsOn || !ELITE_MODS[k].kind);
     // Mapa elit / Zasadzka w Ekspedycji: stałe cechy elit widoczne na mapie przed wejściem.
     const picked = run.levelInfo.eliteMods ? [...run.levelInfo.eliteMods] : [rng.pick(mods)];
     if (!run.levelInfo.eliteMods && waveT > 150) {
       const second = rng.pick(mods);
-      if (second !== picked[0]) picked.push(second);
+      if (eliteCompatible(picked, second)) picked.push(second);
     }
     const [x, y] = ringPos(run, rng.range(0, Math.PI * 2));
     const base = rng.weighted(currentMix(waveT, run.levelInfo.biome).filter(([id]) => id !== 'bat'));

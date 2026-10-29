@@ -215,7 +215,7 @@ export const WEAPONS: WeaponDef[] = [
   {
     // Takezo: dwa miecze tną przed nim i za nim (Niten Ichi-ryū).
     id: 'katana', name: 'Two Swords', desc: 'Two blades cut in front of you and behind you.', icon: 'ic_katana', kind: 'cleave', color: C.lgray, hero: 'takezo',
-    base: S({ damage: 16, cooldown: 0.68, amount: 2, area: 1.05, knock: 2 }),
+    base: S({ damage: 16, cooldown: 0.68, amount: 2, area: 1.25, knock: 2 }),
     levels: [{ damage: 4 }, { cooldown: -0.08 }, { area: 0.15 }, { damage: 6 }, { cooldown: -0.08 }, { amount: 1 }, { damage: 8, area: 0.15 }],
     evolves: [{ passive: 'fury', into: 'katana_evo' }],
   },

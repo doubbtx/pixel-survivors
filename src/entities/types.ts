@@ -104,6 +104,9 @@ export interface Enemy extends Poolable {
   /** Sytuacja (systems/situations.ts), z której pochodzi wróg (0 = żadna), i liczba przyzwań (limit przywoływacza). */
   sit: number;
   summons: number;
+  /** Cechy zachowania elit (R3): odliczanie cechy, wzmocnienie od dowódcy (s), cel teleportu fazy. */
+  traitT: number;
+  buffT: number;
   tx: number;
   ty: number;
   /** Pozostałe salwy serii i czas do następnej. */

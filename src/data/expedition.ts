@@ -3,7 +3,7 @@ import { rng } from '../core/rng';
 import type { Stats } from '../entities/types';
 import { BAL } from './balance';
 import { BIOMES, BIOME_CYCLE, VOID_BIOME, type LevelDef, type Objective } from './levels';
-import { ELITE_MODS } from './enemies';
+import { ELITE_MODS, eliteCompatible } from './enemies';
 import type { Element } from './elements';
 
 /**
@@ -360,10 +360,10 @@ function rollAffinities(map: (MapNode | null)[][], act: number): void {
   }
   for (const row of map) for (const m of row) {
     if (!m || (m.kind !== 'elite' && m.kind !== 'ambush')) continue;
-    const pool = Object.keys(ELITE_MODS).filter((k) => !(k === 'armored' && m.affinity?.kind === 'resist'));
+    // Akt 1: jedna cecha i bez cech zachowania (R3); dalej dwie zgodne.
+    const pool = Object.keys(ELITE_MODS).filter((k) => !(k === 'armored' && m.affinity?.kind === 'resist') && (act > 1 || !ELITE_MODS[k].kind));
     const a = rng.pick(pool);
-    // Akt 1: jedna cecha (wcześniej druga pojawiała się dopiero w późniejszych falach).
-    m.eliteMods = act === 1 ? [a] : [a, rng.pick(pool.filter((k) => k !== a))];
+    m.eliteMods = act === 1 ? [a] : [a, rng.pick(pool.filter((k) => eliteCompatible([a], k)))];
   }
 }
 

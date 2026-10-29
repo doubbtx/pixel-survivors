@@ -619,6 +619,41 @@ function eliteAbility(run: Run, e: Enemy, dt: number, nx: number, ny: number, di
   else fireVolley(run, e.x, e.y, { shape: 'gapRing', count: A.gapRing, gap: 3, speed: 60, sprite: 'eb_orange' }, aimAt(run, e), dmg);
 }
 
+/**
+ * Cechy zachowania elit (R3): dowódca znakuje pobliskich wrogów wzmocnieniem, sztandarowy wbija sztandar, cień znika
+ * (nietrafialny, jak zakopany Topielec — pociski przelatują) i pojawia się bliżej gracza. Rozszczepiacz: Run.killEnemy.
+ */
+function eliteTraits(run: Run, e: Enemy, dt: number): void {
+  const T = BAL.eliteTraits, mods = e.elite!;
+  const has = (k: string) => mods.includes(k);
+  if (!has('commander') && !has('banner') && !has('phase')) return;
+  e.traitT -= dt;
+  if (has('commander') && e.traitT <= 0) {
+    e.traitT = T.stamp;
+    run.enemiesInCircle(e.x, e.y, T.auraR, (o) => { if (o !== e && !o.boss) o.buffT = T.buffT; });
+  }
+  if (has('banner') && e.traitT <= 0) {
+    e.traitT = T.bannerEvery;
+    run.banners.push({ x: e.x, y: e.y, t: T.bannerLife });
+    run.burst(e.x, e.y, C.gold, 10, 50);
+  }
+  if (has('phase') && e.traitT <= 0) {
+    const p = run.player;
+    if (!e.hidden) {
+      // Znika: cel w stronę gracza, nie bliżej niż promienie + 10 (bez obrażeń kontaktowych bez ostrzeżenia).
+      const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1, step = Math.max(0, Math.min(T.phaseStep, d - (e.radius + p.r + 10)));
+      e.tx = e.x + (dx / d) * step; e.ty = e.y + (dy / d) * step;
+      e.hidden = true;
+      e.traitT = T.phaseTime;
+    } else {
+      e.x = e.tx; e.y = e.ty;
+      e.hidden = false;
+      e.traitT = T.phaseEvery;
+      run.burst(e.x, e.y, C.lavender, 8, 40);
+    }
+  }
+}
+
 /** Salwa zwykłego wroga wg ShootDef (kąt bazowy zależny od `aim`). */
 function shoot(run: Run, e: Enemy, sh: ShootDef, dmg: number): void {
   const p = run.player;
@@ -663,6 +698,10 @@ export function updateEnemies(run: Run, dt: number): void {
       }
     }
 
+    if (e.buffT > 0) e.buffT -= dt;
+    if (e.elite) eliteTraits(run, e, dt);
+    if (e.dead) continue;
+
     let dx = p.x - e.x, dy = p.y - e.y;
     let dist = Math.hypot(dx, dy) || 1;
 
@@ -683,7 +722,8 @@ export function updateEnemies(run: Run, dt: number): void {
     } else if (e.elite && e.dashT > 0 && e.def.behavior !== 'warden' && !OWN_MOVES.has(e.def.behavior)) {
       updateEliteCharge(run, e, dt);
     } else {
-      const sp = e.speed * (1 - e.slowF) * dt;
+      // Wzmocnienie dowódcy (R3): szybciej.
+      const sp = e.speed * (1 - e.slowF) * dt * (e.buffT > 0 ? 1 + BAL.eliteTraits.speed : 1);
       const nx = dx / dist, ny = dy / dist;
       switch (e.def.behavior) {
         case 'chase':
@@ -769,8 +809,9 @@ export function updateEnemies(run: Run, dt: number): void {
         }
       }
       const sh = e.def.shoot;
-      if (sh || e.extraRing) {
-        const dmg = e.damage * BAL.bulletDmg;
+      // Cień w fazie znikania nie strzela (niewidoczny strzelec byłby nieuczciwy).
+      if ((sh || e.extraRing) && !e.hidden) {
+        const dmg = e.damage * BAL.bulletDmg * (e.buffT > 0 ? 1 + BAL.eliteTraits.dmg : 1);
         // Seria w toku: kolejne salwy co burstGap (każda celuje od nowa).
         if (sh && e.burstLeft > 0) {
           e.burstT -= dt;
@@ -790,7 +831,7 @@ export function updateEnemies(run: Run, dt: number): void {
           if (e.extraRing && sh) e.shootT = Math.max(sh.cooldown, 1.2);
         }
       }
-      if (e.elite && e.def.behavior !== 'warden' && e.def.behavior !== 'flee') eliteAbility(run, e, dt, nx, ny, dist);
+      if (e.elite && !e.hidden && e.def.behavior !== 'warden' && e.def.behavior !== 'flee') eliteAbility(run, e, dt, nx, ny, dist);
     }
 
     // Odrzut (wygasa wykładniczo).
@@ -820,6 +861,6 @@ export function updateEnemies(run: Run, dt: number): void {
     // Uderzenie wręcz: każdy wróg osobno co BAL.contactCooldown (tłum jest groźny, leczenie go nie przebije).
     if (e.touchCd > 0) e.touchCd -= dt;
     if (e.reactT > 0) e.reactT -= dt;
-    if (e.touchCd <= 0 && e.damage > 0 && !e.hidden && e.z < 4 && dist < e.radius + p.r && run.hurtPlayer(e.damage)) e.touchCd = BAL.contactCooldown;
+    if (e.touchCd <= 0 && e.damage > 0 && !e.hidden && e.z < 4 && dist < e.radius + p.r && run.hurtPlayer(e.damage * (e.buffT > 0 ? 1 + BAL.eliteTraits.dmg : 1))) e.touchCd = BAL.contactCooldown;
   }
 }

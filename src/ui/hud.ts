@@ -291,6 +291,7 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
 function drawStatusRow(r: Renderer, run: Run, x: number, y: number): number {
   const chips: { text: string; col: number; frac: number }[] = [];
   if (run.rageT > 0) chips.push({ text: `Szał ${Math.ceil(run.rageT)}s`, col: UI.threat, frac: Math.min(1, run.rageT / Math.max(run.rageT, run.rageMax)) });
+  if (run.inBanner) chips.push({ text: `Banner +${Math.round(BAL.eliteTraits.bannerTaken * 100)}% dmg taken`, col: UI.threat, frac: 1 });
   if (run.flowT > 0) chips.push({ text: `Flow ${Math.ceil(run.flowT)}s`, col: C.cyan, frac: run.flowT / run.flowMax });
   for (const b of run.buffs) chips.push({ text: Number.isFinite(b.t) ? `${b.name} ${Math.ceil(b.t)}s` : b.name, col: UI.reward, frac: 1 });
   if (!chips.length) return y - UI.gap - 1;

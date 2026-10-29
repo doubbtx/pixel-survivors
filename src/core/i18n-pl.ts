@@ -3,6 +3,13 @@
  * `{}` = wstawka (liczba, nazwa — tłumaczona osobno). Nowy napis w grze: dopisz tu jego polską wersję.
  */
 export const PL: Record<string, string> = {
+  "New elite traits from the second act on: Commander (nearby enemies get faster and stronger), Splitting (breaks into three on death), Bannerman (plants a banner: enemies inside heal, you take more damage) and Phasing (vanishes for a moment, your shots pass through, then reappears closer).": "Nowe cechy elit od drugiego aktu: Dowódca (pobliscy wrogowie szybsi i silniejsi), Rozszczepiający (po śmierci pęka na trzy), Chorąży (wbija sztandar: wrogowie w nim się leczą, Ty dostajesz więcej obrażeń) i Cień (na chwilę znika, Twoje pociski przez niego przelatują, potem pojawia się bliżej).",
+  "Takezo: his swords reach further (larger area).": "Takezo: miecze sięgają dalej (większy obszar).",
+  "Commander": "Dowódca",
+  "Splitting": "Rozszczepiający",
+  "Bannerman": "Chorąży",
+  "Phasing": "Cień",
+  "Banner +{}% dmg taken": "Sztandar +{}% obrażeń",
   "Readability: enemy bullets are drawn above your hits and explosions, and the new automatic setting for your attacks dims them (and damage numbers) when many enemy bullets are close to you.": "Czytelność: pociski wrogów rysują się nad Twoimi trafieniami i wybuchami, a nowe automatyczne ustawienie ataków przygasza je (i liczby obrażeń), gdy blisko jest dużo pocisków wrogów.",
   "Expedition survival maps also end once you defeat as many enemies as a kill map asks for, so strong builds finish them faster.": "Mapy przetrwania w Ekspedycji kończą się też po pokonaniu tylu wrogów, ilu wymaga mapa zabójcza, więc silne buildy kończą je szybciej.",
   "Long boss fights: after 90 seconds a boss weakens and takes more and more damage (up to double).": "Długie walki z bossem: po 90 sekundach boss słabnie i otrzymuje coraz więcej obrażeń (do podwójnych).",

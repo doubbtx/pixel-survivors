@@ -448,6 +448,9 @@ export class Run {
   eliteKills = 0;
   /** Polowanie: czas spędzony w lochu (sekretne schody) nie liczy się do limitu ucieczki. */
   huntPaused = 0;
+  /** Sztandary elit (R3): wrogowie w strefie się leczą, gracz w strefie dostaje więcej obrażeń. */
+  banners: { x: number; y: number; t: number }[] = [];
+  inBanner = false;
   /** Baner „boss słabnie” pokazany dla bieżącego bossa. */
   bossSoftShown = false;
   /** Sytuacje (systems/situations.ts): zapowiedź, aktywna formacja, odliczanie, ostatnia (bez powtórek), dziennik wyników. */
@@ -552,6 +555,7 @@ export class Run {
     this.eliteKills = 0;
     this.huntPaused = 0;
     this.elemDmg = {};
+    this.banners = [];
     this.situation = null;
     this.sitActive = null;
     this.situationT = BAL.situations.first + rng.range(0, 15);
@@ -666,6 +670,19 @@ export class Run {
     return this.mode === 'endless' ? Math.max(0, this.time - (this.nextBossAt - BAL.endlessBossEvery)) : this.time;
   }
 
+  /** Sztandary elit: odliczanie, leczenie wrogów w strefie (co krok, ułamek maks. HP), gracz w strefie. */
+  private updateBanners(dt: number): void {
+    this.inBanner = false;
+    if (!this.banners.length) return;
+    const T = BAL.eliteTraits, p = this.player;
+    for (const b of this.banners) {
+      b.t -= dt;
+      if ((p.x - b.x) ** 2 + (p.y - b.y) ** 2 < T.bannerR * T.bannerR) this.inBanner = true;
+      this.enemiesInCircle(b.x, b.y, T.bannerR, (e) => { if (!e.boss) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * T.bannerRegen * dt); });
+    }
+    if (this.banners.some((b) => b.t <= 0)) this.banners = this.banners.filter((b) => b.t > 0);
+  }
+
   /** Czytelność w tłumie: dużo pocisków wrogów blisko bohatera przygasza jego ataki (tryb 'auto'). */
   private updateFxDim(dt: number): void {
     if (this.playerFx !== 'auto') { this.fxDim = 0; return; }
@@ -709,6 +726,7 @@ export class Run {
     this.confusedT = Math.max(0, this.confusedT - dt);
     this.updatePower(dt);
     this.updateFxDim(dt);
+    this.updateBanners(dt);
     if (this.step % Math.round(BAL.telemetryEvery * 60) === 0) this.sample();
     this.explosionsThisStep = 0;
     this.boomSpots.length = 0;
@@ -1444,6 +1462,18 @@ export class Run {
     }
     if (e.boss || e.elite) this.boomFx(e.x, e.y, e.boss ? 40 : 20);
     this.spawnGem(e.x, e.y, e.xp);
+    // Elita z cechą Rozszczepiacz (R3): kopie bez cech, HP jak kidHp × zwykły wróg (bez mnożnika elity).
+    if (e.elite?.includes('splitter')) {
+      const x = e.x, y = e.y, id = e.def.id, hp = (e.maxHp / BAL.eliteHpMul) * BAL.eliteTraits.kidHp;
+      this.schedule(0, () => {
+        // Cel wykonany tym zabójstwem: bez kopii na ekranie zwycięstwa.
+        if (this.outcome !== 'none' || (this.bossSpawned && !this.boss && this.mode !== 'endless')) return;
+        for (let k = 0; k < BAL.eliteTraits.kids; k++) {
+          const a = (k / BAL.eliteTraits.kids) * Math.PI * 2, c = spawnEnemy(this, id, x + Math.cos(a) * 8, y + Math.sin(a) * 8);
+          if (c) { c.maxHp = c.hp = hp; c.scale = 0.8; c.kx = Math.cos(a) * 60; c.ky = Math.sin(a) * 60; }
+        }
+      });
+    }
     // Rozszczepieniec: po śmierci dwa mniejsze (w następnym kroku, poza pętlą wrogów).
     if (e.def.behavior === 'splitter' || e.def.id === 'voidprism') {
       // Rozszczepieniec pęka na dwa Odpryski, Pryzmat Pustki na dwa Rozszczepieńce.
@@ -1651,7 +1681,7 @@ export class Run {
       this.popText(p.x, p.y - 10, 'Nimb!', C.yellow);
       return false;
     }
-    let dmg = base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this);
+    let dmg = base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this) * (this.inBanner ? 1 + BAL.eliteTraits.bannerTaken : 1);
     const total = dmg;
     this.takenTotal += total;
     const absorbed = Math.min(p.shield, dmg);
@@ -2013,7 +2043,7 @@ function newEnemy(): Enemy {
     flash: 0, slowT: 0, slowF: 0, stunT: 0, shootT: 0, shootA: 0, age: 0, dead: false, elite: null, boss: false,
     scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0, abilT: 0,
     burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, reactT: 0, brittle: 0, hitStamp: new Int32Array(SLOT_COUNT),
-    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false, sit: 0, summons: 0,
+    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false, sit: 0, summons: 0, traitT: 0, buffT: 0,
   };
 }
 

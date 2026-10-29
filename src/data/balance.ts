@@ -159,6 +159,13 @@ export const BAL = {
    * (długie walki słabych buildów; bossowie aktów i Endless, bez Króla z kurhanu, strażników i minibossów).
    */
   bossSoften: { after: 90, ramp: 60, max: 1 },
+  /**
+   * Cechy zachowania elit (R3, 0.41): od `from` s czasu fal. Dowódca: aura `auraR`, wzmocnienie co `stamp` s na `buffT` s
+   * (+`speed`, +`dmg`). Rozszczepiacz: `kids` kopii z HP × `kidHp` zwykłego wroga. Sztandar: co `bannerEvery` s strefa `bannerR`
+   * na `bannerLife` s (leczenie wrogów `bannerRegen`/s maks. HP, gracz +`bannerTaken` obrażeń). Cień: co `phaseEvery` s
+   * znika na `phaseTime` s i pojawia się do `phaseStep` px bliżej gracza.
+   */
+  eliteTraits: { from: 150, auraR: 70, stamp: 0.25, buffT: 0.35, speed: 0.25, dmg: 0.25, kids: 3, kidHp: 1.5, bannerEvery: 8, bannerR: 50, bannerLife: 6, bannerRegen: 0.03, bannerTaken: 0.2, phaseEvery: 4, phaseTime: 1, phaseStep: 40 },
   /** Odstęp próbek telemetrii runu (s). */
   telemetryEvery: 15,
   /** Maks. spawnów na sekundę (żeby fala nie pojawiała się w jednej klatce). */

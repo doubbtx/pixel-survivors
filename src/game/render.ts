@@ -450,14 +450,35 @@ function drawWorld(run: Run, r: Renderer): void {
     r.withAlpha(0.85, () => drawSprite(g, `${name}@${animFrame(name, run.step, m._i * 5)}`, X(m.x), Y(m.y) - 2, { flipX: m.x > p.x }));
   }
 
+  // Sztandary elit (R3): złota strefa z drzewcem (gracz w niej dostaje więcej obrażeń, wrogowie się leczą).
+  for (const b of run.banners) {
+    if (!vis(b.x, b.y)) continue;
+    const bx = X(b.x), by = Y(b.y), R = BAL.eliteTraits.bannerR * ZOOM;
+    r.withAlpha(0.12, () => r.circle(bx, by, R, C.gold, true));
+    r.withAlpha(b.t < 1 && !run.reduceFlash && run.step % 8 < 4 ? 0.3 : 0.7, () => r.circle(bx, by, R, C.gold));
+    r.line(bx, by, bx, by - 14 * ZOOM, C.brown, 2);
+    r.rect(bx, by - 14 * ZOOM, 7 * ZOOM, 5 * ZOOM, C.red);
+  }
+
   // Wrogowie.
   for (const e of run.enemies.items) {
     if (e.dead || !vis(e.x, e.y)) continue;
     const ex = X(e.x), ey = Y(e.y);
     if (e.elite) r.circle(ex, ey + e.radius * ZOOM, e.radius * ZOOM * 1.2, run.blink(30, 15) ? C.yellow : C.orange);
+    // Dowódca (R3): złoty pierścień aury.
+    if (e.elite?.includes('commander')) r.withAlpha(0.45, () => r.circle(ex, ey, BAL.eliteTraits.auraR * ZOOM, C.gold));
     if (e.boss && e.invuln > 0 && !run.reduceFlash && run.step % 6 < 3) continue;
     drawTell(r, run, e, ex, ey);
-    if (e.hidden) continue;
+    if (e.hidden) {
+      // Cień (R3): półprzezroczysta sylwetka i znacznik miejsca, w którym się pojawi.
+      if (e.elite?.includes('phase')) {
+        r.withAlpha(0.3, () => drawSprite(g, `${e.sprite}@0`, ex, ey, { scale: e.scale, flipX: e.x > p.x }));
+        r.withAlpha(0.7, () => r.circle(X(e.tx), Y(e.ty), e.radius * e.scale * ZOOM, C.lavender));
+      }
+      continue;
+    }
+    // Wzmocniony przez dowódcę: złota kropka nad wrogiem.
+    if (e.buffT > 0 && !e.elite) r.rect(ex - 1, ey - (e.radius * e.scale + 5) * ZOOM, 2 * ZOOM, 2 * ZOOM, C.gold);
     drawSprite(g, `${e.sprite}@${animFrame(e.sprite, run.step, e.uid * 7)}`, ex, ey - e.z * ZOOM, { flash: e.flash > 0, scale: e.scale, flipX: e.x > p.x });
     // Boss: zapowiedzi ataków — kurczący się krąg przed nazwanym atakiem, linia szarży (unik ma być czytelny).
     if (e.boss && e.invuln <= 0) {

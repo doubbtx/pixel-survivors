@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.40.0)
+## Stan (wersja 0.41.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -652,6 +652,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   might 1.15, Takezo 1.08 (UWAGA: `HeroDef.base` NADPISUJE domyślne statystyki — might 1.15, nie 0.15). Bot: `&style=
   kite|melee|auto` (melee dla broni 'cleave'). A/B: mapa „przetrwaj” P50 130 → 48 s, boss Ekspedycji P90 78 → 50 s,
   przeżycie bez god mediana 68.5 → 67 s (Borgun 140 → 233 s — do sprawdzenia botem melee, potem obszar zamiast might).
+
+- 0.41.0 (R3, B4 krok 2, G6): `EliteMod.kind` commander / splitter / banner / phase (`eliteTraits` w enemies.ts, wspólny
+  `e.traitT`, więc `eliteCompatible` dopuszcza najwyżej jedną cechę zachowania + `ELITE_FORBIDDEN`). Dowódca znakuje
+  `buffT` (ruch, kontakt, zwykłe strzały +25%), sztandar → `run.banners` (`updateBanners`: leczenie wrogów, `inBanner`
+  +20% obrażeń gracza, czip w HUD), cień → `e.hidden` (poza hashem: pociski przelatują, bez strzałów), rozszczepiacz w
+  killEnemy (kopie bez cech, nie po wykonaniu celu). Od `eliteTraits.from` s czasu fal, w Ekspedycji od aktu 2. DEV
+  `window.__spawn(id, dx, dy, mods)`. B4: bot `style=melee` pokazał, że luka Borguna była artefaktem bota (DPS 1.2M → 40M);
+  Takezo katana area 1.25. G6: profil — logika ~5% klatki przy 1000 wrogów, koszt w `endWorld` (auto jakość), bez zmian.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

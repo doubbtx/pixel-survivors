@@ -145,7 +145,19 @@ export interface EliteMod {
   regen?: number;
   hpMul?: number;
   ring?: boolean;
+  /**
+   * Cecha zachowania (0.41, R3) zamiast statystyk: commander — aura przyspiesza i wzmacnia pobliskich wrogów,
+   * splitter — po śmierci pęka na mniejsze kopie, banner — wbija sztandar (wrogowie się leczą, gracz dostaje więcej),
+   * phase — co kilka sekund znika (nietrafialny) i pojawia się bliżej gracza. Od drugiego aktu / późniejszych fal.
+   */
+  kind?: 'commander' | 'splitter' | 'banner' | 'phase';
 }
+
+/** Pary cech, których nie łączymy (dwie aury naraz, nietrafialny i pancerny / leczący się, kopie z podwójnym HP). */
+export const ELITE_FORBIDDEN: [string, string][] = [['commander', 'banner'], ['phase', 'armored'], ['phase', 'regen'], ['splitter', 'huge']];
+/** Zgodna cecha: bez powtórek, bez par zakazanych i najwyżej jedna cecha zachowania (`kind`) na elitę (wspólny licznik cechy). */
+export const eliteCompatible = (mods: string[], k: string): boolean => !mods.includes(k) && !ELITE_FORBIDDEN.some(([a, b]) => (a === k && mods.includes(b)) || (b === k && mods.includes(a)))
+  && !(ELITE_MODS[k]?.kind && mods.some((m) => ELITE_MODS[m]?.kind));
 
 export const ELITE_MODS: Record<string, EliteMod> = {
   swift: { name: 'Szybki', speedMul: 1.6 },
@@ -153,6 +165,10 @@ export const ELITE_MODS: Record<string, EliteMod> = {
   regen: { name: 'Regenerujący', regen: 0.02 },
   huge: { name: 'Olbrzymi', hpMul: 2 },
   volley: { name: 'Ostrzał', ring: true },
+  commander: { name: 'Commander', kind: 'commander' },
+  splitter: { name: 'Splitting', kind: 'splitter' },
+  banner: { name: 'Bannerman', kind: 'banner' },
+  phase: { name: 'Phasing', kind: 'phase' },
 };
 
 /**
