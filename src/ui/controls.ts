@@ -27,7 +27,7 @@ export class ControlsScreen implements Screen {
       ...REBIND.map(([a]) => ({ label: () => ACTION_NAME[a] ?? a, value: () => (this.waiting === a ? '...' : actionKey(a)), act: () => this.listen(a) })),
       { label: () => 'Reset to defaults', act: () => { this.save({}); sfx.play('select'); } },
       { label: () => 'Wróć', act: () => app.go(back) },
-    ], W / 2, 40, 300, 13);
+    ], W / 2, 38, 300, 12.5);
   }
 
   private save(keys: Record<string, string>): void {
@@ -61,9 +61,9 @@ export class ControlsScreen implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     titleBar(r, 'Controls', 8);
-    panel(r, W / 2 - 160, 34, 320, (REBIND.length + 2) * 13 + 10);
+    panel(r, W / 2 - 160, 32, 320, (REBIND.length + 2) * 12.5 + 8);
     this.menu.render(r);
     const tip = this.waiting ? 'Press a new key (Esc: cancel)' : 'Enter: change key. Arrows, Enter, Esc, Tab and 1-4 always work in menus.';
-    drawText(g, tip, W / 2, H - 16, this.waiting ? C.yellow : C.lavender, { align: 'center', scale: 0.75 });
+    drawText(g, tip, W / 2, H - 12, this.waiting ? C.yellow : C.lavender, { align: 'center', scale: 0.75 });
   }
 }
