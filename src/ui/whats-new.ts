@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.38',
+    lines: [
+      "Expedition maps can be weak to an element (+50% damage from it) or resist one (-50%, its statuses blocked, more loot). The map panel shows your build's element mix from the last map, so you can pick a route that suits it.",
+      "Elite maps and ambushes show their elite traits in advance (one trait in act 1, two later).",
+      "Automatic quality: when frames get slow, the world is drawn at a lower resolution until the game runs smoothly again.",
+    ],
+  },
+  {
     version: '0.37',
     lines: [
       "New Expedition nodes: Ambush (survive while rings of enemies close in, the last ones with elites), Hunt (kill the biome miniboss and its escort before it escapes, for a boss chest) and Vault (an arena with wardens and treasure).",

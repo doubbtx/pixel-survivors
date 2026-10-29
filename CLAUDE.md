@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.37.1)
+## Stan (wersja 0.38.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -625,6 +625,15 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   nagroda modyfikatorów × `arenaReward` w `mapReward`. Mapa elit i Zasadzka: skrzynia co `eliteChestEvery` elitę.
   `freeSlot` (spawner): pełna pula nigdy nie zwalnia bossa ani elity; zabezpieczenie na zwolniony obiekt bossa
   (rzadka blokada poziomu w teście bota). Legenda mapy: tylko rodzaje obecne w akcie.
+
+- 0.38.0 (#4 węzły pod build + G wydajność): `MapNode.affinity` (`rollAffinities`: rzędy 1..rows-3, odporność 25% /
+  podatność 25%, najwyżej 1 odporność na rząd i zawsze do ominięcia — `avoidable`), `LevelDef.weak/resist`; `resistOf`
+  zwraca żywioł mapy dla nie-bossów (blokuje stany i reakcje), podatność ×`weakMul` tylko na trafieniu (ticki dziedziczą),
+  `dmgStep` i `elemDmg` dzielone przez powinowactwo (pogoń HP go nie wyrównuje). `elemDmg` zerowane w `startLevel` — panel
+  „Your build (last map)”. `MapNode.eliteMods`: Mapa elit / Zasadzka, 1 cecha w akcie 1, 2 dalej, bez Pancernych na mapie
+  odpornej; spawner i `encircle(..., eliteMods)`. Znacznik `drawElemMark` na węźle. Automatyczna jakość (main.ts
+  `updateQuality`, `LoopStats.workMs`): praca klatki > 12 ms przez 2 s → `setWorldRes(2)`, powrót po 20 s < 6 ms, najwyżej
+  2 razy; w bocie tylko z `&autoq=1`, w DEV `window.__quality`, `__loop()`. Pomiar (1000 wrogów): render p50 ~10 → 5-8 ms.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

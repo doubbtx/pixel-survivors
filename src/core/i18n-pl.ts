@@ -3,6 +3,9 @@
  * `{}` = wstawka (liczba, nazwa — tłumaczona osobno). Nowy napis w grze: dopisz tu jego polską wersję.
  */
 export const PL: Record<string, string> = {
+  "Expedition maps can be weak to an element (+50% damage from it) or resist one (-50%, its statuses blocked, more loot). The map panel shows your build's element mix from the last map, so you can pick a route that suits it.": "Mapy Ekspedycji mogą być podatne na żywioł (+50% obrażeń od niego) albo odporne (-50%, jego stany zablokowane, więcej łupu). Panel mapy pokazuje udział żywiołów Twojego buildu z ostatniej mapy, więc wybierzesz drogę pod niego.",
+  "Elite maps and ambushes show their elite traits in advance (one trait in act 1, two later).": "Mapy elit i zasadzki pokazują z góry cechy elit (w akcie 1 jedną, potem dwie).",
+  "Automatic quality: when frames get slow, the world is drawn at a lower resolution until the game runs smoothly again.": "Automatyczna jakość: gdy klatki się wydłużają, świat rysuje się w niższej rozdzielczości, aż gra znów działa płynnie.",
   "Weak to {}: {} damage +{}%": "Podatni na {}: obrażenia od żywiołu {} +{}%",
   "Resists {}: {} damage -{}%, its statuses and reactions blocked, +{}% loot": "Odporni na {}: obrażenia od żywiołu {} -{}%, jego stany i reakcje zablokowane, +{}% łupu",
   "Your build (last map): {}": "Twój build (ostatnia mapa): {}",
