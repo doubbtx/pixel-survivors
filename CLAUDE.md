@@ -762,6 +762,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   wypisuje też napisy bez tłumaczenia (`trMisses`) ze wszystkich odwiedzonych ekranów.
   Legenda mapy Ekspedycji zmniejsza tekst (do 0.75) i odstępy, gdy rodzaje węzłów się nie mieszczą; wiersz „Wrogowie”
   odsuwa nazwę o szerokość sprite'a (dzik nie dotyka napisu).
+- 0.46.1: podpowiedzi nie zasłaniają treści — `hintShowing()` (ui/hints.ts): na awansie, kartach i mocy ramka zajmuje miejsce
+  linii klawiszy i przycisków podglądu (`PEEK_UNDER_HINT`, klik w ukryte przyciski nie działa), w sklepie zastępuje linię stanu
+  i klawiszy, na mapie stoi w prawym dolnym rogu obszaru mapy. `npm run layout` ma warianty `hints=1`, `small=1`, `wide=1`
+  (20:9), `touch=1` (zrzuty w /tmp/layout-shots/<wariant>-<język>) — przed wydaniem uruchom wszystkie. Menu główne: zamek
+  z migoczącymi oknami na dalszym wzgórzu (`castle`), chmury, spadająca gwiazda, świetliki, miękka poświata i przebłysk logo,
+  w defiladzie nowsi wrogowie. Przerysowani: przywoływacz (płaszcz z piór, pas z kości, kostur ze szponem), topielec
+  (przygarbiony, łachmany, szpony), ropucha (głowa z pyskiem, brzuch, łapy, źrenice), skrzydła aniołów (osobne lotki);
+  powieka oka kopiowana co drobny piksel (wcześniej kratka).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

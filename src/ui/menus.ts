@@ -29,7 +29,7 @@ import { pactLevel, pactBadge, heroSkins, BADGE_BY_ID } from '../data/pacts';
 import { UNLOCK_BY_ID, heroUnlocked, unlocked } from '../data/unlocks';
 import { PactScreen } from './pacts';
 
-const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
+const PARADE = ['slime', 'boar', 'bat', 'shieldbearer', 'golem', 'kamikaze', 'eye', 'wisp'];
 
 /** Tło menu: nocne niebo z gradientem, gwiazdy, księżyc, dwa pasma wzgórz, przewijany pas łąki i defilada potworów goniących bohaterów. */
 function menuBackdrop(app: App, t: number): void {
@@ -60,12 +60,34 @@ function menuBackdrop(app: App, t: number): void {
   r.withAlpha(0.12, () => disc(404, 38, 17, C.cream));
   disc(404, 38, 12, C.cream);
   r.withAlpha(0.7, () => { disc(400, 35, 2.8, C.tan); disc(408.5, 42, 1.8, C.tan); disc(406, 32.5, 1.2, C.tan); });
+  // Spadająca gwiazda co ~7 s: jasna głowa i blednący ogon, przez górną część nieba.
+  const sp = (t % 7) / 0.9;
+  if (sp < 1) {
+    const sx = L + 60 + ((Math.floor(t / 7) * 137) % Math.max(1, R - L - 200)), sy = 6 + sp * 26;
+    for (let k = 0; k < 8; k++) r.withAlpha((1 - k / 8) * (1 - sp) * 0.9, () => r.rect(sx + sp * 70 - k * 2.4, sy - k * 0.9, 1.2, 0.6, k ? C.lgray : C.white));
+  }
+  // Chmury: płaskie pasma przesuwające się przed księżycem (półprzezroczyste, kilka owali).
+  for (let i = 0; i < 4; i++) {
+    const w = 46 + (i % 2) * 24, cx = L + ((i * 151 + t * (3 + i)) % (R - L + w * 2)) - w, cy = 24 + i * 9;
+    r.withAlpha(0.18 + (i % 2) * 0.06, () => {
+      g.fillStyle = PAL[i % 2 ? C.slate : C.dgray];
+      g.beginPath();
+      g.ellipse(cx, cy, w / 2, 3.2, 0, 0, Math.PI * 2);
+      g.ellipse(cx - w / 5, cy - 2.4, w / 4, 2.6, 0, 0, Math.PI * 2);
+      g.ellipse(cx + w / 6, cy - 2, w / 5, 2.2, 0, 0, Math.PI * 2);
+      g.fill();
+    });
+  }
   // Wzgórza: dalsze jaśniejsze, bliższe ciemniejsze, przesuwają się wolniej niż łąka (paralaksa).
+  const hill = (x: number, base: number, amp: number, speed: number, freq: number) =>
+    base - amp * (0.5 + 0.5 * Math.sin((x + t * speed) * freq)) - 6 * Math.sin((x + t * speed) * freq * 2.7);
   for (const [col, base, amp, speed, freq] of [[C.navy, groundY - 34, 12, 4, 0.021], [C.black, groundY - 14, 10, 10, 0.034]] as const) {
+    // Zamek na dalszym paśmie (pod prawym panelem menu): wieże z blankami i migoczącymi oknami, płynie razem ze wzgórzem.
+    if (col === C.black) castle(r, ((360 - t * 4) % (R - L + 120) + (R - L + 120)) % (R - L + 120) + L - 60, (x) => hill(x, base - 20, 12, 4, 0.021), t);
     g.fillStyle = PAL[col];
     g.beginPath();
     g.moveTo(L, groundY);
-    for (let x = L; x <= R + 4; x += 4) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin((x + t * speed) * freq)) - 6 * Math.sin((x + t * speed) * freq * 2.7));
+    for (let x = L; x <= R + 4; x += 4) g.lineTo(x, hill(x, base, amp, speed, freq));
     g.lineTo(R + 4, groundY);
     g.fill();
   }
@@ -87,6 +109,38 @@ function menuBackdrop(app: App, t: number): void {
   walk('aurel', lead - 122, false, 5);
   walk('takezo', lead - 146, false, 6);
   PARADE.forEach((name, i) => walk(name, lead - 190 - i * 28, false, i + 7));
+  // Świetliki nad łąką: powolne ósemki, pulsujące światło z poświatą.
+  for (let i = 0; i < 14; i++) {
+    const fx = L + ((i * 89 + Math.sin(t * 0.4 + i) * 30 + t * 6) % (R - L)), fy = groundY + 6 + ((i * 37) % 44) + Math.sin(t * 0.9 + i * 2) * 5;
+    const glow = 0.5 + 0.5 * Math.sin(t * 2.2 + i * 1.7);
+    r.withAlpha(0.25 * glow, () => r.rect(fx - 1, fy - 1, 3, 3, C.lime));
+    r.withAlpha(0.4 + 0.6 * glow, () => r.rect(fx, fy, 1, 1, C.yellow));
+  }
+}
+
+/** Sylwetka zamku na wzgórzu tła: `hy(x)` = wysokość wzgórza w punkcie x (zamek stoi na nim), okna migoczą z czasem `t`. */
+function castle(r: App['r'], cx: number, hy: (x: number) => number, t: number): void {
+  const g = r.g, base = hy(cx) + 3;
+  g.fillStyle = PAL[C.navy];
+  const block = (x: number, w: number, h: number) => {
+    g.fillRect(cx + x, base - h, w, h);
+    for (let k = 0; k < w; k += 2) g.fillRect(cx + x + k, base - h - 1.5, 1, 1.5);
+  };
+  block(-16, 6, 22);
+  block(10, 6, 18);
+  block(-10, 20, 12);
+  block(-3, 6, 30);
+  g.beginPath();
+  g.moveTo(cx - 4, base - 31.5); g.lineTo(cx, base - 38); g.lineTo(cx + 4, base - 31.5);
+  g.fill();
+  // Proporzec na najwyższej wieży.
+  r.rect(cx, base - 44, 0.5, 6, C.slate);
+  r.rect(cx + 0.5, base - 44 + Math.round(Math.sin(t * 3)) * 0.5, 4, 1.6, C.dred);
+  // Okna: ciepłe światło, każde migocze w swoim rytmie.
+  for (const [wx, wy, k] of [[-14, 14, 0], [12, 11, 1], [-1, 22, 2], [-1, 14, 3], [-7, 7, 4], [4, 7, 5]] as const) {
+    const on = 0.55 + 0.45 * Math.sin(t * (1.3 + k * 0.4) + k * 2);
+    r.withAlpha(on, () => r.rect(cx + wx, base - wy, 1.2, 1.8, k % 3 ? C.gold : C.orange));
+  }
 }
 
 export class MainMenu implements Screen {
@@ -121,7 +175,17 @@ export class MainMenu implements Screen {
   render(): void {
     menuBackdrop(this.app, this.t);
     const r = this.app.r, g = r.g, m = this.menu;
-    // Logo: cień, obrys i pionowy gradient (żółty → złoty → pomarańczowy) przez przycinanie pasami.
+    // Logo: ciepła poświata, cień, obrys i pionowy gradient (żółty → złoty → pomarańczowy) przez przycinanie pasami.
+    const lw = textWidth('Pixel Survivors') * 3;
+    g.save();
+    g.translate(W / 2, 21);
+    g.scale(lw / 2 + 24, 22);
+    const glow = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+    glow.addColorStop(0, PAL[C.orange]);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = glow;
+    r.withAlpha(0.16 + 0.05 * Math.sin(this.t * 1.5), () => { g.beginPath(); g.arc(0, 0, 1, 0, Math.PI * 2); g.fill(); });
+    g.restore();
     drawText(g, 'Pixel Survivors', W / 2 + 2, 10, C.dred, { align: 'center', scale: 3 });
     drawText(g, 'Pixel Survivors', W / 2, 8, C.yellow, { align: 'center', scale: 3, outline: C.black });
     for (const [y0, col] of [[19, C.gold], [28, C.orange]] as const) {
@@ -130,6 +194,17 @@ export class MainMenu implements Screen {
       g.rect(0, y0, W, 30);
       g.clip();
       drawText(g, 'Pixel Survivors', W / 2, 8, col, { align: 'center', scale: 3 });
+      g.restore();
+    }
+    // Przebłysk co ~5 s: ukośny jasny pas przesuwa się przez litery (przycięty do ich wnętrza przez przemalowanie bieli).
+    const sw = (this.t % 5) / 0.8;
+    if (sw < 1) {
+      const bx = W / 2 - lw / 2 - 10 + sw * (lw + 20);
+      g.save();
+      g.beginPath();
+      g.moveTo(bx, 8); g.lineTo(bx + 8, 8); g.lineTo(bx + 2, 36); g.lineTo(bx - 6, 36);
+      g.clip();
+      r.withAlpha(0.75, () => drawText(g, 'Pixel Survivors', W / 2, 8, C.white, { align: 'center', scale: 3 }));
       g.restore();
     }
     drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 39, C.lavender, { align: 'center', scale: smallS(), outline: C.black });

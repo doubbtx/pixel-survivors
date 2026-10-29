@@ -9,6 +9,7 @@ import { BOSS_POWER_BY_ID, type BossPowerDef } from '../data/enemies';
 import type { Run } from '../game/run';
 import { rollPowerOffer, takePower } from '../systems/powers';
 import { dim, inside, cardFrame } from './widgets';
+import { hintShowing } from './hints';
 
 const CARD_W = 132, CARD_H = 150, CARD_Y = 50;
 
@@ -75,6 +76,6 @@ export class PowerPickView {
     });
     const cur = own ? `Obecna: ${BOSS_POWER_BY_ID[own.id].name} (poz. ${own.level}). Inna moc ją zastąpi.` : 'Nie masz jeszcze mocy bossa.';
     drawText(g, cur, W / 2, CARD_Y + CARD_H + 10, C.lavender, { align: 'center', shadow: C.black });
-    drawText(g, '1-3 / klik: wybierz    X: pomiń', W / 2, CARD_Y + CARD_H + 24, C.lavender, { align: 'center', shadow: C.black });
+    if (!hintShowing()) drawText(g, '1-3 / klik: wybierz    X: pomiń', W / 2, CARD_Y + CARD_H + 24, C.lavender, { align: 'center', shadow: C.black });
   }
 }

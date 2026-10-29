@@ -15,6 +15,7 @@ import type { Run } from '../game/run';
 import { CardPickView } from './cards';
 import { drawItemSlot, drawItemCard } from './items';
 import { button, dim, panel, slot, inside } from './widgets';
+import { hintShowing } from './hints';
 
 const CELL = 28;
 const GAP = 35;
@@ -183,7 +184,8 @@ export class ShopView {
       `HP ${Math.ceil(run.player.hp)}/${Math.ceil(run.stats.maxHp)}  plecak ${run.bag.length}/${BAL.bagSize}  odł. ${run.shards}  losowania ${run.rerolls}/${run.banishes}/${run.cardRerolls}`,
       'Enter/klik: kup  R: odśwież  I: ekwipunek  K: kowadło',
     ];
-    lines.forEach((l, i) => drawText(g, l, 14, 206 + i * 11, i < 1 ? C.lgray : C.lavender));
+    // Przy podpowiedzi jej ramka zastępuje stan i klawisze.
+    if (!hintShowing()) lines.forEach((l, i) => drawText(g, l, 14, 206 + i * 11, i < 1 ? C.lgray : C.lavender));
 
     this.renderDetails(r);
 

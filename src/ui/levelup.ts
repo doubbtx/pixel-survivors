@@ -8,6 +8,7 @@ import { RARITIES } from '../data/items';
 import { generateOptions, applyOption, canBanish, optionScore, type Option, type Recipe } from '../systems/levelup';
 import type { Run } from '../game/run';
 import { button, dim, inside, slot, cardFrame, cardBadge, cardIcon } from './widgets';
+import { hintShowing } from './hints';
 import { drawTagGain } from './synergies';
 
 const CARD_W = 108;
@@ -243,7 +244,8 @@ export class LevelUpView {
       const on = b.label.startsWith('Banish') && this.banishMode;
       button(r, b.x, BTN_Y, BTN_W, 20, b.label, { active: on, accent: on ? C.red : C.gold, col: on ? C.salmon : undefined });
     }
-    // Podpis na ciemnym tle: pod nim są sloty HUD.
+    // Podpis na ciemnym tle: pod nim są sloty HUD. Przy podpowiedzi jej ramka stoi w tym miejscu.
+    if (hintShowing()) return;
     const note = 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', nw = textWidth(note) + 12;
     r.withAlpha(0.85, () => r.roundRect(W / 2 - nw / 2, 235, nw, 14, 4, C.black));
     drawText(r.g, note, W / 2, 236.5, C.lavender, { align: 'center', shadow: C.black });

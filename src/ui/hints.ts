@@ -50,6 +50,9 @@ const HINT_SCREEN: Partial<Record<HintId, string>> = {
 const screenOf = (id: HintId) => HINT_SCREEN[id] ?? 'play';
 
 const SHOW = 6;
+/** Podpowiedź jest teraz na ekranie: nakładki chowają wtedy linię klawiszy i przyciski podglądu, w których miejscu stoi ramka. */
+let showing = false;
+export const hintShowing = (): boolean => showing;
 /** Wielkość tekstu podpowiedzi (mniejsza niż zwykły tekst: podpowiedź nie może zasłaniać gry). */
 const HINT_SCALE = 0.85;
 
@@ -70,16 +73,19 @@ export class Hints {
 
   /** `screen`: bieżący stan ekranu gry; pokazywane są tylko podpowiedzi do niego (inne czekają w kolejce). */
   update(dt: number, screen: string): void {
+    showing = false;
     if (this.cur && screenOf(this.cur) !== screen) {
       // Podpowiedź nie pasuje do ekranu: wraca na początek kolejki.
       this.queue.unshift(this.cur);
       this.cur = null;
     }
     if (this.cur) { this.t -= dt; if (this.t <= 0) this.cur = null; }
+    showing = !!this.cur && this.save.settings.hints;
     const i = this.queue.findIndex((id) => screenOf(id) === screen);
     if (!this.cur && i >= 0) {
       this.cur = this.queue.splice(i, 1)[0];
       this.t = SHOW;
+      showing = this.save.settings.hints;
       sfx.play('hover');
     }
   }

@@ -7,6 +7,7 @@ import { rng } from '../core/rng';
 import { RARITY, rollOffer, cardPool, type CardDef, type CardSource, type Rarity } from '../data/cards';
 import type { Run } from '../game/run';
 import { button, dim, inside, cardFrame, cardBadge, cardIcon } from './widgets';
+import { hintShowing } from './hints';
 import { drawTagGain } from './synergies';
 
 const CARD_W = 136;
@@ -144,6 +145,6 @@ export class CardPickView {
     // Jedno losowanie dla zaznaczonej karty (jak przyciski pod kartami awansu).
     const can = this.run.cardRerolls > 0;
     button(r, W / 2 - BTN_W / 2, BTN_Y, BTN_W, 20, `Reroll selected (${this.run.cardRerolls}) [R]`, { col: can ? undefined : C.dgray });
-    drawText(r.g, '1-3 / click: choose', W / 2, 238, C.lavender, { align: 'center', shadow: C.black });
+    if (!hintShowing()) drawText(r.g, '1-3 / click: choose', W / 2, 238, C.lavender, { align: 'center', shadow: C.black });
   }
 }

@@ -7,6 +7,7 @@
  *   npm run dev                      (w drugim terminalu)
  *   node scripts/layout.cjs                  (oba języki)
  *   node scripts/layout.cjs lang=pl only=menu   (only: menu | game)
+ *   warianty: hints=1 (podpowiedzi włączone), small=1 (Text size Normal), wide=1 (ekran 20:9), touch=1 (sterowanie dotykiem)
  *
  * Zrzuty sprawdzanych ekranów: /tmp/layout-shots/<język>/. Podpowiedzi wyłączone (mają własne miejsca, HINT_BOX).
  * Celowe nakładanie nie jest zgłaszane: napis przemalowany na początku innego (np. czerwona nazwa modyfikatora mapy)
@@ -66,8 +67,10 @@ const PATCH = () => {
   const P = CanvasRenderingContext2D.prototype;
   const st = { on: false, items: [], seq: 0 };
   window.__ov = st;
-  const K = () => document.querySelector('canvas').width / 480;
-  const box = (g, x, y, w, h) => { const t = g.getTransform(), k = K(); return [(t.a * x + t.e) / k, (t.d * y + t.f) / k, (t.a * w) / k, (t.d * h) / k]; };
+  // Skala z wysokości (270 logicznych), przesunięcie OX na szerokich ekranach: współrzędne interfejsu 0..480.
+  const K = () => document.querySelector('canvas').height / 270;
+  const OX = () => (document.querySelector('canvas').width / K() - 480) / 2;
+  const box = (g, x, y, w, h) => { const t = g.getTransform(), k = K(); return [(t.a * x + t.e) / k - OX(), (t.d * y + t.f) / k, (t.a * w) / k, (t.d * h) / k]; };
   const oRR = P.roundRect;
   P.roundRect = function (x, y, w, h, r) { if (st.on && this.canvas.isConnected) { const b = box(this, x, y, w, h); if (b[2] >= 12 && b[3] >= 8) st.items.push({ k: 'r', b, i: st.seq++ }); } return oRR.call(this, x, y, w, h, r); };
   // Przycinanie (przewijane listy): ostatni prostokąt ścieżki + stos save/restore.
@@ -95,25 +98,26 @@ const PATCH = () => {
 
 async function run(lang, name, steps, report, errs, misses) {
   const b = await chromium.launch();
-  const p = await b.newPage({ viewport: { width: 1440, height: 810 } });
+  const p = await b.newPage({ viewport: { width: args.wide ? 1800 : 1440, height: 810 } });
   p.on('pageerror', (e) => errs.push(String(e)));
   await p.addInitScript(PATCH);
   await p.goto(url);
-  await p.evaluate(async (lang) => {
+  await p.evaluate(async ({ lang, ...a }) => {
     const u = await import('/src/data/unlocks.ts');
     localStorage.setItem('pixel-survivors-save', JSON.stringify({
       version: 10, unlocks: [...u.ALL_UNLOCKS], tutorialDone: true, seenVersion: '9.9.9',
-      settings: { flashWarned: true, debug: true, lang, volume: 0, music: 0, textLarge: true, hints: false },
+      settings: { flashWarned: true, debug: true, lang, volume: 0, music: 0, textLarge: !a.small, hints: !!a.hints },
     }));
-  }, lang);
+  }, { lang, ...args });
   await p.reload(); await p.waitForTimeout(1500);
-  const dir = `/tmp/layout-shots/${lang}`;
+  const tag = ['hints', 'small', 'wide', 'touch'].filter((k) => args[k]).join('-'), dir = `/tmp/layout-shots/${tag ? tag + '-' : ''}${lang}`, ox = args.wide ? (1800 / 3 - 480) / 2 : 0;
   fs.mkdirSync(dir, { recursive: true });
   for (const st of steps) {
     if (st.k) for (const key of st.k.split(' ')) { await p.keyboard.press(key, { delay: 50 }); await p.waitForTimeout(st.w ?? 250); }
     if (st.js) await p.evaluate(st.js);
     if (st.wait) await p.waitForTimeout(st.wait);
     if (!st.chk) continue;
+    if (args.touch) await p.evaluate(() => { const i = window.__screen().app.input; i.lastDevice = 'touch'; i.touchControls = true; });
     const items = await p.evaluate(() => new Promise((res) => requestAnimationFrame(() => { const o = window.__ov; o.items = []; o.seq = 0; o.on = true; requestAnimationFrame(() => { o.on = false; res(o.items); }); })));
     await p.screenshot({ path: `${dir}/${name}_${st.chk}.png` });
       const texts = items.filter((x) => x.k === 't'), rects = items.filter((x) => x.k === 'r');
@@ -124,7 +128,7 @@ async function run(lang, name, steps, report, errs, misses) {
       for (const t of texts) if (!uniq.some((u) => u.s === t.s && Math.abs(u.b[0] - t.b[0]) < 1.5 && Math.abs(u.b[1] - t.b[1]) < 1.5)) uniq.push(t);
       for (const t of uniq) {
         const [x, y, w, h] = t.b;
-        if (x < -E || y < -E || x + w > 480 + E || y + h > 270 + E) issues.push(`OFFSCREEN "${t.s}" @${x.toFixed(0)},${y.toFixed(0)} w${w.toFixed(0)}`);
+        if (x < -ox - E || y < -E || x + w > 480 + ox + E || y + h > 270 + E) issues.push(`OFFSCREEN "${t.s}" @${x.toFixed(0)},${y.toFixed(0)} w${w.toFixed(0)}`);
         // najmniejszy wcześniejszy prostokąt zawierający środek napisu
         const mx = x + w / 2, my = y + h / 2;
         const cont = rects.filter((r) => r.i < t.i && mx >= r.b[0] && my >= r.b[1] && mx < r.b[0] + r.b[2] && my < r.b[1] + r.b[3] && r.b[2] * r.b[3] < 480 * 270 * 0.9)
@@ -149,11 +153,13 @@ async function run(lang, name, steps, report, errs, misses) {
   await b.close();
 }
 
-/** Celowe: napis przemalowany na początku dłuższego (nazwa modyfikatora) i plakietka „LV” na krawędzi portretu. */
+/** Celowe: napis przemalowany na początku dłuższego (nazwa modyfikatora), plakietka „LV” na krawędzi portretu, plakietki pod podpowiedzią. */
 function allowed(issue) {
   const m = issue.match(/^OVERLAP "(.*)" x "(.*)" \(/);
   if (m && (m[1].startsWith(m[2]) || m[2].startsWith(m[1]))) return false;
   if (/^SPILL "LV \d+"/.test(issue)) return false;
+  // Jednoznakowe plakietki węzłów mapy („+” bonusu) pod ramką podpowiedzi (hints=1): podpowiedź celowo leży na dalekich węzłach.
+  if (m && (m[1].length === 1 || m[2].length === 1)) return false;
   return true;
 }
 

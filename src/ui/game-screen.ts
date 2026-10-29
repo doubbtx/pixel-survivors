@@ -32,7 +32,7 @@ import { rollItem } from '../data/items';
 import { advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth, rollOffer } from '../data/expedition';
 import { music } from '../core/music';
 import { ExpeditionMapView } from './expedition';
-import { Hints, type HintBox } from './hints';
+import { Hints, hintShowing, type HintBox } from './hints';
 import { HelpScreen } from './help';
 import { CodexScreen } from './codex';
 import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
@@ -496,7 +496,7 @@ export class GameScreen implements Screen {
    */
   private peekFromPick(): boolean {
     const inp = this.app.input, m = inp.mouse, from = this.state;
-    const hit = (i: number) => inp.pressed('click') && inside(m.x, m.y, ...this.peekBtn(i));
+    const hit = (i: number) => inp.pressed('click') && !this.peekHidden() && inside(m.x, m.y, ...this.peekBtn(i));
     if (inp.pressed('build') || hit(0)) { this.openBuild(from); return true; }
     if (inp.pressed('inventory') || hit(1)) { this.openInventory(from); return true; }
     if (inp.pressed('synergies') || hit(2)) { this.openSynergies(from); return true; }
@@ -507,7 +507,13 @@ export class GameScreen implements Screen {
     return [4 + i * 74, H - 16, 72, 14];
   }
 
+  /** Na awansie, kartach i mocy podpowiedź zajmuje dół ekranu (linia klawiszy i przyciski podglądu) na swoje 6 s. */
+  private peekHidden(): boolean {
+    return hintShowing() && PEEK_UNDER_HINT.has(this.state);
+  }
+
   private renderPeekBar(r: Renderer): void {
+    if (this.peekHidden()) return;
     PEEK_LABELS.forEach((l, i) => button(r, ...this.peekBtn(i), l, { scale: 0.9 }));
   }
 
@@ -1167,12 +1173,14 @@ export class GameScreen implements Screen {
  * Miejsce podpowiedzi w każdej nakładce: wolny pas pod przyciskami albo obok nich, tak żeby nie zasłaniała tytułu,
  * legendy ani przycisków (podpis z klawiszami pod spodem może przykryć, podpowiedź mówi to samo).
  */
+const PEEK_UNDER_HINT = new Set(['levelup', 'cards', 'power']);
 const HINT_BOX: Partial<Record<string, HintBox>> = {
-  levelup: { x: 10, y: 232, w: W - 20 },
-  cards: { x: 10, y: 232, w: W - 20 },
+  levelup: { x: 10, y: 233, w: W - 20 },
+  cards: { x: 10, y: 233, w: W - 20 },
   power: { x: 10, y: 222, w: W - 20 },
   loot: { x: 8, y: 207, w: 128 },
-  map: { x: 14, y: H - 8, w: 240, up: true },
+  // Mapa: w prawym dolnym rogu obszaru mapy (dalekie węzły), nie na szczegółach węzła pod spodem.
+  map: { x: W - 14 - 246, y: 164, w: 246, up: true },
   shop: { x: 6, y: 232, w: 266, up: true },
   anvil: { x: 10, y: 181, w: 208, up: true },
 };

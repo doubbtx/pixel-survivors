@@ -319,10 +319,15 @@ function angelOf(f: number, big: boolean): Painter {
   const w = Math.round(16 * s), h = Math.round(16 * s);
   const p = new Painter(w, h, HI);
   const cx = w / 2, flap = [0, 1, 2, 1][f] * s;
-  // Skrzydła z piórami (lotki jako cienkie linie).
+  // Skrzydła: wachlarz osobnych lotek (każda cieniowana), na nich zaokrąglone pokrywy przy barku ze złotą krawędzią.
   for (const d of [-1, 1]) {
-    p.polyShade([[cx + d * 2 * s, 6 * s], [cx + d * 7.2 * s, 2.6 * s - flap], [cx + d * 7 * s, 6 * s - flap / 2], [cx + d * 6 * s, 9.5 * s], [cx + d * 2 * s, 10 * s]], RAMP.bone);
-    for (let k = 1; k < 4; k++) p.thin(cx + d * 2.5 * s, (6 + k) * s, cx + d * (5 + k * 0.5) * s, (3.5 + k * 1.6) * s - flap / 2, C.lgray);
+    for (let k = 0; k < 4; k++) {
+      const bx = cx + d * (2.8 + k * 0.5) * s, by = (6.6 + k * 1) * s;
+      const tip: [number, number] = [cx + d * (7.6 - k * 0.5) * s, (2.6 + k * 2) * s - flap * (1 - k * 0.2)];
+      p.polyShade([[bx - 0.9 * s, by], [bx + 0.9 * s, by], tip], k % 2 ? [C.lavender, C.lgray, C.white, C.white] : RAMP.bone);
+    }
+    p.sphere(cx + d * 4 * s, 7 * s - flap / 3, 2.2 * s, 1.6 * s, RAMP.bone);
+    p.thin(cx + d * 2.2 * s, 8 * s, cx + d * 5.8 * s, 7.4 * s - flap / 3, C.gold);
   }
   // Szata ze złotym brzegiem.
   p.polyShade([[cx - 3 * s, 8 * s], [cx + 3 * s, 8 * s], [cx + 2.4 * s, 15 * s], [cx - 2.4 * s, 15 * s]], RAMP.bone);
@@ -429,10 +434,17 @@ function eye(f: number): Painter {
   if (f > 0) {
     const edge = f === 1 ? 8 : 10;
     const lid = new Painter(18, 18, HI).sphere(9, 9, 7, 7, [C.plum, C.pink, C.salmon, C.salmon]);
-    for (let y = 0; y < edge; y += 0.5) for (let x = 0; x < 18; x += 0.5) if (lid.get(x, y) >= 0) p.dot(x, y, lid.get(x, y));
+    // Kopiowanie powieki co drobny piksel (środki pikseli 1/HI): krok 0.5 zostawiał kratkę.
+    const copy = (y0: number, y1: number) => {
+      for (let j = Math.round(y0 * HI); j < y1 * HI; j++) for (let i = 0; i < 18 * HI; i++) {
+        const x = (i + 0.5) / HI, y = (j + 0.5) / HI, c = lid.get(x, y);
+        if (c >= 0) p.dot(x, y, c);
+      }
+    };
+    copy(0, edge);
     p.thin(2.2, edge, 15.8, edge, C.black);
     if (f === 2) {
-      for (let y = edge + 0.5; y < 18; y += 0.5) for (let x = 0; x < 18; x += 0.5) if (lid.get(x, y) >= 0) p.dot(x, y, lid.get(x, y));
+      copy(edge, 18);
       for (const x of [5, 8, 11, 13]) p.thin(x, edge + 0.5, x - 0.5, edge + 1.5, C.black);
     }
   }
@@ -581,23 +593,41 @@ function shieldbearer(f: number): Painter {
   return p.outline();
 }
 
-/** Przywoływacz: szaman w kościanej masce, szata z piórami, kostur z kulą, która pulsuje przed przywołaniem. */
+/** Przywoływacz: szaman w fioletowej szacie z płaszczem z piór i pasem z kości, kościana maska z rogami, kostur ze szponem trzymającym zieloną kulę (pulsuje przed przywołaniem). */
 function summoner(f: number): Painter {
   const p = new Painter(18, 21, HI);
-  p.polyShade([[9, 3], [14, 9], [15, 20], [3, 20], [4, 9]], RAMP.purple);
-  p.thin(9, 10, 9, 19.5, C.plum).thin(3.4, 19.6, 14.6, 19.6, C.pink);
-  for (const [x, y] of [[4.5, 10], [13.5, 10], [5, 12], [13, 12]] as const) p.thin(x, y, x + (x < 9 ? -1 : 1), y + 2, C.cream); // pióra przy ramionach
-  for (const x of [5.5, 8, 10, 12.5]) p.dot(x, 17.5, C.lime); // runy
-  // Kościana maska z rogami i szparami oczu.
-  p.polyShade([[6, 3.4], [5, 1], [6.8, 2.6]], RAMP.bone).polyShade([[12, 3.4], [13, 1], [11.2, 2.6]], RAMP.bone);
-  p.sphere(9, 6, 3.5, 3, RAMP.bone);
-  p.rect(7.4, 5.6, 1.2, 0.8, C.black).rect(9.6, 5.6, 1.2, 0.8, C.black).dot(7.8, 5.6, C.lime).dot(10, 5.6, C.lime);
-  p.rect(8, 8, 2.2, 0.8, C.dred).thin(9, 3.8, 9, 5, C.lavender);
-  // Kostur z kulą.
-  const r = 2 + (f % 2) * 0.6;
-  p.line(15, 4, 15, 20, C.brown).thin(14.8, 4.5, 14.8, 19.5, C.clay);
-  p.sphere(15, 3, r, r, [C.dgreen, C.green, C.lime, C.white]).dot(14.4, 2.3, C.white);
-  if (f % 2) p.dot(12.5, 1.5, C.lime).dot(17.2, 1, C.lime).dot(15, 0, C.white);
+  const pulse = f % 2 === 1;
+  // Szata: postrzępiony dół, ciemniejszy przód, runy przy rąbku.
+  const hem: [number, number][] = [];
+  for (let x = 14.6; x >= 3.4; x -= 1.4) hem.push([x, 19.6 + ((x * 5) % 2 > 1 ? 0.8 : 0)]);
+  p.polyShade([[9, 5], [13.6, 9], [14.6, 19.6], ...hem, [3.4, 19.6], [4.4, 9]], RAMP.purple);
+  p.polyShade([[9, 10], [11, 19.8], [7, 19.8]], [C.black, C.black, C.plum, C.plum]);
+  p.thin(5, 11, 4, 19, C.salmon).thin(12.8, 11, 13.8, 19, C.black);
+  for (const [x, y] of [[5, 18], [12.6, 18], [9, 16.4]] as const) p.dot(x, y, pulse ? C.white : C.lime).dot(x, y - 0.6, C.green);
+  // Pas z kośćmi.
+  p.thin(4.6, 13, 13.4, 13, C.ddbrown);
+  for (const x of [6, 8, 10, 12]) p.sphere(x, 13.6, 0.6, 0.8, RAMP.bone);
+  // Płaszcz z piór na ramionach.
+  for (let k = 0; k < 7; k++) {
+    const x = 4 + k * 1.65, y = 9 + Math.abs(k - 3) * 0.35;
+    p.polyShade([[x - 0.9, y - 1], [x + 0.9, y - 1], [x, y + 1.8]], k % 2 ? [C.dbrown, C.tan, C.cream, C.white] : [C.dred, C.rust, C.salmon, C.peach]);
+  }
+  // Kościana maska: rogi, szpary oczu z zielonym żarem, zęby.
+  p.polyShade([[6.2, 4.4], [4.2, 0.6], [5.2, 0.4], [7.4, 3.4]], RAMP.bone).polyShade([[11.8, 4.4], [13.8, 0.6], [12.8, 0.4], [10.6, 3.4]], RAMP.bone);
+  p.sphere(9, 6, 3.6, 3.2, RAMP.bone);
+  p.thin(9, 3, 9, 4.6, C.lavender).dot(7.2, 4, C.white);
+  for (const ex of [7.6, 10.4]) p.rect(ex - 0.7, 5.4, 1.4, 1, C.black).dot(ex, 5.6, pulse ? C.white : C.lime);
+  p.rect(7.6, 8, 2.8, 1, C.black);
+  for (const x of [8, 9, 10]) p.dot(x, 8, C.cream);
+  // Rękaw i dłoń przy kosturze.
+  p.polyShade([[12.6, 9.6], [15, 11], [14.4, 12.6], [12.4, 11.6]], RAMP.purple).sphere(15, 11.8, 0.9, 0.8, RAMP.bone);
+  // Kostur z sękami i szponem, kula z poświatą.
+  p.stroke(15.2, 5, 15.2, 20.4, C.dbrown).thin(15.4, 5.5, 15.4, 20, C.brown);
+  p.dot(15.6, 9, C.clay).dot(15.6, 16, C.clay);
+  p.thin(13.6, 4.6, 14.8, 5.6, C.lgray).thin(16.8, 4.6, 15.6, 5.6, C.lgray);
+  const rad = pulse ? 2.5 : 2;
+  if (pulse) p.ring(15.2, 3, rad + 1.2, 0.5, C.lime).dot(12.4, 1.4, C.lime).dot(17.6, 0.8, C.white);
+  p.sphere(15.2, 3, rad, rad, [C.dgreen, C.green, C.lime, C.white]).dot(14.6, 2.2, C.white);
   return p.outline();
 }
 
@@ -720,45 +750,68 @@ function thornling(f: number): Painter {
   return p.outline();
 }
 
-/** Ropucha bagienna: przysadzista, brodawkowata, z workiem rezonansowym, który nadyma się w klatkach 1-2. */
+/** Ropucha bagienna: przysadzista, z jaśniejszym brzuchem, brodawkami z odblaskiem, łapami, szerokim pyskiem i wyłupiastymi oczami; worek rezonansowy nadyma się w klatkach 1-2. */
 function toad(f: number): Painter {
   const p = new Painter(20, 15, HI);
   const sq = f === 3 ? 0.6 : 0;
-  // Tylne łapy w przysiadzie.
-  p.sphere(4.5, 11 + sq, 3.2, 2.6, [C.teal, C.dgreen, C.green, C.green]).sphere(15.5, 11 + sq, 3.2, 2.6, [C.teal, C.dgreen, C.green, C.green]);
-  p.thin(2, 13.6, 4.4, 13.6, C.dgreen).thin(15.6, 13.6, 18, 13.6, C.dgreen);
-  p.sphere(10, 9 + sq, 7, 4.8 - sq, RAMP.green);
+  const skin = [C.teal, C.dgreen, C.green, C.lime];
+  // Tylna łapa złożona w przysiadzie, przednie łapy z palcami.
+  p.sphere(5, 10.6 + sq, 3.6, 3, skin);
+  p.thin(2, 13.8, 6, 13.8, C.dgreen).dot(1.6, 13.4, C.green).dot(3.4, 13.4, C.green);
+  // Tułów i głowa (zwrócona w prawo).
+  p.sphere(9.4, 9 + sq, 6.6, 4.6 - sq, skin);
+  p.sphere(14.4, 8.6 + sq, 4.2, 3.6 - sq * 0.5, skin);
+  p.sphere(10.6, 11.6 + sq, 4.6, 1.8, [C.dgreen, C.tan, C.cream, C.cream]);
   // Worek pod gardłem.
-  const sac = [1.6, 2.2, 2.6, 1.4][f];
-  p.sphere(13.5, 12 + sq, sac + 0.4, sac * 0.8, [C.tan, C.cream, C.cream, C.white]);
-  // Brodawki.
-  for (const [x, y] of [[6, 7.5], [8, 6], [11, 6.6], [5, 10], [9, 9.6]] as const) p.dot(x, y + sq, C.teal).dot(x + 0.5, y + sq - 0.5, C.lime);
-  // Wyłupiaste oczy na czubku.
-  for (const ex of [12, 15.4]) p.sphere(ex, 5.2 + sq, 1.7, 1.7, [C.dbrown, C.orange, C.gold, C.yellow]).rect(ex - 0.8, 5 + sq, 1.8, 0.6, C.black);
-  p.thin(13, 10 + sq, 17.4, 9.4 + sq, C.dgreen);
-  p.rect(6, 13.4, 8, 1, C.dgreen);
+  const sac = [1.4, 2.2, 2.7, 1.2][f];
+  p.sphere(15.4, 11.6 + sq, sac + 0.4, sac * 0.8, [C.tan, C.cream, C.cream, C.white]).dot(15, 11 + sq, C.white);
+  // Pysk.
+  p.thin(12.4, 9.8 + sq, 18.2, 9.4 + sq, C.teal).thin(17.6, 9.4 + sq, 18.4, 8.8 + sq, C.teal);
+  p.dot(17.4, 7.6 + sq, C.teal);
+  // Przednie łapy.
+  for (const x of [12, 15.6]) p.thin(x, 11.6 + sq, x + 0.6, 13.8, C.dgreen).thin(x - 0.4, 13.8, x + 1.4, 13.8, C.green);
+  // Brodawki z odblaskiem.
+  for (const [x, y] of [[5.4, 7.6], [8, 6], [10.6, 6.4], [4.4, 10.2], [8.4, 9.4], [12.2, 7]] as const) p.dot(x, y + sq, C.teal).dot(x - 0.3, y + sq - 0.4, C.lime);
+  // Wyłupiaste oczy z pionową źrenicą.
+  for (const ex of [13, 16.2]) {
+    p.sphere(ex, 5 + sq, 1.8, 1.8, [C.dbrown, C.orange, C.gold, C.yellow]);
+    p.rect(ex - 0.2, 4 + sq, 0.6, 2, C.black).dot(ex - 0.8, 4.2 + sq, C.white);
+  }
+  p.thin(11.4, 4.6 + sq, 17.6, 4.4 + sq, C.dgreen);
   return p.outline();
 }
 
-/** Topielec: utopiec z wodorostami we włosach, sinoniebieska skóra, długie szpony i ociekająca woda. */
+/** Topielec: przygarbiony utopiec o sinej skórze, z włosami-wodorostami opadającymi na twarz, świecącymi oczami, łachmanami u pasa i długimi szponami; kapie z niego woda. */
 function lurker(f: number): Painter {
   const p = new Painter(18, 22, HI);
   const sw = [0, 0.5, 0, -0.5][f];
-  p.block(6, 16, 2, 5, [C.navy, C.dblue, C.dblue, C.blue]).block(10, 16, 2, 5 - Math.abs(sw), [C.navy, C.dblue, C.dblue, C.blue]);
-  p.polyShade([[4, 8], [14, 8], [13, 17], [5, 17]], [C.navy, C.teal, C.dblue, C.blue]);
-  // Żebra.
-  for (const y of [10.5, 12, 13.5]) p.thin(6.5, y, 11.5, y, C.navy);
-  // Ramiona ze szponami wyciągniętymi do przodu.
-  p.thin(13.5, 9, 16.5, 12 + sw, C.dblue).thin(16.5, 12 + sw, 17.5, 13.5 + sw, C.cyan).thin(16.5, 12 + sw, 16.4, 14 + sw, C.cyan);
-  p.thin(4.5, 9, 2.5, 13 - sw, C.dblue).thin(2.5, 13 - sw, 2, 14.5 - sw, C.cyan);
-  // Głowa, wodorosty, białe oczy.
-  p.sphere(9, 5, 3.6, 3.6, [C.navy, C.teal, C.dblue, C.blue]);
-  for (const [x, l] of [[5.6, 7], [7, 5], [11, 6], [12.6, 8]] as const) p.thin(x, 2.4, x + sw * 0.6, 2.4 + l, (x * 2) % 3 ? C.dgreen : C.green);
-  p.thin(6, 2, 12, 2, C.dgreen);
-  p.rect(7.4, 4.6, 1, 1, C.white).rect(10, 4.6, 1, 1, C.white);
-  p.thin(7.6, 7, 10.4, 7, C.black).dot(8.4, 7.4, C.white).dot(9.6, 7.4, C.white);
+  const skin = [C.navy, C.teal, C.dblue, C.blue];
+  // Chude, zgięte nogi.
+  p.thin(7, 16, 6 + sw, 20.6, C.teal).thin(7.6, 16, 6.6 + sw, 20.6, C.dblue);
+  p.thin(11, 16, 12 - sw, 20.6, C.teal).thin(11.6, 16, 12.6 - sw, 20.6, C.navy);
+  p.rect(5 + sw, 20.6, 2.4, 0.8, C.navy).rect(11.4 - sw, 20.6, 2.4, 0.8, C.navy);
+  // Tułów pochylony do przodu, żebra, łachmany u pasa.
+  p.polyShade([[4.6, 9.4], [7.4, 7.2], [12.4, 7.4], [13.8, 9.6], [12.6, 15], [9, 15.6], [5.8, 15.2], [5, 12]], skin);
+  p.sphere(9.4, 13, 2.6, 1.8, [C.teal, C.dblue, C.blue, C.blue]);
+  for (const y of [9.6, 11, 12.4]) p.thin(6.8, y, 11.6, y - 0.3, C.navy).thin(7, y + 0.4, 11.2, y + 0.1, C.cyan);
+  const rags: [number, number][] = [[4.6, 14.4], [13.8, 14]];
+  for (let x = 13.4; x >= 5; x -= 1.2) rags.push([x, 17 + ((x * 3) % 2 > 1 ? 1.2 : 0)]);
+  p.polyShade([[4.6, 14.4], [13.8, 14], ...rags.slice(2)], [C.black, C.ddbrown, C.dgray, C.slate]);
+  // Długie ramiona ze szponami (prawe sięga do przodu).
+  p.stroke(13, 8.6, 16, 12 + sw, C.teal).thin(13, 8.4, 16, 11.6 + sw, C.blue);
+  for (const d of [-0.8, 0, 0.8]) p.thin(16, 12 + sw, 17.4 + d * 0.3, 14 + sw + d, C.lgray);
+  p.stroke(5.2, 8.6, 3, 13 - sw, C.teal);
+  for (const d of [-0.6, 0.6]) p.thin(3, 13 - sw, 2 + d, 15 - sw, C.lgray);
+  // Głowa: świecące oczy spod wodorostów, otwarte usta.
+  p.sphere(9.4, 5, 3.6, 3.4, skin);
+  p.rect(7.6, 4.6, 1.2, 1, C.white).rect(10.4, 4.6, 1.2, 1, C.white).dot(7.8, 4.8, C.cyan).dot(10.6, 4.8, C.cyan);
+  p.rect(8.4, 6.8, 2.2, 1.2, C.black).dot(8.8, 6.8, C.lgray).dot(9.8, 6.8, C.lgray);
+  for (const [x, l] of [[5.8, 8], [6.8, 5.4], [8.2, 3.2], [10.8, 3], [12, 5.6], [13, 9]] as const) {
+    p.thin(x, 1.8, x + sw * 0.6 + (x < 9 ? -0.4 : 0.4), 1.8 + l, (x * 2) % 3 > 1 ? C.dgreen : C.green);
+  }
+  p.thin(6, 1.6, 12.6, 1.6, C.dgreen).dot(8, 1.4, C.lime).dot(11, 1.4, C.lime);
   // Kapiące krople.
-  p.dot(4.4, 17.5 + f % 2, C.cyan).dot(13.4, 18.5 - f % 2, C.cyan);
+  p.dot(3.6, 16.5 + (f % 2) * 1.5, C.cyan).dot(14.4, 17.5 - (f % 2), C.cyan).dot(9, 21.4, f === 2 ? C.white : C.cyan);
   return p.outline();
 }
 
