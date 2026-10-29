@@ -133,7 +133,8 @@ export class MetaScreen implements Screen {
       const [x, y] = this.nodePos(c, r);
       if (!inside(m.x, m.y, x, y, COL_W, NODE_H)) return;
       if (m.lastMove !== this.lastMouse) { this.col = c; this.row = r; }
-      if (inp.pressed('click')) { this.col = c; this.row = r; this.buy(n); }
+      // Dotyk: pierwsze dotknięcie pokazuje opis węzła, drugie kupuje.
+      if (inp.pressed('click')) { const again = this.col === c && this.row === r; this.col = c; this.row = r; if (again || inp.lastDevice !== 'touch') this.buy(n); }
     }));
     if (inp.pressed('click')) {
       HEROES.forEach((_, i) => { if (inside(m.x, m.y, 8 + i * (TAB_W + 4), TAB_Y, TAB_W, 14) && i !== this.hero) this.switchHero(i - this.hero); });

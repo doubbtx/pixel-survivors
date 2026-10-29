@@ -197,7 +197,7 @@ export const PL: Record<string, string> = {
   "Anvil": "Kowadło",
   "Pause": "Pauza",
   "Reset to defaults": "Przywróć domyślne",
-  "Press a new key (Esc: cancel)": "Naciśnij nowy klawisz (Esc: anuluj)",
+  "Press a new key (Esc or tap: cancel)": "Naciśnij nowy klawisz (Esc albo dotknięcie: anuluj)",
   "Enter: change key. Arrows, Enter, Esc, Tab and 1-4 always work in menus.": "Enter: zmień klawisz. Strzałki, Enter, Esc, Tab i 1-4 zawsze działają w menu.",
   "Gamepad: left stick moves, A dodges and confirms, X and B abilities, Y ultimate, Start pause, LT backpack, RT weapons and passives, LB / RB reroll and skip (map difficulty), right stick aims and scrolls.": "Pad: lewa gałka to ruch, A unik i zatwierdzenie, X i B umiejętności, Y superumiejętność, Start pauza, LT plecak, RT bronie i pasywki, LB / RB losowanie i pominięcie (trudność mapy), prawa gałka celuje i przewija.",
   "Keys: change them in Settings, General, Controls. Long texts: PageUp / PageDown, mouse wheel or drag.": "Klawisze: zmienisz je w Ustawieniach, Ogólne, Sterowanie. Długie teksty: PageUp / PageDown, kółko myszy albo przeciągnięcie.",
@@ -751,4 +751,6 @@ export const PL: Record<string, string> = {
   'Close combat: hits on enemies right next to you deal +20% damage (a white ring shows it). Melee weapons hit harder, ranged weapons keep you safer.': 'Walka z bliska: trafienia wrogów tuż obok ciebie zadają +20% obrażeń (pokazuje to biały pierścień). Bronie do walki wręcz biją mocniej, dystansowe dają więcej bezpieczeństwa.',
   "Weapon balance: melee weapons (Holy Aura, Orbit Blades, axe, katana, Holy Light, Mines) hit harder and wider, Chain Lightning is a bit weaker and homing weapons pick targets a little closer. New: hits on enemies right next to you deal +20% damage (a faint orange ring shows it).": "Balans broni: bronie do walki wręcz (Święta aura, Ostrza orbity, topór, katana, Święte światło, Miny) biją mocniej i szerzej, Piorun łańcuchowy jest trochę słabszy, a bronie naprowadzane wybierają cele nieco bliżej. Nowość: trafienia wrogów tuż obok ciebie zadają +20% obrażeń (pokazuje to słaby pomarańczowy pierścień).",
   'Close combat: hits on enemies right next to you deal +20% damage (white ring around you). Melee weapons are built for it.': 'Walka z bliska: trafienia wrogów tuż obok ciebie zadają +20% obrażeń (biały pierścień wokół ciebie). Bronie do walki wręcz są do tego stworzone.',
+  'Skip [X]': 'Pomiń [X]',
+  'Reset [R]': 'Resetuj [R]',
 };

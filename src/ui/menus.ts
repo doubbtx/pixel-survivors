@@ -1,6 +1,7 @@
 import { W, H, OX } from '../core/renderer';
 import { C, PAL } from '../core/palette';
 import { drawText, wrapText, textWidth, setTextSize, DESC, descS, descLH, smallS } from '../core/font';
+import { tr } from '../core/i18n';
 import { sfx } from '../core/audio';
 import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
 import { drawSprite, drawShadow, blit, TILE } from '../gfx/sprites';
@@ -375,6 +376,8 @@ const TABS = ['Ogólne', 'Umiejętności', 'Zasób'];
 const TAB_Y = TOP + 43;
 /** Przyciski na dole ekranu wyboru bohatera: Wstecz (lewo) i Start (prawo). */
 const BTN_Y = H - 18, BTN_H = 15, BACK_W = 70, START_W = 110;
+/** Przycisk zmiany ultimate (R4) między Wstecz a Start. */
+const ULT_W = 200, ULT_X = (LIST_X + BACK_W + W - 12 - START_W) / 2 - ULT_W / 2;
 /** Przewijany obszar szczegółów na stronach Umiejętności i Zasób (x, y, w, h). */
 const DET_AREA = [DET_X + 4, TOP + 60, DET_W - 8, DET_H - 63] as const;
 
@@ -423,6 +426,8 @@ export class HeroSelect implements Screen {
       if (this.page === 0 && inside(x, y, DET_X + 8, this.skillsAt, DET_W - 16, 40)) { this.page = 1; sfx.play('select'); return; }
       if (inside(x, y, W - 12 - START_W, BTN_Y, START_W, BTN_H)) { this.start(); return; }
       if (inside(x, y, LIST_X, BTN_Y, BACK_W, BTN_H)) { this.app.go(new SlotScreen(this.app, this.mode)); return; }
+      if (HEROES[this.sel].altUlt && inside(x, y, ULT_X, BTN_Y, ULT_W, BTN_H)) { this.toggleUlt(); return; }
+      if (this.skinAt && inside(x, y, ...this.skinAt)) { this.cycleSkin(); return; }
       HEROES.forEach((_, i) => {
         if (!inside(x, y, LIST_X, TOP + i * ROW_H, LIST_W, ROW_H - 4)) return;
         if (this.sel === i) this.start();
@@ -436,6 +441,9 @@ export class HeroSelect implements Screen {
   private kit(h: HeroDef): AbilityDef[] {
     return heroAbilities(h, !!this.app.save.altUlt?.[h.id]);
   }
+
+  /** Prostokąt przycisku skórki (null, gdy bohater nie ma skórek). */
+  private skinAt: [number, number, number, number] | null = null;
 
   /** R4: przełącza ultimate zaznaczonego bohatera (zapamiętane per bohater). */
   private toggleUlt(): void {
@@ -506,7 +514,13 @@ export class HeroSelect implements Screen {
     drawText(g, h.name, x + 64, y + 12, h.color, { scale: 2, shadow: C.black });
     // Skórki za odznaki Paktu.
     const owned = heroSkins(this.app.save.pacts.best[h.id] ?? 0), cur = this.app.save.skins[h.id] ?? '';
-    if (owned.length) drawText(g, `Skórka: ${cur && BADGE_BY_ID[cur] ? BADGE_BY_ID[cur].name : 'zwykła'} [X]`, x + DET_W - 10, y + 8, cur ? BADGE_BY_ID[cur]?.color ?? C.lgray : C.lgray, { align: 'right' });
+    // Skórka: napis jest też przyciskiem (dotyk).
+    this.skinAt = null;
+    if (owned.length) {
+      const label = `Skórka: ${cur && BADGE_BY_ID[cur] ? BADGE_BY_ID[cur].name : 'zwykła'} [X]`, sw = textWidth(label) + 8;
+      this.skinAt = [x + DET_W - 6 - sw, y + 5, sw, 13];
+      button(r, ...this.skinAt, label, { col: cur ? BADGE_BY_ID[cur]?.color ?? C.lgray : C.lgray });
+    }
     drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 31, C.lavender);
     TABS.forEach((t, i) => button(r, this.tabX(i), TAB_Y, TAB_W, 14, t, { active: i === this.page, accent: C.gold }));
     if (this.page === 0) this.renderGeneral(h, x, y);
@@ -522,8 +536,6 @@ export class HeroSelect implements Screen {
     const rec = heroRecord(this.app.save, h.id);
     const best = m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}` : `Rekord: ${fmtTime(rec.bestEndless)}`;
     drawText(g, best, x + 12, y + DET_H - 14, C.lavender);
-    // R4: drugi ultimate do wyboru (w dolnym wierszu, nie nachodzi na opis przy długich pasywkach — playtest 3).
-    if (h.altUlt) drawText(g, 'R: swap ultimate (2 to choose from)', x + DET_W - 12, y + DET_H - 14, C.yellow, { align: 'right', scale: smallS() });
     {
       const hm = heroMeta(this.app.save.meta, h.id);
       drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
@@ -537,7 +549,11 @@ export class HeroSelect implements Screen {
     button(r, LIST_X, BTN_Y, BACK_W, BTN_H, 'Wstecz [Esc]');
     if (heroUnlocked(this.app.save, h.id)) button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, `Start: ${h.name} [Enter]`, { accent: C.gold, col: C.yellow, pulse: true });
     else button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, 'Locked', { col: C.dgray });
-    drawText(g, 'Góra/dół: bohater    Lewo/prawo: zakładki', (LIST_X + BACK_W + W - 12 - START_W) / 2, BTN_Y + 2, C.lavender, { align: 'center', scale: smallS() });
+    // R4: przełącznik ultimate jako przycisk (dotyk: wcześniej tylko klawisz R), na każdej zakładce.
+    if (h.altUlt) {
+      const ult = this.kit(h).find((a) => a.slot === 'ult');
+      button(r, ULT_X, BTN_Y, ULT_W, BTN_H, `${tr('Ultimate')}: ${tr(ult?.name ?? '')} [R]`, { accent: C.yellow, col: C.yellow, scale: smallS() });
+    } else drawText(g, 'Góra/dół: bohater    Lewo/prawo: zakładki', (LIST_X + BACK_W + W - 12 - START_W) / 2, BTN_Y + 2, C.lavender, { align: 'center', scale: smallS() });
   }
 
   /** Strona ogólna: broń, pasywka, zasób w skrócie, umiejętności. */

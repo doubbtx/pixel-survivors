@@ -8,10 +8,11 @@ import { BAL } from '../data/balance';
 import { BOSS_POWER_BY_ID, type BossPowerDef } from '../data/enemies';
 import type { Run } from '../game/run';
 import { rollPowerOffer, takePower } from '../systems/powers';
-import { dim, inside, cardFrame } from './widgets';
+import { dim, inside, cardFrame, button } from './widgets';
 import { hintShowing } from './hints';
 
 const CARD_W = 132, CARD_H = 150, CARD_Y = 50;
+const SKIP_BTN: [number, number, number, number] = [W / 2 - 40, CARD_Y + CARD_H + 21, 80, 14];
 
 /**
  * Kradzież mocy po bossie: 3 nazwane ataki bossa do wyboru (1-3, klik, strzałki + Enter), X pomija.
@@ -44,6 +45,8 @@ export class PowerPickView {
   update(input: Input): boolean {
     const n = this.options.length;
     if (n === 0 || input.pressed('skip')) return true;
+    // Pomiń: przycisk pod kartami (dotyk: wcześniej tylko klawisz X).
+    if (input.pressed('click') && !hintShowing() && inside(input.mouse.x, input.mouse.y, ...SKIP_BTN)) return true;
     if (input.pressed('left')) this.sel = (this.sel - 1 + n) % n;
     if (input.pressed('right')) this.sel = (this.sel + 1) % n;
     if (input.pressed('confirm')) return this.choose(this.sel);
@@ -76,6 +79,6 @@ export class PowerPickView {
     });
     const cur = own ? `Obecna: ${BOSS_POWER_BY_ID[own.id].name} (poz. ${own.level}). Inna moc ją zastąpi.` : 'Nie masz jeszcze mocy bossa.';
     drawText(g, cur, W / 2, CARD_Y + CARD_H + 10, C.lavender, { align: 'center', shadow: C.black });
-    if (!hintShowing()) drawText(g, '1-3 / klik: wybierz    X: pomiń', W / 2, CARD_Y + CARD_H + 24, C.lavender, { align: 'center', shadow: C.black });
+    if (!hintShowing()) button(r, ...SKIP_BTN, 'Skip [X]');
   }
 }

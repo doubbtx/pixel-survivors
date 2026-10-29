@@ -52,7 +52,11 @@ export class ControlsScreen implements Screen {
   }
 
   update(): void {
-    if (this.waiting) return;
+    // Czekanie na klawisz: dotknięcie / klik anuluje (na telefonie bez klawiatury ekran był zablokowany).
+    if (this.waiting) {
+      if (this.app.input.pressed('click')) { this.waiting = null; this.app.input.capture = null; sfx.play('select'); }
+      return;
+    }
     if (this.app.input.pressed('back')) { this.app.go(this.back); return; }
     this.menu.update(this.app.input);
   }
@@ -63,7 +67,7 @@ export class ControlsScreen implements Screen {
     titleBar(r, 'Controls', 8);
     panel(r, W / 2 - 160, 32, 320, (REBIND.length + 2) * 12.5 + 8);
     this.menu.render(r);
-    const tip = this.waiting ? 'Press a new key (Esc: cancel)' : 'Enter: change key. Arrows, Enter, Esc, Tab and 1-4 always work in menus.';
+    const tip = this.waiting ? 'Press a new key (Esc or tap: cancel)' : 'Enter: change key. Arrows, Enter, Esc, Tab and 1-4 always work in menus.';
     drawText(g, tip, W / 2, H - 12, this.waiting ? C.yellow : C.lavender, { align: 'center', scale: smallS() });
   }
 }

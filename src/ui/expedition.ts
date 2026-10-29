@@ -163,6 +163,11 @@ export class ExpeditionMapView {
       this.peek = later.find(([r, l]) => { const [x, y] = nodePos(r, l); return inside(m.x, m.y, x - NODE / 2, y - NODE / 2, NODE, NODE); }) ?? null;
     }
     if ((['up', 'down', 'left', 'right', 'confirm', 'n1', 'n2', 'n3', 'n4'] as Action[]).some((a) => input.pressed(a))) this.peek = null;
+    // Dotyk (bez najechania): dotknięcie dalszego węzła pokazuje jego podgląd, ponowne dotknięcie go zdejmuje.
+    if (input.pressed('click') && input.lastDevice === 'touch') {
+      const hit = later.find(([r, l]) => { const [x, y] = nodePos(r, l); return inside(m.x, m.y, x - NODE / 2, y - NODE / 2, NODE, NODE); });
+      if (hit) this.peek = this.peek && this.peek[0] === hit[0] && this.peek[1] === hit[1] ? null : hit;
+    }
     const pstep = !tierOpen(this.run.expedition!) ? (input.pressed('skip') ? 1 : input.pressed('reroll') ? -1 : 0) : 0;
     if (pstep && later.length) {
       const i = this.peek ? later.findIndex(([r, l]) => r === this.peek![0] && l === this.peek![1]) : pstep > 0 ? -1 : 0;
