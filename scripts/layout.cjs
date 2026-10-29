@@ -1,7 +1,8 @@
 /**
  * Test układu: przechodzi ekrany menu i gry (po angielsku i po polsku) i zgłasza napisy, które wychodzą poza ekran,
  * wystają poza swoje okno / kafelek / przycisk albo nachodzą na inny napis. Przechwytuje `fillText` i `roundRect`
- * (z przycinaniem przewijanych list), więc sprawdza to, co faktycznie widać.
+ * (z przycinaniem przewijanych list), więc sprawdza to, co faktycznie widać. Na końcu wypisuje napisy bez tłumaczenia
+ * (`trMisses` z core/i18n.ts) z odwiedzonych ekranów w obu językach.
  *
  *   npm run dev                      (w drugim terminalu)
  *   node scripts/layout.cjs                  (oba języki)
@@ -9,7 +10,7 @@
  *
  * Zrzuty sprawdzanych ekranów: /tmp/layout-shots/<język>/. Podpowiedzi wyłączone (mają własne miejsca, HINT_BOX).
  * Celowe nakładanie nie jest zgłaszane: napis przemalowany na początku innego (np. czerwona nazwa modyfikatora mapy)
- * i plakietka poziomu „LV” na krawędzi portretu w HUD. Kod wyjścia 1, gdy coś wystaje albo były błędy strony.
+ * i plakietka poziomu „LV” na krawędzi portretu w HUD. Kod wyjścia 1, gdy coś wystaje, były błędy strony albo brak tłumaczeń.
  */
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -92,7 +93,7 @@ const PATCH = () => {
   };
 };
 
-async function run(lang, name, steps, report, errs) {
+async function run(lang, name, steps, report, errs, misses) {
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 1440, height: 810 } });
   p.on('pageerror', (e) => errs.push(String(e)));
@@ -143,6 +144,8 @@ async function run(lang, name, steps, report, errs) {
       }
       report.push({ lang, shot: `${name}_${st.chk}`, n: uniq.length, issues: issues.filter(allowed) });
   }
+  // Napisy bez tłumaczenia (core/i18n.ts zbiera je na serwerze deweloperskim): ten sam moduł co w grze.
+  for (const m of await p.evaluate(async () => [...(await import('/src/core/i18n.ts')).trMisses])) misses.add(m);
   await b.close();
 }
 
@@ -155,10 +158,10 @@ function allowed(issue) {
 }
 
 (async () => {
-  const report = [], errs = [];
+  const report = [], errs = [], misses = new Set();
   for (const lang of langs) {
-    if (args.only !== 'game') await run(lang, 'menu', MENU, report, errs);
-    if (args.only !== 'menu') await run(lang, 'game', GAME, report, errs);
+    if (args.only !== 'game') await run(lang, 'menu', MENU, report, errs, misses);
+    if (args.only !== 'menu') await run(lang, 'game', GAME, report, errs, misses);
   }
   let bad = 0;
   for (const r of report) {
@@ -167,7 +170,8 @@ function allowed(issue) {
     console.log(`== [${r.lang}] ${r.shot} (${r.n} napisów)`);
     for (const i of r.issues.slice(0, 20)) console.log('   ' + i);
   }
-  console.log(`Ekrany: ${report.length}, problemy: ${bad}, błędy strony: ${errs.length}`);
+  console.log(`Ekrany: ${report.length}, problemy: ${bad}, błędy strony: ${errs.length}, bez tłumaczenia: ${misses.size}`);
   for (const e of errs) console.log('   ' + e);
-  process.exit(bad || errs.length ? 1 : 0);
+  for (const m of misses) console.log('   brak tłumaczenia ' + m);
+  process.exit(bad || errs.length || misses.size ? 1 : 0);
 })();

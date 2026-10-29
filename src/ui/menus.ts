@@ -547,7 +547,8 @@ const ZOOM_LEVELS = [1, 1.25, 1.5];
 const ZOOM_LABEL = ['daleko', 'normalne', 'blisko'];
 
 /** Kategorie ustawień (zakładki u góry ekranu). */
-const SET_TABS = ['Ogólne', 'Dźwięk', 'Obraz', 'Czytelność', 'Inne'];
+/** Zakładka „Inne” (tryb debug, podgląd balansu) tylko w wersji deweloperskiej. */
+const SET_TABS = ['Ogólne', 'Dźwięk', 'Obraz', 'Czytelność', ...(__DEV_TOOLS__ ? ['Inne'] : [])];
 const SET_TAB_W = 76, SET_TAB_Y = 32, SET_LIST_Y = 58, SET_ROW = 15;
 const setTabX = (i: number) => W / 2 - (SET_TABS.length * (SET_TAB_W + 4) - 4) / 2 + i * (SET_TAB_W + 4);
 
@@ -623,10 +624,10 @@ export class SettingsScreen implements Screen {
         sw('Liczby leczenia', () => yes(s.healNumbers), toggle('healNumbers'), 'Zielone liczby nad postacią: ile HP odzyskałeś (co pół sekundy).'),
         sw('Minimapa', () => yes(s.minimap), toggle('minimap'), 'Mała mapa w prawym górnym rogu: wrogowie, elity, boss i skrzynie.'),
       ],
-      [
+      ...(__DEV_TOOLS__ ? [[
         sw('Tryb debug', () => yes(s.debug), toggle('debug'), 'Klawisze testowe F4, F6, F7 i podgląd balansu. Statystyki wydajności w grze: F3.'),
         [{ label: () => (s.debug ? 'Podgląd balansu' : 'Podgląd balansu (włącz debug)'), act: () => { if (s.debug) app.go(new BalanceScreen(app, this)); } }, () => 'Wartości do sprawdzenia: HP przedmiotów i ulepszeń, skalowanie wrogów, miękkie limity.'],
-      ],
+      ] as [MenuItem, () => string][]] : []),
     ];
     const list = [...rows[this.tab], [{ label: () => 'Wróć', act: () => app.go(this.back) }, () => ''] as [MenuItem, () => string]];
     this.menu = new Menu(list.map(([it]) => it), W / 2, SET_LIST_Y, 340, SET_ROW);

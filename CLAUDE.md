@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.44.3)
+## Stan (wersja 0.45.1)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -470,7 +470,9 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 
 ### Zasady na cały plan
 - Nowe teksty w grze pisane po angielsku, polski jako tłumaczenie (oba języki zawsze kompletne). Język komentarzy w kodzie bez znaczenia.
-- Narzędzia deweloperskie (F3, F4, F6, F7, podgląd balansu) zostają w grze; znikają dopiero w wersji wydawanej (faza 6).
+- Narzędzia deweloperskie (F3, F4, F6, F7, podgląd balansu) zostają w grze; znikają dopiero w wersji wydawanej (faza 6):
+  `npm run build:release` (vite `--mode release`) ustawia `__DEV_TOOLS__ = false` (src/env.d.ts) — nowe narzędzie testowe
+  sprawdzaj przez `__DEV_TOOLS__`, żeby nie trafiło do wydania. GitHub Pages dalej dostaje zwykły `npm run build` (testy autora).
 - Kuźnia bez zmian.
 - Wszystko od razu pod telefon i Steam: pad, różne rozdzielczości, okno i pełny ekran, zapis w jednym pliku (Steam Cloud), osiągnięcia gotowe do przypięcia pod osiągnięcia Steam.
 - Grafika proceduralna (w kodzie); wyjątek: dźwięk może korzystać z plików (faza 5).
@@ -748,6 +750,9 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   ze szpicem, rozcięta szata, złoty rąbek), tarczownik (pawęż z herbem, wapenrok, buzdygan), kamikaze (obręcz z nitami, żarzące
   się pęknięcia, iskra-gwiazdka), skoczek (jasna i ciemna faseta, odłamki, iskry teleportu po okręgu), rozszczepieniec (geoda:
   skorupa, kryształy w szczelinie, rdzeń), odbicie (rycerz z tafli szkła, refleksy, hełm z wizjerem, szklany miecz).
+- 0.45.1: przygotowanie do wydania — `npm run build:release` (vite `--mode release`, `__DEV_TOOLS__ = false`): bez F3/F4/F6/F7,
+  bez zakładki Ustawień „Inne” (tryb debug, podgląd balansu); bot i haki `window.__*` już wcześniej tylko w DEV. `npm run layout`
+  wypisuje też napisy bez tłumaczenia (`trMisses`) ze wszystkich odwiedzonych ekranów.
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
@@ -756,8 +761,9 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - Licencje: plik z listą źródeł i licencji, wpis w napisach końcowych, formaty działające na iPhonie (mp3 lub m4a obok ogg).
 
 ### Faza 6: przygotowanie do wydania (v0.35, potem 1.0)
-- Wersja wydawana bez narzędzi deweloperskich (zostają w wersji deweloperskiej).
-- Automatyczny test brakujących tłumaczeń w obie strony (bot przechodzi grę i zgłasza napisy bez wpisu).
+- Wersja wydawana bez narzędzi deweloperskich (zostają w wersji deweloperskiej) — GOTOWE (`npm run build:release`).
+- Automatyczny test brakujących tłumaczeń w obie strony (bot przechodzi grę i zgłasza napisy bez wpisu) — GOTOWE: bot (`missing` w raporcie) i `npm run layout`
+  (wszystkie 136 ekranów w obu językach, „bez tłumaczenia” na końcu raportu).
 - Pełny test: Ekspedycja, akt 4, długi Endless (30+ min), samouczek.
 - Lokalny dziennik runów (czas, przyczyna śmierci, DPS, wybory) i strojenie balansu na runach autora.
 - Potem opakowanie: najpierw Android, potem iOS, na końcu Steam.

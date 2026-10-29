@@ -618,7 +618,8 @@ export class GameScreen implements Screen {
     run.reduceFlash = set.reduceFlash;
     if (run.easy !== set.easy) { run.easy = set.easy; run.onBuildChanged(); }
     // Statystyki diagnostyczne (F3 / `): tylko na czas sesji; klawisze testowe nadal wymagają trybu debug w Ustawieniach.
-    if (inp.pressed('debug')) this.diag = !this.diag;
+    // Wersja wydawana (__DEV_TOOLS__ = false) nie ma żadnego z nich.
+    if (__DEV_TOOLS__ && inp.pressed('debug')) this.diag = !this.diag;
     this.hints.update(dt, this.state);
     // Muzyka: intensywność z liczby wrogów, lochu i wydarzenia; boss na pełno; poza walką ciszej.
     const fight = this.state === 'play' && run.outcome === 'none';
@@ -639,7 +640,7 @@ export class GameScreen implements Screen {
         if (this.tut) this.updateTutorial(dt);
         if (run.bossKills > this.bossSeen) { this.bossSeen = run.bossKills; this.unlock({ boss: true }); }
         this.showUnlocks();
-        if (this.app.save.settings.debug) {
+        if (__DEV_TOOLS__ && this.app.save.settings.debug) {
           if (inp.pressed('debugTime')) run.debugAdvance();
           if (inp.pressed('debugLevel')) run.addXp(run.xpNext - run.xp);
           if (inp.pressed('debugLoot')) run.pendingLoot.push(run.rollLoot('boss'));
