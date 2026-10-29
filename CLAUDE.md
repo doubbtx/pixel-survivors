@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.34.3)
+## Stan (wersja 0.34.5)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -583,6 +583,9 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   Liang-Barsky (`clipSegment`) do widoku, guard NaN; `Renderer.fan` (stożek Salamandry). Pomiar (Ignara, t=900, ~1000 wrogów):
   render p95 17.9→12.9 ms, fillRect 34%→1.5%. Następne z audytu: obrażenia wrogów niezależne od DPS gracza (`power.dmgExp`),
   telemetria runów, przebudowa `powerMul` (gonienie DPS gracza), auto worldRes=2 (endWorld ~29%).
+- 0.34.5: `titleBar` (ui/widgets.ts) — wstęga tytułu na ekranach menu (jak `dim` w nakładkach); Rekordy i rekordy slotu
+  „not played yet” zamiast zer; Wszechstronność jako pierwszy rząd przewijanej listy synergii (progi `DESC`); panel mapy
+  Ekspedycji: „Enemies:” z `BIOME_WAVES` biomu (+ `BIOME_MINIBOSS` na mapie elit) pod modyfikatorami, w tej samej przewijanej liście.
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

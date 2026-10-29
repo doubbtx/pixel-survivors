@@ -499,4 +499,5 @@ export const PL: Record<string, string> = {
   "not played yet": "jeszcze nie grano",
   "No passives yet": "Brak pasywek",
   "{} card - {}": "Karta {} - {}",
+  "Enemies:": "Wrogowie:",
 };

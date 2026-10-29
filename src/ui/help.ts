@@ -3,7 +3,7 @@ import { C } from '../core/palette';
 import { drawText, wrapText, textWidth, descS } from '../core/font';
 import { sfx } from '../core/audio';
 import type { App, Screen } from './app';
-import { moreArrow, button, panel, inside, Scroll } from './widgets';
+import { moreArrow, button, panel, inside, Scroll, titleBar } from './widgets';
 
 /** Strony pomocy: tytuł i akapity (pierwsze słowa przed dwukropkiem wyróżnione). */
 const PAGES: { title: string; lines: string[] }[] = [
@@ -161,7 +161,7 @@ export class HelpScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
-    drawText(g, 'Pomoc', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, 'Pomoc', 6);
     PAGES.forEach((p, i) => {
       const on = i === this.page;
       button(r, this.tabX(i), 30, TAB_W, 16, p.title, { active: on, accent: C.gold });

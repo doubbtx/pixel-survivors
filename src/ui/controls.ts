@@ -4,7 +4,7 @@ import { drawText } from '../core/font';
 import { sfx } from '../core/audio';
 import { REBIND, actionKey, keyOf, setBindings, type Action } from '../core/input';
 import type { App, Screen } from './app';
-import { Menu, panel } from './widgets';
+import { Menu, panel, titleBar } from './widgets';
 
 /** Nazwy akcji do zmiany (po angielsku; polski w core/i18n-pl.ts). */
 const ACTION_NAME: Partial<Record<Action, string>> = {
@@ -60,7 +60,7 @@ export class ControlsScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
-    drawText(g, 'Controls', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, 'Controls', 8);
     panel(r, W / 2 - 160, 34, 320, (REBIND.length + 2) * 13 + 10, C.gold);
     this.menu.render(r);
     const tip = this.waiting ? 'Press a new key (Esc: cancel)' : 'Enter: change key. Arrows, Enter, Esc, Tab and 1-4 always work in menus.';

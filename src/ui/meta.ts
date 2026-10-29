@@ -11,7 +11,7 @@ import {
 } from '../data/meta';
 import { fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { button, panel, inside } from './widgets';
+import { button, panel, inside, titleBar } from './widgets';
 
 const COL_W = 90, COL_X = 6, COL_STEP = 94;
 const NODE_Y = 66, NODE_H = 28, NODE_STEP = 30;
@@ -147,7 +147,7 @@ export class MetaScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g, h = this.hm, tree = this.tree, meta = this.app.save.meta;
     r.clear(C.black);
-    drawText(g, 'Rozwój', W / 2, 4, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, 'Rozwój', 4);
     drawText(g, 'Q / E: bohater', W - 10, 8, C.lavender, { align: 'right' });
     // Zakładki bohaterów.
     HEROES.forEach((hero, i) => {

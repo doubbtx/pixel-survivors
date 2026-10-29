@@ -484,6 +484,7 @@ src/
 - Collection: a row of tabs at the top instead of the Tab-only button. Arsenal fits all weapons and passives.
 - Readability: descriptions at full size by default (Text size: Large, existing saves switched once; Normal still in Settings), lighter secondary text (better contrast), one title color, "Back [Esc]" buttons everywhere.
 - Fixes: Polish "Ewolucje" header in English, Progression no longer says "Expedition only", "1 pt", peak DPS never below the average, "Silver card" capitalized, Expedition and Endless screens without an empty panel and "not played yet" instead of zeros.
+- 0.34.5: menu screens (Progression, Records, Settings, Help, Evolution book, hero select, Expedition and Endless) get the same title band as the in-game overlays; Records show "not played yet" instead of rows of zeros; Versatility in Synergies is the first row of the list with its thresholds at full size; the Expedition map panel lists the biome's enemies (and the miniboss on elite maps) under the modifiers.
 
 ### Jak przetestować
 

@@ -4,7 +4,7 @@ import { drawText } from '../core/font';
 import { BAL } from '../data/balance';
 import { RARITIES, rollItem, upgradeItem } from '../data/items';
 import type { App, Screen } from './app';
-import { panel } from './widgets';
+import { panel, titleBar } from './widgets';
 
 /**
  * Podgląd balansu (Ustawienia, tryb debug): wartości do sprawdzenia bez grania — HP zbroi z poziomem przedmiotu
@@ -42,7 +42,7 @@ export class BalanceScreen implements Screen {
   render(): void {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
-    drawText(g, 'Podgląd balansu', W / 2, 8, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    titleBar(r, 'Podgląd balansu', 8);
     panel(r, 12, 34, W - 24, H - 46);
     this.lines.forEach(([k, v], i) => {
       const head = !k.startsWith('  ');
