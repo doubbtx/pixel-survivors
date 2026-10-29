@@ -2,7 +2,7 @@ import { C } from '../core/palette';
 import { rng } from '../core/rng';
 import type { Stats } from '../entities/types';
 import { BAL } from './balance';
-import { BIOMES, BIOME_CYCLE, VOID_BIOME, type LevelDef } from './levels';
+import { BIOMES, BIOME_CYCLE, VOID_BIOME, type LevelDef, type Objective } from './levels';
 
 /**
  * Ekspedycja: skończona wyprawa przez BAL.expedition.acts aktów. Każdy akt to mapa rzędów po kilka węzłów —
@@ -15,7 +15,7 @@ import { BIOMES, BIOME_CYCLE, VOID_BIOME, type LevelDef } from './levels';
  * Sekret: w aktach 2-3 czasem pojawia się węzeł „?” (Rozdarcie: walka w Pustce). Wygrana daje Klucz Pustki, który po
  * ostatnim akcie otwiera sekretny akt 4 w biomie Pustka.
  */
-export type NodeKind = 'fight' | 'elite' | 'dungeon' | 'treasure' | 'shop' | 'anvil' | 'rest' | 'shrine' | 'boss' | 'secret';
+export type NodeKind = 'fight' | 'elite' | 'dungeon' | 'treasure' | 'shop' | 'anvil' | 'rest' | 'shrine' | 'boss' | 'secret' | 'ambush' | 'hunt' | 'vault';
 
 export interface NodeInfo {
   name: string;
@@ -34,11 +34,17 @@ export const NODE_INFO: Record<NodeKind, NodeInfo> = {
   rest: { name: 'Obóz', icon: 'ex_rest', color: C.lime, desc: 'Rest: heals, raises max HP for good and lets you pick one of two bonuses for the next map (dungeons do not use it up).' },
   shrine: { name: 'Kapliczka', icon: 'ex_shrine', color: C.yellow, desc: 'Pick one of two blessings for the next few maps.' },
   boss: { name: 'Boss', icon: 'ex_boss', color: C.salmon, desc: 'Pełny poziom z bossem na końcu aktu.' },
+  ambush: { name: 'Ambush', icon: 'ex_ambush', color: C.salmon, desc: 'A short survival map: every few seconds a ring of enemies closes in, the last ones with elites. Reward: gold, card and an elite chest.' },
+  hunt: { name: 'Hunt', icon: 'ex_hunt', color: C.orange, desc: 'The biome miniboss with an escort, tougher than usual. Kill it before it escapes. Reward: a boss chest.' },
+  vault: { name: 'Vault', icon: 'ex_vault', color: C.gold, desc: 'An arena with waves of wardens and treasure at the end (a chance for a unique item).' },
   secret: { name: '???', icon: 'ex_secret', color: C.hotpink, desc: 'Coś tu nie pasuje. Ścieżka, której nie było na mapie...' },
 };
 
 /** Węzły z walką (mapy); pozostałe działają od razu z mapy wyprawy. */
-export const isCombat = (k: NodeKind): boolean => k === 'fight' || k === 'elite' || k === 'dungeon' || k === 'boss' || k === 'secret';
+export const isCombat = (k: NodeKind): boolean => k === 'fight' || k === 'elite' || k === 'dungeon' || k === 'boss' || k === 'secret' || k === 'ambush' || k === 'hunt' || k === 'vault';
+
+/** Węzły-areny (loch, skarbiec): krótkie, więc nagroda modyfikatorów mniejsza (BAL.expedition.arenaReward). */
+export const isArena = (k: NodeKind): boolean => k === 'dungeon' || k === 'vault';
 
 /** Biom aktu: kolejne biomy kampanii, sekretny akt 4 w Pustce. */
 export const actBiome = (act: number): number => (act > BAL.expedition.acts ? VOID_BIOME : (act - 1) % BIOME_CYCLE);
@@ -268,7 +274,7 @@ export function depthAt(act: number, row: number): number {
 export const nodeDepth = (ex: ExpeditionState): number => depthAt(ex.act, exRow(ex));
 
 /** Suma nagród modyfikatorów mapy (punkty %). */
-export const mapReward = (m: MapNode): number => (m.mods ?? []).reduce((s, id) => s + (MAP_MOD_BY_ID[id]?.reward ?? 0), 0);
+export const mapReward = (m: MapNode): number => (m.mods ?? []).reduce((s, id) => s + (MAP_MOD_BY_ID[id]?.reward ?? 0), 0) * (isArena(m.kind) ? BAL.expedition.arenaReward : 1);
 
 /** Flagi mapy na czas poziomu: modyfikatory, bonus, nagroda (ilość i jakość łupu). */
 /** Ekspedycja: większy tłum wrogów niż w kampanii (rośnie z aktem), dodany do modyfikatorów mapy. */
@@ -295,9 +301,12 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
   const b = BIOMES[biome];
   const boss = m.kind === 'boss';
   const short = boss ? 1 : X.fightScale;
-  const objective = (row + act) % 2 === 0
-    ? { kind: 'survive' as const, time: Math.round(X.objTime(act) * short / 10) * 10 }
-    : { kind: 'kills' as const, count: Math.round(X.objKills(act) * short / 10) * 10 };
+  const objective: Objective = m.kind === 'hunt' ? { kind: 'hunt', time: X.huntLimit }
+    : m.kind === 'ambush' ? { kind: 'survive', time: Math.round(X.objTime(act) * short * X.ambushScale / 10) * 10 }
+    : (row + act) % 2 === 0
+      ? { kind: 'survive', time: Math.round(X.objTime(act) * (boss ? 1 : X.surviveScale) / 10) * 10 }
+      : { kind: 'kills', count: Math.round(X.objKills(act) * short / 10) * 10 };
+  const f = m.kind === 'secret' ? { enemyHp: 0.5, enemyDmg: 0.3, mapLoot: 1, mapGold: 1 } : mapFlags(m);
   return {
     depth,
     name: m.name ?? `${b.name}, akt ${act}`,
@@ -307,8 +316,11 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
     bossName: b.bossName,
     boss,
     eliteMul: m.kind === 'elite' || m.kind === 'secret' ? X.eliteEveryMul : 1,
-    dungeon: m.kind === 'dungeon',
-    flags: crowded(m.kind === 'secret' ? { enemyHp: 0.5, enemyDmg: 0.3, mapLoot: 1, mapGold: 1 } : mapFlags(m), act),
+    dungeon: isArena(m.kind),
+    dungeonKind: m.kind === 'vault' ? 'vault' : undefined,
+    ambush: m.kind === 'ambush',
+    // Polowanie: rzadsze zwykłe fale (pojedynek z minibossem).
+    flags: crowded(m.kind === 'hunt' ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.huntCrowd } : f, act),
   };
 }
 

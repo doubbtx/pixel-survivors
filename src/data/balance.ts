@@ -399,7 +399,21 @@ export const BAL = {
     /** Szansa, że boczna kolumna rzędu jest pusta. */
     emptyChance: 0.3,
     /** Wagi typów węzłów w środkowych rzędach. */
-    weights: [['fight', 40], ['elite', 14], ['dungeon', 7], ['treasure', 7], ['shop', 10], ['anvil', 8], ['rest', 9], ['shrine', 8]] as const,
+    weights: [['fight', 34], ['elite', 12], ['dungeon', 6], ['treasure', 7], ['shop', 10], ['anvil', 8], ['rest', 9], ['shrine', 8], ['ambush', 5], ['hunt', 5], ['vault', 3]] as const,
+    /** Węzły-wydarzenia (0.37): Zasadzka — krótsza mapa (× czasu walki), pierścień co `ambushEvery` s (wrogów: ambushRing + ambushGrow × numer),
+     *  elity od pierścienia ambushEliteFrom; Polowanie — limit czasu (s), HP minibossa ×, mniej zwykłych wrogów, eskorta elit;
+     *  areny (loch, skarbiec) — × nagrody modyfikatorów; Mapa elit — skrzynia co N-ta elita. */
+    ambushScale: 0.5,
+    ambushEvery: 15,
+    ambushRing: 18,
+    ambushGrow: 6,
+    ambushEliteFrom: 4,
+    huntLimit: 120,
+    huntHp: 1.5,
+    huntCrowd: -0.3,
+    huntEscort: 2,
+    arenaReward: 0.5,
+    eliteChestEvery: 2,
     /** Szansa, że mapa nie ma bonusu. */
     noBonusChance: 0.35,
     /** Nagroda modyfikatorów: punkt ilości łupu (%) daje tyle szczęścia przedmiotów (× ułamek) i esencji (× ułamek). */
@@ -412,6 +426,10 @@ export const BAL = {
     objKills: (act: number) => 500 + 400 * act,
     /** Długość celu zwykłej walki i elity względem pełnego poziomu. */
     fightScale: 0.75,
+    /** Cel czasowy zwykłej walki krótszy niż zabójczy (0.37: mapy „przetrwaj” trwały ~4× dłużej niż „pokonaj”, telemetria). */
+    surviveScale: 0.5,
+    /** HP bossa aktu ponad zwykły wzór (0.37: walki trwały medianę 6-9 s; przy ×4 bot god P50 19 s, P90 119 s — ×3 z zapasem dla słabszych buildów). */
+    bossHp: 3,
     /** Dodatkowy tłum wrogów na mapach Ekspedycji (flaga enemyCount) w akcie. */
     crowd: (act: number) => 0.5 + 0.25 * act,
     /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */

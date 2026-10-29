@@ -7,7 +7,7 @@ import { ELEMENTS, WEAPON_ELEMENT, type Element } from '../data/elements';
 import { ELITE_MODS } from '../data/enemies';
 import type { Enemy } from '../entities/types';
 import type { Run } from '../game/run';
-import { spawnEnemy, currentMix } from './spawner';
+import { spawnEnemy, currentMix, encircle } from './spawner';
 import { grantMat } from './forge';
 
 /** Trwające albo czekające na start zadanie (kamień na mapie). */
@@ -103,17 +103,7 @@ function finish(run: Run, ok: boolean): void {
 
 /** Karna fala: elity i okrążenie zwykłych wrogów wokół gracza. */
 function punish(run: Run): void {
-  const T = BAL.tasks, p = run.player, mix = currentMix(run.waveTime(), run.levelInfo.biome);
-  for (let i = 0; i < T.failWave; i++) {
-    const a = (i / T.failWave) * Math.PI * 2;
-    spawnEnemy(run, rng.weighted(mix), p.x + Math.cos(a) * 170, p.y + Math.sin(a) * 170);
-  }
-  const mods = Object.keys(ELITE_MODS);
-  for (let i = 0; i < T.failElites; i++) {
-    const a = rng.range(0, Math.PI * 2);
-    spawnEnemy(run, rng.weighted(mix.filter(([id]) => id !== 'bat')), p.x + Math.cos(a) * 180, p.y + Math.sin(a) * 180, { elite: [rng.pick(mods)] });
-  }
-  run.addShake(4);
+  encircle(run, BAL.tasks.failWave, BAL.tasks.failElites);
 }
 
 export function updateTasks(run: Run, dt: number): void {

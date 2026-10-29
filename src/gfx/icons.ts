@@ -633,6 +633,24 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.sphere(8, 8, 6.5, 6.5, [C.black, C.plum, C.hotpink, C.pink]);
     p.rect(6, 3, 4, 2, C.white).rect(9, 5, 2, 3, C.white).rect(7, 8, 2, 2, C.white).rect(7, 12, 2, 2, C.white);
   },
+  ex_ambush: (p) => {
+    // Zasadzka: pierścień czerwonych oczu w ciemności zamyka się wokół jasnej postaci w środku.
+    p.sphere(8, 8, 7, 7, [C.black, C.black, C.navy, C.dgreen]);
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU, x = 8 + Math.cos(a) * 5.4, y = 8 + Math.sin(a) * 5.4; p.px(x - 0.6, y, C.red).px(x + 0.6, y, C.salmon); }
+    p.disc(8, 8, 1.6, C.lime).px(8, 7, C.white);
+  },
+  ex_hunt: (p) => {
+    // Polowanie: czaszka w czerwonym celowniku.
+    skull(p, 8, 8);
+    p.ring(8, 8, 6.4, 0.8, C.red).thin(8, 0.5, 8, 3, C.red).thin(8, 13, 8, 15.5, C.red).thin(0.5, 8, 3, 8, C.red).thin(13, 8, 15.5, 8, C.red);
+  },
+  ex_vault: (p) => {
+    // Skarbiec: okrągłe drzwi sejfu w kamiennej ścianie, złote koło ze szprychami.
+    p.block(1, 2, 14, 13, RAMP.stone);
+    p.sphere(8, 8.5, 5.6, 5.6, RAMP.night).ring(8, 8.5, 5.2, 0.9, C.gold);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.4; p.thin(8, 8.5, 8 + Math.cos(a) * 3.6, 8.5 + Math.sin(a) * 3.6, C.yellow); }
+    p.disc(8, 8.5, 1.2, C.gold).px(8, 8, C.white);
+  },
   ex_shrine: (p) => {
     p.block(5, 7, 6, 8, RAMP.stone).rect(3, 13, 10, 2, C.dgray).rect(4, 6, 8, 1, C.lgray);
     p.sphere(8, 4, 2.5, 2.5, [C.orange, C.gold, C.yellow, C.white]);

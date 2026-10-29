@@ -39,12 +39,12 @@ import { updatePickups } from '../systems/pickups';
 import { updateEffects } from '../systems/effects';
 import { updateTurrets } from '../systems/turrets';
 import { updateMinions, spawnMinion } from '../systems/minions';
-import { updateEvents, startDungeon, type MapObject, type Buff, type Dungeon } from '../systems/events';
+import { updateEvents, enterDungeon, type MapObject, type Buff, type Dungeon } from '../systems/events';
 import { updateResource, resourceOnHit, resourceOnHurt, resourceOnKill, resourceOnHeal, resourceDamageMul, resourceCrit, resourceTakenMul, rhythmGain } from '../systems/resource';
 import { updateTasks, taskOnHurt, taskOnKill, type Task } from '../systems/tasks';
 import { updatePower } from '../systems/powers';
 import { updateTerrain, terrainBlast, type TerrainObj, type Arena } from '../systems/terrain';
-import { BOSS_POWER_BY_ID } from '../data/enemies';
+import { BOSS_POWER_BY_ID, BIOME_MINIBOSS } from '../data/enemies';
 import { PACTS, pactLevel } from '../data/pacts';
 import { equippedAwakenings, forgeKillDrops, forgeBossDrops, grantMat, emptyMats, emptyScrolls } from '../systems/forge';
 import type { MatId, ScrollId } from '../data/forge';
@@ -54,7 +54,11 @@ import { secretsOnKill } from '../systems/mapsecrets';
 import { updateLevelEvents, eventFlags, comboOnKill, comboOnHurt, type LevelEventId } from '../systems/levelevents';
 
 /** Próbka telemetrii runu (Run.telemetry): czasy (całkowity, poziomu, fal), poziom, mnożnik siły, DPS, HP i obrażenia przyjęte (ułamki maks. HP), zabójstwa od ostatniej próbki, wrogowie na mapie. */
-export interface TelemetrySample { t: number; lt: number; wt: number; lvl: number; depth: number; pm: number; dps: number; hp: number; taken: number; kills: number; alive: number }
+export interface TelemetrySample {
+  t: number; lt: number; wt: number; lvl: number; depth: number; pm: number; dps: number; hp: number; taken: number; kills: number; alive: number;
+  /** Średni czas życia zabitych zwykłych wrogów i elit (s, -1 = brak), użycia ulta, mnożnik XP, cel poziomu. */
+  life: number; eLife: number; ult: number; growth: number; goal: string;
+}
 
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
@@ -432,6 +436,13 @@ export class Run {
   /** Miniboss biomu: odliczanie w Endless; w Ekspedycji czy już był na tym poziomie (systems/spawner.ts updateMiniboss). */
   minibossT: number = BAL.biomeEnemies.miniFirst;
   minibossDone = false;
+  /** Węzły-wydarzenia Ekspedycji: Polowanie (miniboss zabity), Zasadzka (odliczanie i numer pierścienia), Mapa elit (zabite elity). */
+  huntKilled = false;
+  ambushT = 0;
+  ambushRing = 0;
+  eliteKills = 0;
+  /** Polowanie: czas spędzony w lochu (sekretne schody) nie liczy się do limitu ucieczki. */
+  huntPaused = 0;
   eliteT: number = BAL.eliteEvery;
   /** Średni DPS gracza (średnia krocząca) i wynikający z niego mnożnik siły wrogów (BAL.power). */
   dpsEma = 0;
@@ -445,6 +456,12 @@ export class Run {
   private takenMark = 0;
   private takenTotal = 0;
   private killsMark = 0;
+  private ultMark = 0;
+  /** Czas życia zabitych wrogów od ostatniej próbki (suma, liczba): zwykli i elity (TTK w telemetrii). */
+  private lifeSum = 0;
+  private lifeN = 0;
+  private eliteLifeSum = 0;
+  private eliteLifeN = 0;
   /** Źródło ostatniego trafienia (np. Żniwo: czy wroga zabiła dusza). */
   private lastHitSrc = '';
   /** > 0 w trakcie hooków trafienia procentowego (PCT_SOURCES). */
@@ -510,6 +527,11 @@ export class Run {
     this.boss = null;
     this.bossSpawned = false;
     this.minibossDone = false;
+    this.huntKilled = false;
+    this.ambushT = BAL.expedition.ambushEvery * 0.4;
+    this.ambushRing = 0;
+    this.eliteKills = 0;
+    this.huntPaused = 0;
     this.eliteT = BAL.eliteEvery * this.levelInfo.eliteMul * BAL.eliteGap(this.levelInfo.waveOffset);
     this.nextEvent = 0;
     this.spawnAcc = 0;
@@ -560,7 +582,7 @@ export class Run {
     this.revivesLeft = this.flag('revive');
     this.showBanner(this.expedition ? this.levelInfo.name : `Poziom ${depth}: ${this.levelInfo.name}`);
     if (this.levelInfo.biome === VOID_BIOME && !this.expedition) this.showBanner('Sekretny biom: Pustka! Bez leczenia, podwójny łup');
-    if (this.levelInfo.dungeon) startDungeon(this);
+    if (this.levelInfo.dungeon) enterDungeon(this, this.levelInfo.dungeonKind ?? 'portal');
   }
 
   /**
@@ -577,6 +599,8 @@ export class Run {
   objectiveProgress(): number {
     if (this.mode === 'endless') return Math.min(1, this.time / this.nextBossAt);
     const o = this.levelInfo.objective;
+    // Polowanie: cel wykonany po zabiciu minibossa albo gdy uciekł (limit czasu).
+    if (o.kind === 'hunt') { const t = this.time - this.huntPaused; return this.huntKilled || t >= o.time ? 1 : Math.min(0.99, t / o.time); }
     return Math.min(1, o.kind === 'survive' ? this.time / o.time : this.levelKills / o.count);
   }
 
@@ -602,9 +626,14 @@ export class Run {
       t: Math.round(this.totalTime), lt: Math.round(this.time), wt: Math.round(this.waveTime()), lvl: this.level, depth: this.depth,
       pm: Math.round(this.powerMul * 10) / 10, dps: Math.round(this.dpsEma), hp: Math.round((this.player.hp / st.maxHp) * 100) / 100,
       taken: Math.round(((this.takenTotal - this.takenMark) / st.maxHp) * 100) / 100, kills: this.kills - this.killsMark, alive: this.enemies.count,
+      life: this.lifeN ? Math.round((this.lifeSum / this.lifeN) * 100) / 100 : -1, eLife: this.eliteLifeN ? Math.round(this.eliteLifeSum / this.eliteLifeN) : -1,
+      ult: this.ultUses - this.ultMark, growth: Math.round(st.growth * 100) / 100,
+      goal: this.levelInfo.dungeon ? 'dungeon' : this.levelInfo.objective.kind,
     });
     this.takenMark = this.takenTotal;
     this.killsMark = this.kills;
+    this.ultMark = this.ultUses;
+    this.lifeSum = this.lifeN = this.eliteLifeSum = this.eliteLifeN = 0;
   }
 
   /** Czas na bieżącej głębokości (s): od startu poziomu, w Endless od pokonania ostatniego bossa (krzywa obrażeń wrogów). */
@@ -1342,6 +1371,7 @@ export class Run {
 
   killEnemy(e: Enemy): void {
     e.dead = true;
+    if (e.elite && !e.boss) { this.eliteLifeSum += e.age; this.eliteLifeN++; } else if (!e.boss) { this.lifeSum += e.age; this.lifeN++; }
     this.kills++;
     this.levelKills++;
     this.ultCharge += (e.boss ? 30 : e.elite ? 5 : 1) * (1 + this.flag('ultGain'));
@@ -1403,9 +1433,15 @@ export class Run {
       const ring = this.addFx('ring', e.x, e.y, C.gold, 0.35);
       if (ring) ring.r = 34;
       sfx.play('explode');
-      this.dropChest(e.x, e.y, 'elite');
+      // Mapa elit: skrzynia co N-ta elita; Polowanie: miniboss kończy łowy, eskorta bez skrzyń.
+      const X = BAL.expedition, hunt = this.levelInfo.objective.kind === 'hunt', mini = BIOME_MINIBOSS.includes(e.def.id);
+      if (hunt && mini) this.huntKilled = true;
+      // Mapa elit i Zasadzka: skrzynia co N-ta elita; eskorta Polowania bez skrzyń i kart.
+      const counted = !!this.expedition && (this.levelInfo.eliteMul < 1 || !!this.levelInfo.ambush) && !mini, escort = hunt && !mini;
+      if (counted) this.eliteKills++;
+      if (!escort && (!counted || this.eliteKills % X.eliteChestEvery === 0)) this.dropChest(e.x, e.y, 'elite');
       for (let i = 0; i < 5; i++) this.spawnPickup(e.x + rng.range(-8, 8), e.y + rng.range(-8, 8), 'coin', 1);
-      this.pendingCards.push('elite');
+      if (!escort) this.pendingCards.push('elite');
     } else if (e.boss) {
       this.onBossKilled();
     } else if (e.def.id === 'goldslime') {
@@ -1470,11 +1506,13 @@ export class Run {
    */
   clearObjective(): void {
     this.bossSpawned = true;
-    const elite = this.levelInfo.eliteMul < 1;
-    if (elite) this.pendingLoot.push(this.rollLoot('elite'));
+    const elite = this.levelInfo.eliteMul < 1, o = this.levelInfo.objective;
+    if (elite || this.levelInfo.ambush) this.pendingLoot.push(this.rollLoot('elite'));
+    // Polowanie: skrzynia bossa tylko za zabitego minibossa (ucieczka: sama karta walki i złoto).
+    if (o.kind === 'hunt' && this.huntKilled) this.pendingLoot.push(this.rollLoot('boss'));
     this.pendingCards.push(elite ? 'elite' : 'fight');
     this.gold += BAL.expedition.fightGold * this.depth * this.stats.greed;
-    this.finishLevel(elite ? 'Elity pokonane!' : 'Walka wygrana!');
+    this.finishLevel(o.kind === 'hunt' ? (this.huntKilled ? 'Hunt complete!' : 'The miniboss escaped...') : this.levelInfo.ambush ? 'Ambush survived!' : elite ? 'Elity pokonane!' : 'Walka wygrana!');
   }
 
   /** Koniec poziomu: zbiera wszystko z ziemi, czyści wrogów i pociski, ustawia zwycięstwo. */

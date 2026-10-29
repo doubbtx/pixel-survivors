@@ -319,8 +319,9 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): void {
   } else if (!run.bossSpawned && !run.scripted) {
     const o = run.levelInfo.objective, bw = 92;
     const kills = !run.dungeon && run.mode !== 'endless' && o.kind === 'kills';
-    const text = run.dungeon ? `Loch: fala ${run.dungeon.wave}/${BAL.events.dungeonWaves}${run.dungeon.cleared ? ', oczyszczony' : ''}`
+    const text = run.dungeon ? `Loch: fala ${run.dungeon.wave}/${run.dungeon.kind === 'vault' ? BAL.secretsMap.vaultWaves : BAL.events.dungeonWaves}${run.dungeon.cleared ? ', oczyszczony' : ''}`
       : run.mode === 'endless' ? `Boss za ${fmtTime(Math.max(0, run.nextBossAt - run.time))}`
+      : o.kind === 'hunt' ? `Hunt: escapes in ${fmtTime(Math.max(0, o.time - run.time + run.huntPaused))}`
       : kills ? `${fmt(run.levelKills)} / ${fmt(o.count)}` : `Przetrwaj do ${fmtTime(o.kind === 'survive' ? o.time : 0)}`;
     meter(r, cx - bw / 2, y, bw, 3, run.objectiveProgress(), UI.reward);
     const tw = textWidth(text) * 0.75 + (kills ? 10 : 0);

@@ -32,7 +32,8 @@ function btnX(i: number): number {
   return x;
 }
 /** Legenda rodzajów węzłów (górny wiersz mapy). */
-const LEGEND: NodeKind[] = ['fight', 'elite', 'dungeon', 'treasure', 'shop', 'anvil', 'rest', 'shrine', 'boss'];
+/** Legenda: tylko rodzaje obecne na mapie aktu (kolejność stała). */
+const LEGEND: NodeKind[] = ['fight', 'elite', 'ambush', 'hunt', 'dungeon', 'vault', 'treasure', 'shop', 'anvil', 'rest', 'shrine', 'boss', 'secret'];
 /** Karty wyboru obozu / kapliczki (lewy górny róg, rozmiar). */
 const OFFER_W = 150, OFFER_H = 40;
 const offerPos = (i: number): [number, number] => [MAP_X + 60 + i * (OFFER_W + 8), DET_Y + 18];
@@ -229,7 +230,7 @@ export class ExpeditionMapView {
     g.restore();
     // Legenda rodzajów węzłów.
     let lx = MAP_X + 8;
-    const legend = ex.map.some((row) => row.some((n) => n?.kind === 'secret')) ? [...LEGEND, 'secret' as const] : LEGEND;
+    const legend = LEGEND.filter((k) => ex.map.some((row) => row.some((n) => n?.kind === k)));
     for (const k of legend) {
       const info = NODE_INFO[k];
       r.withAlpha(0.8, () => drawSprite(g, info.icon, lx + 5, MAP_Y + 9));
@@ -315,12 +316,16 @@ export class ExpeditionMapView {
       const sub = m.kind === 'boss' ? `${kind.name}: ${lv.bossName}` : `${kind.name}, ${rar.name.toLowerCase()}`;
       drawText(g, sub, x0 + 26, y0 + 11, C.lavender);
       if (this.peek) drawText(g, 'preview', x0 + 32 + textWidth(sub), y0 + 11, C.cyan);
-      const goal = lv.dungeon ? `Fale lochu: ${BAL.events.dungeonWaves}` : `Cel: ${objectiveLabel(lv.objective)}`;
+      const goal = lv.dungeon ? `Fale lochu: ${lv.dungeonKind === 'vault' ? BAL.secretsMap.vaultWaves : BAL.events.dungeonWaves}` : `Cel: ${objectiveLabel(lv.objective)}`;
       drawText(g, `${goal}   głębokość ${lv.depth}`, x0 + 26, y0 + 22, C.lgray);
       // Modyfikatory (ryzyko) po lewej: „nazwa: opis” zawijane, przewijane przy wielu modyfikatorach albo dużym tekście.
       const mods = (m.mods ?? []).map((id) => MAP_MOD_BY_ID[id]);
       const [ax, ay, aw, ah] = MODS_AREA, lh = descLH(), oy = this.modScroll.begin(r, ax, ay, aw, ah);
       let my = ay + 1 - oy;
+      // Węzły-wydarzenia: najpierw opis zasad (czym różnią się od zwykłej mapy).
+      if (m.kind === 'ambush' || m.kind === 'hunt' || m.kind === 'vault') {
+        for (const l of wrapText(kind.desc, (aw - 6) / descS())) { drawText(g, l, ax, my, kind.color, DESC); my += lh; }
+      }
       for (const mod of mods) {
         wrapText(`${mod.name}: ${mod.desc}`, (aw - 6) / descS()).forEach((l, i) => {
           drawText(g, l, ax, my, C.lgray, DESC);

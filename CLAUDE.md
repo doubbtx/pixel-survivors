@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.36.0)
+## Stan (wersja 0.37.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -603,6 +603,16 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   przeżycie mediana 75.5→77 s, boss Ekspedycja P90 58→18 s, Endless P90 175→124 s, mapa P90 230→230 (P50 +24%),
   tłum ≥900 wrogów 7.7%→1%. Po wydaniu: objKills (mapa P50), pula ulepszeń przy szybszym levelowaniu, za krótcy bossowie
   Ekspedycji, telemetria elit / ulta / growth, TTK zamiast kills/15 s.
+- 0.37.0 (punkt 2 + węzły-wydarzenia): telemetria `life`/`eLife` (czas życia zabitych), `ult`, `growth`, `goal`; bot `maps`
+  z celem, `statOnly`/`offers`. Pomiar: pula ulepszeń nie wyczerpuje się (do poz. 142), bonusy XP nie spychają na podłogę,
+  mapy „przetrwaj” 4× dłuższe niż „pokonaj” → `surviveScale` 0.5; bossowie Ekspedycji P50 6 s → `expedition.bossHp` ×3
+  (tylko boss aktu). Węzły: `ambush` (cel przetrwania × `ambushScale`, `encircle` co `ambushEvery` s, numer pierścienia z
+  czasu, bez `EVENTS`), `hunt` (cel 'hunt' z limitem, miniboss ×`huntHp` + eskorta bez łupu i kart, `huntKilled`,
+  `huntPaused` w lochu, ponowny spawn po wczytaniu i po lochu), `vault` (`dungeonKind`, bez iskry pustki). `isArena`:
+  nagroda modyfikatorów × `arenaReward` w `mapReward`. Mapa elit i Zasadzka: skrzynia co `eliteChestEvery` elitę.
+  `freeSlot` (spawner): pełna pula nigdy nie zwalnia bossa ani elity; zabezpieczenie na zwolniony obiekt bossa
+  (rzadka blokada poziomu w teście bota). Legenda mapy: tylko rodzaje obecne w akcie.
+
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

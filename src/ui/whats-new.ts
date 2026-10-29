@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.37',
+    lines: [
+      "New Expedition nodes: Ambush (survive while rings of enemies close in, the last ones with elites), Hunt (kill the biome miniboss and its escort before it escapes, for a boss chest) and Vault (an arena with wardens and treasure).",
+      "Balance: elite maps drop a chest from every second elite, dungeons give half the modifier reward, survival maps are shorter and act bosses are tougher.",
+      "Fixed a rare softlock where enemies stopped appearing after a boss was pushed out by a full crowd.",
+    ],
+  },
+  {
     version: '0.36',
     lines: [
       "Enemy toughness rewards strong builds: enemies grow with your level and follow your damage only gently, so a much stronger build clears noticeably faster. Fewer damage sponges, steadier difficulty, smaller crowds.",

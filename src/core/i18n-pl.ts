@@ -3,6 +3,22 @@
  * `{}` = wstawka (liczba, nazwa — tłumaczona osobno). Nowy napis w grze: dopisz tu jego polską wersję.
  */
 export const PL: Record<string, string> = {
+  "New Expedition nodes: Ambush (survive while rings of enemies close in, the last ones with elites), Hunt (kill the biome miniboss and its escort before it escapes, for a boss chest) and Vault (an arena with wardens and treasure).": "Nowe węzły Ekspedycji: Zasadzka (przetrwaj, gdy zamykają się pierścienie wrogów, ostatnie z elitami), Polowanie (zabij minibossa biomu z eskortą, zanim ucieknie, po skrzynię bossa) i Skarbiec (arena ze strażnikami i skarbem).",
+  "Balance: elite maps drop a chest from every second elite, dungeons give half the modifier reward, survival maps are shorter and act bosses are tougher.": "Balans: mapy elit dają skrzynię z co drugiej elity, lochy połowę nagrody za modyfikatory, mapy na przetrwanie są krótsze, a bossowie aktów twardsi.",
+  "Fixed a rare softlock where enemies stopped appearing after a boss was pushed out by a full crowd.": "Naprawiono rzadką blokadę poziomu, gdy przy pełnym tłumie znikał boss i przestawali pojawiać się wrogowie.",
+  "Ambush": "Zasadzka",
+  "Hunt": "Polowanie",
+  "Vault": "Skarbiec",
+  "A short survival map: every few seconds a ring of enemies closes in, the last ones with elites. Reward: gold, card and an elite chest.": "Krótka mapa na przetrwanie: co kilkanaście sekund zamyka się pierścień wrogów, ostatnie z elitami. Nagroda: złoto, karta i skrzynia elity.",
+  "The biome miniboss with an escort, tougher than usual. Kill it before it escapes. Reward: a boss chest.": "Miniboss biomu z eskortą, twardszy niż zwykle. Zabij go, zanim ucieknie. Nagroda: skrzynia bossa.",
+  "An arena with waves of wardens and treasure at the end (a chance for a unique item).": "Arena z falami strażników i skarbem na końcu (szansa na unikat).",
+  "Hunt the miniboss ({} s)": "Upoluj minibossa ({} s)",
+  "Hunt complete!": "Polowanie udane!",
+  "The miniboss escaped...": "Miniboss uciekł...",
+  "Ambush survived!": "Zasadzka przetrwana!",
+  "Ambush! Ring {}": "Zasadzka! Pierścień {}",
+  "Hunt: {}!": "Polowanie: {}!",
+  "Hunt: escapes in {}": "Polowanie: ucieknie za {}",
   "Enemy toughness rewards strong builds: enemies grow with your level and follow your damage only gently, so a much stronger build clears noticeably faster. Fewer damage sponges, steadier difficulty, smaller crowds.": "Wytrzymałość wrogów nagradza silne buildy: wrogowie rosną z poziomem postaci i tylko łagodnie gonią Twoje obrażenia, więc dużo mocniejszy build czyści wyraźnie szybciej. Mniej gąbek na obrażenia, równiejsza trudność, mniejsze tłumy.",
   "Enemy damage no longer grows with how strong your build is: it depends on depth and on time spent at that depth, gently in the first minutes.": "Obrażenia wrogów nie rosną już z siłą Twojego buildu: zależą od głębokości i czasu na tej głębokości, łagodnie w pierwszych minutach.",
   "Expedition map: point at any later node (or press R/X once the act has started) to preview it and highlight every path to it. Maps with a bonus show a green +.": "Mapa wyprawy: wskaż dowolny dalszy węzeł (albo naciśnij R/X, gdy akt już trwa), by zobaczyć jego podgląd i wszystkie drogi do niego. Mapy z bonusem mają zielony +.",

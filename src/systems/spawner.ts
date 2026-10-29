@@ -66,15 +66,40 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
     e.boss = true;
     run.cardState.bossHit = 0;
     // Boss: mnożnik siły (z obrażeń obszarowych) liczy się słabiej — walka ma trwać około minuty uników, nie kilka.
-    e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp')) * Math.pow(run.powerMul, BAL.bossPowerExp - 1);
+    e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp')) * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (run.expedition && run.levelInfo.boss && !run.dungeon ? BAL.expedition.bossHp : 1);
     e.speed = def.speed;
     run.boss = e;
   }
   return e;
 }
 
+/**
+ * Pełna pula: zwalnia miejsce kosztem zwykłego wroga — nigdy bossa ani elity (zwolniony obiekt bossa zostałby użyty
+ * ponownie jako inny wróg, a `run.boss` wskazywałby na niego bez końca i blokował spawner).
+ */
+function freeSlot(run: Run): void {
+  if (run.enemies.count < run.enemies.cap) return;
+  const e = run.enemies.items.find((x) => !x.boss && !x.elite && !x.dead) ?? run.enemies.items.find((x) => !x.boss);
+  if (e) run.enemies.release(e);
+}
+
 function ringPos(run: Run, a: number, r = SPAWN_R): [number, number] {
   return [run.player.x + Math.cos(a) * r, run.player.y + Math.sin(a) * r];
+}
+
+/** Okrążenie: `n` zwykłych wrogów składu fali w pierścieniu wokół gracza i `elites` elit tuż za nim (zadania, Zasadzka). */
+export function encircle(run: Run, n: number, elites: number): void {
+  const p = run.player, mix = currentMix(run.waveTime(), run.levelInfo.biome);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    spawnEnemy(run, rng.weighted(mix), p.x + Math.cos(a) * 170, p.y + Math.sin(a) * 170);
+  }
+  const mods = Object.keys(ELITE_MODS);
+  for (let i = 0; i < elites; i++) {
+    const a = rng.range(0, Math.PI * 2);
+    spawnEnemy(run, rng.weighted(mix.filter(([id]) => id !== 'bat')), p.x + Math.cos(a) * 180, p.y + Math.sin(a) * 180, { elite: [rng.pick(mods)] });
+  }
+  run.addShake(4);
 }
 
 /** Skład fali (id wroga, waga) dla czasu fal `t`, z wrogami biomu (BIOME_WAVES) dołożonymi do zwykłego składu. */
@@ -92,6 +117,7 @@ export function currentMix(t: number, biome: number): [string, number][] {
  */
 export function updateSpawner(run: Run, dt: number): void {
   // W lochu wrogów wystawia systems/events.ts (fale), zwykła mapa czeka.
+  if (run.dungeon && run.levelInfo.objective.kind === 'hunt') run.huntPaused += dt;
   if (run.dungeon || run.scripted) return;
   const t = run.time;
   const waveT = t + run.levelInfo.waveOffset;
@@ -103,7 +129,7 @@ export function updateSpawner(run: Run, dt: number): void {
   if (!run.bossSpawned && run.objectiveProgress() >= 1) {
     run.bossSpawned = true;
     // Boss musi się pojawić nawet przy pełnej puli — zwalniamy miejsce kosztem zwykłego wroga.
-    if (run.enemies.count >= run.enemies.cap) run.enemies.release(run.enemies.items[0]);
+    freeSlot(run);
     const [x, y] = ringPos(run, rng.range(0, Math.PI * 2), 150);
     const b = spawnEnemy(run, 'boss', x, y);
     // Wznowiony poziom: boss wraca z HP z zapisu.
@@ -120,9 +146,24 @@ export function updateSpawner(run: Run, dt: number): void {
     sfx.play('boss');
   }
 
+  // Zabezpieczenie: obiekt bossa zwolniony z puli (już nie boss) — boss pojawi się ponownie zamiast blokady poziomu.
+  if (run.boss && (!run.boss.boss || run.boss.dead)) { run.boss = null; if (!run.dungeon) run.bossSpawned = false; }
   // W trakcie walki z bossem żadnych nowych wrogów (poza tymi, których przyzywa sam boss).
   if (run.boss) return;
-  while (run.nextEvent < EVENTS.length && EVENTS[run.nextEvent].at <= t) {
+  // Zasadzka (Ekspedycja): własne pierścienie co kilkanaście sekund, coraz gęstsze, ostatnie z elitami; bez zwykłych okrążeń.
+  if (run.levelInfo.ambush) {
+    const X = BAL.expedition;
+    run.ambushT -= dt;
+    if (run.ambushT <= 0) {
+      run.ambushT = X.ambushEvery;
+      // Numer pierścienia z czasu mapy (po wczytaniu zapisu pierścienie nie zaczynają od nowa).
+      run.ambushRing = Math.floor((t - X.ambushEvery * 0.4) / X.ambushEvery) + 1;
+      encircle(run, X.ambushRing + X.ambushGrow * run.ambushRing, run.ambushRing >= X.ambushEliteFrom ? 2 : 0);
+      run.showBanner(`Ambush! Ring ${run.ambushRing}`);
+      sfx.play('boss');
+    }
+  }
+  while (!run.levelInfo.ambush && run.nextEvent < EVENTS.length && EVENTS[run.nextEvent].at <= t) {
     const ev = EVENTS[run.nextEvent++];
     for (let i = 0; i < ev.count; i++) {
       const [x, y] = ringPos(run, (i / ev.count) * Math.PI * 2, 170);
@@ -177,17 +218,27 @@ function updateMiniboss(run: Run, dt: number, waveT: number): void {
     run.minibossT -= dt;
     if (run.minibossT > 0) return;
     run.minibossT = B.miniEvery;
+  } else if (run.levelInfo.objective.kind === 'hunt') {
+    // Polowanie: miniboss od razu (po wczytaniu zapisu pojawia się ponownie), dopóki nie zginie.
+    if (run.minibossDone || run.huntKilled || run.dungeon || run.time < 3) return;
   } else {
     if (run.minibossDone || run.levelInfo.eliteMul >= 1 || run.objectiveProgress() < B.miniAt) return;
   }
-  run.minibossDone = true;
-  if (run.enemies.count >= run.enemies.cap) run.enemies.release(run.enemies.items[0]);
+  freeSlot(run);
   const id = BIOME_MINIBOSS[Math.min(BIOME_MINIBOSS.length - 1, run.levelInfo.biome)];
   const [x, y] = ringPos(run, rng.range(0, Math.PI * 2), 150);
   const e = spawnEnemy(run, id, x, y, { elite: [] });
+  // Pełna pula: spróbuj w następnym kroku (flaga dopiero po udanym pojawieniu się).
   if (!e) return;
-  e.maxHp = e.hp = e.maxHp * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (1 + Math.max(0, waveT - 300) / 600);
-  run.showBanner(`Miniboss: ${ENEMIES[id].name}!`);
+  run.minibossDone = true;
+  const hunt = run.levelInfo.objective.kind === 'hunt';
+  e.maxHp = e.hp = e.maxHp * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (1 + Math.max(0, waveT - 300) / 600) * (hunt ? BAL.expedition.huntHp : 1);
+  if (hunt) {
+    // Eskorta: elity bez skrzyń (Run.killEnemy).
+    const mods = Object.keys(ELITE_MODS);
+    for (let i = 0; i < BAL.expedition.huntEscort; i++) spawnEnemy(run, rng.weighted(currentMix(waveT, run.levelInfo.biome).filter(([k]) => k !== 'bat')), x + rng.range(-20, 20), y + rng.range(-20, 20), { elite: [rng.pick(mods)] });
+  }
+  run.showBanner(hunt ? `Hunt: ${ENEMIES[id].name}!` : `Miniboss: ${ENEMIES[id].name}!`);
   run.addShake(3);
   sfx.play('boss');
 }

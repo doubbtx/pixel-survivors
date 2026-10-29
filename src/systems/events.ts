@@ -100,6 +100,8 @@ export function enterDungeon(run: Run, kind: DungeonKind): void {
   run.enemies.clear();
   run.bullets.clear();
   run.mapObjects = [];
+  // Polowanie: miniboss znika razem ze światem mapy — pojawi się ponownie po powrocie.
+  if (run.levelInfo.objective.kind === 'hunt' && !run.huntKilled) run.minibossDone = false;
   run.dungeon = { rx: p.x, ry: p.y, cx: p.x + 100000, cy: p.y, wave: 0, cleared: false, kind };
   p.x = run.dungeon.cx;
   p.y = run.dungeon.cy;
@@ -187,7 +189,8 @@ export function updateEvents(run: Run, dt: number): void {
         // Skarbiec: unikat (szansa) i iskra pustki.
         if (d.kind === 'vault') {
           if (rng.chance(BAL.secretsMap.vaultUnique)) run.pendingLoot.push({ source: 'boss', item: rollUnique(run.depth) });
-          grantMat(run, 'void');
+          // Iskra pustki tylko ze skarbca ukrytego na mapie (węzeł Skarbiec Ekspedycji jej nie daje).
+          if (!run.levelInfo.dungeon) grantMat(run, 'void');
         }
         grantMat(run, 'ore', BAL.forge.dungeonOre);
         for (let i = 0; i < 20; i++) run.spawnPickup(d.cx + rng.range(-30, 30), d.cy + rng.range(-30, 30), 'coin', 1);

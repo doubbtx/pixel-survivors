@@ -4,7 +4,8 @@ import { C, RAMP, type Ramp } from '../core/palette';
  * Poziomy kampanii są generowane z numeru (głębokości), więc kampania nie ma końca.
  * Co 4 poziomy biomy się powtarzają z kolejnym numerem rzymskim i coraz silniejszymi wrogami.
  */
-export type Objective = { kind: 'survive'; time: number } | { kind: 'kills'; count: number };
+/** Cel poziomu; 'hunt' (Ekspedycja, Polowanie): zabij minibossa, zanim ucieknie po `time` s. */
+export type Objective = { kind: 'survive'; time: number } | { kind: 'kills'; count: number } | { kind: 'hunt'; time: number };
 
 export interface Biome {
   name: string;
@@ -54,6 +55,10 @@ export interface LevelDef {
   eliteMul: number;
   /** Ekspedycja: poziom to loch (arena z falami) i flagi mapy na czas poziomu (modyfikatory, bonus, nagroda). */
   dungeon?: boolean;
+  /** Rodzaj lochu (Skarbiec: fale strażników). */
+  dungeonKind?: 'portal' | 'vault';
+  /** Zasadzka (Ekspedycja): pierścienie wrogów zamykają się co kilkanaście sekund, bez zwykłych okrążeń. */
+  ambush?: boolean;
   flags?: Record<string, number>;
 }
 
@@ -86,5 +91,6 @@ export function levelDef(depth: number, isVoid = false): LevelDef {
 }
 
 export function objectiveLabel(o: Objective): string {
+  if (o.kind === 'hunt') return `Hunt the miniboss (${o.time} s)`;
   return o.kind === 'survive' ? `Przetrwaj ${Math.floor(o.time / 60)}:${String(o.time % 60).padStart(2, '0')}` : `Pokonaj ${o.count} wrogów`;
 }
