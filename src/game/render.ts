@@ -15,6 +15,7 @@ import { itemColor } from '../data/items';
 import { BAL } from '../data/balance';
 import { BIOMES } from '../data/levels';
 import type { Run } from './run';
+import type { Enemy } from '../entities/types';
 import { taskTarget } from '../systems/tasks';
 import { drawElemMark } from '../gfx/elemmark';
 
@@ -260,7 +261,7 @@ function drawWorld(run: Run, r: Renderer): void {
   // Cienie (pod wszystkimi stojącymi na ziemi; pomijane w trybie oszczędnych efektów).
   const fancy = !run.lowFx;
   if (fancy) for (const e of run.enemies.items) {
-    if (!e.dead && vis(e.x, e.y)) drawShadow(g, X(e.x), Y(e.y) + e.radius * ZOOM * e.scale * 0.9, e.radius * 3 * e.scale);
+    if (!e.dead && !e.hidden && vis(e.x, e.y)) drawShadow(g, X(e.x), Y(e.y) + e.radius * ZOOM * e.scale * 0.9, e.radius * 3 * e.scale * (1 - e.z / 30));
   }
   if (run.outcome !== 'dead') drawShadow(g, px, py + 8, 13);
   for (const t of run.turrets.items) drawShadow(g, X(t.x), Y(t.y) + 7, 12);
@@ -451,7 +452,9 @@ function drawWorld(run: Run, r: Renderer): void {
     const ex = X(e.x), ey = Y(e.y);
     if (e.elite) r.circle(ex, ey + e.radius * ZOOM, e.radius * ZOOM * 1.2, run.blink(30, 15) ? C.yellow : C.orange);
     if (e.boss && e.invuln > 0 && !run.reduceFlash && run.step % 6 < 3) continue;
-    drawSprite(g, `${e.sprite}@${animFrame(e.sprite, run.step, e.uid * 7)}`, ex, ey, { flash: e.flash > 0, scale: e.scale, flipX: e.x > p.x });
+    drawTell(r, run, e, ex, ey);
+    if (e.hidden) continue;
+    drawSprite(g, `${e.sprite}@${animFrame(e.sprite, run.step, e.uid * 7)}`, ex, ey - e.z * ZOOM, { flash: e.flash > 0, scale: e.scale, flipX: e.x > p.x });
     // Boss: zapowiedzi ataków — kurczący się krąg przed nazwanym atakiem, linia szarży (unik ma być czytelny).
     if (e.boss && e.invuln <= 0) {
       if (e.actT > 0 && e.actT < 0.6) {
@@ -671,9 +674,9 @@ function drawWorld(run: Run, r: Renderer): void {
     r.withAlpha(id === 'storm' ? 0.22 : 0.1, () => r.rect(0, 0, VW, VH, id === 'blood' ? C.dred : id === 'gold' ? C.gold : C.navy));
   }
   for (const s of run.strikes) {
-    const sx = X(s.x), sy = Y(s.y), col = s.foe ? C.orange : C.cyan;
-    r.circle(sx, sy, BAL.levelEvents.stormR * ZOOM, !run.reduceFlash && run.step % 8 < 4 ? C.white : col);
-    r.withAlpha(0.15, () => r.circle(sx, sy, BAL.levelEvents.stormR * ZOOM * Math.max(0, 1 - s.t / BAL.levelEvents.stormWarn), col, true));
+    const sx = X(s.x), sy = Y(s.y), col = s.seed ? C.lime : s.foe ? C.orange : C.cyan, R = (s.r ?? BAL.levelEvents.stormR) * ZOOM;
+    r.circle(sx, sy, R, !run.reduceFlash && run.step % 8 < 4 ? C.white : col);
+    r.withAlpha(0.15, () => r.circle(sx, sy, R * Math.max(0, 1 - s.t / (s.seed ? BAL.biomeEnemies.mortarDelay : BAL.levelEvents.stormWarn)), col, true));
   }
   if (fancy) g.drawImage(getVignette(), 0, 0, VW, VH);
 
@@ -741,4 +744,80 @@ function drawNet(r: Renderer, x: number, y: number, R0: number, t: number, life:
       r.rect(wx - 1.5, wy - 1.5, 1.5, 1, C.lgray);
     }
   });
+}
+
+/**
+ * Zapowiedzi ataków wrogów biomów (0.30): linia szarży (Dzik), cień lądowania (Ropucha), zmarszczki i bulgotanie
+ * pod ziemią (Topielec), stożek płomienia (Salamandra), linia celownika (Skorpion), linia cięcia (Odbicie).
+ * Rysowane pod sprite'em wroga; czerwień = obszar trafienia.
+ */
+function drawTell(r: Renderer, run: Run, e: Enemy, ex: number, ey: number): void {
+  const B = BAL.biomeEnemies;
+  switch (e.def.behavior) {
+    case 'charger':
+    case 'orbiter': {
+      const warn = e.def.behavior === 'charger' ? B.chargeTime : B.orbitTime;
+      if (e.dashT <= warn) return;
+      const sp = Math.hypot(e.dvx, e.dvy) || 1, L = (e.def.behavior === 'charger' ? B.chargeSpeed * B.chargeTime : sp * B.orbitTime) * ZOOM;
+      const ux = e.dvx / sp, uy = e.dvy / sp, k = 1 - (e.dashT - warn) / (e.def.behavior === 'charger' ? B.chargeWarn : B.orbitWarn);
+      r.withAlpha(0.25, () => r.line(ex, ey, ex + ux * L, ey + uy * L, C.red, 6));
+      r.withAlpha(0.8, () => r.line(ex, ey, ex + ux * L * Math.min(1, k + 0.15), ey + uy * L * Math.min(1, k + 0.15), C.red, 2));
+      return;
+    }
+    case 'warden': {
+      // Minibossowie: linia szarży albo cień i krąg lądowania skoku Matrony (zapowiedź 0,6 s przed ruchem).
+      if (e.dashT <= 0.5) {
+        if (e.def.id === 'toadqueen' && e.dashT > 0) r.withAlpha(0.6, () => r.ellipse(ex + (e.tx - e.x) * ZOOM, ey + (e.ty - e.y) * ZOOM + 2, 14 * ZOOM, 6 * ZOOM, C.red));
+        return;
+      }
+      if (e.def.id === 'toadqueen') {
+        const tx = ex + (e.tx - e.x) * ZOOM, ty = ey + (e.ty - e.y) * ZOOM;
+        r.withAlpha(0.3, () => r.ellipse(tx, ty + 2, 14 * ZOOM, 6 * ZOOM, C.black));
+        r.withAlpha(0.8, () => r.ellipse(tx, ty + 2, 14 * ZOOM, 6 * ZOOM, C.red));
+        return;
+      }
+      const L = 0.5 * ZOOM;
+      r.withAlpha(0.25, () => r.line(ex, ey, ex + e.dvx * L, ey + e.dvy * L, C.red, 8));
+      r.withAlpha(0.8, () => r.line(ex, ey, ex + e.dvx * L, ey + e.dvy * L, C.red, 2));
+      return;
+    }
+    case 'leaper': {
+      if (e.dashT <= 0) return;
+      const k = 1 - e.dashT / B.leapTime, tx = ex + (e.tx - e.x) * ZOOM, ty = ey + (e.ty - e.y) * ZOOM, R = (5 + 6 * k) * ZOOM;
+      r.withAlpha(0.35, () => r.ellipse(tx, ty + 2, R, R * 0.45, C.black));
+      r.withAlpha(0.7, () => r.ellipse(tx, ty + 2, R + 1, (R + 1) * 0.45, C.red));
+      return;
+    }
+    case 'burrow': {
+      if (!e.hidden) return;
+      // Zmarszczki płynące z Topielcem; przed wynurzeniem czerwony krąg ugryzienia i bąble.
+      const t = run.totalTime * 3 + e.uid;
+      for (let k = 0; k < 2; k++) {
+        const q = (t + k * 0.5) % 1, R = (3 + q * 8) * ZOOM;
+        r.withAlpha(0.6 * (1 - q), () => r.ellipse(ex, ey + 2, R, R * 0.45, C.cyan));
+      }
+      if (e.phase === 2) {
+        const R = B.burrowR * ZOOM, k = 1 - e.actT / B.burrowWarn;
+        r.withAlpha(0.2 + 0.3 * k, () => r.circle(ex, ey, R, C.red, true));
+        r.withAlpha(0.9, () => r.circle(ex, ey, R, C.red));
+        for (let i = 0; i < 3; i++) r.rect(ex + Math.sin(t * 2 + i * 2) * R * 0.5, ey + Math.cos(t * 3 + i) * R * 0.3, 2, 2, C.lgray);
+      }
+      return;
+    }
+    case 'flamer': {
+      if (e.dashT <= 0) return;
+      const L = 60 * ZOOM, a0 = e.shootA - B.flameCone, a1 = e.shootA + B.flameCone, k = 1 - e.dashT / B.flameWarn;
+      r.withAlpha(0.18 + 0.2 * k, () => {
+        for (let a = a0; a <= a1; a += 0.06) r.line(ex, ey, ex + Math.cos(a) * L, ey + Math.sin(a) * L, C.orange, 2);
+      });
+      r.withAlpha(0.8, () => { r.line(ex, ey, ex + Math.cos(a0) * L, ey + Math.sin(a0) * L, C.red, 1); r.line(ex, ey, ex + Math.cos(a1) * L, ey + Math.sin(a1) * L, C.red, 1); });
+      return;
+    }
+    case 'sniper': {
+      if (e.dashT <= 0) return;
+      const L = 260 * ZOOM, locked = e.dashT <= B.snipeAim * 0.4;
+      r.withAlpha(locked ? 0.95 : 0.45, () => r.line(ex, ey, ex + Math.cos(e.shootA) * L, ey + Math.sin(e.shootA) * L, locked ? C.red : C.salmon, 1));
+      return;
+    }
+  }
 }

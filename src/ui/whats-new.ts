@@ -18,6 +18,15 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.30',
+    lines: [
+      "New enemies in every biome, each with its own attack and a warning before it: Boar (charge line), Thornling (seeds into marked circles), Bog Toad (leaps, landing shadow), Drowner (hides under the mud, ripples), Salamander (flame cone), Scorpion (sniper line), Splitter (splits in two) and Reflection (slices across your path).",
+      "Biome minibosses with their own attacks: Boar King, Toad Matriarch, Sand Tyrant, Shattered Knight and Void Prism. One appears on every Expedition elite map and from time to time in Endless. They drop an elite chest.",
+      "All new enemies and minibosses have Bestiary entries.",
+      "Fixed: four item icons lost in 0.29.3 (ring, greaves, band, charm) no longer stop the game.",
+    ],
+  },
+  {
     version: '0.29',
     lines: [
       'Text size option (Settings, Readability): Large shows descriptions at full size; long texts scroll (mouse wheel, drag, PageUp / PageDown, right stick).',

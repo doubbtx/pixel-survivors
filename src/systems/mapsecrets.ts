@@ -90,7 +90,7 @@ export function touchSecret(run: Run, o: MapObject, dt: number): boolean {
       } else {
         // Zła kolejność: runy i malowidło przepadają, zasadzka.
         for (const m of run.mapObjects) if (m.kind === 'rune' || m.kind === 'mural') m.life = 0;
-        const mix = currentMix(run.waveTime());
+        const mix = currentMix(run.waveTime(), run.levelInfo.biome);
         for (let i = 0; i < S.ambush; i++) { const a = (i / S.ambush) * Math.PI * 2; spawnEnemy(run, rng.weighted(mix), o.x + Math.cos(a) * 60, o.y + Math.sin(a) * 60); }
         run.showBanner('Zła kolejność! Zasadzka');
         sfx.play('hurt');

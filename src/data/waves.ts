@@ -18,6 +18,18 @@ export const WAVES: { from: number; mix: [string, number][] }[] = [
   { from: 460, mix: [['bat', 2], ['golem', 2], ['eye', 3], ['wisp', 3], ['cultist', 3], ['spinner', 0.8], ['sentinel', 0.8], ['kamikaze', 1.2], ['blinker', 1], ['shieldbearer', 1.2], ['weaver', 0.8], ['summoner', 0.5]] },
 ];
 
+/**
+ * Wrogowie biomów (0.30): dokładani do zwykłego składu fal (spawner currentMix) od sekundy `from` w danym biomie
+ * (indeks jak w data/levels.ts BIOMES; 4 = sekretna Pustka ma ich mieszankę od początku).
+ */
+export const BIOME_WAVES: Record<number, { from: number; mix: [string, number][] }[]> = {
+  0: [{ from: 35, mix: [['boar', 0.9]] }, { from: 95, mix: [['boar', 1.4], ['thornling', 1]] }],
+  1: [{ from: 30, mix: [['toad', 1.1]] }, { from: 90, mix: [['toad', 1.4], ['lurker', 1]] }],
+  2: [{ from: 35, mix: [['salamander', 1.1]] }, { from: 95, mix: [['salamander', 1.4], ['scorpion', 1]] }],
+  3: [{ from: 30, mix: [['splitter', 1.1]] }, { from: 90, mix: [['splitter', 1.4], ['mirror', 1]] }],
+  4: [{ from: 0, mix: [['splitter', 1], ['mirror', 1], ['scorpion', 0.7], ['lurker', 0.7]] }],
+};
+
 /** Zdarzenia specjalne: pierścień wrogów zamykający się wokół gracza. */
 export const EVENTS: { at: number; enemy: string; count: number }[] = [
   { at: 90, enemy: 'slime', count: 36 },

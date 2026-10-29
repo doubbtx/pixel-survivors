@@ -441,6 +441,11 @@ src/
 - Expedition map: clicking a node only selects it; Travel or Enter starts it (no accidental fights).
 - Gamepad: RT opens weapons and passives, right stick click the anvil, LB / RB change the map difficulty, forge options with up / down and RB.
 
+**Biome enemies and minibosses (0.30.0)**:
+- 8 new enemies, two per biome (the Void mixes them), each with its own move and a clear warning: Boar charges along a red line, Thornling lobs seeds into marked circles, Bog Toad leaps (shadow and red ring where it lands, slime ring on landing), Drowner swims under the mud where it can't be hit and surfaces with a bite (ripples, then a red circle), Salamander breathes a short flame cone, Scorpion fires a fast sting along a thin aiming line, Splitter breaks into two Splitlings, Reflection circles you and slices across your path.
+- 5 biome minibosses in the style of the Vault Guardian, each with four of its own random attacks plus a spiral and a rage phase: Boar King (charges, triple charge, stomp waves, calls boars), Toad Matriarch (leap with a landing ring, acid rain, wave spit, calls toads), Sand Tyrant (three sniper shots, sting rain, charge, shotgun), Shattered Knight (three slicing dashes, calls Reflections, teleport, cross waves), Void Prism (teleport ring, Splitlings, flower, gap rings; breaks into two Splitters). One per Expedition elite map at half the objective, and every 4 minutes in Endless (first after 2.5). Elite chest, card and XP.
+- Bestiary entries for all of them. Test bot: `bot=gallery foes=boar,toad` screenshots chosen enemies and their warnings.
+
 ### Jak przetestować
 
 1. `npm run dev` → Endless → Nowy run → bohater (albo Ekspedycja → Nowa ekspedycja).

@@ -2,8 +2,8 @@ import { C } from '../core/palette';
 import { rng } from '../core/rng';
 import { sfx } from '../core/audio';
 import { BAL } from '../data/balance';
-import { ENEMIES, ELITE_MODS } from '../data/enemies';
-import { WAVES, EVENTS } from '../data/waves';
+import { ENEMIES, ELITE_MODS, BIOME_MINIBOSS } from '../data/enemies';
+import { WAVES, EVENTS, BIOME_WAVES } from '../data/waves';
 import type { Enemy } from '../entities/types';
 import type { Run } from '../game/run';
 
@@ -38,7 +38,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   e.age = 0; e.dead = false; e.elite = null; e.boss = false; e.scale = 1;
   e.dr = 0; e.regen = 0; e.extraRing = false; e.burstLeft = 0; e.burstT = 0; e.touchCd = 0; e.abilT = 0;
   e.hitStamp.fill(-9999);
-  e.phase = 0; e.invuln = 0; e.actT = 3; e.dashT = 0; e.dvx = 0; e.dvy = 0;
+  e.phase = 0; e.invuln = 0; e.actT = 3; e.dashT = 0; e.dvx = 0; e.dvy = 0; e.z = 0; e.hidden = false; e.tx = 0; e.ty = 0;
 
   if (o.elite) {
     // Pakt „Elity z cechami”: dodatkowe, różne cechy.
@@ -77,11 +77,12 @@ function ringPos(run: Run, a: number, r = SPAWN_R): [number, number] {
   return [run.player.x + Math.cos(a) * r, run.player.y + Math.sin(a) * r];
 }
 
-/** Skład fali (id wroga, waga) dla czasu fal `t`. */
-export function currentMix(t: number): [string, number][] {
-  let mix = WAVES[0].mix;
+/** Skład fali (id wroga, waga) dla czasu fal `t`, z wrogami biomu (BIOME_WAVES) dołożonymi do zwykłego składu. */
+export function currentMix(t: number, biome: number): [string, number][] {
+  let mix = WAVES[0].mix, extra: [string, number][] = [];
   for (const w of WAVES) if (w.from <= t) mix = w.mix;
-  return mix;
+  for (const w of BIOME_WAVES[biome] ?? []) if (w.from <= t) extra = w.mix;
+  return extra.length ? [...mix, ...extra] : mix;
 }
 
 /**
@@ -141,16 +142,18 @@ export function updateSpawner(run: Run, dt: number): void {
       if (second !== picked[0]) picked.push(second);
     }
     const [x, y] = ringPos(run, rng.range(0, Math.PI * 2));
-    const base = rng.weighted(currentMix(waveT).filter(([id]) => id !== 'bat'));
+    const base = rng.weighted(currentMix(waveT, run.levelInfo.biome).filter(([id]) => id !== 'bat'));
     const e = spawnEnemy(run, base, x, y, { elite: picked });
     if (e) run.showBanner(`Elita: ${picked.map((k) => ELITE_MODS[k].name).join(', ')}`);
   }
+
+  updateMiniboss(run, dt, waveT);
 
   const target = BAL.targetEnemies(waveT) * (1 + run.flag('enemyCount'));
   const deficit = target - run.enemies.count;
   if (deficit <= 0) return;
   run.spawnAcc += Math.min(BAL.spawnRateCap(waveT), deficit * 2) * dt;
-  const mix = currentMix(waveT);
+  const mix = currentMix(waveT, run.levelInfo.biome);
   while (run.spawnAcc >= 1) {
     run.spawnAcc -= 1;
     const [x, y] = ringPos(run, rng.range(0, Math.PI * 2), SPAWN_R + rng.range(0, 30));
@@ -162,4 +165,29 @@ export function updateSpawner(run: Run, dt: number): void {
     }
     else spawnEnemy(run, rng.weighted(mix), x, y);
   }
+}
+
+/**
+ * Miniboss biomu (0.30): w Ekspedycji raz na mapie elit (przy połowie celu), w Endless jako wydarzenie co BAL.biomeEnemies.miniEvery s.
+ * Pojawia się jako elita bez cech (skrzynia elity, karta i XP po zabiciu); HP skalowane siłą buildu słabiej, jak u bossa.
+ */
+function updateMiniboss(run: Run, dt: number, waveT: number): void {
+  const B = BAL.biomeEnemies;
+  if (run.mode === 'endless') {
+    run.minibossT -= dt;
+    if (run.minibossT > 0) return;
+    run.minibossT = B.miniEvery;
+  } else {
+    if (run.minibossDone || run.levelInfo.eliteMul >= 1 || run.objectiveProgress() < B.miniAt) return;
+  }
+  run.minibossDone = true;
+  if (run.enemies.count >= run.enemies.cap) run.enemies.release(run.enemies.items[0]);
+  const id = BIOME_MINIBOSS[Math.min(BIOME_MINIBOSS.length - 1, run.levelInfo.biome)];
+  const [x, y] = ringPos(run, rng.range(0, Math.PI * 2), 150);
+  const e = spawnEnemy(run, id, x, y, { elite: [] });
+  if (!e) return;
+  e.maxHp = e.hp = e.maxHp * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (1 + Math.max(0, waveT - 300) / 600);
+  run.showBanner(`Miniboss: ${ENEMIES[id].name}!`);
+  run.addShake(3);
+  sfx.play('boss');
 }

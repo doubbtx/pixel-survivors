@@ -1,3 +1,4 @@
+import { ENEMIES } from '../data/enemies';
 import type { App, Screen } from '../ui/app';
 import type { Action } from '../core/input';
 import type { Mode } from '../game/run';
@@ -18,7 +19,7 @@ import { spawnEnemy } from '../systems/spawner';
  * i skrzynie, używa umiejętności, losowo wybiera awanse, karty i węzły mapy. Raport w `window.__bot` (dla Playwright):
  * przebieg runów, błędy, najwolniejsze kroki, odwiedzone stany i brakujące tłumaczenia.
  */
-export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number }
+export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number> }
 export interface BotReport {
   done: boolean;
   runs: BotRun[];
@@ -44,6 +45,8 @@ export class Bot {
   private readonly mode: Mode;
   private readonly tutorial: boolean;
   private readonly gallery: boolean;
+  /** Galeria wrogów (`&foes=boar,toad`): zamiast umiejętności bohatera zrzuty podanych wrogów i ich zapowiedzi ataków. */
+  private readonly foes: string[];
   /** Galeria: kolejka kroków bieżącego bohatera i czas do następnego. */
   private steps: (() => string | void)[] = [];
   private stepT = 0;
@@ -63,6 +66,7 @@ export class Bot {
     this.mode = params.get('bot') === 'expedition' ? 'expedition' : 'endless';
     this.tutorial = params.get('bot') === 'tutorial';
     this.gallery = params.get('bot') === 'gallery';
+    this.foes = (params.get('foes') ?? '').split(',').filter(Boolean);
     const hero = params.get('hero') ?? 'all';
     this.heroes = hero === 'all' ? HEROES.map((h) => h.id) : [hero];
     this.runs = this.tutorial ? 1 : Number(params.get('runs') ?? this.heroes.length);
@@ -96,6 +100,14 @@ export class Bot {
       const cast = (sl: 'q' | 'e' | 'dash' | 'ult') => () => { if (sl === 'ult') run.ultCharge = run.ultNeed(); inp.botPress(sl); };
       const crowd = () => { for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; spawnEnemy(run, i % 3 ? 'slime' : 'bat', run.player.x + Math.cos(a) * 70, run.player.y + Math.sin(a) * 50); } };
       const shot = (name: string) => () => `${hero}-${name}`;
+      if (this.foes.length) {
+        const foes = () => { this.foes.forEach((id, i) => { for (let k = 0; k < 2; k++) { const a = ((i * 2 + k) / (this.foes.length * 2)) * Math.PI * 2; const e = spawnEnemy(run, id, run.player.x + Math.cos(a) * 90, run.player.y + Math.sin(a) * 60, ENEMIES[id]?.behavior === 'warden' ? { elite: [] } : {}); if (e) e.hp = e.maxHp = 1e6; } }); };
+        this.steps = [foes];
+        for (let k = 0; k < 14; k++) this.steps.push(() => { this.stepT = 0.3; }, shot(`foes${k}`));
+        this.steps.push(() => this.finish(run, 'gallery'));
+        this.stepT = 1;
+        return;
+      }
       this.steps = [crowd, shot('play'), cast('q'), shot('q'), cast('e'), shot('e'), crowd, cast('dash'), shot('dash'), cast('ult'), shot('ult'), () => { this.stepT = 1.5; }, shot('ult-late'), () => this.finish(run, 'gallery')];
       this.stepT = 2;
       return;
@@ -208,7 +220,7 @@ export class Bot {
   private finish(run: any, result: string): void { // eslint-disable-line @typescript-eslint/no-explicit-any
     this.report.runs.push({
       hero: run.hero.id, mode: this.mode, result, time: Math.round(run.totalTime), level: run.level, kills: run.kills,
-      depth: run.depth, act: run.expedition?.act ?? 0,
+      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary },
     });
     this.steps = [];
     this.app.save.slots[this.mode] = null;

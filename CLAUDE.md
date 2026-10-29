@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.29.0)
+## Stan (wersja 0.30.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -509,7 +509,23 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   - pełne sterowanie padem we wszystkich menu (Steam Deck);
   - zostają: kształty żywiołów, wyłączanie wstrząsów ekranu, autocelowanie.
 
-### Faza 4: różnorodność i uczucie mocy (v0.30–0.31)
+### Faza 4: różnorodność i uczucie mocy (v0.30–0.31) — v0.30 GOTOWE (wrogowie i minibossowie), v0.31 w planie
+- 0.30.0 — wrogowie biomów (data/enemies.ts, zachowania w `updateBiomeEnemy` w systems/enemies.ts, parametry `BAL.biomeEnemies`,
+  skład `BIOME_WAVES` w data/waves.ts dokładany przez `currentMix(t, biome)`):
+  `boar` charger (stoi i miga `chargeWarn`, potem jazda `dvx/dvy`), `thornling` mortar (`run.strikes` z `seed: true` i `r`,
+  zielony wybuch), `toad` leaper (`dvx/dvy` start, `tx/ty` cel, `e.z` wysokość łuku, pierścień przy lądowaniu), `lurker` burrow
+  (`hidden`: poza siatką kolizji i bez obrażeń; fazy 0 powierzchnia / 1 pływa / 2 bulgocze w `tx/ty`), `salamander` flamer
+  (stożek `shootA` ± `flameCone`, wachlarz pocisków z `life` 0.75 s), `scorpion` sniper (celuje, kąt blokuje się w 40% czasu),
+  `splitter` (po śmierci 2× `splitling`, run.ts killEnemy), `mirror` orbiter (krąży, cięcie wzdłuż linii przez gracza).
+  Pola wroga: `z`, `hidden`, `tx`, `ty`. Zapowiedzi w `drawTell` (game/render.ts), sprite'y w gfx/actors.ts (domyślnie w prawo).
+  Kontakt rani tylko gdy `!hidden && z < 4`. `OWN_MOVES` wyłącza dla nich szarżę elity.
+- Minibossowie biomów: `boarking`, `toadqueen`, `sandtyrant`, `shatterknight`, `voidprism` (`BIOME_MINIBOSS` wg biomu),
+  zachowanie 'warden' z własną listą `MINIBOSS_ATTACKS[id]` (4 ataki; w szale drugi atak `(pick + 2) % n`). Skok Matrony
+  w `updateWarden` (łuk `miniLeapH`, pierścień przy lądowaniu), zapowiedź szarży/skoku w `drawTell` case 'warden' (także
+  Strażnicy lochów). Pojawianie: `updateMiniboss` (systems/spawner.ts) — Ekspedycja: mapa elit (`eliteMul < 1`) przy
+  `miniAt` celu, raz (`run.minibossDone`); Endless: `run.minibossT` (`miniFirst`, potem `miniEvery`). Elita bez cech
+  (`elite: []`): skrzynia, karta, XP; HP × `powerMul^(bossPowerExp-1)`, po 300 s rośnie. Pryzmat pęka na 2 Rozszczepieńce.
+- Bot: `bot=gallery foes=id,id` (zrzuty wrogów i zapowiedzi, wrogowie z 1e6 HP), raport runu ma `byId` (bestiariusz).
 - Ok. 8 nowych wrogów (1–2 na biom), każdy z innym zachowaniem, zapowiedzią ataku i wpisem w bestiariuszu; grafika od razu w stylu 32-bit (Painter `HI`, detale jak w gfx/actors.ts).
 - Jeden miniboss na biom w stylu Strażnika skarbca, z własnym zestawem losowych ataków (mapy elit i wydarzenie w Endless).
 - Bossowie: 1–2 nowe ataki na fazę i lepsze zapowiedzi.

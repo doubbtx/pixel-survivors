@@ -37,6 +37,14 @@ export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   blinker: { seq: [0, 1, 2, 3], speed: 6 },
   weaver: { seq: [0, 1, 2, 3], speed: 6 },
   stag: { seq: [0, 1, 2, 3], speed: 5 },
+  boar: { seq: [0, 1, 2, 3], speed: 6 },
+  thornling: { seq: [0, 1, 0, 1, 2, 3], speed: 9 },
+  toad: { seq: [0, 1, 2, 1, 0, 3], speed: 8 },
+  lurker: { seq: [0, 1, 2, 3], speed: 8 },
+  salamander: { seq: [0, 1, 2, 3], speed: 6 },
+  scorpion: { seq: [0, 1, 2, 3], speed: 7 },
+  splitter: { seq: [0, 1, 2, 3], speed: 7 },
+  mirror: { seq: [0, 1, 2, 3], speed: 6 },
 };
 
 /** Numer klatki dla czasu (kroki symulacji) z przesunięciem `seed`, żeby tłum nie ruszał się synchronicznie. */
@@ -621,9 +629,181 @@ function weaver(f: number): Painter {
   return p.outline();
 }
 
+/* ── Wrogowie biomów (0.30). Domyślnie zwróceni w prawo (gra odbija sprite, gdy wróg stoi na prawo od gracza). ── */
+
+/** Dzik: masywny tułów z grzywą szczeciny, kły, racice w cyklu kłusa (4 klatki). */
+function boar(f: number): Painter {
+  const p = new Painter(24, 17, HI);
+  const bob = f % 2 ? -0.5 : 0, [a, b] = [[0, 1], [1, 0], [0, -1], [-1, 0]][f];
+  // Nogi (tylne ciemniejsze) z racicami.
+  for (const [x, o, dark] of [[6, -a, 1], [9, b, 0], [15, a, 1], [18, -b, 0]] as const) {
+    p.block(x + o * 0.5, 11, 2, 4 - Math.abs(o) * 0.5, dark ? [C.ddbrown, C.ddbrown, C.dbrown, C.dbrown] : RAMP.wood);
+    p.rect(x + o * 0.5, 14.6 - Math.abs(o) * 0.5, 2, 0.8, C.black);
+  }
+  p.sphere(11, 9 + bob, 8, 4.6, RAMP.wood);
+  p.thin(5, 12 + bob, 16, 12.4 + bob, C.ddbrown);
+  // Grzywa szczeciny na grzbiecie.
+  for (let x = 5; x <= 15; x += 1.5) p.thin(x, 5.4 + bob, x - 0.8, 3.6 + bob + (x % 3 ? 0 : -0.6), C.dbrown);
+  // Głowa z ryjem, uchem, okiem i kłami.
+  p.sphere(18.5, 9.5 + bob, 3.8, 3.4, RAMP.wood);
+  p.polyShade([[17, 6.4 + bob], [16.4, 3.6 + bob], [18.8, 5.8 + bob]], RAMP.wood);
+  p.sphere(22, 10.5 + bob, 1.6, 1.6, [C.dbrown, C.clay, C.tan, C.peach]).dot(22.4, 10.2 + bob, C.dbrown).dot(22.4, 11 + bob, C.dbrown);
+  p.rect(19, 8 + bob, 1, 1, C.red).dot(19, 8 + bob, C.yellow);
+  p.thin(20.6, 12 + bob, 21.6, 10.4 + bob, C.cream).dot(21.6, 10.2 + bob, C.white);
+  // Ogon-chwost.
+  p.thin(3.2, 8 + bob, 2, 6.6 + bob, C.dbrown).dot(1.8, 6.4 + bob, C.ddbrown);
+  return p.outline();
+}
+
+/** Cierniak: krzaczasta istota z kolcami, korzeniami-nóżkami i kwitnącym pąkiem-moździerzem na głowie. */
+function thornling(f: number): Painter {
+  const p = new Painter(18, 19, HI);
+  const sw = f % 2 ? 0.5 : -0.5;
+  for (const [x, o] of [[6, -1], [9, 0], [12, 1]] as const) p.thin(x, 14, x + o * 1.5, 18, C.dbrown).thin(x + o * 1.5, 18, x + o * 2.5, 18, C.brown);
+  p.sphere(9, 11, 5.5, 4.8, RAMP.green);
+  // Kolce dookoła krzaka.
+  for (let k = 0; k < 9; k++) {
+    const an = -Math.PI * 0.95 + (k / 8) * Math.PI * 1.9 + sw * 0.1, x = 9 + Math.cos(an) * 5, y = 11 + Math.sin(an) * 4.4;
+    p.thin(x, y, x + Math.cos(an) * 1.8, y + Math.sin(an) * 1.6, C.cream);
+  }
+  for (const [x, y] of [[6, 9], [11.5, 12.5], [7.5, 13]] as const) p.dot(x, y, C.teal);
+  // Oczy-szpary.
+  p.rect(6.6, 10, 1.2, 1, C.black).rect(10.2, 10, 1.2, 1, C.black).dot(7, 10, C.yellow).dot(10.6, 10, C.yellow);
+  // Pąk na łodyżce: puchnie przed strzałem (klatki 2-3).
+  const r = f >= 2 ? 2.4 : 1.9;
+  p.thin(9, 6.4, 9 + sw, 4.2, C.dgreen);
+  p.sphere(9 + sw, 3 - (r - 1.9), r, r, [C.dred, C.plum, C.hotpink, C.salmon]);
+  p.thin(7.6 + sw, 4.4, 10.4 + sw, 4.4, C.green).dot(8.6 + sw, 2, C.white);
+  return p.outline();
+}
+
+/** Ropucha bagienna: przysadzista, brodawkowata, z workiem rezonansowym, który nadyma się w klatkach 1-2. */
+function toad(f: number): Painter {
+  const p = new Painter(20, 15, HI);
+  const sq = f === 3 ? 0.6 : 0;
+  // Tylne łapy w przysiadzie.
+  p.sphere(4.5, 11 + sq, 3.2, 2.6, [C.teal, C.dgreen, C.green, C.green]).sphere(15.5, 11 + sq, 3.2, 2.6, [C.teal, C.dgreen, C.green, C.green]);
+  p.thin(2, 13.6, 4.4, 13.6, C.dgreen).thin(15.6, 13.6, 18, 13.6, C.dgreen);
+  p.sphere(10, 9 + sq, 7, 4.8 - sq, RAMP.green);
+  // Worek pod gardłem.
+  const sac = [1.6, 2.2, 2.6, 1.4][f];
+  p.sphere(13.5, 12 + sq, sac + 0.4, sac * 0.8, [C.tan, C.cream, C.cream, C.white]);
+  // Brodawki.
+  for (const [x, y] of [[6, 7.5], [8, 6], [11, 6.6], [5, 10], [9, 9.6]] as const) p.dot(x, y + sq, C.teal).dot(x + 0.5, y + sq - 0.5, C.lime);
+  // Wyłupiaste oczy na czubku.
+  for (const ex of [12, 15.4]) p.sphere(ex, 5.2 + sq, 1.7, 1.7, [C.dbrown, C.orange, C.gold, C.yellow]).rect(ex - 0.8, 5 + sq, 1.8, 0.6, C.black);
+  p.thin(13, 10 + sq, 17.4, 9.4 + sq, C.dgreen);
+  p.rect(6, 13.4, 8, 1, C.dgreen);
+  return p.outline();
+}
+
+/** Topielec: utopiec z wodorostami we włosach, sinoniebieska skóra, długie szpony i ociekająca woda. */
+function lurker(f: number): Painter {
+  const p = new Painter(18, 22, HI);
+  const sw = [0, 0.5, 0, -0.5][f];
+  p.block(6, 16, 2, 5, [C.navy, C.dblue, C.dblue, C.blue]).block(10, 16, 2, 5 - Math.abs(sw), [C.navy, C.dblue, C.dblue, C.blue]);
+  p.polyShade([[4, 8], [14, 8], [13, 17], [5, 17]], [C.navy, C.teal, C.dblue, C.blue]);
+  // Żebra.
+  for (const y of [10.5, 12, 13.5]) p.thin(6.5, y, 11.5, y, C.navy);
+  // Ramiona ze szponami wyciągniętymi do przodu.
+  p.thin(13.5, 9, 16.5, 12 + sw, C.dblue).thin(16.5, 12 + sw, 17.5, 13.5 + sw, C.cyan).thin(16.5, 12 + sw, 16.4, 14 + sw, C.cyan);
+  p.thin(4.5, 9, 2.5, 13 - sw, C.dblue).thin(2.5, 13 - sw, 2, 14.5 - sw, C.cyan);
+  // Głowa, wodorosty, białe oczy.
+  p.sphere(9, 5, 3.6, 3.6, [C.navy, C.teal, C.dblue, C.blue]);
+  for (const [x, l] of [[5.6, 7], [7, 5], [11, 6], [12.6, 8]] as const) p.thin(x, 2.4, x + sw * 0.6, 2.4 + l, (x * 2) % 3 ? C.dgreen : C.green);
+  p.thin(6, 2, 12, 2, C.dgreen);
+  p.rect(7.4, 4.6, 1, 1, C.white).rect(10, 4.6, 1, 1, C.white);
+  p.thin(7.6, 7, 10.4, 7, C.black).dot(8.4, 7.4, C.white).dot(9.6, 7.4, C.white);
+  // Kapiące krople.
+  p.dot(4.4, 17.5 + f % 2, C.cyan).dot(13.4, 18.5 - f % 2, C.cyan);
+  return p.outline();
+}
+
+/** Salamandra: ognista jaszczurka z płonącym grzebieniem, łuskami i wężowym ogonem (4 klatki chodu). */
+function salamander(f: number): Painter {
+  const p = new Painter(24, 15, HI);
+  const w = [0, 1, 0, -1][f];
+  // Ogon falujący.
+  p.thin(6, 9, 3, 9 + w * 0.6, C.rust).thin(3, 9 + w * 0.6, 1, 7.6 - w * 0.4, C.orange).dot(0.8, 7.4, C.gold);
+  // Łapy rozstawione.
+  for (const [x, o] of [[8, w], [16, -w]] as const) { p.thin(x, 10, x - 1 + o, 13, C.dred).thin(x + 2, 10, x + 3 - o, 13, C.dred); }
+  p.sphere(12, 9, 6.5, 2.8, RAMP.fire);
+  for (let x = 8; x <= 16; x += 2) p.dot(x, 10.4, C.gold);
+  // Głowa z paszczą.
+  p.sphere(19.5, 8, 3.2, 2.4, RAMP.fire);
+  p.thin(19, 9.2, 22.6, 9, C.dred);
+  p.rect(20, 7, 1, 1, C.black).dot(20, 7, C.yellow);
+  // Płonący grzebień.
+  for (let k = 0; k < 6; k++) {
+    const x = 7 + k * 2.2, h = 2 + ((k + f) % 3) * 0.8;
+    p.thin(x, 6.6, x + 0.4, 6.6 - h, (k + f) % 2 ? C.gold : C.orange).dot(x + 0.4, 6.4 - h, C.yellow);
+  }
+  return p.outline();
+}
+
+/** Skorpion: segmentowany pancerz, szczypce, ogon zawinięty nad grzbietem z jarzącym się żądłem-celownikiem. */
+function scorpion(f: number): Painter {
+  const p = new Painter(24, 19, HI);
+  const l = f % 2 ? 0.5 : -0.5;
+  // Nogi.
+  for (let k = 0; k < 3; k++) {
+    const x = 9 + k * 2.5, o = (k + f) % 2 ? l : -l;
+    p.thin(x, 13, x - 1.5 + o, 17.5, C.dbrown).thin(x, 13, x + 1.5 - o, 17.5, C.dbrown);
+  }
+  // Odwłok i ogon (segmenty łukiem nad grzbietem).
+  p.sphere(11, 13, 5.5, 3, RAMP.gold);
+  for (const x of [8, 10.5, 13]) p.thin(x, 10.6, x, 15, C.orange);
+  const tail = [[6, 12], [3.5, 10], [3, 7], [4.5, 4.4], [7.5, 3]] as const;
+  for (const [x, y] of tail) p.sphere(x, y, 1.6, 1.4, RAMP.gold);
+  p.polyShade([[8.5, 2.2], [11, 3.4 + l * 0.5], [8.6, 4.2]], [C.dred, C.red, C.hotpink, C.salmon]);
+  p.dot(10.4, 3.4 + l * 0.5, C.white);
+  // Głowa i szczypce.
+  p.sphere(17, 12.5, 2.8, 2.2, RAMP.gold);
+  p.dot(17.6, 11.4, C.black).dot(18.6, 11.4, C.black);
+  for (const [y, s] of [[10.5, -1], [14.5, 1]] as const) {
+    p.thin(18.5, y, 20.5, y + s * 0.5, C.orange);
+    p.polyShade([[20, y - 1.2], [23.5, y - 0.6 - l], [22, y + 0.2], [23.5, y + 1 + l], [20, y + 1.2]], RAMP.gold);
+  }
+  return p.outline();
+}
+
+/** Rozszczepieniec: kryształowy zlepek dwóch połówek ze świecącą szczeliną (pęka mocniej w klatkach 2-3). */
+function splitter(f: number): Painter {
+  const p = new Painter(18, 18, HI);
+  const gap = f >= 2 ? 0.8 : 0.3, ramp = [C.plum, C.dblue, C.lavender, C.cyan];
+  p.polyShade([[9 - gap, 2], [9 - gap, 16], [4, 14], [2, 8], [5, 3]], ramp);
+  p.polyShade([[9 + gap, 2], [13, 3], [16, 8], [14, 14], [9 + gap, 16]], ramp);
+  // Fasetki.
+  p.thin(5, 3.4, 7, 9, C.white).thin(3, 8, 7, 9, C.lavender).thin(13, 3.4, 11.4, 9, C.cyan).thin(15, 8, 11.4, 9, C.lavender);
+  // Świecąca szczelina z ziarnem w środku.
+  p.thin(9, 2.5, 9, 15.5, f % 2 ? C.white : C.hotpink).disc(9, 9, 1.3, C.hotpink).dot(9, 8.6, C.white);
+  for (const ex of [6, 11.6]) p.rect(ex, 7, 1.4, 1.4, C.black).dot(ex + 0.4, 7.2, C.white);
+  return p.outline();
+}
+
+/** Odbicie: lustrzany sobowtór z ostrzem — szklista sylwetka w ramce rys, z migoczącymi odbłyskami. */
+function mirror(f: number): Painter {
+  const p = new Painter(18, 22, HI);
+  const ramp = [C.dgray, C.lavender, C.lgray, C.white];
+  const fl = f % 2 ? 0.4 : 0;
+  // Płaszcz-kształt z rozdarciami.
+  p.polyShade([[9, 3], [14, 9], [15, 20], [12, 18], [9, 21], [6, 18], [3, 20], [4, 9]], ramp);
+  p.thin(9, 9, 9, 20, C.lavender).thin(5, 12, 13, 15, C.white).thin(6, 16, 11, 11, C.lavender);
+  // Głowa-maska bez twarzy z rysą.
+  p.sphere(9, 5.5, 3.2, 3.2, ramp);
+  p.thin(8, 3, 10, 7.5, C.dgray).thin(10, 7.5, 9.4, 8.5, C.dgray);
+  p.dot(7.6, 5, C.cyan).dot(10.4, 5, C.cyan);
+  // Szklane ostrze w wyciągniętej dłoni.
+  p.thin(14, 10, 16.5, 11.5, C.lavender);
+  p.polyShade([[16, 11], [17.6, 2 + fl], [18, 2.4 + fl], [17, 11.6]], [C.dblue, C.blue, C.cyan, C.white]);
+  // Migoczące odbłyski (przesuwają się z klatkami).
+  for (let k = 0; k < 3; k++) p.dot(4.5 + ((f * 3 + k * 4) % 9), 10 + ((f * 2 + k * 5) % 9), C.white);
+  return p.outline();
+}
+
 export const ACTORS: Record<string, (f: number) => Painter> = {
   kestra, borgun, ignara, morwen, vesper, aurel, wraith, wraithbig, angel, angelbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel, mimic, stag,
-  shieldbearer, summoner, kamikaze, blinker, weaver,
+  shieldbearer, summoner, kamikaze, blinker, weaver, boar, thornling, toad, lurker, salamander, scorpion, splitter, mirror,
 };
 
 /**

@@ -32,7 +32,7 @@ export function fireVolley(run: Run, x: number, y: number, v: Volley, base: numb
     b.x = x; b.y = y;
     b.vx = Math.cos(a) * sp;
     b.vy = Math.sin(a) * sp;
-    b.life = 6;
+    b.life = v.life ?? 6;
     b.damage = damage;
     b.radius = v.sprite === 'eb_big' ? 3 : 2;
     b.sprite = v.sprite;
@@ -267,6 +267,66 @@ const WARDEN_ATTACKS: WardenAttack[] = [
   (run, e, dmg, spr) => { const a = aimAt(run, e); for (const s of [-0.6, 0.6]) fireVolley(run, e.x, e.y, { ...B_WAVE, sprite: spr }, a + s, dmg); },
 ];
 
+/** Przywołanie świty minibossa: `n` wrogów `id` w kręgu wokół gracza. */
+function callAdds(run: Run, id: string, n: number): void {
+  const p = run.player, a0 = rng.range(0, TAU);
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (i / n) * TAU, x = p.x + Math.cos(a) * 110, y = p.y + Math.sin(a) * 80;
+    run.burst(x, y, C.lgray, 6, 40);
+    spawnEnemy(run, id, x, y);
+  }
+}
+
+/** Skok Matrony: cel w miejscu gracza (z wyprzedzeniem), lot nad ziemią w updateWarden, przy lądowaniu pierścień. */
+function wardenLeap(run: Run, e: Enemy): void {
+  const p = run.player;
+  e.tx = p.x + p.vx * 0.4; e.ty = p.y + p.vy * 0.4;
+  e.dashT = 1.1;
+  e.dvx = (e.tx - e.x) / 0.5; e.dvy = (e.ty - e.y) / 0.5;
+}
+
+/** Minibossowie biomów (0.30): każdy ma własne 4 ataki zamiast WARDEN_ATTACKS; reszta (spirala, szał, zapowiedź) jak u Strażnika skarbca. */
+const MINIBOSS_ATTACKS: Record<string, WardenAttack[]> = {
+  // Król Dzików: szarże (pojedyncza z pierścieniem, potrójna), tąpnięcie (fale z luką), wezwanie stada.
+  boarking: [
+    (run, e, dmg, spr, dx, dy, dist) => { bossCharge(e, dx, dy, dist, 250); sequence(run, e, 2, 1.15, (k) => { if (k) fireVolley(run, e.x, e.y, { shape: 'ring', count: 14, speed: 70, sprite: spr }, rng.range(0, TAU), dmg); }); },
+    (run, e) => sequence(run, e, 3, 1.15, () => { const p = run.player, ddx = p.x - e.x, ddy = p.y - e.y; bossCharge(e, ddx, ddy, Math.hypot(ddx, ddy) || 1, 230); }),
+    (run, e, dmg, spr) => sequence(run, e, 3, 0.45, (k) => { run.addShake(1.5); fireVolley(run, e.x, e.y, { ...B_GAP, count: 20, speed: 55 + k * 10, sprite: spr }, aimAt(run, e) + k * 0.5, dmg); }),
+    (run) => { callAdds(run, 'boar', 3); run.showBanner('The herd answers!'); },
+  ],
+  // Matrona Ropuch: skok na gracza (pierścień przy lądowaniu), kwaśny deszcz (zielone kręgi), falujący splunięcie, wylęg ropuch.
+  toadqueen: [
+    (run, e) => wardenLeap(run, e),
+    (run, _e, dmg) => {
+      const p = run.player, B = BAL.biomeEnemies;
+      for (let i = 0; i < 6; i++) { const a = rng.range(0, TAU), d = i ? rng.range(20, 70) : 0; run.strikes.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d, t: 0.9 + i * 0.12, foe: dmg * B.mortarDmg, seed: true, r: B.mortarR }); }
+    },
+    (run, e, dmg, spr) => sequence(run, e, 2, 0.35, () => fireVolley(run, e.x, e.y, { ...B_WAVE, count: 7, sprite: spr }, aimAt(run, e), dmg)),
+    (run) => callAdds(run, 'toad', 3),
+  ],
+  // Tyran Piasków: trzy strzały snajperskie, deszcz żądeł (kręgi), szarża z pierścieniem, śrut.
+  sandtyrant: [
+    (run, e, dmg) => sequence(run, e, 3, 0.4, () => fireVolley(run, e.x, e.y, { shape: 'fan', count: 1, speed: 250, sprite: 'eb_big' }, leadAim(run, e, 250), dmg * 1.4)),
+    (run, _e, dmg) => markStrikes(run, 5, dmg * 1.6),
+    (run, e, dmg, spr, dx, dy, dist) => { bossCharge(e, dx, dy, dist, 230); sequence(run, e, 2, 1.15, (k) => { if (k) fireVolley(run, e.x, e.y, { shape: 'ring', count: 16, speed: 70, sprite: spr }, rng.range(0, TAU), dmg); }); },
+    (run, e, dmg, spr) => fireVolley(run, e.x, e.y, { ...B_SHOTGUN, sprite: spr }, leadAim(run, e, 85), dmg),
+  ],
+  // Strzaskany Rycerz: trzy cięcia-szarże, odbicia, teleport z pierścieniem z luką, krzyżowe fale.
+  shatterknight: [
+    (run, e) => sequence(run, e, 3, 1, () => { const p = run.player, ddx = p.x - e.x, ddy = p.y - e.y; bossCharge(e, ddx, ddy, Math.hypot(ddx, ddy) || 1, 270); }),
+    (run) => { callAdds(run, 'mirror', 2); run.showBanner('Reflections step out of the glass!'); },
+    (run, e, dmg, spr) => { bossBlink(run, e); fireVolley(run, e.x, e.y, { ...B_GAP, sprite: spr }, aimAt(run, e), dmg); },
+    (run, e, dmg, spr) => { const a = aimAt(run, e); for (const s of [-0.6, 0.6]) fireVolley(run, e.x, e.y, { ...B_WAVE, sprite: spr }, a + s, dmg); },
+  ],
+  // Pryzmat Pustki: teleport z pierścieniem, odpryski, skręcający kwiat, pierścienie z luką (po śmierci pęka na dwa Rozszczepieńce).
+  voidprism: [
+    (run, e, dmg, spr) => { bossBlink(run, e); fireVolley(run, e.x, e.y, { shape: 'ring', count: 20, speed: 60, sprite: spr }, rng.range(0, TAU), dmg); },
+    (run) => callAdds(run, 'splitling', 4),
+    (run, e, dmg) => sequence(run, e, 2, 0.6, () => fireVolley(run, e.x, e.y, B_FLOWER, rng.range(0, TAU), dmg)),
+    (run, e, dmg, spr) => sequence(run, e, 3, 0.35, (k) => fireVolley(run, e.x, e.y, { ...B_GAP, count: 24, sprite: spr }, aimAt(run, e) + k * 0.7, dmg)),
+  ],
+};
+
 /**
  * Miniboss lochu (Strażnik skarbca, Strażnik lochu): krąży wokół gracza, strzela stałą spiralą i co chwilę (losowy odstęp) wykonuje losowy atak
  * z zapowiedzią (miga). Poniżej połowy HP szał: bliżej, gęstsza spirala, krótsze odstępy i czasem dwa ataki naraz.
@@ -276,7 +336,20 @@ function updateWarden(run: Run, e: Enemy, dt: number, dx: number, dy: number, di
   const Wd = BAL.secretsMap.warden, rage = e.hp < e.maxHp * 0.5, spr = e.def.bullet ?? 'eb_cyan';
   if (e.dashT > 0) {
     e.dashT -= dt;
-    if (e.dashT < 0.5) { e.x += e.dvx * dt; e.y += e.dvy * dt; } else if (run.blink(4, 2)) e.flash = 2;
+    if (e.dashT < 0.5) {
+      e.x += e.dvx * dt; e.y += e.dvy * dt;
+      // Matrona skacze: łuk nad ziemią, przy lądowaniu pierścień i wstrząs.
+      if (e.def.id === 'toadqueen') {
+        e.z = Math.sin(Math.max(0, e.dashT / 0.5) * Math.PI) * BAL.biomeEnemies.miniLeapH;
+        if (e.dashT <= 0) {
+          e.z = 0;
+          fireVolley(run, e.x, e.y, { shape: 'ring', count: 18, speed: 60, sprite: spr }, rng.range(0, TAU), e.damage * BAL.bulletDmg);
+          run.burst(e.x, e.y + 4, C.dgreen, 16, 60);
+          run.addShake(2.5);
+          sfx.play('explode');
+        }
+      }
+    } else if (run.blink(4, 2)) e.flash = 2;
   } else {
     // Krąży w dystansie `k`; gdy gracz ucieka poza ekran, dogania go prosto i szybciej (miniboss ma być widoczny).
     const k = rage ? 55 : 70, far = dist > Wd.catchUp, side = e.uid % 2 ? 1 : -1;
@@ -294,17 +367,168 @@ function updateWarden(run: Run, e: Enemy, dt: number, dx: number, dy: number, di
   e.actT -= dt;
   if (e.actT > 0 && e.actT < 0.4 && run.blink(6, 3)) e.flash = 2; // zapowiedź ataku
   if (e.actT > 0) return;
-  const n = WARDEN_ATTACKS.length;
+  const list = MINIBOSS_ATTACKS[e.def.id] ?? WARDEN_ATTACKS, n = list.length;
   let pick = rng.int(0, n - 1);
   if (pick === e.phase) pick = (pick + 1) % n;
   e.phase = pick;
-  WARDEN_ATTACKS[pick](run, e, dmg, spr, dx, dy, dist);
-  if (rage && rng.chance(Wd.rageDouble)) WARDEN_ATTACKS[(pick + 3) % n](run, e, dmg, spr, dx, dy, dist);
+  list[pick](run, e, dmg, spr, dx, dy, dist);
+  // Drugi atak w szale — u minibossów biomów bez przywołań i skoków (te nie łączą się z innymi).
+  const second = (pick + (list === WARDEN_ATTACKS ? 3 : 2)) % n;
+  if (rage && rng.chance(Wd.rageDouble)) list[second](run, e, dmg, spr, dx, dy, dist);
   e.actT = rng.range(Wd.actMin, Wd.actMax) * (rage ? Wd.rageMul : 1);
 }
 
+/** Zachowania z własnym użyciem dashT/actT (wrogowie biomów): bez szarży elity, która by je nadpisała. */
+const OWN_MOVES = new Set(['charger', 'mortar', 'leaper', 'burrow', 'flamer', 'sniper', 'orbiter']);
+
 /** Elity bez własnych pocisków walczą wręcz: ich zdolnością jest szarża. */
-const isMeleeElite = (e: Enemy) => !e.def.shoot && e.def.behavior !== 'keep' && e.def.behavior !== 'summoner' && e.def.behavior !== 'weaver';
+const isMeleeElite = (e: Enemy) => !e.def.shoot && e.def.behavior !== 'keep' && e.def.behavior !== 'summoner' && e.def.behavior !== 'weaver' && !OWN_MOVES.has(e.def.behavior);
+
+/**
+ * Wrogowie biomów (0.30, data/enemies.ts): każdy z zapowiedzią ataku (rysuje ją game/render.ts drawTells).
+ * Stan w polach wroga: actT (odliczanie do ataku), dashT (zapowiedź + wykonanie), tx/ty (cel), shootA (kąt), z, hidden, phase.
+ */
+function updateBiomeEnemy(run: Run, e: Enemy, dt: number, dist: number, nx: number, ny: number, sp: number): void {
+  const B = BAL.biomeEnemies, p = run.player, dmg = e.damage * BAL.bulletDmg;
+  /** Trzyma dystans `k` i krąży (strafe) — strzelcy i Odbicie. */
+  const keep = (k: number, strafe: number) => {
+    const dir = dist > k + 10 ? 1 : dist < k - 10 ? -0.7 : 0, side = e.uid % 2 ? 1 : -1;
+    e.x += (nx * dir - ny * strafe * side) * sp; e.y += (ny * dir + nx * strafe * side) * sp;
+  };
+  switch (e.def.behavior) {
+    case 'charger': {
+      // Dzik: podchodzi, staje i grzebie (linia szarży), potem pędzi po prostej.
+      if (e.dashT > 0) {
+        e.dashT -= dt;
+        if (e.dashT < B.chargeTime) { e.x += e.dvx * dt; e.y += e.dvy * dt; } else if (run.blink(6, 3)) e.flash = 2;
+        break;
+      }
+      e.x += nx * sp; e.y += ny * sp;
+      e.actT -= dt;
+      if (e.actT <= 0 && dist < 150) {
+        e.actT = B.chargeEvery * rng.range(0.85, 1.2);
+        e.dashT = B.chargeWarn + B.chargeTime;
+        e.dvx = nx * B.chargeSpeed; e.dvy = ny * B.chargeSpeed;
+      }
+      break;
+    }
+    case 'mortar': {
+      // Cierniak: powoli trzyma dystans i ciska nasiona w kręgi pod graczem (pierwszy z wyprzedzeniem ruchu).
+      keep(e.def.keepDist ?? 120, 0.2);
+      e.actT -= dt;
+      if (e.actT < 0.4 && dist < 210 && run.blink(6, 3)) e.flash = 2;
+      if (e.actT > 0 || dist > 210) break;
+      e.actT = B.mortarEvery * rng.range(0.85, 1.2);
+      for (let i = 0; i < B.mortarCount; i++) {
+        const lead = i === 0 ? B.mortarDelay * 0.6 : 0, a = rng.range(0, TAU), d = i === 0 ? 0 : rng.range(B.mortarSpread * 0.4, B.mortarSpread);
+        run.strikes.push({ x: p.x + p.vx * lead + Math.cos(a) * d, y: p.y + p.vy * lead + Math.sin(a) * d, t: B.mortarDelay + i * 0.15, foe: dmg * B.mortarDmg, seed: true, r: B.mortarR });
+      }
+      run.burst(e.x, e.y - 6, C.lime, 4, 40);
+      break;
+    }
+    case 'leaper': {
+      // Ropucha: skok łukiem do celu (cień w miejscu lądowania), przy lądowaniu pierścień kwasu.
+      if (e.dashT > 0) {
+        e.dashT -= dt;
+        const k = Math.min(1, 1 - e.dashT / B.leapTime);
+        e.x = e.dvx + (e.tx - e.dvx) * k; e.y = e.dvy + (e.ty - e.dvy) * k;
+        e.z = Math.sin(k * Math.PI) * B.leapHeight;
+        if (e.dashT <= 0) {
+          e.z = 0;
+          fireVolley(run, e.x, e.y, { shape: 'ring', count: B.leapRing, speed: 55, sprite: 'eb_cyan' }, rng.range(0, TAU), dmg);
+          run.burst(e.x, e.y + 3, C.dgreen, 8, 40);
+          run.addShake(0.8);
+        }
+        break;
+      }
+      e.actT -= dt;
+      if (e.actT < 0.35 && run.blink(6, 3)) e.flash = 2;
+      if (e.actT > 0) break;
+      e.actT = B.leapEvery * rng.range(0.8, 1.2);
+      const d = Math.min(dist, B.leapRange) + rng.range(-8, 8);
+      e.dvx = e.x; e.dvy = e.y;
+      e.tx = e.x + nx * d; e.ty = e.y + ny * d;
+      e.dashT = B.leapTime;
+      break;
+    }
+    case 'burrow': {
+      // Topielec: na powierzchni goni; pod ziemią (nietrafialny) płynie do gracza, staje, bulgocze i wynurza się z ugryzieniem.
+      e.actT -= dt;
+      if (e.phase === 0) {
+        e.x += nx * sp; e.y += ny * sp;
+        if (e.actT <= 0) { e.phase = 1; e.hidden = true; e.actT = B.burrowUnder; run.burst(e.x, e.y, C.teal, 8, 40); }
+      } else if (e.phase === 1) {
+        e.x += nx * sp * 1.6; e.y += ny * sp * 1.6;
+        if (e.actT <= 0 || dist < 10) { e.phase = 2; e.actT = B.burrowWarn; e.tx = p.x; e.ty = p.y; }
+      } else {
+        e.x = e.tx; e.y = e.ty;
+        if (e.actT <= 0) {
+          e.phase = 0; e.hidden = false; e.actT = B.burrowUp;
+          if ((p.x - e.x) ** 2 + (p.y - e.y) ** 2 < (B.burrowR + p.r) ** 2) run.hurtPlayer(e.damage * 1.3);
+          run.burst(e.x, e.y, C.teal, 14, 70);
+          run.burst(e.x, e.y, C.cyan, 6, 90);
+          sfx.play('hit');
+        }
+      }
+      break;
+    }
+    case 'flamer': {
+      // Salamandra: podchodzi; stożek zapowiedzi (zablokowany kąt), potem krótki płomień (zwalniające pociski ognia).
+      if (e.dashT > 0) {
+        e.dashT -= dt;
+        if (run.blink(6, 3)) e.flash = 2;
+        if (e.dashT <= 0) {
+          const n = B.flameCount;
+          fireVolley(run, e.x, e.y, { shape: 'fan', count: n, speed: 105, spread: (B.flameCone * 2) / (n - 1), acc: -110, minV: 18, life: 0.75, sprite: 'eb_orange' }, e.shootA, dmg);
+          run.burst(e.x + Math.cos(e.shootA) * 8, e.y + Math.sin(e.shootA) * 8, C.orange, 8, 70);
+        }
+        break;
+      }
+      keep(e.def.keepDist ?? 45, 0.3);
+      e.actT -= dt;
+      if (e.actT <= 0 && dist < B.flameRange) {
+        e.actT = B.flameEvery * rng.range(0.85, 1.2);
+        e.dashT = B.flameWarn;
+        e.shootA = Math.atan2(p.y - e.y, p.x - e.x);
+      }
+      break;
+    }
+    case 'sniper': {
+      // Skorpion: daleko; linia celownika (śledzi gracza przez 60% czasu, potem stoi), potem szybki kolec.
+      if (e.dashT > 0) {
+        e.dashT -= dt;
+        if (e.dashT > B.snipeAim * 0.4) e.shootA = Math.atan2(p.y - e.y, p.x - e.x);
+        if (e.dashT <= 0) fireVolley(run, e.x, e.y, { shape: 'fan', count: 1, speed: B.snipeSpeed, sprite: 'eb_big' }, e.shootA, dmg * 1.5);
+        break;
+      }
+      keep(e.def.keepDist ?? 150, 0.5);
+      e.actT -= dt;
+      if (e.actT <= 0 && dist < 260) { e.actT = B.snipeEvery * rng.range(0.85, 1.2); e.dashT = B.snipeAim; }
+      break;
+    }
+    case 'splitter':
+      e.x += nx * sp; e.y += ny * sp;
+      break;
+    case 'orbiter': {
+      // Odbicie: krąży wokół gracza; linia przez gracza (zapowiedź), potem cięcie szarżą wzdłuż niej.
+      if (e.dashT > 0) {
+        e.dashT -= dt;
+        if (e.dashT < B.orbitTime) { e.x += e.dvx * dt; e.y += e.dvy * dt; } else if (run.blink(6, 3)) e.flash = 2;
+        break;
+      }
+      keep(e.def.keepDist ?? 75, 1);
+      e.actT -= dt;
+      if (e.actT <= 0 && dist < 130) {
+        e.actT = B.orbitEvery * rng.range(0.85, 1.2);
+        e.tx = p.x + nx * 60; e.ty = p.y + ny * 60;
+        const L = Math.hypot(e.tx - e.x, e.ty - e.y) || 1;
+        e.dvx = ((e.tx - e.x) / L) * B.orbitSpeed; e.dvy = ((e.ty - e.y) / L) * B.orbitSpeed;
+        e.dashT = B.orbitWarn + B.orbitTime;
+      }
+      break;
+    }
+  }
+}
 
 /** Szarża elity: zapowiedź (miga), pęd w zapamiętanym kierunku, przy lądowaniu pierścień pocisków. */
 function updateEliteCharge(run: Run, e: Enemy, dt: number): void {
@@ -397,7 +621,7 @@ export function updateEnemies(run: Run, dt: number): void {
       updateBoss(run, e, dt, dx, dy, dist);
     } else if (e.stunT > 0) {
       e.stunT -= dt;
-    } else if (e.elite && e.dashT > 0 && e.def.behavior !== 'warden') {
+    } else if (e.elite && e.dashT > 0 && e.def.behavior !== 'warden' && !OWN_MOVES.has(e.def.behavior)) {
       updateEliteCharge(run, e, dt);
     } else {
       const sp = e.speed * (1 - e.slowF) * dt;
@@ -471,6 +695,9 @@ export function updateEnemies(run: Run, dt: number): void {
           }
           break;
         }
+        case 'charger': case 'mortar': case 'leaper': case 'burrow': case 'flamer': case 'sniper': case 'splitter': case 'orbiter':
+          updateBiomeEnemy(run, e, dt, dist, nx, ny, sp);
+          break;
         case 'warden':
           updateWarden(run, e, dt, dx, dy, dist, nx, ny, e.speed * (1 - e.slowF));
           break;
@@ -533,6 +760,6 @@ export function updateEnemies(run: Run, dt: number): void {
     // Uderzenie wręcz: każdy wróg osobno co BAL.contactCooldown (tłum jest groźny, leczenie go nie przebije).
     if (e.touchCd > 0) e.touchCd -= dt;
     if (e.reactT > 0) e.reactT -= dt;
-    if (e.touchCd <= 0 && e.damage > 0 && dist < e.radius + p.r && run.hurtPlayer(e.damage)) e.touchCd = BAL.contactCooldown;
+    if (e.touchCd <= 0 && e.damage > 0 && !e.hidden && e.z < 4 && dist < e.radius + p.r && run.hurtPlayer(e.damage)) e.touchCd = BAL.contactCooldown;
   }
 }

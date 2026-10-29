@@ -193,6 +193,25 @@ export const BAL = {
     shieldTurn: 1.4, shieldArc: 1.1, kamikazeFuseAt: 22, kamikazeFuse: 0.6, kamikazeR: 32, kamikazeDmg: 2.5,
     blinkEvery: 3.5, blinkMin: 45, blinkMax: 75, summonEvery: 6, summonCount: 3, webEvery: 5, webR: 26, webLife: 5, webSlow: 0.5,
   },
+  /**
+   * Wrogowie biomów (data/enemies.ts, systems/enemies.ts): Dzik (odstęp szarży, zapowiedź s, prędkość, czas pędu), Cierniak
+   * (odstęp, liczba kręgów, rozrzut, czas do uderzenia, mnożnik obrażeń), Ropucha (odstęp skoku, czas lotu, wysokość,
+   * zasięg, pierścień), Topielec (pod ziemią s, na powierzchni s, zapowiedź s, promień ugryzienia), Salamandra (zasięg, zapowiedź,
+   * liczba płomieni, stożek rad), Skorpion (odstęp, celowanie s, prędkość kolca), Rozszczepieniec (dzieci), Odbicie (odstęp,
+   * zapowiedź, prędkość, czas pędu).
+   */
+  biomeEnemies: {
+    chargeEvery: 3.2, chargeWarn: 0.75, chargeSpeed: 175, chargeTime: 0.55,
+    /** Minibossowie biomów: w Endless pierwszy po `first` s, potem co `every` s; w Ekspedycji na mapie elit przy połowie celu. */
+    miniFirst: 150, miniEvery: 240, miniAt: 0.5, miniLeapH: 22,
+    mortarEvery: 3.4, mortarCount: 3, mortarSpread: 40, mortarDelay: 1.1, mortarDmg: 1.6, mortarR: 11,
+    leapEvery: 2.2, leapTime: 0.6, leapHeight: 12, leapRange: 70, leapRing: 8,
+    burrowUnder: 2.6, burrowUp: 2.5, burrowWarn: 0.7, burrowR: 20,
+    flameRange: 55, flameWarn: 0.6, flameCount: 7, flameCone: 0.55, flameEvery: 3,
+    snipeEvery: 3.6, snipeAim: 0.85, snipeSpeed: 230,
+    splitKids: 2,
+    orbitEvery: 3.4, orbitWarn: 0.65, orbitSpeed: 240, orbitTime: 0.55,
+  },
   /** Pakty ryzyka (data/pacts.ts): esencja × (1 + essencePer × poziom Paktu). */
   pacts: { essencePer: 0.08 },
   /**

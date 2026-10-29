@@ -95,6 +95,11 @@ export interface Enemy extends Poolable {
   /** Regeneracja jako ułamek maks. HP na sekundę. */
   regen: number;
   extraRing: boolean;
+  /** Wysokość nad ziemią (skok Ropuchy; rysowanie wyżej), schowany pod ziemią (Topielec: poza siatką, bez trafień) i cel ataku. */
+  z: number;
+  hidden: boolean;
+  tx: number;
+  ty: number;
   /** Pozostałe salwy serii i czas do następnej. */
   burstLeft: number;
   burstT: number;

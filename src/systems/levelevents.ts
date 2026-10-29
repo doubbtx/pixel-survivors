@@ -52,8 +52,14 @@ function updateStrikes(run: Run, dt: number): void {
   for (const s of run.strikes) {
     s.t -= dt;
     if (s.t > 0) continue;
-    const hit = (s.x - p.x) ** 2 + (s.y - p.y) ** 2 < E.stormR * E.stormR;
-    if (s.foe) {
+    const R = s.r ?? E.stormR, hit = (s.x - p.x) ** 2 + (s.y - p.y) ** 2 < (R + (s.r ? p.r : 0)) ** 2;
+    if (s.foe && s.seed) {
+      // Nasiono Cierniaka: kłujący wybuch zieleni, bez ognistej eksplozji.
+      if (hit) run.hurtPlayer(s.foe);
+      run.burst(s.x, s.y, C.green, 10, 60);
+      run.burst(s.x, s.y, C.lime, 6, 90);
+      sfx.play('hit');
+    } else if (s.foe) {
       if (hit) run.hurtPlayer(s.foe);
       run.boomFx(s.x, s.y, E.stormR);
       run.burst(s.x, s.y, C.orange, 12, 70);

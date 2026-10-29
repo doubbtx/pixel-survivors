@@ -31,7 +31,7 @@ import { fmt } from '../util/format';
 import { updatePlayer } from '../systems/player';
 import { updateAbilities, castAbility } from '../systems/abilities';
 import { updateWeapons } from '../systems/weapons';
-import { updateSpawner } from '../systems/spawner';
+import { updateSpawner, spawnEnemy } from '../systems/spawner';
 import { updateEnemies } from '../systems/enemies';
 import { updateProjectiles, updateEnemyBullets } from '../systems/projectiles';
 import { updateZones } from '../systems/zones';
@@ -231,7 +231,8 @@ export class Run {
   levelEvent: { id: LevelEventId; t: number } | null = null;
   levelEventT: number = BAL.levelEvents.every * 0.6;
   /** Uderzenia w zaznaczone kręgi: pioruny burzy (ranią wszystkich) i deszcz żaru bossa (`foe` = obrażenia tylko dla gracza). */
-  strikes: { x: number; y: number; t: number; foe?: number }[] = [];
+  /** Zaznaczone kręgi uderzeń: piorun burzy, ogień bossa (`foe`), nasiona Cierniaka (`seed`: mniejszy, zielony wybuch). */
+  strikes: { x: number; y: number; t: number; foe?: number; seed?: boolean; r?: number }[] = [];
   stormT = 0;
   combo = 0;
   /** Sekrety map (systems/mapsecrets.ts): czas do kolejnego, odurzenie (odwrócone sterowanie, s), tytuł sekretnego bossa w HUD,
@@ -411,6 +412,9 @@ export class Run {
   nextBossAt: number = BAL.endlessBossEvery;
   boss: Enemy | null = null;
   bossSpawned = false;
+  /** Miniboss biomu: odliczanie w Endless; w Ekspedycji czy już był na tym poziomie (systems/spawner.ts updateMiniboss). */
+  minibossT: number = BAL.biomeEnemies.miniFirst;
+  minibossDone = false;
   eliteT: number = BAL.eliteEvery;
   /** Średni DPS gracza (średnia krocząca) i wynikający z niego mnożnik siły wrogów (BAL.power). */
   dpsEma = 0;
@@ -480,6 +484,7 @@ export class Run {
     this.levelKills = 0;
     this.boss = null;
     this.bossSpawned = false;
+    this.minibossDone = false;
     this.eliteT = BAL.eliteEvery * this.levelInfo.eliteMul * BAL.eliteGap(this.levelInfo.waveOffset);
     this.nextEvent = 0;
     this.spawnAcc = 0;
@@ -633,7 +638,7 @@ export class Run {
 
   private rebuildHash(): void {
     this.hash.clear();
-    for (const e of this.enemies.items) if (!e.dead) this.hash.insert(e);
+    for (const e of this.enemies.items) if (!e.dead && !e.hidden) this.hash.insert(e);
   }
 
   private runTimers(dt: number): void {
@@ -1294,6 +1299,17 @@ export class Run {
     }
     if (e.boss || e.elite) this.boomFx(e.x, e.y, e.boss ? 40 : 20);
     this.spawnGem(e.x, e.y, e.xp);
+    // Rozszczepieniec: po śmierci dwa mniejsze (w następnym kroku, poza pętlą wrogów).
+    if (e.def.behavior === 'splitter' || e.def.id === 'voidprism') {
+      // Rozszczepieniec pęka na dwa Odpryski, Pryzmat Pustki na dwa Rozszczepieńce.
+      const x = e.x, y = e.y, kid = e.def.id === 'voidprism' ? 'splitter' : 'splitling';
+      this.schedule(0, () => {
+        for (let k = 0; k < BAL.biomeEnemies.splitKids; k++) {
+          const c = spawnEnemy(this, kid, x + (k ? 7 : -7), y + rng.range(-4, 4));
+          if (c) { if (kid === 'splitling') c.scale = 0.7; c.kx = (k ? 1 : -1) * 60; }
+        }
+      });
+    }
     sfx.play('kill');
     const hp = this.hero.passive;
     if (hp.kind === 'killShield') this.killShield(BAL.killShieldPerKill, hp.value + this.flag('passive.shieldCap'));
@@ -1767,7 +1783,7 @@ function newEnemy(): Enemy {
     flash: 0, slowT: 0, slowF: 0, stunT: 0, shootT: 0, shootA: 0, age: 0, dead: false, elite: null, boss: false,
     scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0, abilT: 0,
     burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, reactT: 0, brittle: 0, hitStamp: new Int32Array(SLOT_COUNT),
-    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0,
+    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0,
   };
 }
 

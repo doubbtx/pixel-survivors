@@ -14,6 +14,8 @@ export type VolleyShape = 'fan' | 'ring' | 'gapRing' | 'shotgun';
 
 export interface Volley {
   shape: VolleyShape;
+  /** Czas życia pocisku w sekundach (domyślnie 6); krótki = płomień o ograniczonym zasięgu. */
+  life?: number;
   count: number;
   speed: number;
   sprite: string;
@@ -33,8 +35,15 @@ export interface Volley {
  * shield — tarcza z przodu blokuje pociski (obraca się powoli, trzeba obejść albo bić obszarem);
  * summoner — trzyma dystans i przywołuje nietoperze; kamikaze — dobiega, zapala lont i wybucha;
  * blink — teleportuje się obok gracza po zapowiedzi; weaver — trzyma dystans i rzuca pod gracza spowalniające sieci.
+ * Wrogowie biomów (0.30, BIOME_WAVES; liczby w BAL.biomeEnemies, zapowiedzi rysuje game/render.ts):
+ * charger — staje, grzebie i pokazuje linię, potem szarżuje; mortar — stoi i ciska nasiona w zaznaczone kręgi pod graczem;
+ * leaper — skacze łukiem (cień w miejscu lądowania), przy lądowaniu pierścień pocisków; burrow — zanurza się (tylko zmarszczki,
+ * nie da się go trafić), wynurza pod graczem po zapowiedzi; flamer — podchodzi, pokazuje stożek i zieje ogniem;
+ * sniper — trzyma daleki dystans, celuje widoczną linią, potem szybki przebijający kolec; splitter — po śmierci dzieli się
+ * na dwa mniejsze; orbiter — krąży wokół gracza i co chwilę przecina go szarżą po zaznaczonej linii.
  */
-export type EnemyBehavior = 'chase' | 'fast' | 'keep' | 'flee' | 'boss' | 'shield' | 'summoner' | 'kamikaze' | 'blink' | 'weaver' | 'warden';
+export type EnemyBehavior = 'chase' | 'fast' | 'keep' | 'flee' | 'boss' | 'shield' | 'summoner' | 'kamikaze' | 'blink' | 'weaver' | 'warden'
+  | 'charger' | 'mortar' | 'leaper' | 'burrow' | 'flamer' | 'sniper' | 'splitter' | 'orbiter';
 
 export interface ShootDef {
   volley: Volley;
@@ -92,6 +101,16 @@ export const ENEMIES: Record<string, EnemyDef> = {
   kamikaze: { id: 'kamikaze', color: C.orange, name: 'Kamikaze', sprite: 'kamikaze', hp: 12, speed: 62, damage: 10, radius: 4, xp: 2, behavior: 'kamikaze', knockResist: 0 },
   blinker: { id: 'blinker', color: C.cyan, name: 'Skoczek', sprite: 'blinker', hp: 25, speed: 30, damage: 8, radius: 4, xp: 4, behavior: 'blink', knockResist: 0.2 },
   weaver: { id: 'weaver', color: C.dgray, name: 'Pajęczarz', sprite: 'weaver', hp: 35, speed: 22, damage: 6, radius: 5, xp: 6, behavior: 'weaver', keepDist: 110, knockResist: 0.3 },
+  // Wrogowie biomów (0.30): nazwy po angielsku (polski w core/i18n-pl.ts).
+  boar: { id: 'boar', color: C.brown, name: 'Boar', sprite: 'boar', hp: 45, speed: 26, damage: 14, radius: 6, xp: 5, behavior: 'charger', knockResist: 0.6 },
+  thornling: { id: 'thornling', color: C.green, name: 'Thornling', sprite: 'thornling', hp: 30, speed: 8, damage: 6, radius: 5, xp: 4, behavior: 'mortar', keepDist: 120, knockResist: 0.9 },
+  toad: { id: 'toad', color: C.green, name: 'Bog Toad', sprite: 'toad', hp: 34, speed: 0, damage: 10, radius: 5, xp: 4, behavior: 'leaper', knockResist: 0.4 },
+  lurker: { id: 'lurker', color: C.teal, name: 'Drowner', sprite: 'lurker', hp: 40, speed: 40, damage: 14, radius: 5, xp: 5, behavior: 'burrow', knockResist: 0.5 },
+  salamander: { id: 'salamander', color: C.orange, name: 'Salamander', sprite: 'salamander', hp: 38, speed: 30, damage: 8, radius: 5, xp: 5, behavior: 'flamer', keepDist: 45, knockResist: 0.3 },
+  scorpion: { id: 'scorpion', color: C.gold, name: 'Scorpion', sprite: 'scorpion', hp: 32, speed: 24, damage: 9, radius: 5, xp: 5, behavior: 'sniper', keepDist: 150, knockResist: 0.4 },
+  splitter: { id: 'splitter', color: C.pink, name: 'Splitter', sprite: 'splitter', hp: 40, speed: 26, damage: 9, radius: 6, xp: 3, behavior: 'splitter', knockResist: 0.3 },
+  splitling: { id: 'splitling', color: C.pink, name: 'Splitling', sprite: 'splitter', hp: 14, speed: 40, damage: 6, radius: 4, xp: 1, behavior: 'chase', knockResist: 0 },
+  mirror: { id: 'mirror', color: C.lavender, name: 'Reflection', sprite: 'mirror', hp: 36, speed: 46, damage: 12, radius: 5, xp: 5, behavior: 'orbiter', keepDist: 75, knockResist: 0.5 },
   // Sekrety map (systems/mapsecrets.ts): mimik udaje skrzynię, biały jeleń ucieka jak Złoty szlam.
   mimic: { id: 'mimic', color: C.brown, name: 'Mimik', sprite: 'mimic', hp: 30, speed: 44, damage: 12, radius: 6, xp: 15, behavior: 'chase', knockResist: 0.7 },
   stag: { id: 'stag', color: C.white, name: 'Biały jeleń', sprite: 'stag', hp: 90, speed: 50, damage: 0, radius: 5, xp: 30, behavior: 'flee', knockResist: 0.6 },
@@ -107,6 +126,12 @@ export const ENEMIES: Record<string, EnemyDef> = {
   /** Minibossowie lochów z losowymi atakami (systems/enemies.ts updateWarden): skarbiec za pęknięta ścianą i zwykły loch. */
   warden: { id: 'warden', color: C.cyan, name: 'Strażnik skarbca', sprite: 'sentinel', hp: 80, speed: 34, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1, bullet: 'eb_cyan' },
   keeper: { id: 'keeper', color: C.orange, name: 'Strażnik lochu', sprite: 'golem', hp: 80, speed: 30, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
+  /** Minibossowie biomów (0.30): elita map Ekspedycji i wydarzenie w Endless, własne zestawy ataków (systems/enemies.ts MINIBOSS_ATTACKS). */
+  boarking: { id: 'boarking', color: C.brown, name: 'Boar King', sprite: 'boar', hp: 110, speed: 30, damage: 14, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
+  toadqueen: { id: 'toadqueen', color: C.green, name: 'Toad Matriarch', sprite: 'toad', hp: 110, speed: 26, damage: 13, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_cyan' },
+  sandtyrant: { id: 'sandtyrant', color: C.gold, name: 'Sand Tyrant', sprite: 'scorpion', hp: 110, speed: 30, damage: 13, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
+  shatterknight: { id: 'shatterknight', color: C.lavender, name: 'Shattered Knight', sprite: 'mirror', hp: 110, speed: 36, damage: 14, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_blue' },
+  voidprism: { id: 'voidprism', color: C.pink, name: 'Void Prism', sprite: 'splitter', hp: 120, speed: 30, damage: 13, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_pink' },
   boss: {
     id: 'boss', color: C.pink, name: 'Władca Otchłani', sprite: 'boss', hp: BAL.bossBaseHp, speed: 22, damage: 25, radius: 10, xp: 400, behavior: 'boss', knockResist: 1,
   },
@@ -162,3 +187,6 @@ export const BOSS_POWERS: BossPowerDef[] = [
 ];
 
 export const BOSS_POWER_BY_ID: Record<string, BossPowerDef> = Object.fromEntries(BOSS_POWERS.map((p) => [p.id, p]));
+
+/** Minibossowie biomów w kolejności biomów (Pustka = 4). */
+export const BIOME_MINIBOSS = ['boarking', 'toadqueen', 'sandtyrant', 'shatterknight', 'voidprism'];

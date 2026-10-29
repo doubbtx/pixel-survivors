@@ -65,7 +65,7 @@ function start(run: Run, t: Task): void {
   t.max = t.life = t.def.time * (1 - Math.min(0.5, run.flag('taskTime')));
   if (t.def.kind === 'hunt') {
     const a = rng.range(0, Math.PI * 2);
-    const base = rng.weighted(currentMix(run.waveTime()).filter(([id]) => id !== 'bat'));
+    const base = rng.weighted(currentMix(run.waveTime(), run.levelInfo.biome).filter(([id]) => id !== 'bat'));
     const e = spawnEnemy(run, base, t.x + Math.cos(a) * T.huntDist, t.y + Math.sin(a) * T.huntDist, { elite: [rng.pick(Object.keys(ELITE_MODS))] });
     if (!e) { t.life = 0; return; }
     t.target = e.uid;
@@ -103,7 +103,7 @@ function finish(run: Run, ok: boolean): void {
 
 /** Karna fala: elity i okrążenie zwykłych wrogów wokół gracza. */
 function punish(run: Run): void {
-  const T = BAL.tasks, p = run.player, mix = currentMix(run.waveTime());
+  const T = BAL.tasks, p = run.player, mix = currentMix(run.waveTime(), run.levelInfo.biome);
   for (let i = 0; i < T.failWave; i++) {
     const a = (i / T.failWave) * Math.PI * 2;
     spawnEnemy(run, rng.weighted(mix), p.x + Math.cos(a) * 170, p.y + Math.sin(a) * 170);
