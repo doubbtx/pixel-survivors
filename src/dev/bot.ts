@@ -61,6 +61,7 @@ export class Bot {
   private readonly style: string;
   private runIdx = 0;
   private ultMode = 'base';
+  private torment = 0;
   private cur: GameScreen | null = null;
   private wander = Math.random() * Math.PI * 2;
   private wait = 0;
@@ -92,6 +93,8 @@ export class Bot {
     this.style = params.get('style') ?? 'auto';
     // R4: `&ult=alt` (drugi ultimate), `&ult=mix` (na zmianę w kolejnych runach).
     this.ultMode = params.get('ult') ?? 'base';
+    // Udręka (0.46): `&torment=N` — poziom wyprawy (odblokowany na potrzeby testu).
+    this.torment = Number(params.get('torment') ?? 0);
     // Pomiar balansu: `&pmax=1e6` zdejmuje sufit mnożnika siły (BAL.power.max), żeby telemetria pokazała prawdziwy zakres.
     if (params.has('pmax')) (BAL.power as { max: number }).max = Number(params.get('pmax'));
     this.tier = Math.max(1, Math.min(4, Number(params.get('tier') ?? 1)));
@@ -278,6 +281,7 @@ export class Bot {
     this.app.save.slots[this.mode] = null;
     const alt = this.ultMode === 'alt' || (this.ultMode === 'mix' && this.runIdx % 2 === 1);
     this.app.save.altUlt = { ...this.app.save.altUlt, [hero]: alt };
+    if (this.torment) { this.app.save.tormentMax = Math.max(this.app.save.tormentMax ?? 0, this.torment); this.app.save.exTorment = this.torment; }
     this.cur = new GameScreen(this.app, this.tutorial ? 'kestra' : hero, this.mode, undefined, this.tutorial);
     this.app.go(this.cur);
   }

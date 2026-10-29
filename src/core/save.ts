@@ -111,6 +111,9 @@ export interface SaveData {
   lastHero: string;
   /** Ostatnio wybrany poziom trudności map Ekspedycji (nowa wyprawa zaczyna od niego). */
   exTier: number;
+  /** Udręka (0.46): najwyższy odblokowany poziom (0 = brak) i ostatnio wybrany. */
+  tormentMax?: number;
+  exTorment?: number;
   /** Pakty ryzyka (data/pacts.ts): wybrane na następny run i najwyższy poziom Paktu z pokonanym bossem per bohater. */
   pacts: { chosen: Record<string, number>; best: Record<string, number> };
   /** Zdobyte osiągnięcia (data/achievements.ts) i zabójstwa per wróg (bestiariusz). Nowe pola bez migracji. */
@@ -260,6 +263,8 @@ export function loadSave(): SaveData {
     seenHints: d.seenHints ?? [],
     lastHero: d.lastHero ?? '',
     exTier: d.exTier ?? 0,
+    tormentMax: d.tormentMax ?? 0,
+    exTorment: d.exTorment ?? 0,
     earlyDeaths: d.earlyDeaths ?? 0,
     pacts: { ...base.pacts, ...d.pacts },
     achievements: d.achievements ?? [],
