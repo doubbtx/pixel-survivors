@@ -5,7 +5,7 @@ import { BADGE_BY_ID } from '../data/pacts';
 import { Painter, canvasRes, HI } from './painter';
 import { ICON_FNS } from './icons';
 import { ACTORS, boss } from './actors';
-import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes, fountain, rune, mural, mushroom, stairs, barrow, grove } from './objects';
+import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes, fountain, rune, mural, mushroom, stairs, barrow, grove, banner, traitMark, buffMark } from './objects';
 import { spark, poof, boom, arrowSprite, prop, uiSkull } from './world';
 import { landmark } from './landmarks';
 
@@ -266,6 +266,10 @@ function build(name: string): HTMLCanvasElement {
   if (base === 'grove') return grove().canvas();
   if (base === 'tspikes') return spikes(f === 1).canvas();
   if (base === 'totem') return totem().canvas();
+  // Cechy elit: 'banner@<0-2>', 'trait_<cecha>', 'buffmark'.
+  if (base === 'banner') return banner(f).canvas();
+  if (base.startsWith('trait_')) return traitMark(base.slice(6)).canvas();
+  if (base === 'buffmark') return buffMark().canvas();
   if (ICON_FNS[name]) {
     const p = new Painter(16, 16, HI);
     ICON_FNS[name](p);

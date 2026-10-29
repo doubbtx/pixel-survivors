@@ -4,7 +4,7 @@ import { drawLabel } from '../core/font';
 import { rng } from '../core/rng';
 import { drawSprite, drawShadow, getSprite, queueWarm, warmStep } from '../gfx/sprites';
 import { ANIM } from '../gfx/actors';
-import { ENEMIES } from '../data/enemies';
+import { ENEMIES, ELITE_MODS } from '../data/enemies';
 import { LANDMARK_KINDS } from '../gfx/landmarks';
 import { CHUNK, groundChunk, groundBase, groundFrame, groundReady } from '../gfx/ground';
 import { drawScenery } from './scenery';
@@ -456,8 +456,7 @@ function drawWorld(run: Run, r: Renderer): void {
     const bx = X(b.x), by = Y(b.y), R = BAL.eliteTraits.bannerR * ZOOM;
     r.withAlpha(0.12, () => r.circle(bx, by, R, C.gold, true));
     r.withAlpha(b.t < 1 && !run.reduceFlash && run.step % 8 < 4 ? 0.3 : 0.7, () => r.circle(bx, by, R, C.gold));
-    r.line(bx, by, bx, by - 14 * ZOOM, C.brown, 2);
-    r.rect(bx, by - 14 * ZOOM, 7 * ZOOM, 5 * ZOOM, C.red);
+    drawSprite(g, `banner@${Math.floor(run.time * 6) % 3}`, bx + 5, by - 10);
   }
 
   // Wrogowie.
@@ -478,7 +477,7 @@ function drawWorld(run: Run, r: Renderer): void {
       continue;
     }
     // Wzmocniony przez dowódcę: złota kropka nad wrogiem.
-    if (e.buffT > 0 && !e.elite) r.rect(ex - 1, ey - (e.radius * e.scale + 5) * ZOOM, 2 * ZOOM, 2 * ZOOM, C.gold);
+    if (e.buffT > 0 && !e.elite) drawSprite(g, 'buffmark', ex, ey - (e.radius * e.scale + 5) * ZOOM);
     drawSprite(g, `${e.sprite}@${animFrame(e.sprite, run.step, e.uid * 7)}`, ex, ey - e.z * ZOOM, { flash: e.flash > 0, scale: e.scale, flipX: e.x > p.x });
     // Boss: zapowiedzi ataków — kurczący się krąg przed nazwanym atakiem, linia szarży (unik ma być czytelny).
     if (e.boss && e.invuln <= 0) {
@@ -539,6 +538,9 @@ function drawWorld(run: Run, r: Renderer): void {
       r.rect(ex - w / 2 - 1, by - 1, w + 2, 5, C.black);
       r.rect(ex - w / 2, by, Math.round(w * fr), 3, C.orange);
       r.rect(ex - w / 2, by, Math.round(w * fr), 1, C.gold);
+      // Cecha zachowania elity (0.41): ikona nad paskiem życia (korona, flaga, duch, odłamki).
+      const trait = e.elite.find((m) => ELITE_MODS[m]?.kind);
+      if (trait) drawSprite(g, `trait_${ELITE_MODS[trait].kind}`, ex, by - 6);
     }
   }
 
