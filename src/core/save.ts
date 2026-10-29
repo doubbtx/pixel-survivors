@@ -118,6 +118,8 @@ export interface SaveData {
   bestiary: Record<string, number>;
   /** Skórki bohaterów (odznaki Paktu). */
   skins: Record<string, string>;
+  /** R4: bohaterowie z wybranym drugim ultimate (ekran bohatera, R). */
+  altUlt?: Record<string, boolean>;
   /** Wersja gry, której ekran „What's new” gracz już widział ('' = nowa gra, bez ekranu). */
   seenVersion: string;
   /** Wyczyny (data/feats.ts): ile razy zdobyty każdy. */
@@ -263,6 +265,7 @@ export function loadSave(): SaveData {
     achievements: d.achievements ?? [],
     bestiary: { ...d.bestiary },
     skins: { ...d.skins },
+    altUlt: { ...d.altUlt },
     seenVersion: d.seenVersion ?? '',
     feats: { ...d.feats },
     unlocks: d.unlocks ?? [],

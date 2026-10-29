@@ -129,7 +129,7 @@ export class GameScreen implements Screen {
   private readonly tut: Tutorial | null;
 
   constructor(private readonly app: App, private readonly heroId: string, private readonly mode: Mode, snapshot?: RunSnapshot, tutorial = false) {
-    this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode);
+    this.run = snapshot ? Run.fromSnapshot(snapshot) : new Run(heroId, mode, 1, true, !!app.save.altUlt?.[heroId]);
     this.tut = tutorial ? new Tutorial() : null;
     this.run.scripted = tutorial;
     // Nowy run: pakty ryzyka wybrane przed startem (ui/pacts.ts) obowiązują do jego końca.

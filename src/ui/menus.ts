@@ -5,7 +5,7 @@ import { sfx } from '../core/audio';
 import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
 import { drawSprite, drawShadow, blit, TILE } from '../gfx/sprites';
 import { animFrame } from '../gfx/actors';
-import { HEROES, HERO_BY_ID, resourceDetails, type HeroDef } from '../data/heroes';
+import { HEROES, HERO_BY_ID, resourceDetails, heroAbilities, type HeroDef, type AbilityDef } from '../data/heroes';
 import { WEAPON_BY_ID } from '../data/weapons';
 import { BAL } from '../data/balance';
 import { endSlotRun } from '../game/campaign';
@@ -339,6 +339,7 @@ export class HeroSelect implements Screen {
     if (inp.pressed('back')) this.app.go(new SlotScreen(this.app, this.mode));
     if (inp.pressed('inventory') && unlocked(this.app.save, 'pacts')) { this.app.go(new PactScreen(this.app, this)); return; }
     if (inp.pressed('skip')) this.cycleSkin();
+    if (inp.pressed('reroll')) this.toggleUlt();
     if (inp.pressed('click')) {
       const { x, y } = inp.mouse;
       if (inside(x, y, LIST_X, this.pactY(), LIST_W, 18) && unlocked(this.app.save, 'pacts')) { this.app.go(new PactScreen(this.app, this)); return; }
@@ -356,6 +357,21 @@ export class HeroSelect implements Screen {
   }
 
   /** Skórka zaznaczonego bohatera: zwykła, potem kolejne zdobyte odznaki Paktu (X). */
+  /** Umiejętności z wybranym ultimate (R4). */
+  private kit(h: HeroDef): AbilityDef[] {
+    return heroAbilities(h, !!this.app.save.altUlt?.[h.id]);
+  }
+
+  /** R4: przełącza ultimate zaznaczonego bohatera (zapamiętane per bohater). */
+  private toggleUlt(): void {
+    const h = HEROES[this.sel];
+    if (!h.altUlt) return;
+    const s = this.app.save;
+    s.altUlt = { ...s.altUlt, [h.id]: !s.altUlt?.[h.id] };
+    this.app.persist();
+    sfx.play('select');
+  }
+
   private cycleSkin(): void {
     const h = HEROES[this.sel], skins = this.app.save.skins;
     const ids = ['', ...heroSkins(this.app.save.pacts.best[h.id] ?? 0).map((b) => b.id)];
@@ -423,7 +439,7 @@ export class HeroSelect implements Screen {
       // Umiejętności i zasób: przewijany obszar do dołu panelu (dłuższe opisy przy dużym tekście).
       const [ax, ay, aw, ah] = DET_AREA, oy = this.scroll.begin(r, ax, ay, aw, ah);
       const end = this.page === 1
-        ? drawSkills(r, h.abilities.map((a) => ({ def: a, cd: a.slot === 'ult' ? 'ładowane zabójstwami' : `odnowienie ${a.cooldown} s`, evo: false })), x + 12, ay + 4 - oy, DET_W - 26)
+        ? drawSkills(r, this.kit(h).map((a) => ({ def: a, cd: a.slot === 'ult' ? 'ładowane zabójstwami' : `odnowienie ${a.cooldown} s`, evo: false })), x + 12, ay + 4 - oy, DET_W - 26)
         : this.renderResource(h, x, ay + 2 - oy);
       this.scroll.end(r, end + oy - ay, ax, ay, aw, ah);
     }
@@ -467,7 +483,9 @@ export class HeroSelect implements Screen {
     this.skillsAt = ly;
     if (hovered(x + 8, ly, DET_W - 16, 40)) r.withAlpha(0.15, () => r.roundRect(x + 8, ly - 2, DET_W - 16, 42, 2, C.white));
     drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 41, C.lavender, { align: 'right', scale: 0.75 });
-    h.abilities.forEach((a, i) => {
+    // R4: drugi ultimate do wyboru.
+    if (h.altUlt) drawText(g, 'R: swap ultimate (2 to choose from)', x + 12, ly + 41, C.yellow, { scale: 0.75 });
+    this.kit(h).forEach((a, i) => {
       const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
       const ax = x + 12 + (i % 2) * 140, ay = ly + Math.floor(i / 2) * 20;
       slot(r, ax, ay, 18, a.color);

@@ -76,6 +76,13 @@ export interface HeroDef {
   passive: { name: string; desc: string; kind: HeroPassiveKind; value: number };
   resource: ResourceDef;
   abilities: AbilityDef[];
+  /** R4 (0.45): drugi ultimate do wyboru na ekranie bohatera (R); zastępuje ult z `abilities`. */
+  altUlt?: AbilityDef;
+}
+
+/** Umiejętności bohatera z wybranym ultimate (alt = drugi, jeśli bohater go ma). */
+export function heroAbilities(h: HeroDef, alt: boolean): AbilityDef[] {
+  return alt && h.altUlt ? h.abilities.map((a) => (a.slot === 'ult' ? h.altUlt! : a)) : h.abilities;
 }
 
 /** Wartość parametru umiejętności na danym poziomie. */

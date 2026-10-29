@@ -7,7 +7,7 @@ import type { AimMode, PlayerFx } from '../core/save';
 import { VIEW_W, VIEW_H } from '../core/renderer';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
-import { HERO_BY_ID, evolveAbility, type HeroDef, type AbilitySlot } from '../data/heroes';
+import { HERO_BY_ID, evolveAbility, heroAbilities, type HeroDef, type AbilitySlot } from '../data/heroes';
 import { WEAPON_BY_ID } from '../data/weapons';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { levelDef, BIOME_CYCLE, VOID_BIOME, type LevelDef } from '../data/levels';
@@ -125,6 +125,8 @@ export type Outcome = 'none' | 'dead' | 'victory';
 /** Zapis runu (slot trybu). `depth` = poziom, który gracz rozegra jako następny (albo trwający, gdy `inProgress`). */
 export interface RunSnapshot {
   hero: string;
+  /** R4: drugi ultimate wybrany na start. */
+  altUlt?: boolean;
   mode: Mode;
   depth: number;
   inProgress: boolean;
@@ -536,10 +538,11 @@ export class Run {
   fxDim = 0;
   private fxDimOn = false;
 
-  constructor(heroId: string, readonly mode: Mode, depth = 1, fresh = true) {
+  constructor(heroId: string, readonly mode: Mode, depth = 1, fresh = true, readonly altUlt = false) {
     this.hero = HERO_BY_ID[heroId];
     this.player = { x: 0, y: 0, r: 4, hp: 1, shield: 0, hurtCd: 0, iframes: 0, fx: 1, fy: 0, dashT: 0, dvx: 0, dvy: 0, vx: 0, vy: 0, moving: false, flash: 0 };
-    const ab = (slot: AbilitySlot): AbilityInst => ({ def: this.hero.abilities.find((a) => a.slot === slot)!, level: 1, cd: 0, activeT: 0 });
+    const kit = heroAbilities(this.hero, altUlt);
+    const ab = (slot: AbilitySlot): AbilityInst => ({ def: kit.find((a) => a.slot === slot)!, level: 1, cd: 0, activeT: 0 });
     this.abilities = { q: ab('q'), e: ab('e'), dash: ab('dash'), ult: ab('ult') };
     this.basicWeaponId = this.hero.weapon;
     if (fresh) {
@@ -1998,7 +2001,7 @@ export class Run {
   toSnapshot(nextDepth: number, inProgress: boolean): RunSnapshot {
     const ab = this.abilities;
     return {
-      hero: this.hero.id, mode: this.mode, depth: nextDepth, inProgress,
+      hero: this.hero.id, altUlt: this.altUlt || undefined, mode: this.mode, depth: nextDepth, inProgress,
       level: this.level, xp: this.xp, gold: this.gold, kills: this.kills, totalTime: this.totalTime, hp: this.player.hp,
       weapons: this.weapons.map((w) => [w.def.id, w.level, { ...w.bonus }]),
       passives: this.passives.map((p) => (p.evo ? [p.id, p.level, 1] : [p.id, p.level])),
@@ -2032,7 +2035,7 @@ export class Run {
   }
 
   static fromSnapshot(s: RunSnapshot): Run {
-    const run = new Run(s.hero, s.mode, s.depth, false);
+    const run = new Run(s.hero, s.mode, s.depth, false, !!s.altUlt);
     run.level = s.level;
     run.xp = s.xp;
     run.xpNext = BAL.xpToNext(s.level);
