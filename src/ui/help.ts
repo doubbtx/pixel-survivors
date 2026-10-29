@@ -32,6 +32,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Przedmioty: skrzynie z elit i bossów. Kolor to jakość. Kowadło: Kuźnia do +15, przekuwanie i jakość (strona Moce).',
       'Szczęście (pasywka Podkowa, afiks Fortuna, karty): lepsze przedmioty, częstsze skrzynie i unikaty, rzadsze karty, lepsza jakość ulepszeń broni.',
       'Trafia cię tylko mały środek postaci: przeciskaj się między pociskami.',
+      'Close combat: hits on enemies right next to you deal +20% damage (a faint orange ring shows it). Melee weapons hit harder, ranged weapons keep you safer.',
       'Nowi wrogowie: Tarczownik (blokuje pociski z przodu, obejdź go), Przywoływacz, Kamikaze (wybucha), Skoczek (teleport), Pajęczarz (sieci spowalniają).',
       'Wydarzenia: Krwawy księżyc (więcej elit i łupu), Złota godzina, Burza (pioruny w zaznaczone kręgi). Kombo: zabójstwa bez oberwania dają więcej złota.',
     ],

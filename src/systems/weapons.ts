@@ -134,7 +134,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       sfx.play(weaponSound(w));
       return;
     }
-    const targets = nearestN(run, amount, 200);
+    const targets = nearestN(run, amount, BAL.homing.bolt);
     if (targets.length === 0) { w.timer = 0.1; return; }
     for (let i = 0; i < amount; i++) {
       const t = targets[i % targets.length];
@@ -193,7 +193,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     const hit: number[] = [];
     const stun = run.augOn(w, 'chain_stun') ? 0.3 : 0, burst = run.augOn(w, 'chain_burst');
     for (let c = 0; c < s.amount; c++) {
-      let cur = c === 0 ? run.nearestEnemy(p.x, p.y, 170) : run.nearestEnemy(p.x + rng.range(-80, 80), p.y + rng.range(-60, 60), 120, hit);
+      let cur = c === 0 ? run.nearestEnemy(p.x, p.y, BAL.homing.chain) : run.nearestEnemy(p.x + rng.range(-80, 80), p.y + rng.range(-60, 60), 120, hit);
       let fx = p.x, fy = p.y, any = false;
       for (let j = 0; j <= s.pierce && cur; j++) {
         hit.push(cur.uid);

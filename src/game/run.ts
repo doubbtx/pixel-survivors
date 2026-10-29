@@ -509,6 +509,11 @@ export class Run {
   readonly telemetry: TelemetrySample[] = [];
   private takenMark = 0;
   private takenTotal = 0;
+  /** Telemetria 0.47: trafienia (bez stanów) i ile z nich z bonusem bliskiego dystansu. */
+  hitsN = 0;
+  closeHits = 0;
+  /** Czas ostatniego trafienia z bliska (pierścień przy bohaterze). */
+  closeAt = -1;
   private killsMark = 0;
   private ultMark = 0;
   /** Czas życia zabitych wrogów od ostatniej próbki (suma, liczba): zwykli i elity (TTK w telemetrii). */
@@ -1444,9 +1449,13 @@ export class Run {
     if (branded && !o.dot) this.drainHeal(BAL.brand.heal * (1 + this.flag('guardHeal')), BAL.brand.faith);
     // Długa walka z bossem: boss słabnie (BAL.bossSoften); pogoń HP tego nie wyrównuje.
     const soft = e.boss && !this.dungeon ? this.bossSoftMul(e) : 1;
+    // Bliski dystans (0.47): trafienie wroga przy graczu mocniejsze (ryzyko = obrażenia), bez stanów i źródeł procentowych.
+    const cr = BAL.close.r + e.radius;
+    const close = !o.dot && (e.x - this.player.x) ** 2 + (e.y - this.player.y) ** 2 < cr * cr && !PCT_SOURCES.has(src) ? 1 + BAL.close.bonus : 1;
+    if (!o.dot) { this.hitsN++; if (close > 1) { this.closeHits++; this.closeAt = this.totalTime; } }
     if (soft > 1 && !this.bossSoftShown) { this.bossSoftShown = true; this.showBanner(`${this.levelInfo.bossName} weakens!`); }
     // Podatność raz: ticki stanów (podpalenie, trucizna) dziedziczą ją przez bazę z trafienia, które je nałożyło.
-    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * (o.dot ? 1 : weak) * soft * hunt * cmd * (branded ? 1 + this.flag('brandDmg') : 1) * loyal * resourceDamageMul(this, src) * (1 - e.dr));
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * (o.dot ? 1 : weak) * soft * close * hunt * cmd * (branded ? 1 + this.flag('brandDmg') : 1) * loyal * resourceDamageMul(this, src) * (1 - e.dr));
     // Statystyki (tabela obrażeń, DPS) i siła gracza (trudność, 0.35.2: bez nadwyżki ponad HP wroga) liczą tylko zadane
     // obrażenia; kradzież życia całe trafienie.
     const dealt = Math.min(dmg, Math.max(0, e.hp));

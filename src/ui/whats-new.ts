@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.47',
+    lines: [
+      "Weapon balance: melee weapons (Holy Aura, Orbit Blades, axe, katana, Holy Light, Mines) hit harder and wider, Chain Lightning is a bit weaker and homing weapons pick targets a little closer. New: hits on enemies right next to you deal +20% damage (a faint orange ring shows it).",
+    ],
+  },
+  {
     version: '0.46',
     lines: [
       "Torment: levels above Nightmare for experienced players. Win an Expedition on Nightmare to open Torment 1, then each win opens the next (up to 10). Press T on the map before the first fight; every level adds one rule and more essence.",

@@ -154,6 +154,15 @@ export const BAL = {
   situations: { first: 30, every: [75, 100] as [number, number], everyLate: [60, 80] as [number, number], lateAfter: 600, warn: 2, eventGap: 20, expire: 60, coins: 8, ritualWindow: 20 },
   /** Czytelność (0.40): tryb 'auto' ataków gracza — przygaszenie przy ≥ `on` pociskach wrogów w promieniu, koniec przy ≤ `off`. */
   readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500 },
+  /** 0.47 (gracz: „biorę bronie dystansowe i samo się wygrywa”; pomiar: wręcz ≈ 30% zabójstw pocisków naprowadzanych).
+   * Mnożniki obrażeń/obszaru broni wg wzorca (z ewolucjami) i wg id (prefiks), plus bonus za trafienia z bliska. */
+  weaponTune: {
+    kind: { aura: { dmg: 1.5, area: 1.3 }, orbit: { dmg: 1.5, area: 1.3 }, cleave: { dmg: 1.35, area: 1.1 }, lash: { dmg: 1.45, area: 1.15 }, nova: { dmg: 1.2, area: 1.1 }, mines: { dmg: 1.25 } } as Record<string, { dmg: number; area?: number }>,
+    id: { chain: 0.85 } as Record<string, number>,
+  },
+  close: { r: 50, bonus: 0.2 },
+  /** Zasięg wyboru celu broni naprowadzanych (było 200 / 170): strzelają do wrogów bliżej, nie z drugiego końca ekranu. */
+  homing: { bolt: 160, chain: 130 },
   /**
    * Boss słabnie (0.40): po `after` s walki otrzymuje coraz więcej obrażeń, do ×(1 + `max`) po kolejnych `ramp` s
    * (długie walki słabych buildów; bossowie aktów i Endless, bez Króla z kurhanu, strażników i minibossów).

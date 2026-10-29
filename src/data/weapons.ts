@@ -1,5 +1,6 @@
 import { C } from '../core/palette';
 import type { Tag } from './cards';
+import { BAL } from './balance';
 
 /**
  * Definicje broni. Nowa broń = nowy wpis tutaj (+ ewentualnie nowy `kind` w systems/weapons.ts,
@@ -378,6 +379,17 @@ export const evolvesOf = (d: WeaponDef): { passive: string; into: string }[] => 
 export function evolveSource(id: string): { base: WeaponDef; passive: string } | undefined {
   for (const w of WEAPONS) for (const e of evolvesOf(w)) if (e.into === id) return { base: w, passive: e.passive };
   return undefined;
+}
+
+// Strojenie 0.47 (BAL.weaponTune): walka wręcz mocniejsza, łańcuch i noże słabsze. Obrażenia zaokrąglone do całości.
+for (const w of WEAPONS) {
+  const k = BAL.weaponTune.kind[w.kind], idMul = Object.entries(BAL.weaponTune.id).find(([id]) => w.id === id || w.id.startsWith(`${id}_`))?.[1] ?? 1;
+  const m = (k?.dmg ?? 1) * idMul;
+  if (m === 1 && !k?.area) continue;
+  const sc = (v: number) => Math.max(1, Math.round(v * m));
+  w.base.damage = sc(w.base.damage);
+  for (const l of w.levels) if (l.damage) l.damage = sc(l.damage);
+  if (k?.area) w.base.area = Math.round(w.base.area * k.area * 100) / 100;
 }
 
 export const WEAPON_BY_ID: Record<string, WeaponDef> = Object.fromEntries(WEAPONS.map((w) => [w.id, w]));

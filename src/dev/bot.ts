@@ -21,7 +21,7 @@ import { spawnEnemy } from '../systems/spawner';
  * i skrzynie, używa umiejętności, losowo wybiera awanse, karty i węzły mapy. Raport w `window.__bot` (dla Playwright):
  * przebieg runów, błędy, najwolniejsze kroki, odwiedzone stany i brakujące tłumaczenia.
  */
-export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; relics?: string[]; ult?: string; ultUses?: number; parries?: number; tl?: TelemetrySample[]; maps?: { t: number; goal: string }[]; bosses?: number[]; statOnly?: number; offers?: number; statOffers?: number; sits?: { id: string; result: string; dur: number; taken: number }[] }
+export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; relics?: string[]; ult?: string; ultUses?: number; close?: number; parries?: number; tl?: TelemetrySample[]; maps?: { t: number; goal: string }[]; bosses?: number[]; statOnly?: number; offers?: number; statOffers?: number; sits?: { id: string; result: string; dur: number; taken: number }[] }
 export interface BotReport {
   done: boolean;
   runs: BotRun[];
@@ -59,6 +59,7 @@ export class Bot {
   private readonly god: boolean;
   /** Styl ruchu (`&style=kite|melee|auto`): auto = melee dla bohaterów z bronią wręcz (cięcie), inaczej kite. */
   private readonly style: string;
+  private readonly kit: string[];
   private runIdx = 0;
   private ultMode = 'base';
   private torment = 0;
@@ -91,6 +92,8 @@ export class Bot {
     this.turbo = Math.max(1, Number(params.get('turbo') ?? 1));
     this.god = params.get('god') === '1';
     this.style = params.get('style') ?? 'auto';
+    // Porównanie broni: `&kit=bolt,orbit` = tylko te bronie na maks. poziomie, bez awansów i kart (`&style=idle`: bez ruchu i umiejętności).
+    this.kit = (params.get('kit') ?? '').split(',').filter(Boolean);
     // R4: `&ult=alt` (drugi ultimate), `&ult=mix` (na zmianę w kolejnych runach).
     this.ultMode = params.get('ult') ?? 'base';
     // Udręka (0.46): `&torment=N` — poziom wyprawy (odblokowany na potrzeby testu).
@@ -174,7 +177,14 @@ export class Bot {
         this.lastGoal = run.levelInfo.dungeon ? 'dungeon' : run.levelInfo.objective.kind;
         if (run.boss && run.boss.hp > 0) this.bossT += dt;
         else if (this.bossT > 0) { this.bosses.push(Math.round(this.bossT)); this.bossT = 0; }
-        this.play(run, dt);
+        if (this.kit.length) {
+          if (!run.weapons.some((w: any) => this.kit.includes(w.def.id))) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            run.weapons.length = 0;
+            for (const id of this.kit) { run.addWeapon(id); const w = run.weapons[run.weapons.length - 1]; w.level = w.def.levels.length + 1; }
+          }
+          run.pendingLevels = 0; run.pendingCards.length = 0;
+        }
+        if (this.style !== 'idle') this.play(run, dt);
         break;
       case 'levelup': this.countOffer(gs.levelUp, run.level); press((['n1', 'n2', 'n3'] as const)[rnd(Math.min(3, gs.levelUp?.options?.length ?? 3))]); break;
       case 'cards': press((['n1', 'n2', 'n3'] as const)[rnd(3)]); break;
@@ -257,7 +267,7 @@ export class Bot {
   private finish(run: any, result: string): void { // eslint-disable-line @typescript-eslint/no-explicit-any
     this.report.runs.push({
       hero: run.hero.id, mode: this.mode, result, time: Math.round(run.totalTime), level: run.level, kills: run.kills,
-      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, sits: run.sitLog, maps: this.maps, bosses: this.bosses, statOnly: this.statOnly, offers: this.offers, statOffers: this.statOffers, relics: [...run.relics], ult: run.altUlt ? 'alt' : 'base', ultUses: run.ultUses, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
+      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, sits: run.sitLog, maps: this.maps, bosses: this.bosses, statOnly: this.statOnly, offers: this.offers, statOffers: this.statOffers, relics: [...run.relics], ult: run.altUlt ? 'alt' : 'base', ultUses: run.ultUses, close: Math.round((run.closeHits / Math.max(1, run.hitsN)) * 100) / 100, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     this.steps = [];
     this.maps = []; this.bosses = []; this.lastLt = 0; this.bossT = 0; this.statOnly = this.offers = this.statOffers = 0;

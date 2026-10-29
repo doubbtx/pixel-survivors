@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.46.3)
+## Stan (wersja 0.47.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -728,6 +728,12 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   levelup/cards/power od x 232 (nie zasłania C/I/Y); `BAL.enemyBulletHardCap` 400 w fireVolley (poza bossem); fx 'disc'
   (wypełnione koło + obrys) dla Earthquake / Solar Flare / Death Mark; błysk trafienia wyłączony przy ≥ `BAL.readability.flashCrowd`
   (500) wrogach; koniec samouczka → MainMenu z `save.notice` (Rozwój, Kolekcja) zamiast HeroSelect. 0.46.1 = druga sesja.
+- 0.47.0 (gracz: „biorę bronie dystansowe i samo się wygrywa”, po krytyce Agenta 2): `BAL.weaponTune` — mnożniki obrażeń/obszaru
+  wg wzorca (aura/orbit ×1.5 + obszar ×1.3, cleave ×1.35, lash ×1.45, nova ×1.2, mines ×1.25, z ewolucjami) i wg id (chain ×0.85),
+  stosowane przy ładowaniu data/weapons.ts (zaokrąglenie do całości). `BAL.close` (+20% dla trafień w promieniu 50 px + promień
+  wroga, bez stanów i PCT_SOURCES; pierścień przy bohaterze `run.closeAt`, telemetria `close` w bocie). `BAL.homing` zasięg wyboru
+  celu bolt 200→160, chain 170→130. Bot: `&kit=a,b` (tylko te bronie na maks., bez awansów) i `&style=idle`. Pomiar (god, 180 s,
+  1 broń): wręcz ≈ pociski (2000–2900 zabójstw); A/B 7 bohaterów: Borgun 140→172 s, reszta w szumie.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula
