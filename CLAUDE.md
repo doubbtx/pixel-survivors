@@ -460,6 +460,8 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     obrączka), bronie (pocisk, kostur, dusze, orbita, bumerang, laser, miny), umiejętności (sztylet Vesper `dagger`, Krok cienia,
     Zniknięcie, Anioł stróż, Szarża, Uderzenie, Cień, Mignięcie, Wskrzeszenie), pasywki (skrzydło `wing`, Duplikator, Furia,
     Magnes), karta Szklane działo, zwój Talizman. Zasada: 3 tony z rampy, światło z lewej góry, detale `thin`/`spot`/`stroke`.
+  - 0.29.4: poprawka — przy podmianie ikon w 0.29.3 zginęły `it_ring`, `it_greaves`, `it_band` i `it_charm` (gra przerywała się
+    błędem „Brak sprite'a”, gdy wypadł taki przedmiot); przywrócone. Bot (endless/expedition) wykrywa takie błędy w raporcie.
   - Nie zrobione: szersza logiczna rozdzielczość na ekranach 20:9 (telefon ma pasy po bokach, interfejs nie zajmuje więcej miejsca).
 ## Plan dalej (przed wydaniem)
 

@@ -119,6 +119,11 @@ export const ITEM_ICONS: Record<string, (p: Painter) => void> = {
     p.polyShade([[5, 8.5], [0.5, 0.5], [2.6, 4.5], [0.3, 5.5], [2.6, 8.5], [0.6, 10], [5, 11.5]], RAMP.bone);
     p.thin(4.5, 9, 1.2, 1.5, C.white).thin(4.5, 10, 0.8, 6, C.white).thin(4.5, 11, 1.2, 9.8, C.lgray);
   },
+  it_ring: (p) => {
+    p.ring(8, 9.5, 5, 1.6, GOLD[2]);
+    p.line(4, 7, 6, 5, GOLD[3]).line(10, 14, 12, 12, GOLD[1]);
+    p.sphere(8, 4, 2.2, 2.2, RAMP.blue).px(7, 3, C.white);
+  },
   it_signet: (p) => {
     // Sygnet: stalowa obrączka i złota płytka z wygrawerowanym herbem (tarcza) i klejnotem.
     p.ring(8, 10.5, 4.8, 1.6, STEEL[2]);
@@ -183,4 +188,18 @@ export const ITEM_ICONS: Record<string, (p: Painter) => void> = {
     }
     p.polyShade([[1, 11], [5, 7.5], [9, 12], [6, 15.5], [1.5, 15]], RAMP.wood);
     p.thin(2, 12, 6, 9, C.clay).spot(4.5, 12, GOLD[2]);
-  },};
+  },
+  it_greaves: (p) => {
+    p.block(3, 1, 4, 11, STEEL).block(9, 1, 4, 11, STEEL);
+    p.block(2, 11, 6, 4, RAMP.wood).block(8, 11, 6, 4, RAMP.wood);
+    p.px(4, 3, C.white).px(10, 3, C.white).rect(3, 6, 4, 1, GOLD[2]).rect(9, 6, 4, 1, GOLD[2]);
+  },
+  it_band: (p) => {
+    p.ring(8, 9, 5.5, 2, GOLD[2]).ring(8, 9, 5.5, 1, GOLD[3]);
+    p.px(4, 6, C.white).px(12, 12, GOLD[1]);
+  },
+  it_charm: (p) => {
+    p.line(3, 1, 8, 6, GOLD[2]).line(13, 1, 8, 6, GOLD[2]);
+    p.poly([[8, 6], [12, 10], [8, 15], [4, 10]], C.cyan).poly([[8, 7.5], [10.5, 10], [8, 13], [5.5, 10]], C.blue).px(7, 9, C.white);
+  },
+};
