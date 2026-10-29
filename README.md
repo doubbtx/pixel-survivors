@@ -15,6 +15,7 @@ Przeglądarkowy survivors-like / bullet hell w stylu 16-bit: Canvas 2D + TypeScr
 npm install
 npm run dev       # serwer deweloperski
 npm run build     # statyczne pliki w dist/ (GitHub Pages / itch.io — ścieżki względne)
+npm run build:release  # to samo bez narzędzi deweloperskich (F3/F4/F6/F7, tryb debug, podgląd balansu) — wersja do wydania
 npm run preview   # podgląd buildu
 ```
 
@@ -494,6 +495,7 @@ src/
 - 0.44.1 (player projectiles): your magic bolts, souls, embers and sun shots are now elongated streaks pointing where they fly, so round shots always mean enemy fire.
 - 0.44.2 (readability): with Text size set to Large (the default on phones) the smallest labels are bigger: HUD counters, key badges on skills, map legend, button hints and menu notes. The selected map node's name is no longer hidden under the node below it.
 - 0.44.3 (enemy art): the cultist, shieldbearer, kamikaze, blinker, splitter and reflection are redrawn with the same detail as the newer enemies. The shieldbearer now actually carries a shield, the splitter is a cracked geode and the reflection is a knight made of glass.
+- 0.45.1 (release prep): a release build without developer tools (test keys, debug mode and the balance preview stay only in the test version), and an automatic check for untranslated text on every screen.
 
 ### Jak przetestować
 
