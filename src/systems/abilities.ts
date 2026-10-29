@@ -511,6 +511,12 @@ const CASTS: Record<AbilityKind, Cast> = {
       run.enemiesInCircle(p.x, p.y, r, (e) => run.damageEnemy(e, dmg, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 6 }));
       const ring = run.addFx('ring', p.x, p.y, C.yellow, 0.4);
       if (ring) ring.r = r;
+      // Promienie słońca od bohatera do brzegu i ogień na obwodzie (playtest 4: Rozbłysk wciąż słabo widoczny).
+      for (let k = 0; k < 12; k++) {
+        const ang = (k / 12) * Math.PI * 2 + 0.13, ray = run.addFx('line', p.x, p.y, k % 2 ? C.yellow : C.orange, 0.35);
+        if (ray) { ray.x2 = p.x + Math.cos(ang) * r; ray.y2 = p.y + Math.sin(ang) * r; }
+        run.burst(p.x + Math.cos(ang) * r * 0.92, p.y + Math.sin(ang) * r * 0.92, C.orange, 3, 50);
+      }
       run.burst(p.x, p.y, C.orange, 30, 140);
       run.addShake(6);
       sfx.play('explode');

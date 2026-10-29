@@ -98,6 +98,9 @@ export class ExpeditionMapView {
   constructor(private readonly run: Run, private readonly onTier: (tier: number) => void, private readonly onTorment: (n: number) => void, private readonly onChosen: (text: string) => void) {}
 
   /** Udręka: zmiana tylko przed pierwszą walką wyprawy (akt 1, pusta ścieżka). */
+  /** Chwila ostatniej zmiany Udręki (okienko zasad przy wyborze klawiaturą). */
+  private torAt = -1e9;
+
   private tormentOpen(): boolean {
     const ex = this.run.expedition!;
     return (ex.tormentMax ?? 0) > 0 && ex.act === 1 && ex.path.length === 0;
@@ -195,6 +198,7 @@ export class ExpeditionMapView {
       const ex = this.run.expedition!;
       ex.torment = ((ex.torment ?? 0) + 1) % ((ex.tormentMax ?? 0) + 1);
       this.onTorment(ex.torment);
+      this.torAt = performance.now();
       sfx.play('select');
     }
     // Przyciski: Plecak, Menu, Wyrusz.
@@ -212,7 +216,8 @@ export class ExpeditionMapView {
   /** Zasady Udręki pod kursorem (rysowane na końcu, nad panelem szczegółów). */
   private renderTormentTip(r: Renderer): void {
     const n = this.run.expedition!.torment ?? 0;
-    if (!n || !hovered(TOR_X, BTN_Y, TOR_W, BTN_H)) return;
+    // Mysz: pod kursorem; klawiatura / pad: przez 3 s po zmianie (playtest 4: przy T zasad nie było widać).
+    if (!n || (!hovered(TOR_X, BTN_Y, TOR_W, BTN_H) && performance.now() - this.torAt > 3000)) return;
     const lines = TORMENT.slice(0, n).map((t, i) => `${i + 1}. ${tr(t.name)}`), h = lines.length * 9 + 6;
     r.rect(TOR_X, BTN_Y - h - 2, 170, h, C.black);
     panel(r, TOR_X, BTN_Y - h - 2, 170, h);
@@ -242,7 +247,8 @@ export class ExpeditionMapView {
     // Prawa strona nagłówka: plakietki stanu wyprawy.
     const bless = ex.blessing ? EX_BLESSINGS.find((b) => b.id === ex.blessing!.id) : null;
     // Esencja: nagrody modyfikatorów ukończonych map zwiększają esencję na koniec wyprawy (BAL.expedition.rewardEssence).
-    const essence = Math.round(ex.bonus * X.rewardEssence);
+    // Razem z mnożnikiem Udręki (playtest 4: przy Udręce 10 licznik pokazywał +0%), tak jak w game-screen (mapMul).
+    const essence = Math.round(((1 + ex.bonus * X.rewardEssence / 100) * (1 + (ex.torment ?? 0) * BAL.torment.essence) - 1) * 100);
     const chips: [string, number, string?][] = [
       [`HP ${fmt(Math.ceil(run.player.hp))}/${fmt(run.stats.maxHp)}`, C.salmon], [`złoto ${fmt(Math.floor(run.gold))}`, C.gold],
       [`esencja +${essence}%`, C.cyan, 'Nagrody za modyfikatory ukończonych map. Na koniec wyprawy dostaniesz tyle więcej esencji do Rozwoju.'],

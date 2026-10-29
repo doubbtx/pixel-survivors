@@ -1209,7 +1209,9 @@ export class Run {
     // Teren: beczki w zasięgu wybuchają łańcuchowo, osłony pękają.
     terrainBlast(this, x, y, r);
     const spots = this.boomSpots, near = BAL.fx.boomMerge * BAL.fx.boomMerge;
-    if (spots.length >= BAL.fx.boomsPerStep * 2) return;
+    // Wielki tłum (playtest 4: od 10. minuty wybuchy zakrywały ekran): o połowę mniej animacji wybuchów na krok.
+    const crowd = this.enemies.count >= BAL.readability.flashCrowd;
+    if (spots.length >= BAL.fx.boomsPerStep * (crowd ? 1 : 2)) return;
     for (let i = 0; i < spots.length; i += 2) if ((spots[i] - x) ** 2 + (spots[i + 1] - y) ** 2 < near) return;
     spots.push(x, y);
     const f = this.addFx('ring', x, y, col, 0.25);
@@ -1479,7 +1481,9 @@ export class Run {
     if (o.stun) e.stunT = Math.max(e.stunT, o.stun);
     // Czytelność w tłumie: przy wielu wrogach liczby tylko dla krytyków.
     // Zwykłe liczby nie nakładają się: przy świeżej liczbie tuż obok nowa jest pomijana (krytyki zawsze widać).
-    const n = this.damageNumbers && (crit || (this.enemies.count < BAL.juice.numbersCritOnly && !this.numberNear(e.x, e.y - e.radius))) ? this.dmgNums.obtain() : null;
+    // Wielki tłum: także krytyki tylko do `numbersCrowd` liczb naraz i bez nakładania się.
+    const crowdN = this.enemies.count >= BAL.readability.flashCrowd;
+    const n = this.damageNumbers && (crit ? !crowdN || (this.dmgNums.count < BAL.juice.numbersCrowd && !this.numberNear(e.x, e.y - e.radius)) : this.enemies.count < BAL.juice.numbersCritOnly && !this.numberNear(e.x, e.y - e.radius)) ? this.dmgNums.obtain() : null;
     if (n) {
       n.x = e.x + rng.range(-3, 3);
       n.y = e.y - e.radius - 2;

@@ -364,7 +364,9 @@ export function levelAt(act: number, row: number, m: MapNode, torment = 0): Leve
     resist: m.affinity?.kind === 'resist' ? m.affinity.el : undefined,
     eliteMods: m.eliteMods,
     // Polowanie: rzadsze zwykłe fale (pojedynek z minibossem).
-    flags: crowded(m.kind === 'hunt' ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.huntCrowd } : gentle ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.gentle.crowd, enemyDmg: (f.enemyDmg ?? 0) + X.gentle.dmg } : f, act),
+    // Drugi węzeł aktu 1 (playtest 4: skok trudności po łagodnym starcie): połowa ulgi z łagodnego startu.
+    flags: crowded(m.kind === 'hunt' ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.huntCrowd } : gentle ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.gentle.crowd, enemyDmg: (f.enemyDmg ?? 0) + X.gentle.dmg }
+      : act === 1 && row === 1 && !boss && !torment ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.gentle.crowd * X.gentle.second, enemyDmg: (f.enemyDmg ?? 0) + X.gentle.dmg * X.gentle.second } : f, act),
     gentle,
   };
 }

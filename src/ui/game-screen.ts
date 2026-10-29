@@ -549,6 +549,7 @@ export class GameScreen implements Screen {
     if (run.player.hp < run.stats.maxHp && run.hurtFx > 0) h.show('hurt');
     if (run.boss) h.show('boss');
     if (run.reactions > 0) h.show('reaction');
+    if (run.closeAt >= 0) h.show('close');
     if (run.time > 20) h.show('resource');
     if (run.time > 30 && run.terrain.some((t) => (t.x - run.player.x) ** 2 + (t.y - run.player.y) ** 2 < 120 * 120)) h.show('terrain');
     if (run.task) h.show('task');
