@@ -101,6 +101,9 @@ export interface Enemy extends Poolable {
   /** Boss: następny atak fazy (0-2) i czy jego zapowiedź (nazwa) już się pokazała. */
   nextAlt: number;
   told: boolean;
+  /** Sytuacja (systems/situations.ts), z której pochodzi wróg (0 = żadna), i liczba przyzwań (limit przywoływacza). */
+  sit: number;
+  summons: number;
   tx: number;
   ty: number;
   /** Pozostałe salwy serii i czas do następnej. */

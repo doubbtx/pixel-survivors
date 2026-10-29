@@ -18,6 +18,13 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.39',
+    lines: [
+      "Situations: every minute or so enemies arrive in a formation that asks for a specific answer: a shield wall with shooters behind it, crossfire from four sides, a kamikaze swarm, a ritual of summoners, and one per biome (a stampede, attackers from below, a desert ambush, a mirror dance). A 2-second warning shows where they come from.",
+      "Break a formation for a handful of gold; kill both ritual summoners within 20 seconds for an elite chest.",
+    ],
+  },
+  {
     version: '0.38',
     lines: [
       "Expedition maps can be weak to an element (+50% damage from it) or resist one (-50%, its statuses blocked, more loot). The map panel shows your build's element mix from the last map, so you can pick a route that suits it.",

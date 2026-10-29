@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.38.0)
+## Stan (wersja 0.39.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -634,6 +634,16 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   odpornej; spawner i `encircle(..., eliteMods)`. Znacznik `drawElemMark` na węźle. Automatyczna jakość (main.ts
   `updateQuality`, `LoopStats.workMs`): praca klatki > 12 ms przez 2 s → `setWorldRes(2)`, powrót po 20 s < 6 ms, najwyżej
   2 razy; w bocie tylko z `&autoq=1`, w DEV `window.__quality`, `__loop()`. Pomiar (1000 wrogów): render p50 ~10 → 5-8 ms.
+
+- 0.39.0 (zadanie F, sytuacje): `systems/situations.ts` — tabela SITUATIONS (ogólne: shieldwall, crossfire, kamikaze,
+  ritual; biomowe z `biomes`: stampede 0, below 1/4, desert 2, mirrors 3), `plan(skala, kąt)` → offsety wokół gracza.
+  Czas poziomu (`situationT`, BAL.situations), `from` wg czasu fal; bez bossa, lochu, Zasadzki, burzy, samouczka i obok
+  EVENTS (±`eventGap`). Zapowiedź `run.situation` (render.ts: znaczniki `mark`, krąg przy `ring`; hud.ts: czerwona strzałka
+  kierunkowych), spawn z `e.sit` (pełna pula: zwalnia najdalszych zwykłych, nie nagrody), `situationKill` w killEnemy:
+  rozbicie = monety, Rytuał = skrzynia elity za obu przywoływaczy w `ritualWindow`. Dziennik `run.sitLog` (broken /
+  failed / lost), `sit` w telemetrii, `sits` w bocie; boss kasuje zapowiedź. Przywoływacz z sytuacji ma limit `summonCap`.
+  A/B (bez god): przeżycie mediana 72 → 72 s; bot god rozbija formacje w 1-8 s (bez obrażeń) — do strojenia skali na
+  prawdziwych runach (telemetria `sitLog`).
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

@@ -18,6 +18,7 @@ import type { Run } from './run';
 import type { Enemy } from '../entities/types';
 import { taskTarget } from '../systems/tasks';
 import { drawElemMark } from '../gfx/elemmark';
+import { situationRing } from '../systems/situations';
 import { BOSS_TELL, BOSS_TELLS, bossStyle } from '../systems/enemies';
 
 const MARGIN = 40;
@@ -694,6 +695,20 @@ function drawWorld(run: Run, r: Renderer): void {
     r.circle(sx, sy, R, !run.reduceFlash && run.step % 8 < 4 ? C.white : col);
     r.withAlpha(0.15, () => r.circle(sx, sy, R * Math.max(0, 1 - s.t / (s.seed ? BAL.biomeEnemies.mortarDelay : BAL.levelEvents.stormWarn)), col, true));
   }
+  // Zapowiedź sytuacji: znaczniki w miejscach pojawienia się (w polu widzenia), krąg wokół gracza przy pierścieniach.
+  if (run.situation) {
+    const w = run.situation, k = 1 - w.t / BAL.situations.warn, pulse = !run.reduceFlash && run.step % 10 < 5;
+    for (const s of w.spots) {
+      if (!s.mark) continue;
+      const sx = X(run.player.x + s.dx), sy = Y(run.player.y + s.dy), R = (s.key ? 9 : 7) * ZOOM;
+      r.circle(sx, sy, R, pulse ? C.white : s.key ? C.yellow : C.red);
+      r.withAlpha(0.2, () => r.circle(sx, sy, R * k, s.key ? C.yellow : C.red, true));
+    }
+    if (situationRing(w.id)) r.withAlpha(0.35 + 0.3 * k, () => r.circle(px, py, (70 - 30 * k) * ZOOM, pulse ? C.white : C.red));
+  }
+  // Rytuał w toku: żółty krąg pod żywymi przywoływaczami (cel priorytetowy).
+  const sa = run.sitActive;
+  if (sa?.keysLeft) for (const e of run.enemies.items) if (!e.dead && e.sit === sa.uid && e.def.behavior === 'summoner') r.circle(X(e.x), Y(e.y), 10 * ZOOM, C.yellow);
   if (fancy) g.drawImage(getVignette(), 0, 0, VW, VH);
 
   // Znaczniki poza ekranem na krawędzi w stronę celu: dobre skrzynie (Rzadki+ albo super-bonus) i cel zadania.

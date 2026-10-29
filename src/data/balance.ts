@@ -146,6 +146,12 @@ export const BAL = {
     levelHp: 0.01,
     levelDmg: 0.012,
   },
+  /**
+   * Sytuacje (systems/situations.ts, 0.39): pierwsza po `first` s czasu poziomu, potem co `every` s (po `lateAfter` s czasu fal
+   * co `everyLate`), zapowiedź `warn` s, odłożenie o `eventGap` s przy pierścieniu EVENTS, nierozbita wygasa po `expire` s;
+   * nagroda za rozbicie: monety, Rytuał: skrzynia elity, gdy obaj przywoływacze zginą w `ritualWindow` s.
+   */
+  situations: { first: 30, every: [75, 100] as [number, number], everyLate: [60, 80] as [number, number], lateAfter: 600, warn: 2, eventGap: 20, expire: 60, coins: 8, ritualWindow: 20 },
   /** Odstęp próbek telemetrii runu (s). */
   telemetryEvery: 15,
   /** Maks. spawnów na sekundę (żeby fala nie pojawiała się w jednej klatce). */
@@ -212,7 +218,7 @@ export const BAL = {
    */
   newEnemies: {
     shieldTurn: 1.4, shieldArc: 1.1, kamikazeFuseAt: 22, kamikazeFuse: 0.6, kamikazeR: 32, kamikazeDmg: 2.5,
-    blinkEvery: 3.5, blinkMin: 45, blinkMax: 75, summonEvery: 6, summonCount: 3, webEvery: 5, webR: 26, webLife: 5, webSlow: 0.5,
+    blinkEvery: 3.5, blinkMin: 45, blinkMax: 75, summonEvery: 6, summonCount: 3, summonCap: 12, webEvery: 5, webR: 26, webLife: 5, webSlow: 0.5,
   },
   /**
    * Wrogowie biomów (data/enemies.ts, systems/enemies.ts): Dzik (odstęp szarży, zapowiedź s, prędkość, czas pędu), Cierniak

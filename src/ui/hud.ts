@@ -21,6 +21,7 @@ import { powerCd } from '../systems/powers';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { REWARD_LABEL } from '../data/tasks';
 import { drawElemMark } from '../gfx/elemmark';
+import { situationName, situationRing } from '../systems/situations';
 import { UI, SMALL, OUT, tile, meter, iconSlot, cornerTag, label, approach } from './theme';
 
 /**
@@ -196,7 +197,7 @@ const ARROW_MX = 26, ARROW_MY = 52;
  */
 function drawSecretArrows(r: Renderer, run: Run): void {
   const p = run.player, k = W / VIEW_W;
-  const targets: { x: number; y: number; label: string }[] = [];
+  const targets: { x: number; y: number; label: string; col?: number }[] = [];
   let mush: MapObject | null = null;
   const d2 = (x: number, y: number) => (x - p.x) ** 2 + (y - p.y) ** 2;
   for (const o of run.mapObjects) {
@@ -210,6 +211,9 @@ function drawSecretArrows(r: Renderer, run: Run): void {
   let wall: { x: number; y: number } | null = null;
   for (const t of run.terrain) if (t.secret && t.hp > 0 && d2(t.x, t.y) < WALL_HINT_R ** 2 && (!wall || d2(t.x, t.y) < d2(wall.x, wall.y))) wall = t;
   if (wall) targets.push({ x: wall.x, y: wall.y, label: 'Ściana' });
+  // Zapowiedź sytuacji z jednego kierunku: czerwona strzałka z nazwą.
+  const sit = run.situation;
+  if (sit && !situationRing(sit.id)) targets.push({ x: p.x + Math.cos(sit.a) * 400, y: p.y + Math.sin(sit.a) * 400, label: situationName(sit.id), col: C.red });
   for (const t of targets) {
     const sx = (t.x - run.camX) * k, sy = (t.y - run.camY) * k;
     if (sx > 0 && sx < W && sy > 0 && sy < H) continue;
@@ -224,11 +228,11 @@ function drawSecretArrows(r: Renderer, run: Run): void {
       r.g.lineTo(ax + Math.cos(a - 2.4) * wid, ay + Math.sin(a - 2.4) * wid);
       r.g.fill();
     };
-    tri(8, 6, C.black); tri(6.5, 4.5, C.pink);
-    const text = `${t.label} ${Math.round(Math.sqrt(d2(t.x, t.y)) / 10)}m`, tw = textWidth(text) * 0.75 + 6;
+    tri(8, 6, C.black); tri(6.5, 4.5, t.col ?? C.pink);
+    const text = t.col ? t.label : `${t.label} ${Math.round(Math.sqrt(d2(t.x, t.y)) / 10)}m`, tw = textWidth(text) * 0.75 + 6;
     const lx = Math.max(tw / 2 + 2, Math.min(W - tw / 2 - 2, ax - Math.cos(a) * 16)), ly = ay - Math.sin(a) * 12 - 4;
     tile(r, lx - tw / 2, ly - 1, tw, 8, undefined, 0.7);
-    drawText(r.g, text, lx, ly - 0.5, C.pink, { align: 'center', ...SMALL });
+    drawText(r.g, text, lx, ly - 0.5, t.col ?? C.pink, { align: 'center', ...SMALL });
   }
 }
 

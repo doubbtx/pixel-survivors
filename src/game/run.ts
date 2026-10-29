@@ -32,6 +32,7 @@ import { updatePlayer } from '../systems/player';
 import { updateAbilities, castAbility } from '../systems/abilities';
 import { updateWeapons } from '../systems/weapons';
 import { updateSpawner, spawnEnemy } from '../systems/spawner';
+import { situationKill, type Spot } from '../systems/situations';
 import { updateEnemies } from '../systems/enemies';
 import { updateProjectiles, updateEnemyBullets } from '../systems/projectiles';
 import { updateZones } from '../systems/zones';
@@ -60,6 +61,8 @@ export interface TelemetrySample {
   life: number; eLife: number; ult: number; growth: number; goal: string;
   /** Powinowactwo mapy ('weak:fire', 'resist:ice' albo ''). */
   aff: string;
+  /** Sytuacja w toku (id) albo ''. */
+  sit: string;
 }
 
 export const DEFAULT_STATS: Stats = {
@@ -445,6 +448,13 @@ export class Run {
   eliteKills = 0;
   /** Polowanie: czas spędzony w lochu (sekretne schody) nie liczy się do limitu ucieczki. */
   huntPaused = 0;
+  /** Sytuacje (systems/situations.ts): zapowiedź, aktywna formacja, odliczanie, ostatnia (bez powtórek), dziennik wyników. */
+  situation: { id: string; t: number; a: number; spots: Spot[] } | null = null;
+  sitActive: { uid: number; id: string; left: number; keys: number; keysLeft: number; t0: number; taken0: number } | null = null;
+  situationT: number = BAL.situations.first;
+  sitSeq = 0;
+  lastSituation = '';
+  readonly sitLog: { id: string; result: 'broken' | 'failed' | 'lost'; dur: number; taken: number }[] = [];
   /** Obrażenia zadane na bieżącej (ostatniej) mapie wg żywiołu źródła — udział żywiołów buildu na mapie Ekspedycji. */
   elemDmg: Partial<Record<Element | 'none', number>> = {};
   eliteT: number = BAL.eliteEvery;
@@ -537,6 +547,9 @@ export class Run {
     this.eliteKills = 0;
     this.huntPaused = 0;
     this.elemDmg = {};
+    this.situation = null;
+    this.sitActive = null;
+    this.situationT = BAL.situations.first + rng.range(0, 15);
     this.eliteT = BAL.eliteEvery * this.levelInfo.eliteMul * BAL.eliteGap(this.levelInfo.waveOffset);
     this.nextEvent = 0;
     this.spawnAcc = 0;
@@ -634,6 +647,7 @@ export class Run {
       life: this.lifeN ? Math.round((this.lifeSum / this.lifeN) * 100) / 100 : -1, eLife: this.eliteLifeN ? Math.round(this.eliteLifeSum / this.eliteLifeN) : -1,
       ult: this.ultUses - this.ultMark, growth: Math.round(st.growth * 100) / 100,
       goal: this.levelInfo.dungeon ? 'dungeon' : this.levelInfo.objective.kind,
+      sit: this.sitActive?.id ?? this.situation?.id ?? '',
       aff: this.levelInfo.weak ? `weak:${this.levelInfo.weak}` : this.levelInfo.resist ? `resist:${this.levelInfo.resist}` : '',
     });
     this.takenMark = this.takenTotal;
@@ -645,6 +659,11 @@ export class Run {
   /** Czas na bieżącej głębokości (s): od startu poziomu, w Endless od pokonania ostatniego bossa (krzywa obrażeń wrogów). */
   depthTime(): number {
     return this.mode === 'endless' ? Math.max(0, this.time - (this.nextBossAt - BAL.endlessBossEvery)) : this.time;
+  }
+
+  /** Suma obrażeń przyjętych w runie (całe trafienia przed tarczą) — telemetria sytuacji. */
+  takenSoFar(): number {
+    return this.takenTotal;
   }
 
   /** Debug (F4): przyspiesza cel poziomu i czas fal. */
@@ -1428,6 +1447,7 @@ export class Run {
     if (this.aug('souls_raise') && (this.lastHitSrc === 'Duszki' || this.lastHitSrc === 'Rój dusz') && rng.chance(BAL.minions.harvestChance)) {
       spawnMinion(this, e.x, e.y, this.cardDamage(BAL.minions.passiveDmg), BAL.minions.passiveLife, false, 'Żniwo');
     }
+    if (e.sit) situationKill(this, e);
     const kid = e.boss ? 'boss' : e.def.id;
     this.killsById[kid] = (this.killsById[kid] ?? 0) + 1;
     resourceOnKill(this, e);
@@ -1968,7 +1988,7 @@ function newEnemy(): Enemy {
     flash: 0, slowT: 0, slowF: 0, stunT: 0, shootT: 0, shootA: 0, age: 0, dead: false, elite: null, boss: false,
     scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0, abilT: 0,
     burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, reactT: 0, brittle: 0, hitStamp: new Int32Array(SLOT_COUNT),
-    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false,
+    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false, sit: 0, summons: 0,
   };
 }
 

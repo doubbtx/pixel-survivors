@@ -20,7 +20,7 @@ import { spawnEnemy } from '../systems/spawner';
  * i skrzynie, używa umiejętności, losowo wybiera awanse, karty i węzły mapy. Raport w `window.__bot` (dla Playwright):
  * przebieg runów, błędy, najwolniejsze kroki, odwiedzone stany i brakujące tłumaczenia.
  */
-export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; parries?: number; tl?: TelemetrySample[]; maps?: { t: number; goal: string }[]; bosses?: number[]; statOnly?: number; offers?: number; statOffers?: number }
+export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; parries?: number; tl?: TelemetrySample[]; maps?: { t: number; goal: string }[]; bosses?: number[]; statOnly?: number; offers?: number; statOffers?: number; sits?: { id: string; result: string; dur: number; taken: number }[] }
 export interface BotReport {
   done: boolean;
   runs: BotRun[];
@@ -239,7 +239,7 @@ export class Bot {
   private finish(run: any, result: string): void { // eslint-disable-line @typescript-eslint/no-explicit-any
     this.report.runs.push({
       hero: run.hero.id, mode: this.mode, result, time: Math.round(run.totalTime), level: run.level, kills: run.kills,
-      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, maps: this.maps, bosses: this.bosses, statOnly: this.statOnly, offers: this.offers, statOffers: this.statOffers, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
+      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, sits: run.sitLog, maps: this.maps, bosses: this.bosses, statOnly: this.statOnly, offers: this.offers, statOffers: this.statOffers, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     this.steps = [];
     this.maps = []; this.bosses = []; this.lastLt = 0; this.bossT = 0; this.statOnly = this.offers = this.statOffers = 0;

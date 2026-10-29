@@ -745,7 +745,8 @@ export function updateEnemies(run: Run, dt: number): void {
           if (e.actT > 0 || dist > 220) break;
           if (e.def.behavior === 'summoner') {
             e.actT = N.summonEvery;
-            for (let i = 0; i < N.summonCount && run.enemies.count < BAL.maxEnemies; i++) spawnEnemy(run, 'bat', e.x + rng.range(-12, 12), e.y + rng.range(-12, 12));
+            // Limit przyzwań tylko dla przywoływaczy z sytuacji (Rytuał pozostawiony w spokoju nie zasypie ekranu).
+            for (let i = 0; i < N.summonCount && (!e.sit || e.summons < N.summonCap) && run.enemies.count < BAL.maxEnemies; i++, e.summons++) spawnEnemy(run, 'bat', e.x + rng.range(-12, 12), e.y + rng.range(-12, 12));
             run.burst(e.x, e.y, C.lime, 10, 50);
           } else {
             // Sieć pod graczem (spowalnia, dopóki w niej stoi).
