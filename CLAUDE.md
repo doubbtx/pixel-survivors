@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.47.0)
+## Stan (wersja 0.47.1)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -783,6 +783,15 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   w defiladzie nowsi wrogowie. Przerysowani: przywoływacz (płaszcz z piór, pas z kości, kostur ze szponem), topielec
   (przygarbiony, łachmany, szpony), ropucha (głowa z pyskiem, brzuch, łapy, źrenice), skrzydła aniołów (osobne lotki);
   powieka oka kopiowana co drobny piksel (wcześniej kratka).
+- 0.47.1: własni bossowie biomów (gfx/actors.ts `BOSS_ART`, `boss(b, f, i)`): biom 0 Władca Otchłani (`lich`), 1 Królowa
+  Bagien (`swampQueen`), 2 Żar Pustkowia (`magmaLord`), 3 Oko Pustki (`voidEye`), 4 Serce Pustki (`voidHeart`). Minibossy z własnymi
+  sprite'ami (`MINIBOSSES`: ciało zwykłego wroga + `Deco` przed obrysem — korona `crown()`, przebarwienie `recolor`): boarking,
+  toadqueen, sandtyrant, shatterknight, voidprism, vaultwarden, dungeonkeeper (data/enemies.ts i bestiary.ts). Zjawa z kapturem,
+  łańcuchem i rękawami. Śmierć według materiału (`DEATH_STYLE`, efekt 'fade' w render.ts): rozprysk, rozpad na bryły, rozbicie
+  na odłamki. Pogoda biomów (gfx/weather.ts, rysowana zawsze, w pikselach logicznych: łąka pyłki i świetliki, bagno deszcz
+  i mgła, pustkowie popiół i iskry, Otchłań drobiny, Pustka gwiazdy; w lochu bez). Stany żywiołów na wrogach czytelniejsze
+  (języki ognia, odłamki lodu, zygzak, bąbelki). Ultimate: `Run.ultAt` + fala i ramka w kolorze bohatera przez 0.7 s.
+  Uwaga: `fancy` (pełne efekty) jest wyłączone od 0.30.1 — nowe efekty rysuj poza tym blokiem.
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

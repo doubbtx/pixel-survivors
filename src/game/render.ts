@@ -3,7 +3,7 @@ import { C, PAL } from '../core/palette';
 import { drawLabel } from '../core/font';
 import { rng } from '../core/rng';
 import { drawSprite, drawShadow, getSprite, queueWarm, warmStep, STREAKS } from '../gfx/sprites';
-import { ANIM } from '../gfx/actors';
+import { ANIM, DEATH_STYLE } from '../gfx/actors';
 import { ENEMIES, ELITE_MODS } from '../data/enemies';
 import { LANDMARK_KINDS } from '../gfx/landmarks';
 import { CHUNK, groundChunk, groundBase, groundFrame, groundReady } from '../gfx/ground';
@@ -18,6 +18,7 @@ import type { Run } from './run';
 import type { Enemy } from '../entities/types';
 import { taskTarget } from '../systems/tasks';
 import { drawElemMark } from '../gfx/elemmark';
+import { drawWeather } from '../gfx/weather';
 import { situationRing } from '../systems/situations';
 
 /** Pociski z 4 klatkami obrotu (sprite `${nazwa}0..3`): Sierp krwi, Kości. */
@@ -93,6 +94,10 @@ function getVignette(): HTMLCanvasElement {
  * znajdźki → wrogowie → gracz → pociski → cząsteczki/efekty → liczby obrażeń → winieta.
  */
 /** Buduje z góry klatki efektów wybuchów, żeby pierwszy wybuch w runie nie przycinał gry. */
+
+/** Kolor kropli przy rozprysku (śmierć 'splat'). */
+const SPLAT_COL: Record<string, number> = { goldslime: C.gold, lurker: C.cyan, toad: C.green, toadqueen: C.green };
+
 export function warmFx(): void {
   for (const [kind, n] of Object.entries(FX_FRAMES)) for (let f = 0; f < n; f++) getSprite(`${kind}@${f}`);
 }
@@ -532,10 +537,29 @@ function drawWorld(run: Run, r: Renderer): void {
     // Stany żywiołów: płomyki (podpalenie), szron (spowolnienie lodem), iskry (porażenie), bąbelki (trucizna).
     if (e.burnT > 0 || e.slowT > 0 || e.shockT > 0 || e.poisonT > 0) {
       const top = ey - e.radius * ZOOM * e.scale, ph = (run.step + e.uid * 5) % 12;
-      if (e.burnT > 0) { r.rect(ex - 3 + (ph % 6), top - 2 - (ph >> 1), 2, 2, ph < 6 ? C.orange : C.yellow); }
-      if (e.slowT > 0) { r.withAlpha(0.35, () => r.circle(ex, ey, e.radius * ZOOM * e.scale + 1, C.cyan)); }
-      if (e.shockT > 0 && ph < 4) { r.rect(ex + 3, top + 1, 1, 3, C.yellow); r.rect(ex + 2, top + 2, 3, 1, C.white); }
-      if (e.poisonT > 0) { r.rect(ex - 4 + ((ph * 3) % 8), top + 2 - (ph % 4), 2, 2, C.lime); }
+      const rad = e.radius * ZOOM * e.scale;
+      // Ogień: trzy migoczące języki nad wrogiem (wysokość zmienia się z fazą).
+      if (e.burnT > 0) for (let k = 0; k < 3; k++) {
+        const fh = 2 + ((ph + k * 5) % 6) / 2, fx = ex - 4 + k * 3;
+        r.rect(fx, top - fh, 2, fh, C.orange);
+        r.rect(fx + 0.5, top - fh - 1, 1, 1.5, (ph + k) % 4 < 2 ? C.yellow : C.gold);
+      }
+      // Lód: szronowy krąg i odłamki lodu przy podstawie; pełne wychłodzenie = szklista poświata.
+      if (e.slowT > 0) {
+        r.withAlpha(0.35, () => r.circle(ex, ey, rad + 1, C.cyan));
+        if (e.chill > 0) r.withAlpha(0.18, () => r.circle(ex, ey, rad, C.cyan, true));
+        for (const k of [-1, 1]) { r.rect(ex + k * (rad - 1), ey + rad - 4, 1, 3, C.cyan); r.rect(ex + k * (rad - 1), ey + rad - 4, 1, 1, C.white); }
+      }
+      // Błyskawica: zygzak przy boku wroga, miga.
+      if (e.shockT > 0 && ph < 5) {
+        const zx = ex + rad - 1, zy = top + 1;
+        r.rect(zx, zy, 2, 1, C.white); r.rect(zx + 1, zy + 1, 1, 2, C.yellow); r.rect(zx - 1, zy + 3, 3, 1, C.white); r.rect(zx - 1, zy + 4, 1, 2, C.yellow);
+      }
+      // Trucizna: dwa bąbelki unoszące się i pękające.
+      if (e.poisonT > 0) for (let k = 0; k < 2; k++) {
+        const t = ((ph + k * 6) % 12) / 12, bx = ex - 3 + k * 5, by = top + 3 - t * 7;
+        r.withAlpha(1 - t * 0.7, () => { r.rect(bx, by, 2, 2, C.dgreen); r.rect(bx, by, 1, 1, C.lime); });
+      }
       // Kształty żywiołów (Ustawienia, dla daltonistów): rząd znaczników nad wrogiem.
       if (run.elemShapes) {
         const marks = ([['fire', e.burnT], ['ice', e.chill > 0 ? e.slowT : 0], ['lightning', e.shockT], ['poison', e.poisonT]] as const).filter(([, t]) => t > 0);
@@ -706,9 +730,36 @@ function drawWorld(run: Run, r: Renderer): void {
           break;
         }
         case 'fade': {
-          // Znikający wróg: biały błysk sylwetki, potem bladnięcie i lekkie uniesienie.
-          const up = (1 - k) * 4;
-          r.withAlpha(k * 0.8, () => drawSprite(g, f.sprite, X(f.x), Y(f.y) - up, { flash: k > 0.7 && !run.reduceFlash, scale: Math.max(1, Math.round(f.r)), flipX: f.a0 === 1 }));
+          // Znikający wróg według materiału (DEATH_STYLE): rozprysk, bryły spadające, odłamki na boki; reszta blednie i unosi się.
+          const sc = Math.max(1, Math.round(f.r)), flash = k > 0.7 && !run.reduceFlash, flipX = f.a0 === 1, t = 1 - k;
+          const style = DEATH_STYLE[f.sprite.slice(0, f.sprite.indexOf('@'))] ?? 'fade', x = X(f.x), y = Y(f.y);
+          if (style === 'splat') {
+            // Spłaszcza się i rozlewa, kilka kropli w bok.
+            r.withAlpha(k, () => drawSprite(g, f.sprite, x, y, { flash, scale: sc, flipX, squash: [1 + t * 0.9, Math.max(0.15, 1 - t * 1.1)] }));
+            for (let i = 0; i < 4; i++) {
+              const a = Math.PI + (i + 0.5) * (Math.PI / 4), d = t * 10 * sc;
+              r.withAlpha(k, () => r.rect(x + Math.cos(a) * d * (i % 2 ? 1 : -1), y + 4 * sc - Math.sin(a) * d * 0.6 + t * t * 8, 2, 2, SPLAT_COL[f.sprite.slice(0, f.sprite.indexOf('@'))] ?? C.lime));
+            }
+          } else if (style !== 'fade') {
+            // Cztery ćwiartki sprite'a: bryły rozjeżdżają się lekko i spadają, odłamki rozlatują się szybko na boki.
+            const shatter = style === 'shatter', R = 40;
+            for (const qx of [-1, 1]) for (const qy of [-1, 1]) {
+              const ox = qx * t * (shatter ? 12 : 3) * sc, oy = qy * t * (shatter ? 8 : 1) * sc + (shatter ? 0 : t * t * 14 * sc);
+              g.save();
+              g.beginPath();
+              g.rect(x + ox + (qx < 0 ? -R : 0), y + oy + (qy < 0 ? -R : 0), R, R);
+              g.clip();
+              r.withAlpha(shatter ? k : Math.min(1, k * 1.6), () => drawSprite(g, f.sprite, x + ox, y + oy, { flash, scale: sc, flipX }));
+              g.restore();
+            }
+            if (shatter) for (let i = 0; i < 6; i++) {
+              const a = (i / 6) * Math.PI * 2 + f.x, d = t * 18 * sc;
+              r.withAlpha(k, () => r.rect(x + Math.cos(a) * d, y + Math.sin(a) * d * 0.7, 1.5, 1.5, i % 2 ? C.white : C.cyan));
+            }
+          } else {
+            const up = t * 4;
+            r.withAlpha(k * 0.8, () => drawSprite(g, f.sprite, x, y - up, { flash, scale: sc, flipX }));
+          }
           break;
         }
         case 'disc': {
@@ -776,6 +827,21 @@ function drawWorld(run: Run, r: Renderer): void {
     g.globalCompositeOperation = prev;
     // Światło od stóp bohatera: oświetla ziemię i wszystko wokół, a nie rozbiela samej postaci.
     lit(g, (glow) => { glow(px, py + 10, 150, C.peach, 0.16); glow(px, py + 12, 60, C.yellow, 0.05); });
+  }
+  // Ultimate (0.7 s): przyciemnienie w kolorze bohatera, fala od postaci i jasne krawędzie ekranu (bez błysku przy Reduce flashing).
+  const ut = run.totalTime - run.ultAt;
+  if (ut >= 0 && ut < 0.7) {
+    const k = ut / 0.7, col = run.hero.color;
+    r.withAlpha(0.22 * (1 - k), () => r.rect(0, 0, VW, VH, C.navy));
+    r.withAlpha(0.7 * (1 - k), () => { r.circle(px, py, 10 + k * VW * 0.7, col); r.circle(px, py, 8 + k * VW * 0.66, C.white); });
+    if (!run.reduceFlash) r.withAlpha(0.35 * (1 - k), () => { const e = 10; r.rect(0, 0, VW, e, col); r.rect(0, VH - e, VW, e, col); r.rect(0, 0, e, VH, col); r.rect(VW - e, 0, e, VH, col); });
+  }
+  // Pogoda biomu (gfx/weather.ts, ~100 prostokątów): nad sceną, pod liczbami obrażeń; w lochu bez pogody.
+  if (!run.dungeon) {
+    g.save();
+    g.scale(ZOOM, ZOOM);
+    drawWeather(r, biome, run.totalTime, ox / ZOOM, oy / ZOOM, VW / ZOOM, VH / ZOOM);
+    g.restore();
   }
 
   // Zwykłe liczby małe, krytyki większe z krótkim „wyskokiem”; wszystkie blakną pod koniec życia.

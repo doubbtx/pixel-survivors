@@ -611,6 +611,7 @@ export function castAbility(run: Run, slot: AbilitySlot, free = false): void {
       if (run.ultCharge < run.ultNeed() || a.activeT > 0) return;
       run.ultCharge = 0;
       run.ultUses++;
+      run.ultAt = run.totalTime;
     } else {
       if (a.cd > 0) return;
       a.cd = abilityMaxCd(run, slot);

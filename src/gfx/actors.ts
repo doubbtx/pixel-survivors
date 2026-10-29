@@ -8,6 +8,15 @@ import { Painter, HI } from './painter';
  * Klatka `f` to parametr rysowania — kod gry wybiera ją przez animFrame().
  */
 
+/** Śmierć według materiału (game/render.ts, efekt 'fade'): rozprysk, rozpad na spadające bryły, rozbicie na odłamki; reszta blednie. */
+export type DeathStyle = 'fade' | 'splat' | 'crumble' | 'shatter';
+export const DEATH_STYLE: Record<string, DeathStyle> = {
+  slime: 'splat', goldslime: 'splat', toad: 'splat', toadqueen: 'splat', lurker: 'splat',
+  golem: 'crumble', dungeonkeeper: 'crumble', shieldbearer: 'crumble', mimic: 'crumble',
+  sentinel: 'shatter', vaultwarden: 'shatter', blinker: 'shatter', splitter: 'shatter', voidprism: 'shatter',
+  mirror: 'shatter', shatterknight: 'shatter', spinner: 'shatter',
+};
+
 /** Sekwencja klatek i liczba kroków symulacji na klatkę. */
 export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   kestra: { seq: [0, 1, 2, 3], speed: 7 },
@@ -46,6 +55,13 @@ export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   scorpion: { seq: [0, 1, 2, 3], speed: 7 },
   splitter: { seq: [0, 1, 2, 3], speed: 7 },
   mirror: { seq: [0, 1, 2, 3], speed: 6 },
+  boarking: { seq: [0, 1, 2, 3], speed: 7 },
+  toadqueen: { seq: [0, 1, 2, 1, 0, 3], speed: 9 },
+  sandtyrant: { seq: [0, 1, 2, 3], speed: 8 },
+  shatterknight: { seq: [0, 1, 2, 3], speed: 7 },
+  voidprism: { seq: [0, 1, 2, 3], speed: 8 },
+  vaultwarden: { seq: [0, 1, 2, 3], speed: 11 },
+  dungeonkeeper: { seq: [0, 1, 2, 3], speed: 11 },
 };
 
 /** Numer klatki dla czasu (kroki symulacji) z przesunięciem `seed`, żeby tłum nie ruszał się synchronicznie. */
@@ -234,18 +250,28 @@ function wraithOf(f: number, big: boolean): Painter {
   const p = new Painter(w, h, HI);
   const cx = w / 2, sway = [0, 1, 0, -1][f] * s;
   const pale = [C.slate, C.lavender, C.lgray, C.white];
-  // Postrzępiony ogon z trzema językami.
-  p.polyShade([[cx - 4 * s, 7 * s], [cx + 4 * s, 7 * s], [cx + 3 * s + sway, 15 * s], [cx + 1.5 * s + sway, 12.5 * s], [cx + sway * 0.5, 15.5 * s], [cx - 1.5 * s + sway, 12.5 * s], [cx - 3 * s + sway, 15 * s]], pale);
-  p.thin(cx - 1.5 * s, 9 * s, cx - 1.5 * s + sway, 12 * s, C.lavender).thin(cx + 1.5 * s, 9 * s, cx + 1.5 * s + sway, 12 * s, C.lavender);
-  // Ramiona-smugi.
-  p.thin(cx - 4 * s, 8 * s, cx - 5.5 * s, 10.5 * s + sway, C.lgray).thin(cx + 4 * s, 8 * s, cx + 5.5 * s, 10.5 * s - sway, C.lgray);
-  p.sphere(cx, 6 * s, 4.5 * s, 4.5 * s, pale);
-  // Puste oczodoły ze świecącymi oczami i usta.
-  for (const ex of [cx - 1.8 * s, cx + 1.4 * s]) p.sphere(ex, 6 * s, 1.1 * s, 1.2 * s, [C.navy, C.navy, C.slate, C.slate]).dot(ex, 5.8 * s, C.lime).dot(ex - 0.5, 5.8 * s, C.white);
-  p.sphere(cx, 8.8 * s, 0.9 * s, 0.6 * s, [C.navy, C.navy, C.slate, C.slate]);
+  // Postrzępiony całun z trzema językami, falującymi z klatką.
+  p.polyShade([[cx - 4.4 * s, 6 * s], [cx + 4.4 * s, 6 * s], [cx + 3.4 * s + sway, 15 * s], [cx + 1.6 * s + sway, 12.6 * s], [cx + sway * 0.5, 15.6 * s], [cx - 1.6 * s + sway, 12.6 * s], [cx - 3.4 * s + sway, 15 * s]], pale);
+  p.thin(cx - 1.6 * s, 9 * s, cx - 1.6 * s + sway, 12.2 * s, C.lavender).thin(cx + 1.6 * s, 9 * s, cx + 1.6 * s + sway, 12.2 * s, C.slate);
+  p.thin(cx - 3.6 * s, 7 * s, cx - 2.8 * s + sway, 13.6 * s, C.white);
+  // Rozwiane rękawy ze szponami.
+  for (const d of [-1, 1]) {
+    const tip: [number, number] = [cx + d * 6.4 * s, 10.4 * s - d * sway];
+    p.polyShade([[cx + d * 3.6 * s, 6.4 * s], [cx + d * 4.6 * s, 9 * s], tip], pale);
+    p.thin(tip[0], tip[1], tip[0] + d * 0.6 * s, tip[1] + 1.2 * s, C.lgray).thin(tip[0], tip[1], tip[0] - d * 0.2 * s, tip[1] + 1.4 * s, C.lgray);
+  }
+  // Kaptur ze szpicem i jasną krawędzią; twarz w głębokim cieniu.
+  p.polyShade([[cx, 0.6 * s], [cx + 4.6 * s, 4.6 * s], [cx + 4 * s, 9 * s], [cx - 4 * s, 9 * s], [cx - 4.6 * s, 4.6 * s]], pale);
+  p.thin(cx - 4.2 * s, 4.6 * s, cx - 0.4 * s, 1 * s, C.white);
+  p.sphere(cx, 6 * s, 2.9 * s, 2.6 * s, [C.black, C.navy, C.navy, C.slate]);
+  // Świecące oczy z poświatą (mrugają w klatce 2).
+  const eye = f === 2 ? C.green : C.lime;
+  for (const ex of [cx - 1.3 * s, cx + 1.1 * s]) p.rect(ex - 0.4 * s, 5.6 * s, 0.9 * s, 0.7 * s, eye).dot(ex, 5.6 * s, C.white);
+  // Łańcuch z kajdanem na szyi.
+  for (let k = 0; k < 4; k++) p.ring(cx - 2.4 * s + k * 1.6 * s, 9.6 * s + (k % 2) * 0.4, 0.6 * s, 0.3, C.dgray);
   if (big) {
-    p.polyShade([[cx - 4 * s, 2 * s], [cx - 2.5 * s, 0.4], [cx - 1, 1.2 * s], [cx, 0], [cx + 1, 1.2 * s], [cx + 2.5 * s, 0.4], [cx + 4 * s, 2 * s], [cx, 3 * s]], RAMP.gold); // korona
-    p.dot(cx, 1.6 * s, C.hotpink);
+    p.polyShade([[cx - 3.4 * s, 2.4 * s], [cx - 2.4 * s, 0.4], [cx - 1, 1.4 * s], [cx, 0], [cx + 1, 1.4 * s], [cx + 2.4 * s, 0.4], [cx + 3.4 * s, 2.4 * s], [cx, 3.2 * s]], RAMP.gold); // korona
+    p.dot(cx, 1.8 * s, C.hotpink);
     p.line(w - 3, 4 * s, w - 3, h - 3, C.lgray).thin(w - 2.6, 4 * s, w - 2.6, h - 3.5, C.white).rect(w - 4, h - 4, 3, 0.5, C.gold).dot(w - 3, 4 * s - 1, C.white); // miecz
   }
   return p.outline(C.plum);
@@ -390,7 +416,7 @@ function bat(f: number): Painter {
 }
 
 /** Golem: ciężki chód w 4 klatkach (nogi na zmianę, ramiona w przeciwfazie), kamienne płyty, mech i świecący rdzeń. */
-function golem(f: number): Painter {
+function golem(f: number, deco?: Deco): Painter {
   const p = new Painter(25, 25, HI);
   const bob = f % 2 === 1 ? -1 : 0;
   const swing = [0, 1, 0, -1][f];
@@ -417,6 +443,7 @@ function golem(f: number): Painter {
   for (const ex of [11, 14]) p.rect(ex, 5 + bob, 1, 1, C.orange).dot(ex, 5 + bob, C.yellow);
   // Mech (ditherowane kępki).
   for (const [x, y] of [[9.5, 2.5], [10.5, 2], [11, 2.5], [16, 8], [16.5, 7.5], [17, 8], [4, 10 + swing], [4.5, 9.5 + swing], [18.5, 11 - swing]] as const) p.dot(x, y + bob, (x * 2) % 2 ? C.lime : C.green);
+  deco?.(p, f);
   return p.outline();
 }
 
@@ -503,7 +530,7 @@ function cultist(f: number): Painter {
 }
 
 /** Strażnik: unoszący się kryształ z fasetami i okiem; runy krążą wokół (4 klatki), rdzeń pulsuje. */
-function sentinel(f: number): Painter {
+function sentinel(f: number, deco?: Deco): Painter {
   const p = new Painter(20, 24, HI);
   const o = f % 2 ? 0 : 1;
   for (let k = 0; k < 3; k++) {
@@ -522,6 +549,7 @@ function sentinel(f: number): Painter {
   // Runiczny krąg pod kryształem.
   p.thin(5, 23, 15, 23, C.slate);
   for (const x of [4, 7, 10, 13, 16]) p.dot(x, 22.5, C.cyan);
+  deco?.(p, f);
   return p.outline(C.navy);
 }
 
@@ -705,7 +733,7 @@ function weaver(f: number): Painter {
 /* ── Wrogowie biomów (0.30). Domyślnie zwróceni w prawo (gra odbija sprite, gdy wróg stoi na prawo od gracza). ── */
 
 /** Dzik: masywny tułów z grzywą szczeciny, kły, racice w cyklu kłusa (4 klatki). */
-function boar(f: number): Painter {
+function boar(f: number, deco?: Deco): Painter {
   const p = new Painter(24, 17, HI);
   const bob = f % 2 ? -0.5 : 0, [a, b] = [[0, 1], [1, 0], [0, -1], [-1, 0]][f];
   // Nogi (tylne ciemniejsze) z racicami.
@@ -725,6 +753,7 @@ function boar(f: number): Painter {
   p.thin(20.6, 12 + bob, 21.6, 10.4 + bob, C.cream).dot(21.6, 10.2 + bob, C.white);
   // Ogon-chwost.
   p.thin(3.2, 8 + bob, 2, 6.6 + bob, C.dbrown).dot(1.8, 6.4 + bob, C.ddbrown);
+  deco?.(p, f);
   return p.outline();
 }
 
@@ -751,7 +780,7 @@ function thornling(f: number): Painter {
 }
 
 /** Ropucha bagienna: przysadzista, z jaśniejszym brzuchem, brodawkami z odblaskiem, łapami, szerokim pyskiem i wyłupiastymi oczami; worek rezonansowy nadyma się w klatkach 1-2. */
-function toad(f: number): Painter {
+function toad(f: number, deco?: Deco): Painter {
   const p = new Painter(20, 15, HI);
   const sq = f === 3 ? 0.6 : 0;
   const skin = [C.teal, C.dgreen, C.green, C.lime];
@@ -778,6 +807,7 @@ function toad(f: number): Painter {
     p.rect(ex - 0.2, 4 + sq, 0.6, 2, C.black).dot(ex - 0.8, 4.2 + sq, C.white);
   }
   p.thin(11.4, 4.6 + sq, 17.6, 4.4 + sq, C.dgreen);
+  deco?.(p, f);
   return p.outline();
 }
 
@@ -838,7 +868,7 @@ function salamander(f: number): Painter {
 }
 
 /** Skorpion: segmentowany pancerz, szczypce, ogon zawinięty nad grzbietem z jarzącym się żądłem-celownikiem. */
-function scorpion(f: number): Painter {
+function scorpion(f: number, deco?: Deco): Painter {
   const p = new Painter(24, 19, HI);
   const l = f % 2 ? 0.5 : -0.5;
   // Nogi.
@@ -860,11 +890,12 @@ function scorpion(f: number): Painter {
     p.thin(18.5, y, 20.5, y + s * 0.5, C.orange);
     p.polyShade([[20, y - 1.2], [23.5, y - 0.6 - l], [22, y + 0.2], [23.5, y + 1 + l], [20, y + 1.2]], RAMP.gold);
   }
+  deco?.(p, f);
   return p.outline();
 }
 
 /** Rozszczepieniec: pęknięta geoda — dwie połówki w ciemnej skorupie, w szczelinie kryształy i pulsujący rdzeń (pęka mocniej w klatkach 2-3). */
-function splitter(f: number): Painter {
+function splitter(f: number, deco?: Deco): Painter {
   const p = new Painter(18, 18, HI);
   const gap = f >= 2 ? 0.9 : 0.4, pulse = f % 2 === 1;
   const half = (cx: number, side: number): [number, number][] => {
@@ -888,11 +919,12 @@ function splitter(f: number): Painter {
   // Oczy na połówkach i rysy skorupy.
   for (const ex of [5.2, 11.6]) p.rect(ex, 6.6, 1.4, 1.6, C.black).dot(ex + 0.4, 6.8, ex < 9 ? C.white : C.salmon);
   p.thin(3, 11, 5, 13, C.plum).thin(14.4, 5, 13, 7, C.black).dot(4.2, 4.6, C.white).dot(4.6, 4.2, C.salmon);
+  deco?.(p, f);
   return p.outline();
 }
 
 /** Odbicie: lustrzany sobowtór — rycerz z tafli szkła (jasne, ciemne i odbijające niebo), hełm z wizjerem, ukośne refleksy, rysy i szklany miecz. */
-function mirror(f: number): Painter {
+function mirror(f: number, deco?: Deco): Painter {
   const p = new Painter(18, 22, HI);
   const glass = [C.slate, C.lavender, C.lgray, C.white], dark = [C.navy, C.slate, C.lavender, C.lgray], sky = [C.dblue, C.blue, C.cyan, C.white];
   const fl = f % 2 ? 0.4 : 0;
@@ -914,6 +946,7 @@ function mirror(f: number): Painter {
   p.thin(13.6, 11, 16, 11.6, C.lavender);
   p.thin(15, 10.6, 17.6, 11.4, C.gold);
   p.polyShade([[16, 11], [17.4, 1.6 + fl], [18, 2 + fl], [17, 11.4]], sky).thin(16.8, 10, 17.6, 2.4 + fl, C.white);
+  deco?.(p, f);
   return p.outline();
 }
 
@@ -955,16 +988,242 @@ function takezo(f: number): Painter {
   return p.outline();
 }
 
+/** Dodatek rysowany na postaci przed obrysem (wersje minibossów: korony, zbroje, przebarwienia). */
+type Deco = (p: Painter, f: number) => void;
+
+/** Złota korona z klejnotem: środek `x`, dół `y`, szerokość `w`. */
+function crown(p: Painter, x: number, y: number, w: number, gem: number = C.red): void {
+  const h = w * 0.55;
+  p.polyShade([[x - w / 2, y], [x - w / 2, y - h], [x - w / 4, y - h * 0.5], [x, y - h * 1.1], [x + w / 4, y - h * 0.5], [x + w / 2, y - h], [x + w / 2, y]], RAMP.gold);
+  p.thin(x - w / 2, y - 0.2, x + w / 2, y - 0.2, C.orange).dot(x, y - h * 0.4, gem).dot(x - 0.2, y - h * 0.5, C.white);
+}
+
+/**
+ * Minibossy (strażnicy aktów, skala 2): ciało zwykłego wroga z własnymi insygniami, żeby nie wyglądały jak powiększony zwykły wróg.
+ */
+const MINIBOSSES: Record<string, (f: number) => Painter> = {
+  // Król dzików: korona, złote kły, blizna przez oko.
+  boarking: (f) => boar(f, (p, k) => {
+    const b = k % 2 ? -0.5 : 0;
+    crown(p, 19.4, 4.6 + b, 4.4);
+    p.thin(20.6, 12 + b, 21.8, 10 + b, C.gold).dot(21.8, 9.8 + b, C.yellow);
+    p.thin(18.2, 7 + b, 20, 9.4 + b, C.salmon);
+  }),
+  // Matrona ropuch: korona z lilii z lotosem między oczami.
+  toadqueen: (f) => toad(f, (p, k) => {
+    const sq = k === 3 ? 0.6 : 0;
+    p.sphere(14.6, 3.2 + sq, 2.6, 1, [C.teal, C.dgreen, C.green, C.lime]);
+    for (const dx of [-1.2, 0, 1.2]) p.polyShade([[14.6 + dx - 0.7, 3 + sq], [14.6 + dx + 0.7, 3 + sq], [14.6 + dx * 1.2, 0.6 + sq - (dx ? 0 : 0.6)]], [C.plum, C.pink, C.salmon, C.white]);
+  }),
+  // Tyran piasku: karmazynowy pancerz i złota korona kolców na grzbiecie.
+  sandtyrant: (f) => scorpion(f, (p) => {
+    p.recolor([C.black, C.ddbrown, C.dred, C.red, C.orange]);
+    for (const x of [8, 10.5, 13]) p.polyShade([[x - 0.8, 10.4], [x + 0.8, 10.4], [x, 8]], RAMP.gold);
+  }),
+  // Strzaskany rycerz: przyciemnione szkło, czerwony wizjer, pęknięcia z żarem.
+  shatterknight: (f) => mirror(f, (p) => {
+    p.recolor([C.black, C.black, C.navy, C.slate, C.dgray]);
+    p.rect(6.4, 4.6, 5.2, 1.2, C.black).dot(7.6, 4.8, C.red).dot(10.4, 4.8, C.red);
+    p.thin(6, 12, 8, 16, C.hotpink).thin(12, 10, 13, 13, C.hotpink);
+  }),
+  // Pryzmat pustki: geoda w barwach pustki z krążącymi okruchami.
+  voidprism: (f) => splitter(f, (p, k) => {
+    p.recolor([C.black, C.navy, C.plum, C.pink, C.hotpink]);
+    for (let i = 0; i < 4; i++) {
+      const a = k * (Math.PI / 4) + (i * Math.PI) / 2;
+      p.dot(9 + Math.cos(a) * 8.4, 9 + Math.sin(a) * 8.4, i % 2 ? C.cyan : C.white);
+    }
+  }),
+  // Strażnik skarbca: złote okucia kryształu i korona nad szczytem.
+  vaultwarden: (f) => sentinel(f, (p, k) => {
+    const o = k % 2 ? 0 : 1;
+    p.thin(3, 9 + o, 17, 9 + o, C.gold).thin(10, 1.4 + o, 10, 20.6 + o, C.gold);
+    crown(p, 10, 2 + o, 5, C.cyan);
+  }),
+  // Strażnik lochu: rogi, kajdany z łańcuchem i żarzące się runy.
+  dungeonkeeper: (f) => golem(f, (p, k) => {
+    const bob = k % 2 === 1 ? -1 : 0;
+    p.polyShade([[9, 3 + bob], [7, -0.4 + bob], [10.2, 2.4 + bob]], RAMP.bone).polyShade([[16, 3 + bob], [18, -0.4 + bob], [14.8, 2.4 + bob]], RAMP.bone);
+    p.rect(2.4, 15 + bob, 5, 1.4, C.dgray).rect(18, 15 + bob, 5, 1.4, C.dgray);
+    for (let x = 7.6; x < 18; x += 1.6) p.ring(x, 17.6 + bob + Math.sin(x) * 0.4, 0.7, 0.3, C.lgray);
+    for (const [x, y] of [[10, 12.5], [15, 12.5], [12.5, 10]] as const) p.dot(x, y + bob, C.orange);
+  }),
+};
+
 export const ACTORS: Record<string, (f: number) => Painter> = {
   kestra, borgun, ignara, morwen, vesper, aurel, takezo, wraith, wraithbig, angel, angelbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel, mimic, stag,
   shieldbearer, summoner, kamikaze, blinker, weaver, boar, thornling, toad, lurker, salamander, scorpion, splitter, mirror,
+  ...MINIBOSSES,
 };
 
+/** Bossowie biomów 1-4 (biom 0: Władca Otchłani, `lich`). Wszyscy 37×38, 4 klatki: oddech / puls / ruch detali. */
+const BOSS_ART: ((f: number) => Painter)[] = [swampQueen, magmaLord, voidEye, voidHeart];
+
+/** Boss biomu `i` (sprite 'boss<i>'): biom 0 i nieznane — Władca Otchłani w kolorach biomu. */
+export function boss(b: Biome, f: number, i: number): Painter {
+  return i >= 1 && BOSS_ART[i - 1] ? BOSS_ART[i - 1](f) : lich(b, f);
+}
+
+/** Królowa Bagien: rozdęta ropucha-królowa w błotnej spódnicy, korona z liści lilii z lotosem, pnącza zamiast włosów, kostur z pałki wodnej, muchy. */
+function swampQueen(f: number): Painter {
+  const p = new Painter(37, 38, HI);
+  const o = f % 2 ? 0 : 1, wave = (f >> 1) & 1;
+  const mud = [C.black, C.ddbrown, C.dbrown, C.brown], skin = [C.teal, C.dgreen, C.green, C.lime];
+  // Błotna spódnica z kapiącym dołem.
+  const hem: [number, number][] = [];
+  for (let x = 33; x >= 4; x -= 2) hem.push([x, 35 + ((x / 2 + wave) % 2 ? 1 : 0)]);
+  p.polyShade([[8, 24 + o], [29, 24 + o], [33, 35], ...hem, [4, 35]], mud);
+  for (const x of [9, 16, 23, 29]) p.thin(x, 30 + o, x + (wave ? 0.5 : -0.5), 35.5, C.ddbrown);
+  p.dot(7 + wave * 2, 37, C.dbrown).dot(27 - wave * 2, 37.4, C.dbrown);
+  // Kostur z pałki wodnej (z lewej).
+  p.stroke(3.5, 9, 3.5, 36, C.dbrown).thin(3.8, 9.5, 3.8, 35.5, C.brown);
+  p.sphere(3.5, 7, 1.6, 3.4, RAMP.wood).thin(3.5, 2.6, 3.5, 3.8, C.tan).thin(2, 12, 0.6, 9, C.green).thin(5, 12, 6.6, 8.6, C.green);
+  // Rozdęte ciało, jasny brzuch, brodawki.
+  p.sphere(18.5, 22 + o, 12.5, 9, skin);
+  p.sphere(18.5, 25 + o, 7.6, 5.4, [C.dgreen, C.tan, C.cream, C.cream]);
+  for (const [x, y] of [[9, 19], [12, 16], [26, 17], [28, 22], [10, 25], [25.6, 25]] as const) p.dot(x, y + o, C.teal).dot(x - 0.4, y - 0.4 + o, C.lime);
+  // Grube ramiona: lewe trzyma kostur, prawe z błotną kulą.
+  p.sphere(6.6, 21 + o, 3.4, 4.4, skin).sphere(4.6, 25 + o, 2.2, 1.8, skin);
+  p.sphere(30.6, 21 + o, 3.4, 4.4, skin).sphere(32, 26 + o, 2.8, 2.6, mud).dot(31, 25 + o, C.tan);
+  // Głowa: szeroki żabi pysk z wargą, policzki.
+  p.sphere(18.5, 12 + o, 9, 6.2, skin);
+  p.thin(11, 14.6 + o, 26, 14.6 + o, C.teal).thin(11, 15.2 + o, 26, 15.2 + o, C.dgreen).thin(10.4, 14 + o, 11, 14.6 + o, C.teal).thin(26.6, 14 + o, 26, 14.6 + o, C.teal);
+  p.dot(13, 12.4 + o, C.salmon).dot(24, 12.4 + o, C.salmon);
+  // Wyłupiaste oczy z pionową źrenicą.
+  for (const ex of [13.4, 23.6]) {
+    p.sphere(ex, 8 + o, 2.8, 2.6, [C.dbrown, C.orange, C.gold, C.yellow]);
+    p.rect(ex - 0.3, 6.6 + o, 0.8, 3, C.black).dot(ex - 1.2, 7 + o, C.white);
+  }
+  // Pnącza opadające z głowy.
+  for (const [x, l] of [[10.4, 10], [9.4, 13], [27, 11], [28, 14]] as const) p.thin(x, 9 + o, x + (wave ? 0.6 : -0.6) * (x < 18 ? -1 : 1), 9 + o + l, (x * 3) % 2 > 1 ? C.dgreen : C.green);
+  // Korona: liście lilii i lotos.
+  for (const [x, y, rx] of [[12, 4.4, 3], [25, 4.4, 3], [18.5, 3.4, 3.4]] as const) {
+    p.sphere(x, y + o, rx, 1.6, skin).thin(x, y + o, x + 1.4, y + 1.4 + o, C.teal);
+  }
+  for (const [dx, h] of [[-2.2, 2.8], [0, 4], [2.2, 2.8]] as const) p.polyShade([[18.5 + dx - 1.2, 3 + o], [18.5 + dx + 1.2, 3 + o], [18.5 + dx * 1.3, 3 - h + o]], [C.plum, C.pink, C.salmon, C.white]);
+  p.disc(18.5, 2.8 + o, 0.9, C.yellow);
+  // Muchy krążące wokół.
+  for (let k = 0; k < 3; k++) {
+    const a = f * 1.3 + k * 2.1;
+    p.dot(18.5 + Math.cos(a) * 15, 13 + Math.sin(a) * 6, C.black).dot(18.5 + Math.cos(a) * 15 + 0.5, 12.6 + Math.sin(a) * 6, C.lgray);
+  }
+  return p.outline();
+}
+
+/** Żar Pustkowia: kolos z zastygłej lawy — kamienne bryły z żarzącymi się pęknięciami, rdzeń w piersi, pięści z magmy, korona płomieni i iskry. */
+function magmaLord(f: number): Painter {
+  const p = new Painter(37, 38, HI);
+  const o = f % 2 ? 0 : 1, hot = f % 2 === 1;
+  const rock = [C.black, C.black, C.ddbrown, C.dbrown], glow = hot ? C.yellow : C.orange;
+  // Nogi-kolumny.
+  p.block(11, 28, 5, 9, rock).block(21, 28, 5, 9, rock);
+  p.thin(13, 30, 14, 36, glow).thin(23.6, 31, 23, 36, glow);
+  // Ramiona z pięściami z magmy.
+  p.sphere(5.4, 21 + o, 3.6, 5, rock).sphere(31.6, 21 + o, 3.6, 5, rock);
+  p.sphere(5, 28 + o, 3.4, 3.2, RAMP.fire).sphere(32, 28 + o, 3.4, 3.2, RAMP.fire);
+  p.dot(4, 27 + o, C.yellow).dot(31, 27 + o, C.yellow).dot(4.6, 27.6 + o, C.white);
+  // Tułów i barki-głazy.
+  p.sphere(18.5, 20 + o, 11, 9.4, rock);
+  p.sphere(8, 13 + o, 4.6, 3.6, rock).sphere(29, 13 + o, 4.6, 3.6, rock);
+  // Pęknięcia z lawą.
+  const cracks: [number, number, number, number][] = [[10, 15, 13, 19], [13, 19, 11, 24], [27, 16, 24, 20], [24, 20, 26, 25], [15, 25, 18.5, 27.6], [22, 25, 18.5, 27.6], [7, 12, 9, 14.6], [30, 12, 28, 14.6]];
+  for (const [x0, y0, x1, y1] of cracks) p.stroke(x0, y0 + o, x1, y1 + o, C.rust).thin(x0, y0 + o, x1, y1 + o, glow);
+  p.dot(10, 12 + o, C.brown).dot(25, 14 + o, C.brown).dot(14, 13 + o, C.dbrown);
+  // Rdzeń w piersi.
+  p.disc(18.5, 19 + o, hot ? 3.4 : 3, C.rust).disc(18.5, 19 + o, hot ? 2.4 : 2, C.orange).disc(18.5, 19 + o, 1.2, hot ? C.white : C.yellow);
+  // Głowa: kamienny łeb, oczy-szczeliny i rozżarzona paszcza.
+  p.sphere(18.5, 9 + o, 5.4, 4.6, rock);
+  p.rect(15, 8 + o, 2.6, 1, glow).rect(19.6, 8 + o, 2.6, 1, glow).dot(16, 8 + o, C.white).dot(20.6, 8 + o, C.white);
+  p.rect(16.4, 11 + o, 4.2, 1.2, C.rust).thin(16.6, 11.2 + o, 20.4, 11.2 + o, glow);
+  // Korona płomieni (wysokość zmienia się z klatką).
+  const hs = [[4, 6, 5, 7, 4], [5, 7, 6, 5, 3], [3, 5, 7, 6, 5], [5, 6, 4, 7, 5]][f];
+  [12.4, 15.4, 18.5, 21.6, 24.6].forEach((x, i) => p.polyShade([[x - 1.6, 6 + o], [x + 1.6, 6 + o], [x + (i % 2 ? 0.6 : -0.6), 6 - hs[i] + o]], RAMP.fire));
+  p.dot(18.5, 3 + o, C.white);
+  // Iskry unoszące się w górę.
+  for (let k = 0; k < 4; k++) p.dot(6 + ((k * 9 + f * 3) % 26), 2 + ((k * 5 + f * 4) % 10), k % 2 ? C.yellow : C.orange);
+  return p.outline();
+}
+
+/** Oko Pustki: lewitujące oko w mięsistej skorupie z kolcami, kosmiczna tęczówka z gwiazdami i pionową źrenicą, sześć falujących macek, krąg run. */
+function voidEye(f: number): Painter {
+  const p = new Painter(37, 38, HI);
+  const o = f % 2 ? 0 : 1;
+  const flesh = [C.black, C.navy, C.plum, C.pink];
+  // Macki: łańcuch kul malejących, falują z klatką.
+  for (let t = 0; t < 6; t++) {
+    const bx = 8 + t * 4.2, ph = f * 0.9 + t * 1.3;
+    for (let k = 0; k < 7; k++) {
+      const y = 24 + k * 1.9 + o, x = bx + Math.sin(ph + k * 0.7) * (0.6 + k * 0.35), r = 1.7 - k * 0.2;
+      p.sphere(x, y, r, r, flesh);
+    }
+  }
+  // Kolce na obrzeżu skorupy.
+  for (let k = 0; k < 9; k++) {
+    const a = Math.PI + (k * Math.PI) / 8, cx = 18.5 + Math.cos(a) * 12.4, cy = 15 + o + Math.sin(a) * 11.4;
+    const tx = 18.5 + Math.cos(a) * 15.6, ty = 15 + o + Math.sin(a) * 14.4;
+    p.polyShade([[cx - Math.sin(a) * 1.2, cy + Math.cos(a) * 1.2], [cx + Math.sin(a) * 1.2, cy - Math.cos(a) * 1.2], [tx, ty]], RAMP.bone);
+  }
+  // Skorupa i powieki.
+  p.sphere(18.5, 16 + o, 12.6, 11.4, flesh);
+  p.sphere(18.5, 16 + o, 9.4, 8.2, [C.black, C.black, C.navy, C.navy]);
+  // Gałka z żyłkami.
+  p.sphere(18.5, 16 + o, 8.6, 7.4, RAMP.bone);
+  for (const [x0, y0, x1, y1] of [[10.6, 14, 13, 15], [11, 19, 13.4, 17.6], [26.4, 13.4, 24, 15], [26, 19.4, 23.6, 18]] as const) p.thin(x0, y0 + o, x1, y1 + o, C.salmon);
+  // Kosmiczna tęczówka z gwiazdami i pionową źrenicą.
+  p.sphere(18.5, 16 + o, 5.4, 5.4, [C.navy, C.dblue, C.blue, C.cyan]);
+  p.ring(18.5, 16 + o, 5.4, 0.6, C.hotpink).ring(18.5, 16 + o, 3.6, 0.4, C.cyan);
+  for (const [x, y] of [[16, 14], [21, 13.4], [20.4, 18.6], [15.6, 18]] as const) p.dot(x, y + o, C.white);
+  const pw = f === 2 ? 0.6 : 1.2;
+  p.polyShade([[18.5, 11.6 + o], [18.5 + pw, 16 + o], [18.5, 20.4 + o], [18.5 - pw, 16 + o]], [C.black, C.black, C.black, C.navy]);
+  p.dot(16.2, 13 + o, C.white).dot(16.6, 13 + o, C.white).dot(16.2, 13.4 + o, C.white);
+  // Górna powieka (cień) i krąg run.
+  p.thin(10.4, 10 + o, 26.6, 10 + o, C.plum);
+  for (let k = 0; k < 8; k++) {
+    const a = f * (Math.PI / 8) + (k * Math.PI) / 4;
+    p.dot(18.5 + Math.cos(a) * 17.4, 16 + o + Math.sin(a) * 4.4, k % 2 ? C.cyan : C.hotpink);
+  }
+  return p.outline();
+}
+
+/** Serce Pustki: kryształowe serce bijące w rytmie klatek (f=1 skurcz), tętnice u góry, wbite odłamki, jarzący rdzeń, krążące kryształy i macki cienia u dołu. */
+function voidHeart(f: number): Painter {
+  const p = new Painter(37, 38, HI);
+  const beat = f === 1 ? 1 : f === 3 ? 0.5 : 0, s = 1 + beat * 0.08;
+  const heart = [C.black, C.navy, C.plum, C.pink], crystal = [C.navy, C.dblue, C.cyan, C.white];
+  // Macki cienia pod sercem.
+  for (const [x, d] of [[13, -1], [18.5, 0], [24, 1]] as const) {
+    for (let k = 0; k < 5; k++) p.sphere(x + d * k * 0.8 + Math.sin(f + k) * 0.6, 29 + k * 1.6, 1.6 - k * 0.22, 1.6 - k * 0.22, [C.black, C.black, C.navy, C.plum]);
+  }
+  // Tętnice.
+  p.stroke(14, 9, 12, 2, C.plum).stroke(23, 9, 25.6, 3, C.plum).stroke(18.5, 8, 18.5, 1.6, C.dred);
+  p.thin(12.2, 2.4, 12.6, 4, C.pink).thin(25.4, 3.4, 25, 5, C.pink);
+  for (const [x, y] of [[12, 1.6], [25.6, 2.4], [18.5, 1]] as const) p.ring(x, y, 1.2, 0.4, C.plum);
+  // Serce: dwa płaty i spiczasty dół.
+  const cx = 18.5, cy = 17;
+  p.sphere(cx - 5.4 * s, cy - 3 * s, 6.4 * s, 6 * s, heart).sphere(cx + 5.4 * s, cy - 3 * s, 6.4 * s, 6 * s, heart);
+  p.polyShade([[cx - 11.6 * s, cy - 2 * s], [cx + 11.6 * s, cy - 2 * s], [cx, cy + 12 * s]], heart);
+  p.thin(cx, cy - 6 * s, cx, cy + 9 * s, C.black);
+  for (const [x0, y0, x1, y1] of [[cx - 8, cy - 4, cx - 4, cy + 3], [cx + 7, cy - 6, cx + 4, cy + 2], [cx - 3, cy + 5, cx + 2, cy + 8]] as const) p.thin(x0, y0, x1, y1, C.dred);
+  // Wbite odłamki kryształu.
+  for (const [x, y, h, d] of [[cx - 8, cy - 7, 5, -1], [cx + 8.4, cy - 6, 6, 1], [cx + 3, cy + 4, 4, 1], [cx - 4, cy + 1, 3.6, -1]] as const) {
+    p.polyShade([[x - 1.4, y + 1], [x + 1.4, y + 1], [x + d * 0.8, y - h]], crystal);
+  }
+  // Jarzący się rdzeń.
+  p.disc(cx, cy, 3.4 + beat, C.plum).disc(cx, cy, 2.4 + beat * 0.8, C.hotpink).disc(cx, cy, 1.2, f === 1 ? C.white : C.salmon);
+  p.dot(cx - 6, cy - 6, C.white).dot(cx - 5.4, cy - 6.6, C.salmon);
+  // Krążące kryształy.
+  for (let k = 0; k < 4; k++) {
+    const a = f * (Math.PI / 4) + (k * Math.PI) / 2, x = cx + Math.cos(a) * 16, y = cy + Math.sin(a) * 6;
+    p.polyShade([[x, y - 2.4], [x + 1.2, y], [x, y + 2.4], [x - 1.2, y]], crystal);
+  }
+  return p.outline();
+}
+
 /**
- * Boss 37×38: szata w kolorach biomu (cieniowana, z fałdami, runami i pasem), naramienniki z kolcami, czaszka, korona
+ * Władca Otchłani 37×38: szata w kolorach biomu (cieniowana, z fałdami, runami i pasem), naramienniki z kolcami, czaszka, korona
  * z klejnotami, pulsujące kule mocy i iskry wokół (4 klatki: oddech, puls kul, krążące iskry, falujący dół szaty).
  */
-export function boss(b: Biome, f: number): Painter {
+function lich(b: Biome, f: number): Painter {
   const p = new Painter(37, 38, HI);
   const robe = b.bossRobe;
   const o = f % 2 ? 0 : 1; // klatki parzyste o piksel niżej — "oddech"

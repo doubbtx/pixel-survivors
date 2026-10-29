@@ -124,14 +124,14 @@ export const ENEMIES: Record<string, EnemyDef> = {
     shoot: { volley: { shape: 'gapRing', count: 18, gap: 4, speed: 58, sprite: 'eb_cyan' }, aim: 'random', cooldown: 4.5, windup: 0.7, range: 180 },
   },
   /** Minibossowie lochów z losowymi atakami (systems/enemies.ts updateWarden): skarbiec za pęknięta ścianą i zwykły loch. */
-  warden: { id: 'warden', color: C.cyan, name: 'Strażnik skarbca', sprite: 'sentinel', hp: 80, speed: 34, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1, bullet: 'eb_cyan' },
-  keeper: { id: 'keeper', color: C.orange, name: 'Strażnik lochu', sprite: 'golem', hp: 80, speed: 30, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
+  warden: { id: 'warden', color: C.cyan, name: 'Strażnik skarbca', sprite: 'vaultwarden', hp: 80, speed: 34, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1, bullet: 'eb_cyan' },
+  keeper: { id: 'keeper', color: C.orange, name: 'Strażnik lochu', sprite: 'dungeonkeeper', hp: 80, speed: 30, damage: 10, radius: 7, xp: 40, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
   /** Minibossowie biomów (0.30): elita map Ekspedycji i wydarzenie w Endless, własne zestawy ataków (systems/enemies.ts MINIBOSS_ATTACKS). */
-  boarking: { id: 'boarking', color: C.brown, name: 'Boar King', sprite: 'boar', hp: 110, speed: 30, damage: 14, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
-  toadqueen: { id: 'toadqueen', color: C.green, name: 'Toad Matriarch', sprite: 'toad', hp: 110, speed: 26, damage: 13, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_cyan' },
-  sandtyrant: { id: 'sandtyrant', color: C.gold, name: 'Sand Tyrant', sprite: 'scorpion', hp: 110, speed: 30, damage: 13, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
-  shatterknight: { id: 'shatterknight', color: C.lavender, name: 'Shattered Knight', sprite: 'mirror', hp: 110, speed: 36, damage: 14, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_blue' },
-  voidprism: { id: 'voidprism', color: C.pink, name: 'Void Prism', sprite: 'splitter', hp: 120, speed: 30, damage: 13, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_pink' },
+  boarking: { id: 'boarking', color: C.brown, name: 'Boar King', sprite: 'boarking', hp: 110, speed: 30, damage: 14, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
+  toadqueen: { id: 'toadqueen', color: C.green, name: 'Toad Matriarch', sprite: 'toadqueen', hp: 110, speed: 26, damage: 13, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_cyan' },
+  sandtyrant: { id: 'sandtyrant', color: C.gold, name: 'Sand Tyrant', sprite: 'sandtyrant', hp: 110, speed: 30, damage: 13, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_orange' },
+  shatterknight: { id: 'shatterknight', color: C.lavender, name: 'Shattered Knight', sprite: 'shatterknight', hp: 110, speed: 36, damage: 14, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_blue' },
+  voidprism: { id: 'voidprism', color: C.pink, name: 'Void Prism', sprite: 'voidprism', hp: 120, speed: 30, damage: 13, radius: 7, xp: 50, behavior: 'warden', knockResist: 1, bullet: 'eb_pink' },
   boss: {
     id: 'boss', color: C.pink, name: 'Władca Otchłani', sprite: 'boss', hp: BAL.bossBaseHp, speed: 22, damage: 25, radius: 10, xp: 400, behavior: 'boss', knockResist: 1,
   },
