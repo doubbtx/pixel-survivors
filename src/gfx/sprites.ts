@@ -6,7 +6,7 @@ import { Painter, canvasRes, HI } from './painter';
 import { ICON_FNS, crescentPts, die } from './icons';
 import { ACTORS, boss } from './actors';
 import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes, fountain, rune, mural, mushroom, stairs, barrow, grove, banner, traitMark, buffMark } from './objects';
-import { spark, poof, boom, arrowSprite, prop, uiSkull } from './world';
+import { spark, poof, boom, arrowSprite, prop, uiSkull, ARROW_DIRS } from './world';
 import { landmark } from './landmarks';
 
 /**
@@ -62,6 +62,30 @@ function orb(size: number, ramp: Ramp, ring: number, spikes = 0): Painter {
   p.soft((x, y) => Math.hypot(x - c, y - c) / (r * 0.72), ramp[2], 0.35);
   p.soft((x, y) => Math.hypot(x - c, y - c) / (r * 0.46), ramp[3], 0.4);
   p.soft((x, y) => Math.hypot(x - c, y - c) / Math.max(0.6, r * 0.24), C.white, 0.3);
+  return p.outline(ring);
+}
+
+/**
+ * Pocisk gracza (0.44.1): wydłużone wrzeciono wzdłuż lotu z jasnym grotem i blednącym ogonem, w `ARROW_DIRS` kierunkach
+ * (`pb_<nazwa>@<kierunek>`). Zasada czytelności: okrągłe = wróg (`orb`), wydłużone = gracz.
+ */
+export const STREAKS: Record<string, { len: number; w: number; ramp: Ramp; ring: number }> = {
+  bolt: { len: 6.5, w: 2.4, ramp: RAMP.blue, ring: C.dblue },
+  soul: { len: 5.5, w: 2, ramp: [C.plum, C.pink, C.salmon, C.white], ring: C.lime },
+  ember: { len: 5.5, w: 2, ramp: RAMP.fire, ring: C.gold },
+  sun: { len: 8, w: 3.2, ramp: [C.orange, C.gold, C.yellow, C.white], ring: C.rust },
+};
+
+function streak(name: string, k: number): Painter {
+  const { len, w, ramp, ring } = STREAKS[name];
+  const size = Math.ceil(len * 2 + 3), p = new Painter(size, size, HI), c = size / 2;
+  const a = (k * Math.PI * 2) / ARROW_DIRS, ux = Math.cos(a), uy = Math.sin(a);
+  const at = (d: number, side = 0): [number, number] => [c + ux * d - uy * side, c + uy * d + ux * side];
+  // Ogon (dwa stopnie, cieńszy z tyłu), korpus-romb, jasny grot i biały punkt z przodu.
+  p.poly([at(-len, 0), at(-len * 0.3, w * 0.45), at(0, 0), at(-len * 0.3, -w * 0.45)], ramp[0]);
+  p.poly([at(-len * 0.55, 0), at(0, w * 0.75), at(len * 0.75, 0), at(0, -w * 0.75)], ramp[1]);
+  p.poly([at(-len * 0.1, 0), at(len * 0.25, w * 0.55), at(len * 0.85, 0), at(len * 0.25, -w * 0.55)], ramp[2]);
+  p.disc(...at(len * 0.4), w * 0.42, ramp[3]).dot(...at(len * 0.6), C.white);
   return p.outline(ring);
 }
 
@@ -264,6 +288,7 @@ function build(name: string): HTMLCanvasElement {
   if (base === 'poof') return poof(f).canvas();
   if (base === 'boom') return boom(f).canvas();
   if (base === 'arrow' || base === 'arrowc') return arrowSprite(f, base === 'arrowc').canvas();
+  if (base.startsWith('pb_')) return streak(base.slice(3), f).canvas();
   if (base.startsWith('prop')) return prop(Number(base.slice(4)), f).canvas();
   if (base.startsWith('lm')) return landmark(BIOMES[Number(base.slice(2))], f).canvas();
   if (base.startsWith('shrine')) return shrine(Number(base.slice(6))).canvas();

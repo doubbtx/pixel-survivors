@@ -491,6 +491,7 @@ src/
 - 0.38.1 (projectiles and hero animation): enemy shots look like glowing energy (dark warning rim, bright white core) instead of glossy marbles, and boss shots have a spiked corona so they read differently. Heroes breathe when standing, crouch and spring up when using an ability, leave afterimages when dodging, kick up dust when running and jolt when hit.
 - 0.41.4 (elite trait art, layout test): the Bannerman plants a real fluttering banner, every elite with a behaviour trait shows its icon above the health bar (crown, flag, ghost, shards), enemies buffed by a Commander get a gold arrow. New `npm run layout` checks every screen in both languages for text that spills out of its box.
 - 0.42.1 (UI review): on wide phones (20:9) the game fills the whole screen instead of a 16:9 box with black bars (menus and HUD stay centred, the world and backgrounds reach the edges). The centre banner no longer collides with kill-streak callouts. Anvil and Risk Pacts use the same Back [Esc] button as other screens, the Endless hero select title is translated, long level-up descriptions shrink slightly before being cut, the Build / Backpack / Synergies buttons during picks are larger, and shop service details are centred.
+- 0.44.1 (player projectiles): your magic bolts, souls, embers and sun shots are now elongated streaks pointing where they fly, so round shots always mean enemy fire.
 
 ### Jak przetestować
 
