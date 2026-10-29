@@ -592,7 +592,8 @@ export class Run {
     this.dmgStep = 0;
     const t = this.waveTime();
     const base = P.baseHp * BAL.enemyHpMul(this.time) * BAL.depthHpMul(this.depth);
-    this.powerMul = Math.min(P.max, Math.max(1, Math.pow((this.dpsEma * P.ttk(t)) / base, P.exp)));
+    const floor = P.floor(this.level), chase = Math.pow((this.dpsEma * P.ttk(t)) / (base * floor), P.chaseExp);
+    this.powerMul = Math.min(P.max, Math.max(1, floor * Math.min(P.chaseMax, Math.max(P.chaseMin, chase))));
   }
 
   private sample(): void {
@@ -1184,14 +1185,15 @@ export class Run {
     const loyal = this.loyal && src === this.weapons[0].def.name ? Math.pow(1 + BAL.loyal.dmg, this.loyal) : 1;
     const resist = this.resistOf(e) !== undefined && damageElement(src, this.augElem) === this.resistOf(e) ? BAL.bossResist.mul : 1;
     const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * loyal * resourceDamageMul(this, src) * (1 - e.dr));
-    // Statystyki (tabela obrażeń, DPS) liczą tylko zadane obrażenia; siła gracza (trudność) i kradzież życia całe trafienie.
+    // Statystyki (tabela obrażeń, DPS) i siła gracza (trudność, 0.35.2: bez nadwyżki ponad HP wroga) liczą tylko zadane
+    // obrażenia; kradzież życia całe trafienie.
     const dealt = Math.min(dmg, Math.max(0, e.hp));
     e.hp -= dmg;
     if (!this.reduceFlash) e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;
-    if (!pct) this.dmgStep += dmg;
+    if (!pct) this.dmgStep += dealt;
     this.lastHitSrc = src;
     if (st.lifesteal > 0) this.heal(Math.min(dmg * st.lifesteal, st.maxHp * 0.02));
     if (o.knock) {

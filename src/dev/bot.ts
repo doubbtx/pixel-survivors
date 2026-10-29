@@ -1,3 +1,4 @@
+import { BAL } from '../data/balance';
 import { ENEMIES } from '../data/enemies';
 import type { App, Screen } from '../ui/app';
 import type { Action } from '../core/input';
@@ -19,7 +20,7 @@ import { spawnEnemy } from '../systems/spawner';
  * i skrzynie, używa umiejętności, losowo wybiera awanse, karty i węzły mapy. Raport w `window.__bot` (dla Playwright):
  * przebieg runów, błędy, najwolniejsze kroki, odwiedzone stany i brakujące tłumaczenia.
  */
-export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; parries?: number; tl?: TelemetrySample[] }
+export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; parries?: number; tl?: TelemetrySample[]; maps?: number[]; bosses?: number[] }
 export interface BotReport {
   done: boolean;
   runs: BotRun[];
@@ -61,6 +62,11 @@ export class Bot {
   private wait = 0;
   private dashCd = 0;
   private castT = 0;
+  /** Pomiar balansu: czasy ukończonych poziomów (map) i walk z bossem w bieżącym runie (s czasu gry). */
+  private maps: number[] = [];
+  private bosses: number[] = [];
+  private lastLt = 0;
+  private bossT = 0;
 
   constructor(private readonly app: App, params: URLSearchParams) {
     this.mode = params.get('bot') === 'expedition' ? 'expedition' : 'endless';
@@ -73,6 +79,8 @@ export class Bot {
     this.maxTime = Number(params.get('time') ?? 300);
     this.turbo = Math.max(1, Number(params.get('turbo') ?? 1));
     this.god = params.get('god') === '1';
+    // Pomiar balansu: `&pmax=1e6` zdejmuje sufit mnożnika siły (BAL.power.max), żeby telemetria pokazała prawdziwy zakres.
+    if (params.has('pmax')) (BAL.power as { max: number }).max = Number(params.get('pmax'));
     this.tier = Math.max(1, Math.min(4, Number(params.get('tier') ?? 1)));
     if (params.get('fresh') !== '1') app.save.unlocks = [...ALL_UNLOCKS];
     window.addEventListener('error', (e) => this.report.errors.push(String(e.message)));
@@ -145,6 +153,10 @@ export class Bot {
         if (gs.tut && run.step % 90 === 0) press((['q', 'e', 'dash', 'ult'] as const)[rnd(4)]);
         if (!gs.tut && run.totalTime > this.maxTime && run.outcome === 'none') { this.finish(run, 'timeout'); return; }
         if (this.god) { run.player.hp = run.stats.maxHp; run.player.iframes = Math.max(run.player.iframes, 0.1); }
+        if (run.time < this.lastLt - 1) this.maps.push(Math.round(this.lastLt));
+        this.lastLt = run.time;
+        if (run.boss && run.boss.hp > 0) this.bossT += dt;
+        else if (this.bossT > 0) { this.bosses.push(Math.round(this.bossT)); this.bossT = 0; }
         this.play(run, dt);
         break;
       case 'levelup': press((['n1', 'n2', 'n3'] as const)[rnd(Math.min(3, gs.levelUp?.options?.length ?? 3))]); break;
@@ -220,9 +232,10 @@ export class Bot {
   private finish(run: any, result: string): void { // eslint-disable-line @typescript-eslint/no-explicit-any
     this.report.runs.push({
       hero: run.hero.id, mode: this.mode, result, time: Math.round(run.totalTime), level: run.level, kills: run.kills,
-      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
+      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, maps: this.maps, bosses: this.bosses, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     this.steps = [];
+    this.maps = []; this.bosses = []; this.lastLt = 0; this.bossT = 0;
     this.app.save.slots[this.mode] = null;
     this.report.unlocks = [...this.app.save.unlocks];
     this.startNext();

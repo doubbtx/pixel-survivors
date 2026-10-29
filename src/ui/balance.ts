@@ -29,7 +29,7 @@ export class BalanceScreen implements Screen {
       const t = min * 60;
       L.push([`  minuta ${min}`, `x${BAL.enemyHpMul(t).toFixed(1)} / x${BAL.enemyDmgMul(t).toFixed(2)}, elity co ${Math.round(BAL.eliteEvery * BAL.eliteGap(t))} s, salwy x${BAL.patternDensity(t).toFixed(2)}`]);
     }
-    L.push(['Siła buildu (BAL.power)', `mnożnik 1-${BAL.power.max}, obrażenia wrogów x${BAL.power.dmg(1, 0)}-${BAL.power.dmg(9, 999)} wg głębokości, cel TTK ${BAL.power.ttk(0).toFixed(2)}-${BAL.power.ttk(900).toFixed(2)} s`]);
+    L.push(['Siła buildu (BAL.power)', `mnożnik 1-${BAL.power.max} (podłoga x${BAL.power.floor(50).toFixed(0)} na poziomie 50), obrażenia wrogów x${BAL.power.dmg(1, 0)}-${BAL.power.dmg(9, 999)} wg głębokości, cel TTK ${BAL.power.ttk(0).toFixed(2)}-${BAL.power.ttk(900).toFixed(2)} s`]);
     L.push(['Miękkie limity: krytyk 50% / 100% / 200%', [0.5, 1, 2].map((v) => `${Math.round(BAL.softCap(v, BAL.softCaps.crit!) * 100)}%`).join(' / ')]);
     L.push(['  szybkość ruchu +100% / +200%', [1, 2].map((v) => `+${Math.round(BAL.softCap(v, BAL.softCaps.speedBonus!) * 100)}%`).join(' / ')]);
   }

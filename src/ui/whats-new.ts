@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.36',
+    lines: [
+      "Enemy toughness rewards strong builds: enemies grow with your level and follow your damage only gently, so a much stronger build clears noticeably faster. Fewer damage sponges, steadier difficulty, smaller crowds.",
+    ],
+  },
+  {
     version: '0.35',
     lines: [
       "Enemy damage no longer grows with how strong your build is: it depends on depth and on time spent at that depth, gently in the first minutes.",

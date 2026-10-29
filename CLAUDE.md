@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.35.0)
+## Stan (wersja 0.36.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -597,6 +597,12 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - 0.35.1 (zadanie C): obrażenia wrogów `BAL.power.dmg(głębokość, Run.depthTime())` zamiast `powerMul^0.45` (dopasowane do
   P35 telemetrii; samouczek bez krzywej). Walidacja bez god mode (7 bohaterów × 4 runy): mediana przeżycia 82 → 80 s.
   Następne: D (przebudowa `powerMul` HP: podłoga czasowa + ograniczone gonienie liczone z zadanych obrażeń, bez overkillu).
+- 0.36.0 (zadanie D): `powerMul` = podłoga `1.06^(poziom-12)` × pogoń `sqrt(DPS·ttk/(baza·podłoga))` w [0.45, 8], całość
+  [1, 300]; DPS liczy tylko obrażenia zadane (bez nadwyżki; Egzekucja zadawała 3× maks. HP). Podłoga w pm (bossowie dalej
+  pm^0.5). Bot: `&pmax=` (sufit do pomiarów), `BotRun.maps`/`bosses` (czasy poziomów i walk z bossem). A/B 2 rundy:
+  przeżycie mediana 75.5→77 s, boss Ekspedycja P90 58→18 s, Endless P90 175→124 s, mapa P90 230→230 (P50 +24%),
+  tłum ≥900 wrogów 7.7%→1%. Po wydaniu: objKills (mapa P50), pula ulepszeń przy szybszym levelowaniu, za krótcy bossowie
+  Ekspedycji, telemetria elit / ulta / growth, TTK zamiast kills/15 s.
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

@@ -3,6 +3,7 @@
  * `{}` = wstawka (liczba, nazwa — tłumaczona osobno). Nowy napis w grze: dopisz tu jego polską wersję.
  */
 export const PL: Record<string, string> = {
+  "Enemy toughness rewards strong builds: enemies grow with your level and follow your damage only gently, so a much stronger build clears noticeably faster. Fewer damage sponges, steadier difficulty, smaller crowds.": "Wytrzymałość wrogów nagradza silne buildy: wrogowie rosną z poziomem postaci i tylko łagodnie gonią Twoje obrażenia, więc dużo mocniejszy build czyści wyraźnie szybciej. Mniej gąbek na obrażenia, równiejsza trudność, mniejsze tłumy.",
   "Enemy damage no longer grows with how strong your build is: it depends on depth and on time spent at that depth, gently in the first minutes.": "Obrażenia wrogów nie rosną już z siłą Twojego buildu: zależą od głębokości i czasu na tej głębokości, łagodnie w pierwszych minutach.",
   "Expedition map: point at any later node (or press R/X once the act has started) to preview it and highlight every path to it. Maps with a bonus show a green +.": "Mapa wyprawy: wskaż dowolny dalszy węzeł (albo naciśnij R/X, gdy akt już trwa), by zobaczyć jego podgląd i wszystkie drogi do niego. Mapy z bonusem mają zielony +.",
   "Camps and shrines now offer two bonuses to choose from instead of a random one. Dungeons do not use up camp bonuses.": "Obozy i kapliczki proponują teraz dwa bonusy do wyboru zamiast losowego. Loch nie zużywa bonusu z obozu.",

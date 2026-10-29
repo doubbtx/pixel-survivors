@@ -121,8 +121,11 @@ export const BAL = {
   /** Gęstość salw wrogów (mnożnik liczby pocisków) rośnie po 4. minucie czasu fal, do +60%. */
   patternDensity: (t: number) => 1 + Math.min(0.6, Math.max(0, (t - 240) / 600)),
   /**
-   * Siła buildu: HP wrogów dopasowuje się do średniego DPS gracza (średnia krocząca `emaSec` s), tak by przeciętny wróg
-   * ginął w ok. `ttk(t)` sekundy całego DPS. Tylko w górę (mnożnik ≥ 1), z wykładnikiem `exp` (łagodniej niż 1:1) i limitem `max`.
+   * Siła buildu (0.35.2): HP wrogów = baza × `floor(poziom postaci)` × pogoń. Podłoga to oczekiwana siła na danym poziomie
+   * (dopasowana do telemetrii bez sufitu: log(siły) koreluje z poziomem 0.82, z głębokością 0.66), pogoń dopasowuje się
+   * do średniego DPS (średnia krocząca `emaSec` s, tylko obrażenia zadane, bez nadwyżki ponad HP wroga), tak by przeciętny
+   * wróg ginął w ok. `ttk(t)` s — ale łagodnie: pierwiastek (`chaseExp`), w granicach `chaseMin`-`chaseMax`. Build 4× ponad
+   * podłogę zabija 2× szybciej (dawniej 1.3×), najsłabsze buildy dostają do 55% litości. Całość ≥ 1 i ≤ `max` (jak dawniej).
    * Obrażenia wrogów NIE zależą od siły buildu (0.35.1): krzywa `dmg(głębokość, czas na tej głębokości)` zastąpiła
    * `powerMul^0.45`. Dopasowana do 35. percentyla dawnego mnożnika z telemetrii bota (21 runów Endless, 14 Ekspedycji):
    * ×2 na głębokość, w obrębie głębokości rośnie z czasem (najwyżej ×2; na pierwszej głębokości wolniej i najwyżej ×1.6
@@ -134,7 +137,10 @@ export const BAL = {
     emaSec: 15,
     baseHp: 15,
     ttk: (t: number) => 0.06 + 0.06 * Math.exp(-t / 240),
-    exp: 0.8,
+    floor: (level: number) => Math.pow(1.06, Math.max(0, level - 12)),
+    chaseExp: 0.5,
+    chaseMin: 0.45,
+    chaseMax: 8,
     max: 300,
     dmg: (depth: number, t: number) => Math.min(6.3, Math.pow(2, depth - 1) * (depth <= 1 ? Math.min(1.6, 1 + t / 300) : Math.min(2, 1 + t / 120))),
     levelHp: 0.01,
