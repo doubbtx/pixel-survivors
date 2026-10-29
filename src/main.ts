@@ -76,6 +76,7 @@ const step = (dt: number) => {
   fadeT = Math.max(0, fadeT - dt);
   // Pełny ekran: F na każdym ekranie.
   if (input.pressed('fullscreen')) toggleFullscreen();
+  if (bot?.frozen) { input.endStep(); return; }
   const t0 = bot ? performance.now() : 0;
   bot?.tick(screen, dt);
   screen.update(dt);

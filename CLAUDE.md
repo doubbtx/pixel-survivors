@@ -448,6 +448,11 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
   - Pad: RT = bronie i pasywki, prawa gałka (klik) = kowadło; mapa: LB/RB (R/X) zmienia trudność; Kuźnia: góra/dół + RB/X
     przełącza opcję (`optSel`). Wszystkie menu mają odpowiedniki klawiszy (strzałki, Enter, Esc, Tab).
   - Mapa Ekspedycji: klik w węzeł tylko zaznacza (`ExpeditionMapView.update`), wejście przyciskiem Wyrusz albo Enterem.
+  - 0.29.1 (grafika): sieć Kestry (`drawNet` w game/render.ts: rozwinięcie, ukośne oczka z linki, węzły, lina z obciążnikami),
+    minimapa (strzałka gracza w kierunku patrzenia, narożniki widoku, kształty znaczników: boss romb, elity i przedmioty
+    kwadraty, obiekty kółka; tło 0.88), wybuch (`gfx/world.ts boom`: chmura kul ognia z iskrami zamiast jednej sfery),
+    deszcz strzał (spadające strzały z lotkami w cyklach 0.35 s, pył przy wbiciu). Bot `bot=gallery`: każdy bohater
+    używa Q, E, uniku i R w tłumie, `scripts/bot.cjs` robi zrzut po każdej (gra stoi do zrzutu: `Bot.frozen`), /tmp/bot-shots/gallery.
   - Nie zrobione: szersza logiczna rozdzielczość na ekranach 20:9 (telefon ma pasy po bokach, interfejs nie zajmuje więcej miejsca).
 ## Plan dalej (przed wydaniem)
 

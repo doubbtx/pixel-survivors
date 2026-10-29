@@ -40,27 +40,54 @@ export function poof(f: number): Painter {
   return p;
 }
 
-/** Eksplozja 34×34: błysk, kula ognia, rozpad w dym. */
+/**
+ * Eksplozja 34×34: błysk z promieniami, nieregularna chmura kul ognia (bez jednej gładkiej sfery — po powiększeniu
+ * wyglądała jak piłka), iskry, potem rozpad w dym.
+ */
 export function boom(f: number): Painter {
   const p = new Painter(34, 34, HI);
   const r = new Rng(91 + f);
   const c = 17;
-  if (f === 0) p.sphere(c, c, 5, 5, [C.gold, C.yellow, C.white, C.white]);
-  if (f === 1) p.sphere(c, c, 10, 10, RAMP.fire).sphere(c - 1, c - 1, 6, 6, [C.orange, C.gold, C.yellow, C.white]);
-  if (f === 2) {
-    p.sphere(c, c, 14, 14, [C.dred, C.rust, C.orange, C.gold]).sphere(c - 2, c - 2, 7, 7, [C.orange, C.gold, C.yellow, C.yellow]);
-  }
-  if (f >= 3) {
-    const smoke = f === 3 ? [C.dbrown, C.rust, C.orange, C.gold] : f === 4 ? [C.black, C.slate, C.dgray, C.lavender] : [C.black, C.navy, C.slate, C.dgray];
-    const n = f === 5 ? 6 : 9;
+  /** Kule rozrzucone wokół środka: liczba, odległość, promień, rampa. */
+  const blobs = (n: number, dist: number, rad: number, ramp: readonly number[]) => {
     for (let k = 0; k < n; k++) {
-      const a = (k / n) * Math.PI * 2 + f;
-      const d = 6 + f * 2;
-      const rr = f === 5 ? 2.5 : 4.5;
-      p.sphere(c + Math.cos(a) * d, c + Math.sin(a) * d, rr, rr, smoke);
+      const a = (k / n) * Math.PI * 2 + r.range(-0.35, 0.35), d = dist * r.range(0.55, 1), rr = rad * r.range(0.7, 1.15);
+      p.sphere(c + Math.cos(a) * d, c + Math.sin(a) * d, rr, rr, ramp);
     }
-    if (f === 3) p.sphere(c, c, 6, 6, [C.rust, C.orange, C.gold, C.yellow]);
-    for (let i = 0; i < 8; i++) p.spot(r.int(2, 31), r.int(2, 31), f === 3 ? C.gold : C.dgray);
+  };
+  const embers = (n: number, spread: number, col: number) => {
+    for (let k = 0; k < n; k++) {
+      const a = r.range(0, Math.PI * 2), d = r.range(spread * 0.6, spread);
+      p.spot(c + Math.cos(a) * d, c + Math.sin(a) * d, col);
+    }
+  };
+  if (f === 0) {
+    // Błysk: jasny rdzeń i krótkie promienie.
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2 + 0.2, l = k % 2 ? 6 : 9;
+      p.thin(c, c, c + Math.cos(a) * l, c + Math.sin(a) * l, k % 2 ? C.gold : C.yellow);
+    }
+    p.sphere(c, c, 4, 4, [C.gold, C.yellow, C.white, C.white]);
+  }
+  if (f === 1) {
+    blobs(6, 5, 4.5, RAMP.fire);
+    p.sphere(c, c, 5, 5, [C.orange, C.gold, C.yellow, C.white]);
+    embers(10, 14, C.yellow);
+  }
+  if (f === 2) {
+    blobs(8, 9, 5, [C.dred, C.rust, C.orange, C.gold]);
+    blobs(5, 4, 4, [C.rust, C.orange, C.gold, C.yellow]);
+    embers(12, 16, C.gold);
+  }
+  if (f === 3) {
+    blobs(9, 11, 4, [C.dbrown, C.rust, C.orange, C.gold]);
+    blobs(3, 3, 3, [C.rust, C.orange, C.gold, C.yellow]);
+    embers(10, 16, C.orange);
+  }
+  if (f >= 4) {
+    const smoke = f === 4 ? [C.black, C.slate, C.dgray, C.lavender] : [C.black, C.navy, C.slate, C.dgray];
+    blobs(f === 4 ? 9 : 7, 12 + (f - 4) * 3, f === 4 ? 3.5 : 2.5, smoke);
+    embers(6, 16, C.dgray);
   }
   return p;
 }

@@ -6,6 +6,7 @@
  *   node scripts/bot.cjs bot=endless hero=all runs=6 time=300 turbo=4 lang=en
  *   node scripts/bot.cjs bot=expedition hero=kestra runs=1 time=1800 turbo=6 tier=2 shots=60
  *
+ * Galeria grafiki: `node scripts/bot.cjs bot=gallery` (zrzuty do /tmp/bot-shots/gallery, viewport 1440x810).
  * Opcje bota (src/dev/bot.ts): bot, hero, runs, time, turbo, tier, god, fresh (nowy gracz bez odblokowań).
  * `lang` (en / pl) ustawia język gry, `shots=N` zapisuje zrzut co N sekund do /tmp/bot-shots, `limit` = limit w minutach.
  * Kod wyjścia 1, gdy były błędy albo brakujące tłumaczenia.
@@ -19,7 +20,7 @@ if (!q.has('bot')) q.set('bot', 'endless');
 
 (async () => {
   const b = await chromium.launch();
-  const p = await b.newPage({ viewport: { width: 960, height: 540 } });
+  const p = await b.newPage({ viewport: q.get('bot') === 'gallery' ? { width: 1440, height: 810 } : { width: 960, height: 540 } });
   const errors = [];
   p.on('pageerror', (e) => errors.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -29,8 +30,16 @@ if (!q.has('bot')) q.set('bot', 'endless');
   let lastShot = 0, rep = null;
   if (shots) require('fs').mkdirSync('/tmp/bot-shots', { recursive: true });
   while (Date.now() - t0 < limit) {
-    await p.waitForTimeout(2000);
+    await p.waitForTimeout(q.get('bot') === 'gallery' ? 200 : 2000);
     rep = await p.evaluate(() => window.__bot ?? null);
+    // Galeria: zamówione zrzuty (gra stoi do potwierdzenia).
+    while (rep && rep.shot && rep.ack !== rep.shot) {
+      require('fs').mkdirSync('/tmp/bot-shots/gallery', { recursive: true });
+      await p.screenshot({ path: `/tmp/bot-shots/gallery/${rep.shot}.png` });
+      await p.evaluate((n) => { window.__bot.ack = n; }, rep.shot);
+      await p.waitForTimeout(150);
+      rep = await p.evaluate(() => window.__bot);
+    }
     if (shots && Date.now() - lastShot > shots * 1000) {
       lastShot = Date.now();
       await p.screenshot({ path: `/tmp/bot-shots/${Math.round((lastShot - t0) / 1000)}.png` });

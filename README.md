@@ -437,6 +437,7 @@ src/
 - Text size (Settings → Readability): Normal or Large (default on touch screens). Large draws descriptions at full size: abilities, hero resource, Arsenal, weapons and passives, elements, map modifiers, item description, pause, synergies, help. Long texts scroll with the mouse wheel, a finger drag, PageUp / PageDown or the right stick.
 - Reduce flashing (Settings → Readability) and a photosensitivity warning on first launch: blinking warnings stay lit, no white hit flashes, the hero turns half-transparent instead of blinking while invulnerable.
 - Key rebinding (Settings → General → Controls): movement, Q, E, dodge, ultimate, backpack, weapons, skip, banish, anvil, pause. Arrows, Enter, Esc, Tab and 1-4 always work in menus. The HUD, ability descriptions and the tutorial show your keys.
+- Graphics (0.29.1): Kestra's Net is a real rope net, explosions are clouds of fire instead of one big ball, Arrow Rain shows falling arrows, the minimap has a direction arrow, view corners and shaped markers. Test bot `bot=gallery` screenshots every hero's abilities for review.
 - Expedition map: clicking a node only selects it; Travel or Enter starts it (no accidental fights).
 - Gamepad: RT opens weapons and passives, right stick click the anvil, LB / RB change the map difficulty, forge options with up / down and RB.
 

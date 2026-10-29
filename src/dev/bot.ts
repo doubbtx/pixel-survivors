@@ -5,9 +5,11 @@ import { GameScreen } from '../ui/game-screen';
 import { HEROES } from '../data/heroes';
 import { trMisses } from '../core/i18n';
 import { ALL_UNLOCKS } from '../data/unlocks';
+import { spawnEnemy } from '../systems/spawner';
 
 /**
- * Bot testowy (tylko serwer deweloperski): `?bot=endless`, `?bot=expedition` albo `?bot=tutorial` (samouczek do końca), opcjonalnie `&hero=kestra`
+ * Bot testowy (tylko serwer deweloperski): `?bot=endless`, `?bot=expedition`, `?bot=tutorial` (samouczek do końca)
+ * albo `?bot=gallery` (przegląd grafiki: każdy bohater używa Q, E, uniku i R w tłumie, zrzut po każdym — scripts/bot.cjs), opcjonalnie `&hero=kestra`
  * (`all` = po kolei wszyscy), `&runs=3`, `&time=600` (limit czasu runu w sekundach gry), `&turbo=4` (kroki na klatkę),
  * `&tier=1` (trudność map Ekspedycji 1-4), `&god=1` (nietykalność i pełne życie co krok — do testów dalszej zawartości), `&fresh=1` (bez odblokowań, jak nowy gracz;
  * domyślnie bot ma wszystkie).
@@ -27,6 +29,9 @@ export interface BotReport {
   missing: string[];
   /** Odblokowania w zapisie po ostatnim runie (test stopniowych odblokowań z `fresh=1`). */
   unlocks: string[];
+  /** Galeria: nazwa zrzutu do zrobienia (gra stoi, aż skrypt odpowie `ack` tą samą nazwą). */
+  shot?: string;
+  ack?: string;
 }
 
 /** Obiekty mapy, do których bot podchodzi. */
@@ -38,6 +43,10 @@ export class Bot {
   readonly turbo: number;
   private readonly mode: Mode;
   private readonly tutorial: boolean;
+  private readonly gallery: boolean;
+  /** Galeria: kolejka kroków bieżącego bohatera i czas do następnego. */
+  private steps: (() => string | void)[] = [];
+  private stepT = 0;
   private readonly heroes: string[];
   private readonly runs: number;
   private readonly maxTime: number;
@@ -53,6 +62,7 @@ export class Bot {
   constructor(private readonly app: App, params: URLSearchParams) {
     this.mode = params.get('bot') === 'expedition' ? 'expedition' : 'endless';
     this.tutorial = params.get('bot') === 'tutorial';
+    this.gallery = params.get('bot') === 'gallery';
     const hero = params.get('hero') ?? 'all';
     this.heroes = hero === 'all' ? HEROES.map((h) => h.id) : [hero];
     this.runs = this.tutorial ? 1 : Number(params.get('runs') ?? this.heroes.length);
@@ -72,6 +82,31 @@ export class Bot {
     if (ms > 16) this.report.slowSteps++;
   }
 
+  /** Galeria: gra stoi, dopóki skrypt nie zrobi zamówionego zrzutu. */
+  get frozen(): boolean {
+    return !!this.report.shot && this.report.ack !== this.report.shot;
+  }
+
+  /** Galeria: kroki dla bohatera (tłum wrogów, potem po kolei umiejętności ze zrzutem po każdej). */
+  private galleryTick(gs: any, dt: number): void { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const run = gs.run, inp = this.app.input, hero = run.hero.id;
+    run.player.hp = run.stats.maxHp; run.player.iframes = 1;
+    if (gs.state !== 'play') { this.wait -= dt; if (this.wait <= 0) { inp.botPress(gs.state === 'pause' ? 'pause' : 'confirm'); this.wait = 0.25; } return; }
+    if (!this.steps.length) {
+      const cast = (sl: 'q' | 'e' | 'dash' | 'ult') => () => { if (sl === 'ult') run.ultCharge = run.ultNeed(); inp.botPress(sl); };
+      const crowd = () => { for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; spawnEnemy(run, i % 3 ? 'slime' : 'bat', run.player.x + Math.cos(a) * 70, run.player.y + Math.sin(a) * 50); } };
+      const shot = (name: string) => () => `${hero}-${name}`;
+      this.steps = [crowd, shot('play'), cast('q'), shot('q'), cast('e'), shot('e'), crowd, cast('dash'), shot('dash'), cast('ult'), shot('ult'), () => { this.stepT = 1.5; }, shot('ult-late'), () => this.finish(run, 'gallery')];
+      this.stepT = 2;
+      return;
+    }
+    this.stepT -= dt;
+    if (this.stepT > 0) return;
+    const name = this.steps.shift()!();
+    this.stepT = name ? 0.05 : 0.35;
+    if (name) this.report.shot = name;
+  }
+
   /** Wołane co krok przed `screen.update`: steruje wejściem. */
   tick(screen: Screen, dt: number): void {
     if (this.report.done) return;
@@ -81,6 +116,7 @@ export class Bot {
     if (screen !== this.cur) { this.cur = screen; }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gs = screen as any, run = gs.run, state: string = gs.state;
+    if (this.gallery) { this.galleryTick(gs, dt); return; }
     this.report.states[state] = (this.report.states[state] ?? 0) + 1;
     const inp = this.app.input, press = (a: Action) => inp.botPress(a);
     if (state !== 'play') {
@@ -174,6 +210,7 @@ export class Bot {
       hero: run.hero.id, mode: this.mode, result, time: Math.round(run.totalTime), level: run.level, kills: run.kills,
       depth: run.depth, act: run.expedition?.act ?? 0,
     });
+    this.steps = [];
     this.app.save.slots[this.mode] = null;
     this.report.unlocks = [...this.app.save.unlocks];
     this.startNext();

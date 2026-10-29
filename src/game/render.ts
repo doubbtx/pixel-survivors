@@ -205,21 +205,25 @@ function drawWorld(run: Run, r: Renderer): void {
           drawSprite(g, z.t > 0.4 && run.blink(20, 10) ? 'mine1' : 'mine0', zx, zy);
           break;
         case 'net':
-          r.withAlpha(0.15, () => r.circle(zx, zy, zr, C.lgray, true));
-          r.circle(zx, zy, zr, C.lgray);
-          for (let k = -zr + 5; k < zr; k += 8) {
-            const hw = Math.sqrt(zr * zr - k * k);
-            r.rect(zx - hw, zy + k, hw * 2, 1, C.lavender);
-            r.rect(zx + k, zy - hw, 1, hw * 2, C.lavender);
-          }
+          drawNet(r, zx, zy, zr, z.t, z.life);
           break;
         case 'rain':
-          r.withAlpha(0.15, () => r.circle(zx, zy, zr, C.gold, true));
+          r.withAlpha(0.12, () => r.circle(zx, zy, zr, C.gold, true));
           r.circle(zx, zy, zr, C.gold);
-          for (let k = 0; k < 8; k++) {
-            const ax = zx + rng.range(-zr, zr) * 0.8, ay = zy + rng.range(-zr, zr) * 0.8;
-            r.line(ax, ay - 9, ax, ay, C.brown);
-            r.rect(ax, ay, 1, 1, C.white);
+          // Spadające strzały: drzewce z obwódką, stalowy grot, białe lotki; część właśnie wbija się w ziemię (pył).
+          for (let k = 0; k < 9; k++) {
+            // Każda strzała: cykl 0.35 s, w każdym cyklu nowe (stałe w cyklu) miejsce, spada z wysokości 22 do ziemi.
+            const u = z.t / 0.35 + k / 9, cyc = Math.floor(u), ph = u - cyc;
+            const h1 = Math.sin(cyc * 12.9898 + k * 78.233 + z.x) * 43758.5453, h2 = Math.sin(cyc * 39.346 + k * 11.135 + z.y) * 24634.6345;
+            const a = (h1 - Math.floor(h1)) * Math.PI * 2, d = Math.sqrt(h2 - Math.floor(h2)) * zr * 0.85, fall = (1 - Math.min(1, ph / 0.75)) * 22;
+            const ax = zx + Math.cos(a) * d, ay = zy + Math.sin(a) * d * 0.8;
+            const hx = ax, hy = ay - fall, tx = hx + 3, ty = hy - 13;
+            r.line(tx, ty, hx, hy, C.ddbrown, 2);
+            r.line(tx, ty, hx, hy, C.clay, 1);
+            r.rect(hx - 1, hy - 1, 2, 2, C.lgray);
+            r.rect(tx - 1, ty - 1, 2, 1, C.white);
+            r.rect(tx + 0.5, ty, 1, 2, C.white);
+            if (fall <= 0) r.withAlpha(0.6, () => r.ellipse(ax, ay + 1, 3, 1.2, C.tan));
           }
           break;
         case 'curse':
@@ -695,4 +699,46 @@ function drawWorld(run: Run, r: Renderer): void {
     r.rect(ax + dx - 1, ay + dy - 1, w + 2, h + 2, C.black);
     r.rect(ax + dx, ay + dy, w, h, C.white);
   }
+}
+
+/**
+ * Sieć (E Kestry, Sidła): rozwija się przy rzucie, ukośne oczka ze sznurka przycięte do koła, węzły na skrzyżowaniach,
+ * grubsza lina na obwodzie z obciążnikami; cień pod spodem i wygaszenie pod koniec.
+ */
+function drawNet(r: Renderer, x: number, y: number, R0: number, t: number, life: number): void {
+  const open = 1 - (1 - Math.min(1, t / 0.18)) ** 3, R = R0 * (0.35 + 0.65 * open);
+  const a = Math.min(1, (life - t) / 0.3, 0.25 + open);
+  r.withAlpha(a, () => {
+    r.withAlpha(0.22, () => r.circle(x, y + 2, R, C.black, true));
+    r.withAlpha(0.1, () => r.circle(x, y, R, C.tan, true));
+    // Dwie rodziny ukośnych linek (±35°): cięciwy koła w stałych odstępach.
+    const sp = Math.max(6, R / 3.2), dirs = [0.6, -0.6].map((q) => [Math.cos(q), Math.sin(q)] as const);
+    for (const [dx, dy] of dirs) {
+      const nx = -dy, ny = dx;
+      for (let k = -R + sp / 2; k < R; k += sp) {
+        const h = Math.sqrt(Math.max(0, R * R - k * k)) * 0.96, cx = x + nx * k, cy = y + ny * k;
+        r.line(cx - dx * h, cy - dy * h, cx + dx * h, cy + dy * h, C.dbrown, 2);
+        r.line(cx - dx * h, cy - dy * h, cx + dx * h, cy + dy * h, C.tan, 1);
+      }
+    }
+    // Węzły: przecięcia linek wewnątrz koła.
+    const [[ax, ay], [bx, by]] = dirs, det = (-ay) * bx - ax * (-by);
+    for (let i = -R + sp / 2; i < R; i += sp) {
+      for (let j = -R + sp / 2; j < R; j += sp) {
+        // Punkt P - c spełnia n1·P = i, n2·P = j (n = prostopadła do kierunku).
+        const px = (i * bx - ax * j) / det, py = ((-ay) * j - (-by) * i) / det;
+        if (px * px + py * py > R * R * 0.85) continue;
+        r.rect(x + px - 1, y + py - 1, 2, 2, C.dbrown);
+        r.rect(x + px - 0.5, y + py - 1, 1, 1, C.cream);
+      }
+    }
+    // Lina na obwodzie i obciążniki.
+    r.circle(x, y, R + 0.5, C.dbrown);
+    r.circle(x, y, R - 0.5, C.clay);
+    for (let k = 0; k < 8; k++) {
+      const q = (k / 8) * Math.PI * 2 + 0.2, wx = x + Math.cos(q) * R, wy = y + Math.sin(q) * R;
+      r.rect(wx - 1.5, wy - 1.5, 3, 3, C.dgray);
+      r.rect(wx - 1.5, wy - 1.5, 1.5, 1, C.lgray);
+    }
+  });
 }
