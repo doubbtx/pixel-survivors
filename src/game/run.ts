@@ -360,6 +360,8 @@ export class Run {
   /** Przepływ (Rytm Takezo): pozostały czas i pełny czas (flaga rhythm.flow wydłuża). */
   flowT = 0;
   flowMax = 1;
+  /** Rytm opada (0.43): po otrzymaniu obrażeń pasek spada do zera (bez przyrostu), potem buduje się od nowa. */
+  rhythmDrain = false;
   /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej). */
   reactions = 0;
   /** Błysk paska XP po zebraniu kryształu (s). */
@@ -607,6 +609,7 @@ export class Run {
     if (this.hero.resource.kind !== 'souls') this.res = 0;
     this.rageT = 0;
     this.flowT = 0;
+    this.rhythmDrain = false;
     delete this.cardState['sec.berserk'];
     // Błogosławieństwo kapliczki Ekspedycji na kolejne mapy (trwa cały poziom).
     const bless = this.expedition?.blessing ? EX_BLESSINGS.find((b) => b.id === this.expedition!.blessing!.id) : null;
@@ -1037,12 +1040,12 @@ export class Run {
 
   /** Tekst unoszący się nad światem (np. "Egzekucja!"). */
   /** Leczenie z trafienia Sierpa krwi: ułamek maks. HP, w ramach sekundowego budżetu (nie skaluje się z obrażeniami). */
-  drainHeal(frac: number): void {
+  drainHeal(frac: number, faith = 1): void {
     if (this.relic('chalice')) return;
     const h = Math.min(this.drainLeft, this.stats.maxHp * frac);
     if (h <= 0) return;
     this.drainLeft -= h;
-    this.heal(h);
+    this.heal(h, faith);
   }
 
   popText(x: number, y: number, text: string, col: number): void {
@@ -1240,7 +1243,7 @@ export class Run {
   }
 
   /** Leczenie z uwzględnieniem kart: blokada leczenia, nadmiar → tarcza. */
-  heal(v: number): void {
+  heal(v: number, faith = 1): void {
     if (this.flag('noHeal') > 0 || v <= 0) return;
     v *= 1 - Math.min(0.9, this.flag('healCut'));
     // Zbroja Wiecznej Warty (unikat): leczenie zamienia się w tarczę.
@@ -1260,7 +1263,7 @@ export class Run {
       if (cap > 0) this.addShield(v - room, cap);
     }
     // Wiara (Aurel) rośnie z leczenia — na końcu, bo pełna wiara sama leczy (Łaska).
-    if (got > 0) resourceOnHeal(this, got);
+    if (got > 0) resourceOnHeal(this, got * faith);
   }
 
   /** Dodaje tarczę, nie przekraczając limitu `capFrac` × maks. HP (nie obcina tarczy z innych źródeł). Zwraca przyrost. */
@@ -1319,11 +1322,14 @@ export class Run {
     const hunt = this.relic('huntmark') && !e.boss ? (e.elite ? 1 + BAL.relics.huntElite : 1 - BAL.relics.huntRegular) : 1;
     // Aura dowódcy (Buława/Przeniewierca); Buława bez aury: kara obrażeń.
     const cmd = this.cmdBuffT > 0 ? 1 + BAL.eliteTraits.dmg : this.relic('mace') ? 1 - BAL.relics.maceDmgLoss : 1;
+    // Piętno (Aurel): +obrażenia z kart, leczenie w budżecie (Wiara z niego rośnie słabiej).
+    const branded = e.brandT > 0;
+    if (branded && !o.dot) this.drainHeal(BAL.brand.heal * (1 + this.flag('guardHeal')), BAL.brand.faith);
     // Długa walka z bossem: boss słabnie (BAL.bossSoften); pogoń HP tego nie wyrównuje.
     const soft = e.boss && !this.dungeon ? this.bossSoftMul(e) : 1;
     if (soft > 1 && !this.bossSoftShown) { this.bossSoftShown = true; this.showBanner(`${this.levelInfo.bossName} weakens!`); }
     // Podatność raz: ticki stanów (podpalenie, trucizna) dziedziczą ją przez bazę z trafienia, które je nałożyło.
-    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * (o.dot ? 1 : weak) * soft * hunt * cmd * loyal * resourceDamageMul(this, src) * (1 - e.dr));
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * (o.dot ? 1 : weak) * soft * hunt * cmd * (branded ? 1 + this.flag('brandDmg') : 1) * loyal * resourceDamageMul(this, src) * (1 - e.dr));
     // Statystyki (tabela obrażeń, DPS) i siła gracza (trudność, 0.35.2: bez nadwyżki ponad HP wroga) liczą tylko zadane
     // obrażenia; kradzież życia całe trafienie.
     const dealt = Math.min(dmg, Math.max(0, e.hp));
@@ -1483,6 +1489,11 @@ export class Run {
 
   killEnemy(e: Enemy): void {
     e.dead = true;
+    // Włócznia świtu: napiętnowany wybucha światłem (jedna fala, wybuch nie piętnuje).
+    if (e.brandT > 0 && e.brandBoom && this.lastHitSrc !== 'Dawn Burst') {
+      const B = BAL.brand, dmg = (this.cardState.lanceDmg ?? 0) * B.boom;
+      if (dmg > 0) this.schedule(0, () => this.explode(e.x, e.y, B.boomR * this.stats.area, dmg, 'Dawn Burst', C.yellow, 2));
+    }
     if (e.elite && !e.boss) { this.eliteLifeSum += e.age; this.eliteLifeN++; } else if (!e.boss) { this.lifeSum += e.age; this.lifeN++; }
     this.kills++;
     this.levelKills++;
@@ -1838,7 +1849,7 @@ export class Run {
     pr.forceCrit = s.forceCrit ?? false;
     pr.t = 0;
     pr.bounces = this.flag('bounce');
-    pr.retarget = 0; pr.split = 0; pr.splitEnd = 0; pr.retMul = 1; pr.blast = 0; pr.drain = 0; pr.dice = 0; pr.sixBlast = false;
+    pr.retarget = 0; pr.split = 0; pr.splitEnd = 0; pr.retMul = 1; pr.blast = 0; pr.drain = 0; pr.dice = 0; pr.sixBlast = false; pr.brand = 0; pr.brandBoom = false;
     return pr;
   }
 
@@ -2093,7 +2104,7 @@ function newEnemy(): Enemy {
     flash: 0, slowT: 0, slowF: 0, stunT: 0, shootT: 0, shootA: 0, age: 0, dead: false, elite: null, boss: false,
     scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0, abilT: 0,
     burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, reactT: 0, brittle: 0, hitStamp: new Int32Array(SLOT_COUNT),
-    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false, sit: 0, summons: 0, traitT: 0, buffT: 0,
+    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false, sit: 0, summons: 0, traitT: 0, buffT: 0, brandT: 0, brandBoom: false,
   };
 }
 
@@ -2101,7 +2112,7 @@ function newProjectile(): Projectile {
   return {
     _i: -1, x: 0, y: 0, vx: 0, vy: 0, life: 0, damage: 0, radius: 2, pierce: 0, hits: [], sprite: '', src: '',
     kind: 'normal', returning: false, knock: 0, forceCrit: false, t: 0, bounces: 0,
-    retarget: 0, split: 0, splitEnd: 0, retMul: 1, blast: 0, drain: 0, dice: 0, sixBlast: false,
+    retarget: 0, split: 0, splitEnd: 0, retMul: 1, blast: 0, drain: 0, dice: 0, sixBlast: false, brand: 0, brandBoom: false,
   };
 }
 

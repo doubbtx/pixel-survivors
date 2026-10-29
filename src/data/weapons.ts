@@ -15,8 +15,10 @@ import type { Tag } from './cards';
  *  laser     promień; damage na tick (0.1 s), duration = czas świecenia, area × 3 px = szerokość
  *  mines     miny przy graczu; duration = czas życia miny, area × 22 px = promień wybuchu
  *  cleave    cięcie łukiem przed graczem; area × 26 px = zasięg, amount = liczba cięć
+ *  lash      poziome cięcia w bok jak bicz (Takezo, 0.43): 1. w stronę patrzenia, 2. w przeciwną, kolejne rzędami wyżej/niżej;
+ *            area × 58 px = długość, area × 14 px = wysokość pasa, amount = liczba cięć
  */
-export type WeaponKind = 'bolt' | 'orbit' | 'aura' | 'chain' | 'meteor' | 'boomerang' | 'laser' | 'mines' | 'cleave' | 'nova';
+export type WeaponKind = 'bolt' | 'orbit' | 'aura' | 'chain' | 'meteor' | 'boomerang' | 'laser' | 'mines' | 'cleave' | 'nova' | 'lash';
 
 export interface WeaponStats {
   damage: number;
@@ -217,13 +219,13 @@ export const WEAPONS: WeaponDef[] = [
 
   {
     // Takezo: dwa miecze tną przed nim i za nim (Niten Ichi-ryū).
-    id: 'katana', name: 'Two Swords', desc: 'Two blades cut in front of you and behind you.', icon: 'ic_katana', kind: 'cleave', color: C.lgray, hero: 'takezo',
+    id: 'katana', name: 'Two Swords', desc: 'Long horizontal cuts: first to the side you face, then to the other side.', icon: 'ic_katana', kind: 'lash', color: C.lgray, hero: 'takezo',
     base: S({ damage: 16, cooldown: 0.68, amount: 2, area: 1.25, knock: 2 }),
     levels: [{ damage: 4 }, { cooldown: -0.08 }, { area: 0.15 }, { damage: 6 }, { cooldown: -0.08 }, { amount: 1 }, { damage: 8, area: 0.15 }],
     evolves: [{ passive: 'fury', into: 'katana_evo' }],
   },
   {
-    id: 'katana_evo', name: 'Two Heavens as One', desc: 'A storm of cuts in every direction, faster than the eye.', icon: 'ic_katana_evo', kind: 'cleave', color: C.cyan, hero: 'takezo',
+    id: 'katana_evo', name: 'Two Heavens as One', desc: 'Four long cuts on both sides at once, faster than the eye.', icon: 'ic_katana_evo', kind: 'lash', color: C.cyan, hero: 'takezo',
     base: S({ damage: 30, cooldown: 0.4, amount: 4, area: 1.5, knock: 3 }),
     levels: [], evolved: true,
   },
@@ -419,7 +421,7 @@ export function weaponStatsAt(def: WeaponDef, level: number): WeaponStats {
 
 /** Rzeczownik "sztuki" broni dla opisu +ilości (zależy od wzorca). */
 const AMOUNT_NOUN: Record<WeaponKind, string> = {
-  bolt: 'pocisk', orbit: 'ostrze', aura: 'aura', chain: 'piorun', meteor: 'meteor', boomerang: 'bumerang', laser: 'promień', mines: 'mina', cleave: 'cięcie', nova: 'pierścień',
+  bolt: 'pocisk', orbit: 'ostrze', aura: 'aura', chain: 'piorun', meteor: 'meteor', boomerang: 'bumerang', laser: 'promień', mines: 'mina', cleave: 'cięcie', nova: 'pierścień', lash: 'cięcie',
 };
 
 const r2 = (v: number) => Math.round(Math.abs(v) * 100) / 100;

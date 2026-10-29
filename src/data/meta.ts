@@ -170,11 +170,12 @@ export const HERO_TREES: Record<string, MetaNode[]> = {
     ...EXPEDITION,
   ],
   aurel: [
-    N('au_count', 'Strażnicy', 'Zastęp', 'ab_a_guard', 3, 40, flag('a_guard.count', 1), '+{v} strażnik', false),
-    N('au_dmg', 'Strażnicy', 'Święty miecz', 'ab_a_guard_evo', 5, 25, flag('minionDmg', 0.06), 'Sługi zadają +{v} obrażeń', true),
-    N('au_life', 'Strażnicy', 'Wierność', 'pi_hourglass', 5, 25, flag('a_guard.duration', 1), 'Strażnicy trwają o {v} s dłużej', false),
-    N('au_speed', 'Strażnicy', 'Skrzydła', 'pi_wings', 5, 30, flag('minionSpeed', 0.05), 'Sługi są {v} szybsze', true),
-    KEY('au_echo', 'Strażnicy', 'Druga modlitwa', 'ab_a_guard_evo', 600, flag('echo.q', 1), 'Strażnicy przybywają drugi raz po chwili.'),
+    // 0.43: gałąź Włóczni światła (te same id węzłów i flagi a_guard.* co dawni Strażnicy — wydane punkty zostają).
+    N('au_count', 'Spear', 'Many Spears', 'ab_a_guard', 3, 40, flag('a_guard.count', 1), '+{v} spear', false),
+    N('au_dmg', 'Spear', 'Holy Edge', 'ab_a_guard_evo', 5, 25, flag('lanceDmg', 0.06), 'The Spear of Light deals +{v} damage', true),
+    N('au_life', 'Spear', 'Lasting Brand', 'pi_hourglass', 5, 25, flag('a_guard.duration', 1), 'Brand lasts {v} s longer', false),
+    N('au_speed', 'Spear', 'Swift Throw', 'pi_wings', 5, 30, flag('cd.q', 0.05), 'The Spear of Light recharges {v} faster', true),
+    KEY('au_echo', 'Spear', 'Second Prayer', 'ab_a_guard_evo', 600, flag('echo.q', 1), 'A second spear flies a moment later.'),
     N('au_sheal', 'Świątynia', 'Ukojenie', 'ab_a_sanct', 5, 20, flag('a_sanct.heal', 0.2), 'Uświęcona ziemia leczy o {v}% HP na sekundę więcej', false),
     N('au_srad', 'Świątynia', 'Szeroki krąg', 'ab_a_sanct', 5, 25, flag('a_sanct.radius', 4), '+{v} promienia Uświęconej ziemi', false),
     N('au_sdur', 'Świątynia', 'Trwałość', 'pi_hourglass', 5, 25, flag('a_sanct.duration', 0.4), 'Uświęcona ziemia trwa o {v} s dłużej', false),
@@ -189,7 +190,7 @@ export const HERO_TREES: Record<string, MetaNode[]> = {
     N('au_jcount', 'Sąd', 'Wielu winnych', 'ab_a_judge', 5, 30, flag('a_judge.count', 1), '+{v} cel Sądu', false),
     N('au_jblast', 'Sąd', 'Jasność', 'ab_a_judge_evo', 5, 25, flag('a_judge.blast', 2), '+{v} promienia słupów', false),
     N('au_ult', 'Sąd', 'Pobożność', 'ab_a_judge_evo', 5, 35, flag('ultGain', 0.06), 'Ultimate ładuje się {v} szybciej', true),
-    KEY('au_guardheal', 'Sąd', 'Kojące ostrza', 'ab_a_guard', 600, flag('guardHeal', 1), 'Trafienia strażników leczą 2x mocniej.'),
+    KEY('au_guardheal', 'Sąd', 'Soothing Brand', 'ab_a_guard', 600, flag('guardHeal', 1), 'Hits on Branded enemies heal twice as much.'),
     ...EXPEDITION,
   ],
   // Takezo: gałęzie jak księgi Musashiego (Ziemia — miecze, Woda — cięcia, Ogień — cios z góry, Pustka — rytm i iai).

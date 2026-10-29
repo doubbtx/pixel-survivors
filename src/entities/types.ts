@@ -107,6 +107,9 @@ export interface Enemy extends Poolable {
   /** Cechy zachowania elit (R3): odliczanie cechy, wzmocnienie od dowódcy (s), cel teleportu fazy. */
   traitT: number;
   buffT: number;
+  /** Piętno Aurela (0.43): pozostały czas; trafienia gracza w napiętnowanego leczą (wspólny budżet). brandBoom: wybuch przy śmierci (Włócznia świtu). */
+  brandT: number;
+  brandBoom: boolean;
   tx: number;
   ty: number;
   /** Pozostałe salwy serii i czas do następnej. */
@@ -174,6 +177,9 @@ export interface Projectile extends Poolable {
   drain: number;
   dice: number;
   sixBlast: boolean;
+  /** Włócznia światła (Aurel): czas Piętna nakładanego trafieniem (0 = zwykły pocisk), wybuch napiętnowanych przy śmierci. */
+  brand: number;
+  brandBoom: boolean;
 }
 
 export interface EnemyBullet extends Poolable {
@@ -259,7 +265,7 @@ export interface Zone extends Poolable {
   knock: number;
 }
 
-export type FxKind = 'line' | 'ring' | 'arc' | 'spark' | 'poof' | 'boom' | 'fade';
+export type FxKind = 'line' | 'ring' | 'arc' | 'spark' | 'poof' | 'boom' | 'fade' | 'slash';
 
 /** Krótkotrwałe efekty wizualne bez logiki (błyskawice, fale, cięcia, iskry, obłoki, eksplozje). Dla klatek animacji `r` = skala. */
 export interface Fx extends Poolable {

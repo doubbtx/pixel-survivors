@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
@@ -419,14 +420,14 @@ export class AnvilView {
     drawText(g, `Szansa: ${parts.join(' + ')}${parts.length > 1 ? ` = ${pct(ch.total)}` : ''}`, x + 8, 103, ch.total >= 0.5 ? C.lime : ch.total >= 0.2 ? C.yellow : C.salmon);
     const mat = MAT_BY_ID[s.mat], have = run.mats[s.mat];
     drawSprite(g, mat.icon, x + 15, 120);
-    drawText(g, `${mat.name} ${have}/${s.count}   ${fmt(forgeGold(run, it))} zł`, x + 25, 114, have >= s.count ? C.white : C.salmon);
+    drawText(g, `${tr(mat.name)} ${have}/${s.count}   ${fmt(forgeGold(run, it))} zł`, x + 25, 114, have >= s.count ? C.white : C.salmon);
     const fail = risks.crack > 0 ? `${this.opts.risk ? 'ZNISZCZENIE' : 'pęknięcie'} ${pct(risks.crack)}` : '';
     const failText = [risks.down > 0 && `spadek ${pct(risks.down)}`, fail].filter(Boolean).join(', ') || 'nic nie tracisz poza materiałem';
     drawText(g, `Porażka: ${failText}`, x + 8, 125, this.opts.risk && risks.crack ? C.red : C.lgray);
     // Zwoje i tryb ryzyka.
     OPT_KEYS.forEach((k, i) => {
       const y = OPT_Y + i * OPT_H, on = this.opts[k];
-      const label = k === 'risk' ? `Ryzyko: +${Math.round(BAL.forge.risk * 100)}%, pęknięcie = zniszczenie` : `${OPT_LABEL[k]} (${run.scrolls[k]})`;
+      const label = k === 'risk' ? `Ryzyko: +${Math.round(BAL.forge.risk * 100)}%, pęknięcie = zniszczenie` : `${tr(OPT_LABEL[k])} (${run.scrolls[k]})`;
       if (i === this.optSel) r.roundFrame(x + 4, y - 1, DET_W - 8, OPT_H - 1, 2, C.yellow, 0.5);
       r.rect(x + 8, y + 2, 7, 7, C.black);
       if (on) r.rect(x + 9, y + 3, 5, 5, k === 'risk' ? C.red : C.lime);

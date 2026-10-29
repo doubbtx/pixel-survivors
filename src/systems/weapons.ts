@@ -37,7 +37,7 @@ export function effectiveStats(run: Run, w: WeaponInst): EffWeapon {
 }
 
 /** Bronie celujące w kierunku (flaga `facing` odbiera im auto-celowanie). */
-const AIMED = new Set<WeaponKind>(['bolt', 'boomerang', 'laser', 'cleave']);
+const AIMED = new Set<WeaponKind>(['bolt', 'boomerang', 'laser', 'cleave', 'lash']);
 
 /** Kąt patrzenia gracza, gdy flaga `facing` wyłącza auto-celowanie; inaczej null. */
 function facingAngle(run: Run): number | null {
@@ -110,7 +110,7 @@ function weaponSound(w: WeaponInst): SfxName {
     case 'meteor': return 'w_meteor';
     case 'boomerang': return 'w_boom';
     case 'mines': return 'w_mine';
-    case 'cleave': return 'w_cleave';
+    case 'cleave': case 'lash': return 'w_cleave';
     default: return 'w_bolt';
   }
 }
@@ -299,6 +299,17 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
   },
 
   /** Cięcie łukiem ±60° przed graczem; kolejne cięcia rozkładają się po okręgu. */
+  lash(run, w, s, dt) {
+    if (!ready(w, s, dt)) return;
+    // Strona: kierunek patrzenia w poziomie; kolejne cięcia na zmianę w przeciwną stronę i rzędami wyżej / niżej.
+    const side0 = run.player.fx < 0 ? -1 : 1, n = Math.max(1, Math.round(s.amount)), row = 15 * s.area;
+    for (let k = 0; k < n; k++) {
+      const side = k % 2 ? -side0 : side0, r = Math.floor(k / 2), dy = r === 0 ? 0 : (r % 2 ? -1 : 1) * Math.ceil(r / 2) * row;
+      run.schedule(k * 0.07, () => lashCut(run, w, s, side, dy));
+    }
+    sfx.play(weaponSound(w));
+  },
+
   cleave(run, w, s, dt) {
     if (!ready(w, s, dt)) return;
     const p = run.player;
@@ -329,6 +340,17 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     sfx.play(weaponSound(w));
   },
 };
+
+/** Jedno cięcie bicza: poziomy pas od bohatera w stronę `side` (±1), przesunięty w pionie o `dy`. */
+function lashCut(run: Run, w: WeaponInst, s: EffWeapon, side: number, dy: number): void {
+  const p = run.player, L = 58 * s.area, h = 7 * s.area, cx = p.x + side * L / 2, cy = p.y + dy;
+  run.enemiesInCircle(cx, cy, L / 2 + h + 8, (e) => {
+    if (Math.abs(e.x - cx) > L / 2 + e.radius || Math.abs(e.y - cy) > h + e.radius) return;
+    run.damageEnemy(e, s.damage, w.def.name, { kx: side, ky: 0, knock: s.knock });
+  });
+  const f = run.addFx('slash', p.x + side * 4, cy, w.def.color, 0.16);
+  if (f) { f.x2 = p.x + side * L; f.y2 = cy; f.w = h; }
+}
 
 export function updateWeapons(run: Run, dt: number): void {
   for (const w of run.weapons) BEHAVIORS[w.def.kind](run, w, effectiveStats(run, w), dt);

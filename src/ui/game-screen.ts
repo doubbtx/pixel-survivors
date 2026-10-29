@@ -85,6 +85,9 @@ export class GameScreen implements Screen {
   private diag = false;
   /** Prawa kolumna pauzy: 0 postać (statystyki, bronie, karty), 1 umiejętności z opisami. */
   private pausePage = 0;
+  /** Pauza, zakładka Build: karta przypięta kliknięciem (opis w okienku; -1 = brak) i prostokąty kart z ostatniej klatki. */
+  private pauseCard = -1;
+  private cardRects: [number, number, number, number][] = [];
   private anvil: AnvilView | null = null;
   private map: ExpeditionMapView | null = null;
   /** Stan, do którego wraca kowadło (ekran ukończenia, sklep albo mapa). */
@@ -481,6 +484,7 @@ export class GameScreen implements Screen {
 
   private openPause(): void {
     this.state = 'pause';
+    this.pauseCard = -1;
     this.pauseMenu.sel = 0;
     this.confirmQuit = false;
   }
@@ -687,6 +691,11 @@ export class GameScreen implements Screen {
         }
         if (this.pausePage === 2) this.pauseScroll.update(inp, ...this.pauseArea());
         PAUSE_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.pauseTab(i))) { this.pausePage = i; sfx.play('select'); } });
+        // Build: klik w kartę pokazuje / chowa jej opis.
+        if (this.pausePage === 1 && inp.pressed('click')) {
+          const hit = this.cardRects.findIndex((rc) => inside(inp.mouse.x, inp.mouse.y, ...rc));
+          if (hit >= 0) { this.pauseCard = this.pauseCard === hit ? -1 : hit; sfx.play('select'); }
+        }
         this.pauseMenu.update(inp);
         break;
       case 'end':
@@ -850,14 +859,38 @@ export class GameScreen implements Screen {
     // Karty: nazwy w dwóch kolumnach, reszta jako „+N więcej”.
     const cy = ey + 38, nCards = run.cards.reduce((n, c) => n + c.stacks, 0);
     head(`Karty (${nCards})`, cy);
-    const rows = Math.max(1, Math.floor((H - 12 - (cy + 12)) / 11)), max = rows * 2;
+    const rows = Math.max(1, Math.floor((H - 26 - (cy + 12)) / 11)), max = rows * 2;
     const shown = run.cards.length > max ? max - 1 : max;
+    if (run.cards.length) drawText(g, 'Click or point at a card: description', x0, H - 22, C.lavender, { scale: 0.75 });
+    this.cardRects = [];
+    const m = this.app.input.mouse;
+    let hover = -1;
     run.cards.slice(0, shown).forEach((c, i) => {
-      const def = CARD_BY_ID[c.id];
-      drawText(g, `${def.name}${c.stacks > 1 ? ' x' + c.stacks : ''}`, x0 + (i % 2) * (colW + 8), cy + 12 + Math.floor(i / 2) * 11, def.cursed ? C.hotpink : rarityColor(def.rarity, 0));
+      const def = CARD_BY_ID[c.id], cx = x0 + (i % 2) * (colW + 8), y = cy + 12 + Math.floor(i / 2) * 11;
+      this.cardRects.push([cx - 1, y - 1, colW, 11]);
+      const on = this.pauseCard === i || inside(m.x, m.y, cx - 1, y - 1, colW, 11);
+      if (on && hover < 0 && this.pauseCard < 0) hover = i;
+      if (this.pauseCard === i || (this.pauseCard < 0 && hover === i)) r.withAlpha(0.25, () => r.rect(cx - 2, y - 1, colW, 11, C.lavender));
+      drawText(g, `${def.name}${c.stacks > 1 ? ' x' + c.stacks : ''}`, cx, y, def.cursed ? C.hotpink : rarityColor(def.rarity, 0));
     });
     if (run.cards.length > shown) drawText(g, `+${run.cards.length - shown} więcej`, x0 + (shown % 2) * (colW + 8), cy + 12 + Math.floor(shown / 2) * 11, C.lavender);
     if (!run.cards.length) drawText(g, 'Brak kart', x0, cy + 12, C.lavender);
+    // Opis karty: przypiętej kliknięciem albo pod kursorem; okienko nad listą kart (nie zasłania wskazanej karty).
+    const idx = this.pauseCard >= 0 && this.pauseCard < shown ? this.pauseCard : hover;
+    if (idx >= 0) this.renderCardTip(run.cards[idx], x0, colW, this.cardRects[idx][1]);
+  }
+
+  /** Okienko z opisem karty (pauza, Build): nazwa w kolorze rzadkości, tagi, opis i liczba kopii. */
+  private renderCardTip(c: { id: string; stacks: number }, x0: number, colW: number, rowY: number): void {
+    const r = this.app.r, g = r.g, def = CARD_BY_ID[c.id], w = colW * 2 + 8, tw = (w - 12) / descS(), lh = descLH();
+    const lines = wrapText(def.desc, tw), h = 26 + lines.length * lh + (c.stacks > 1 ? lh : 0);
+    const y = Math.max(40, rowY - h - 3);
+    panel(r, x0 - 4, y, w + 2, h);
+    drawText(g, def.name, x0 + 2, y + 4, def.cursed ? C.hotpink : rarityColor(def.rarity, 0), { shadow: C.black });
+    drawText(g, def.tags.join(' / '), x0 + w - 6, y + 4, C.lavender, { align: 'right', scale: 0.75 });
+    let ly = y + 17;
+    for (const l of lines) { drawText(g, l, x0 + 2, ly, C.white, DESC); ly += lh; }
+    if (c.stacks > 1) drawText(g, `x${c.stacks}: the effect stacks`, x0 + 2, ly, C.lime, DESC);
   }
 
   /** Zakładka `i` prawej kolumny pauzy: [x, y, szerokość, wysokość]. */

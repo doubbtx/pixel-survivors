@@ -190,7 +190,7 @@ export class Bot {
   private play(run: any, dt: number): void { // eslint-disable-line @typescript-eslint/no-explicit-any
     const inp = this.app.input, p = run.player;
     // Walka wręcz (Borgun, Takezo): zwykli wrogowie odpychają dopiero z bliska, a bot idzie do najbliższego (zasięg cięcia).
-    const melee = this.style === 'melee' || (this.style === 'auto' && WEAPON_BY_ID[run.hero.weapon]?.kind === 'cleave');
+    const melee = this.style === 'melee' || (this.style === 'auto' && ['cleave', 'lash'].includes(WEAPON_BY_ID[run.hero.weapon]?.kind ?? ''));
     let fx = 0, fy = 0, near = 0, closest: { x: number; y: number } | null = null, cd = 160 * 160;
     for (const e of run.enemies.items) {
       if (e.dead) continue;

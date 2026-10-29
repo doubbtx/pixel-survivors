@@ -124,21 +124,20 @@ export const HERO_ICONS: Record<string, (p: Painter) => void> = {
 
   // ===================== Aurel =====================
   ab_a_guard: (p) => {
-    // Anioł stróż: cieniowane skrzydła z piórami, szata, głowa i aureola.
-    p.polyShade([[5.5, 7], [0.5, 1.5], [1, 6], [0.5, 9], [2, 11], [5.5, 10.5]], RAMP.bone);
-    p.polyShade([[10.5, 7], [15.5, 1.5], [15, 6], [15.5, 9], [14, 11], [10.5, 10.5]], RAMP.bone);
-    p.thin(4.5, 8, 1.5, 3, C.white).thin(4.5, 9.5, 1.5, 7.5, C.lavender).thin(11.5, 8, 14.5, 3, C.white).thin(11.5, 9.5, 14.5, 7.5, C.lavender);
-    p.polyShade([[5.5, 8], [10.5, 8], [11.5, 15], [4.5, 15]], [C.lavender, C.lgray, C.cream, C.white]);
-    p.thin(8, 9, 8, 14.5, C.gold);
-    p.sphere(8, 5.5, 2.4, 2.4, RAMP.skin);
-    halo(p, 8, 2.2, 3.2);
+    // Włócznia światła: złote drzewce po skosie, biały grot, promienie wokół grotu i romb Piętna.
+    p.stroke(2, 14.5, 11, 5.5, C.dbrown).thin(2.5, 14, 11, 5.5, C.gold);
+    p.poly([[10, 4], [15, 1], [12, 6]], C.white).poly([[10.5, 4.5], [14, 2], [11.8, 5.5]], C.yellow);
+    p.px(15, 4, C.yellow).px(12, 0.5, C.yellow).px(15.5, 0.5, C.white);
+    p.poly([[3, 4], [5, 2], [7, 4], [5, 6]], C.gold).px(5, 4, C.white);
   },
   ab_a_guard_evo: (p) => {
-    p.poly([[4, 6], [0, 1], [1, 10], [5, 11]], C.yellow).poly([[12, 6], [16, 1], [15, 10], [11, 11]], C.yellow);
-    p.poly([[5, 8], [11, 8], [10, 15], [6, 15]], C.white);
-    p.sphere(8, 5.5, 2.6, 2.6, RAMP.bone);
-    p.line(13, 6, 13, 15, C.white).rect(12, 12, 3, 1, C.gold);
-    halo(p, 8, 2, 3.5, C.gold);
+    // Włócznia świtu: trzy włócznie w wachlarzu ze złotą poświatą.
+    halo(p, 8, 13, 6, C.gold);
+    for (const [x1, y1] of [[2.5, 2], [8, 0.5], [13.5, 2]] as const) {
+      p.thin(8, 14.5, x1, y1 + 2.5, C.gold);
+      p.poly([[x1 - 1.2, y1 + 2.5], [x1, y1 - 0.5], [x1 + 1.2, y1 + 2.5]], C.white);
+    }
+    p.px(8, 10, C.yellow);
   },
   ab_a_sanct: (p) => {
     halo(p, 8, 12, 7, C.gold);

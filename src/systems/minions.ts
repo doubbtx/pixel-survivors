@@ -57,14 +57,16 @@ export function updateMinions(run: Run, dt: number): void {
   guardShield(run, dt);
 }
 
-/** Opiekun (pasywka Aurela): co N s tarcza za każdego sługę. */
+/** Opiekun (pasywka Aurela, 0.43): co N s tarcza za każdego napiętnowanego wroga w pobliżu. */
 function guardShield(run: Run, dt: number): void {
   const hp = run.hero.passive;
-  if (hp.kind !== 'guardShield' || !run.minions.count) return;
+  if (hp.kind !== 'guardShield') return;
   const t = (run.cardState.guardShield ?? 0) + dt;
   run.cardState.guardShield = t;
   if (t < Math.max(2, hp.value - run.flag('passive.n'))) return;
   run.cardState.guardShield = 0;
-  const F = BAL.resource.faith;
-  run.addShield(run.stats.maxHp * F.shieldPer * run.minions.count, F.shieldCap + run.flag('passive.shieldCap'));
+  const B = BAL.brand, p = run.player;
+  let n = 0;
+  run.enemiesInCircle(p.x, p.y, B.guardR, (e) => { if (e.brandT > 0) n++; });
+  if (n) run.addShield(run.stats.maxHp * B.shieldPer * n, B.shieldCap + run.flag('passive.shieldCap'));
 }

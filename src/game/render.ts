@@ -481,6 +481,13 @@ function drawWorld(run: Run, r: Renderer): void {
     }
     // Wzmocniony przez dowódcę: złota kropka nad wrogiem.
     if (e.buffT > 0 && !e.elite) drawSprite(g, 'buffmark', ex, ey - (e.radius * e.scale + 5) * ZOOM);
+    // Piętno Aurela: złoty krzyżyk z białym środkiem pod wrogiem (miga w ostatniej sekundzie).
+    if (e.brandT > 0 && (e.brandT > 1 || (run.step >> 3) % 2 === 0)) {
+      const by = ey + (e.radius * e.scale + 3) * ZOOM, bs = 3 * ZOOM;
+      r.rect(ex - bs, by - 1, bs * 2, 2, C.gold);
+      r.rect(ex - 1, by - bs, 2, bs * 2, C.gold);
+      r.rect(ex - 1, by - 1, 2, 2, C.white);
+    }
     drawSprite(g, `${e.sprite}@${animFrame(e.sprite, run.step, e.uid * 7)}`, ex, ey - e.z * ZOOM, { flash: e.flash > 0, scale: e.scale, flipX: e.x > p.x });
     // Boss: zapowiedzi ataków — kurczący się krąg przed nazwanym atakiem, linia szarży (unik ma być czytelny).
     if (e.boss && e.invuln <= 0) {
@@ -629,6 +636,13 @@ function drawWorld(run: Run, r: Renderer): void {
             r.rect(x - Math.cos(d) * rr * 0.5 + Math.cos(a) * (rr - 2), y - Math.sin(d) * rr * 0.5 + Math.sin(a) * (rr - 2), 2, 2, C.white);
           }
         });
+      } else if (pr.brand > 0) {
+        // Włócznia światła (Aurel): złote drzewce z białym grotem wzdłuż lotu, krótka smuga za nią.
+        const a = Math.atan2(pr.vy, pr.vx), c = Math.cos(a) * ZOOM, s = Math.sin(a) * ZOOM;
+        r.withAlpha(0.35, () => r.line(x - c * 26, y - s * 26, x - c * 8, y - s * 8, C.yellow, 4));
+        r.line(x - c * 12, y - s * 12, x + c * 6, y + s * 6, C.gold, 3);
+        r.line(x - c * 12, y - s * 12, x + c * 6, y + s * 6, C.yellow, 1);
+        r.line(x + c * 4, y + s * 4, x + c * 11, y + s * 11, C.white, 3);
       } else if (SPIN.has(pr.sprite)) {
         drawSprite(g, `${pr.sprite}${Math.floor(pr.t * 14) & 3}`, x, y);
       } else {
@@ -669,6 +683,17 @@ function drawWorld(run: Run, r: Renderer): void {
           // Znikający wróg: biały błysk sylwetki, potem bladnięcie i lekkie uniesienie.
           const up = (1 - k) * 4;
           r.withAlpha(k * 0.8, () => drawSprite(g, f.sprite, X(f.x), Y(f.y) - up, { flash: k > 0.7 && !run.reduceFlash, scale: Math.max(1, Math.round(f.r)), flipX: f.a0 === 1 }));
+          break;
+        }
+        case 'slash': {
+          // Cięcie bicza (Takezo): klinowate ostrze od bohatera, zwęża się ku końcowi i blednie; biały rdzeń.
+          const x0 = X(f.x), x1 = X(f.x2), yy = Y(f.y), hh = f.w * ZOOM * (0.5 + 0.5 * k), dir = Math.sign(x1 - x0) || 1;
+          const len = Math.abs(x1 - x0) * (0.75 + 0.25 * (1 - k));
+          for (let i = 0; i < len; i += 2) {
+            const t = i / len, th = Math.max(1, hh * (1 - t * 0.85) * Math.sin(Math.PI * Math.min(1, t * 1.6 + 0.15)));
+            r.rect(x0 + dir * i, yy - th / 2, 2, th, f.col);
+            r.rect(x0 + dir * i, yy - th / 5, 2, Math.max(1, th / 2.5), C.white);
+          }
           break;
         }
         case 'arc':

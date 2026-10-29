@@ -10,7 +10,7 @@ import type { Tag } from './cards';
  */
 export type AbilitySlot = 'q' | 'e' | 'dash' | 'ult';
 export type AbilityKind = 'volley' | 'net' | 'dash' | 'rain' | 'charge' | 'slam' | 'titan' | 'fireball' | 'firering' | 'inferno' | 'summon' | 'curse' | 'legion'
-  | 'shadowstep' | 'execute' | 'bladedance' | 'guardian' | 'sanctum' | 'judgment' | 'overhead' | 'flurry' | 'iai';
+  | 'shadowstep' | 'execute' | 'bladedance' | 'guardian' | 'lance' | 'sanctum' | 'judgment' | 'overhead' | 'flurry' | 'iai';
 
 export interface AbilityDef {
   id: string;
@@ -98,7 +98,7 @@ export function abilityCooldown(def: AbilityDef, level: number): number {
 /** Opisy przyrostów parametrów umiejętności na poziom (klucze z `pl`). */
 const ABILITY_DELTA: Record<string, (v: number, def: AbilityDef) => string> = {
   damage: (v) => `+${v} obrażeń`,
-  count: (v, d) => `+${v} ${d.kind === 'volley' ? 'strzała' : d.kind === 'summon' || d.kind === 'legion' || d.kind === 'guardian' ? 'sługa' : d.kind === 'judgment' ? 'cel' : 'pocisk'}`,
+  count: (v, d) => `+${v} ${d.kind === 'volley' ? 'strzała' : d.kind === 'summon' || d.kind === 'legion' || d.kind === 'guardian' ? 'sługa' : d.kind === 'judgment' ? 'cel' : d.kind === 'lance' ? 'włócznia' : 'pocisk'}`,
   radius: (v) => `+${v} promienia`,
   duration: (v) => `działa o ${v} s dłużej`,
   dist: (v) => `+${v} zasięgu`,
@@ -287,18 +287,19 @@ export const HEROES: HeroDef[] = [
     id: 'aurel', name: 'Aurel', role: 'Kapłan', sprite: 'aurel', color: C.yellow,
     base: { maxHp: 120, speed: 54, regen: 0.4, duration: 1.05 },
     weapon: 'light',
-    tags: ['Życie', 'Przywołania'],
-    passive: { name: 'Opiekun', desc: 'Co 6 s dostajesz tarczę 3% HP za każdego sługę (maks. 18% HP).', kind: 'guardShield', value: 6 },
-    resource: { kind: 'faith', name: 'Wiara', color: C.yellow, desc: 'Rośnie z zabójstw w pobliżu i z leczenia. Pełna daje Łaskę: leczenie, tarczę i dłuższe sługi. Sąd (R) zużywa całą.' },
+    tags: ['Życie', 'Obszar'],
+    passive: { name: 'Guardian', desc: 'Every 6 s you get a shield of 2% HP for each Branded enemy near you (max 10% HP).', kind: 'guardShield', value: 6 },
+    resource: { kind: 'faith', name: 'Wiara', color: C.yellow, desc: 'Grows from kills nearby and from healing. When full it becomes Grace: healing and a shield. Judgment (R) spends all of it.' },
     abilities: [
       {
-        id: 'a_guard', name: 'Strażnicy', icon: 'ab_a_guard', desc: 'Przywołujesz świetlistych strażników, którzy walczą i leczą cię trafieniami.', slot: 'q', kind: 'guardian', color: C.yellow,
-        cooldown: 10, cdPerLevel: -0.5, maxLevel: 5,
-        p: { count: 2, damage: 16, duration: 10 }, pl: { count: 1, damage: 6 },
-        evo: { tag: 'Przywołania', name: 'Anielski zastęp', desc: 'Strażnicy są wielcy, silniejsi i trwają dłużej.', icon: 'ab_a_guard_evo', bonus: { count: 1, damage: 16, duration: 4 } },
+        // 0.43: Włócznia światła zamiast Strażników (id i flagi a_guard.* zostają dla zapisów, drzewka i kart).
+        id: 'a_guard', name: 'Spear of Light', icon: 'ab_a_guard', desc: 'You throw a spear of light that pierces every enemy in a line and Brands them for a few seconds. Your hits on Branded enemies heal you a little.', slot: 'q', kind: 'lance', color: C.yellow,
+        cooldown: 4, cdPerLevel: -0.2, maxLevel: 5,
+        p: { count: 1, damage: 70, duration: 6 }, pl: { damage: 22, duration: 0.5 },
+        evo: { tag: 'Obszar', name: 'Dawn Spear', desc: 'Three spears in a fan, and Branded enemies burst with light when they die.', icon: 'ab_a_guard_evo', bonus: { count: 2, damage: 20 } },
       },
       {
-        id: 'a_sanct', name: 'Uświęcona ziemia', icon: 'ab_a_sanct', desc: 'Krąg światła wokół ciebie: leczy cię, rani wrogów i przedłuża życie sług.', slot: 'e', kind: 'sanctum', color: C.gold,
+        id: 'a_sanct', name: 'Uświęcona ziemia', icon: 'ab_a_sanct', desc: 'A circle of light around you: it heals you, hurts enemies and makes their Brand last longer.', slot: 'e', kind: 'sanctum', color: C.gold,
         cooldown: 12, cdPerLevel: -0.6, maxLevel: 5,
         p: { damage: 8, radius: 44, duration: 4, heal: 1 }, pl: { damage: 4, radius: 4, duration: 0.5 },
         evo: { tag: 'Życie', name: 'Sanktuarium', desc: 'Większy krąg, który na start daje tarczę 12% HP.', icon: 'ab_a_sanct_evo', bonus: { radius: 14, damage: 6, heal: 0.5 } },
@@ -323,7 +324,7 @@ export const HEROES: HeroDef[] = [
     weapon: 'katana',
     tags: ['Szybkość', 'Krytyk'],
     passive: { name: 'Mikiri', desc: '5% chance to parry a hit or a projectile at level 1, +0.6% per level (max 35%, cards included): no damage, a counter cut around you and +6 Rhythm. Parried projectiles fly back at enemies.', kind: 'parry', value: 20 },
-    resource: { kind: 'rhythm', name: 'Rhythm', color: C.cyan, desc: 'Every hit builds Rhythm and attack speed. Full Rhythm starts Flow: a few seconds of very fast, stronger attacks, then it builds again from zero. Iai (R) spends it on a stronger cut.' },
+    resource: { kind: 'rhythm', name: 'Rhythm', color: C.cyan, desc: 'Every hit builds Rhythm and attack speed, and it stays until you take damage: then it drains to zero and builds again. Full Rhythm starts Flow: a few seconds of very fast, stronger attacks. Iai (R) spends it on a stronger cut.' },
     abilities: [
       {
         id: 't_slam', name: 'Helm Splitter', icon: 'ab_t_slam', desc: 'An overhead strike into the ground in front of you: damage and a short stun in a circle.', slot: 'q', kind: 'overhead', color: C.lgray,
@@ -395,8 +396,8 @@ export function resourceDetails(kind: ResourceKind): string[] {
       `Sąd (R) zużywa całą: +${pc(R.faith.judgDmg)} obrażeń za punkt, +1 cel za każde ${R.faith.judgExtra}.`,
     ];
     case 'rhythm': return [
-      `Max ${R.rhythm.max}. Every hit: +1 (at most every ${R.rhythm.gap} s), a parry: +${R.parry.rhythm}.`,
-      `While it builds: +${pc(R.rhythm.atk)} attack speed per point. Getting hit costs ${pc(R.rhythm.hurtLoss)}.`,
+      `Max ${R.rhythm.max}. Every hit: +${R.rhythm.hit} (at most every ${R.rhythm.gap} s), a parry: +${R.parry.rhythm}.`,
+      `While it builds: +${pc(R.rhythm.atk)} attack speed per point. Getting hit drains it to zero (${R.rhythm.drain} per second).`,
       `Full: Flow for ${R.rhythm.flow} s: +${pc(R.rhythm.flowAtk)} attack speed, +${pc(R.rhythm.flowDmg)} damage, Thousand Cuts ready. Then it starts from zero.`,
       `Iai (R): outside Flow spends it all (+${pc(R.rhythm.iai)} damage per point), in Flow deals x${R.rhythm.flowIai} and Flow goes on.`,
     ];

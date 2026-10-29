@@ -46,7 +46,9 @@ import { spawnTurret } from '../systems/turrets';
  *  res.gain / res.power / res.max   zasób bohatera: szybszy przyrost, silniejszy efekt, większa pojemność (systems/resource.ts)
  *  heat.safe / heat.vent            Żar Ignary: przegrzanie nie rani, mocniejszy Wydech żaru
  *  execHeal / execKeep / stepResetDash   Vesper: Egzekucja leczy za zabitych i zostawia część kombo, Cios z cienia odnawia unik
- *  guardHeal       Aurel: mocniejsze leczenie z trafień strażników (+ułamek)
+ *  guardHeal       Aurel: mocniejsze leczenie z trafień w napiętnowanych (+ułamek)
+ *  brandDmg        Aurel: więcej obrażeń przeciw napiętnowanym (+ułamek)
+ *  lanceDmg / lanceSpeed  Aurel: obrażenia / prędkość Włóczni światła (+ułamek)
  *  secretRate      częstsze sekrety map (+ułamek)
  *  calm            +obrażenia po BAL.feats.calmAfter s bez trafienia; firstBlock: pierwsze trafienie na poziomie blokowane
  * Flagi paktów (data/pacts.ts, na cały run):
@@ -419,7 +421,7 @@ export const CARDS: CardDef[] = [
   { id: 'h_v_dance', name: 'Wirujący taniec', rarity: 'gold', tags: ['Umiejętności', 'Szybkość'], hero: 'vesper', desc: 'Taniec ostrzy: +1.5 s, +15 obrażeń cięć.', stackable: true, flags: { 'v_dance.duration': 1.5, 'v_dance.damage': 15 } },
   { id: 'h_v_blood', name: 'Krwawe żniwo', rarity: 'gold', tags: ['Życie', 'Krytyk'], hero: 'vesper', desc: 'Egzekucja leczy 4% HP za każdego zabitego wroga.', stackable: true, flags: { execHeal: 0.04 } },
   { id: 'h_v_shadow', name: 'Mistrzyni cieni', rarity: 'prism', tags: ['Krytyk', 'Szybkość'], hero: 'vesper', desc: 'Łowczyni działa o 6 zabójstw wcześniej, a Cios z cienia odnawia też Zniknięcie.', flags: { 'passive.n': 6, stepResetDash: 1 } },
-  { id: 'h_a_guard', name: 'Wierni', rarity: 'silver', tags: ['Przywołania'], hero: 'aurel', desc: 'Strażnicy: +1 strażnik, +6 obrażeń.', stackable: true, flags: { 'a_guard.count': 1, 'a_guard.damage': 6 } },
+  { id: 'h_a_guard', name: 'Twin Spears', rarity: 'silver', tags: ['Obszar'], hero: 'aurel', desc: 'Spear of Light: +1 spear, +12 damage.', stackable: true, flags: { 'a_guard.count': 1, 'a_guard.damage': 12 } },
   { id: 'h_a_faith', name: 'Gorliwość', rarity: 'silver', tags: ['Życie'], hero: 'aurel', desc: 'Wiara rośnie 40% szybciej, a Łaska i Sąd są 30% silniejsze.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
   {
     id: 'h_a_step', name: 'Ślad światła', rarity: 'silver', tags: ['Życie', 'Szybkość'], hero: 'aurel', desc: 'Krok światła leczy 4% maks. HP.', stackable: true,
@@ -427,8 +429,8 @@ export const CARDS: CardDef[] = [
   },
   { id: 'h_a_sanct', name: 'Święty krąg', rarity: 'gold', tags: ['Życie', 'Obszar'], hero: 'aurel', desc: 'Uświęcona ziemia: +2 s, +12 promienia, leczy o 0.5% HP na sekundę więcej.', stackable: true, flags: { 'a_sanct.duration': 2, 'a_sanct.radius': 12, 'a_sanct.heal': 0.5 } },
   { id: 'h_a_judge', name: 'Wyrok', rarity: 'gold', tags: ['Umiejętności'], hero: 'aurel', desc: 'Sąd: +4 cele, +30 obrażeń słupów.', stackable: true, flags: { 'a_judge.count': 4, 'a_judge.damage': 30 } },
-  { id: 'h_a_shield', name: 'Tarcza wiary', rarity: 'gold', tags: ['Tarcze', 'Przywołania'], hero: 'aurel', desc: 'Opiekun działa co 4 s zamiast co 6 s, a tarcza może urosnąć o 10% HP więcej.', flags: { 'passive.n': 2, 'passive.shieldCap': 0.1 } },
-  { id: 'h_a_saint', name: 'Święty patron', rarity: 'prism', tags: ['Przywołania', 'Życie'], hero: 'aurel', desc: 'Sługi zadają +50% obrażeń, a trafienia strażników leczą 2x mocniej.', flags: { minionDmg: 0.5, guardHeal: 1 } },
+  { id: 'h_a_shield', name: 'Tarcza wiary', rarity: 'gold', tags: ['Tarcze', 'Życie'], hero: 'aurel', desc: 'Guardian works every 4 s instead of 6 s, and its shield can grow 10% HP higher.', flags: { 'passive.n': 2, 'passive.shieldCap': 0.1 } },
+  { id: 'h_a_saint', name: 'Święty patron', rarity: 'prism', tags: ['Życie', 'Obszar'], hero: 'aurel', desc: 'Branded enemies take +25% damage from you, and hits on them heal twice as much.', flags: { brandDmg: 0.25, guardHeal: 1 } },
   // Takezo (szermierz, 0.32): opisy po angielsku, polski w core/i18n-pl.ts.
   { id: 'h_t_slam', name: 'Heavy Blade', rarity: 'silver', tags: ['Obszar'], hero: 'takezo', desc: 'Helm Splitter: +16 damage, +4 radius.', stackable: true, flags: { 't_slam.damage': 16, 't_slam.radius': 4 } },
   { id: 'h_t_rhythm', name: 'Steady Breath', rarity: 'silver', tags: ['Szybkość'], hero: 'takezo', desc: 'Rhythm builds 40% faster and gives 30% more attack speed.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
@@ -496,7 +498,7 @@ const CARD_ICONS: Record<string, string> = {
   h_a_sanct: 'ab_a_sanct_evo', h_a_judge: 'ab_a_judge', h_a_shield: 'tag:Tarcze', h_a_saint: 'ab_a_guard_evo',
   u_trophy: 'ui_skull', u_butcher: 'ic_axe_evo', u_mentor: 'gem2', u_map: 'cd_gold', u_smith: 'it_plate', u_ghost: 'pi_wings',
   u_banner: 'syn_all', u_greed: 'coin', u_lore: 'pi_crit', u_eternal: 'pi_herb', u_sun: 'ic_light_evo', u_pact: 'cd_blood',
-  u_ward: 'tag:Tarcze', u_halo: 'ab_a_guard', u_medal: 'pi_clover',
+  u_ward: 'tag:Tarcze', u_halo: 'tag:Życie', u_medal: 'pi_clover',
 };
 for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;
 

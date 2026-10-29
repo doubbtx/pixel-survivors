@@ -44,6 +44,7 @@ export const WEAPON_TAGS: Record<WeaponKind, Tag[]> = {
   boomerang: ['Pociski', 'Szybkość'],
   laser: ['Krytyk', 'Ogień'],
   mines: ['Ogień', 'Przywołania'],
+  lash: ['Obszar', 'Szybkość'],
   cleave: ['Obszar', 'Tarcze'],
   nova: ['Obszar', 'Życie'],
 };

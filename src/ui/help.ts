@@ -68,7 +68,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Żar (Ignara): Q i E rozgrzewają, czary są mocniejsze. Powyżej żółtej kreski żar cię rani. Unik (od 40 żaru) zrzuca go wybuchem.',
       'Dusze (Morwen): wrogowie ginący w pobliżu dają dusze. Pełne stają się sługą, R zużywa wszystkie na mocniejszą armię.',
       'Kombo (Vesper): każde trafienie podbija obrażenia. Egzekucja (E) zużywa całe kombo, oberwanie je zeruje.',
-      'Wiara (Aurel): z zabójstw w pobliżu i leczenia. Pełna daje Łaskę (leczenie, tarcza, sługi), Sąd (R) zużywa całą.',
+      'Faith (Aurel): from kills nearby and healing. When full it gives Grace (healing and a shield); Judgment (R) spends all of it. Spear of Light (Q) Brands enemies: your hits on them heal you.',
     ],
   },
   {

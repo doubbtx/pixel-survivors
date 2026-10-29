@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.42.0)
+## Stan (wersja 0.43.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -682,11 +682,19 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   Podgląd przy wyborze: `peekFromPick` w game-screen (stany levelup/cards/power/relic/loot) — C build, I/Tab plecak,
   Y synergie (nowa akcja `synergies`, do zmiany w Sterowaniu) albo przyciski `peekBtn`; powrót przez build/inv/synReturn.
   Nowe bronie ogólne: `sickle` (Sierp krwi, bolt z `hybrid.seek`, ewolucja z `fang` → `sickle_evo` z `hybrid.drain` 0.4%
-  maks. HP za trafienie w budżecie `BAL.drainPerSec` 1%/s — `Run.drainHeal`, przez `heal`, nie działa z Kielichem; alt z
+  maks. HP za trafienie w budżecie `BAL.drainPerSec` 1.5%/s — `Run.drainHeal`, przez `heal`, nie działa z Kielichem; alt z
   `crit`) i `dice` (Kości, `hybrid.dice` = mnożnik szóstki, rzut w `rollDie` w projectiles.ts: x0.5–1.6 albo szóstka z
   szansą 1/6 + stats.luck/8, maks. 0.5; ewolucja z `horseshoe` → `dice_evo` z `sixBlast` (wybuch + moneta co 1 s); alt z
   `clover`). `WeaponDef.tags` dodaje tagi synergii obok tagów wzorca (`weaponTags`). Sprite'y obrotowe `SPIN` w render.ts
   (`sickle0..3`, `dice0..3`, `gdice0..3`), ikony z `crescentPts` / `die` w gfx/icons.ts.
+
+- 0.43.0: Aurel Q = Włócznia światła (kind 'lance', id `a_guard` i flagi `a_guard.*` bez zmian dla zapisów/drzewka/kart):
+  pocisk z `pr.brand` (czas Piętna) przebija linię; `Enemy.brandT` / `brandBoom`. Trafienie napiętnowanego leczy przez
+  `drainHeal` (wspólny budżet `BAL.drainPerSec` z Sierpem krwi, Wiara ×`BAL.brand.faith`), `brandDmg` z karty. Ewolucja
+  Włócznia świtu: 3 włócznie, wybuch 'Dawn Burst' w killEnemy (bez łańcucha: `lastHitSrc`). Opiekun: tarcza
+  `BAL.brand.shieldPer` za napiętnowanego w `guardR`; Uświęcona ziemia przedłuża Piętno; Łaska bez sług; sekret 'saint':
+  20 napiętnowanych przy ≥95% HP; meta: `lanceDmg`, `cd.q`. Render: włócznia liniami (gałąź `pr.brand`), romb Piętna pod
+  wrogiem. Takezo: broń 'katana' ma kind 'lash' (cięcia poziome jak bicz: `lashCut`, fx 'slash'), bot traktuje 'lash' jak walkę wręcz.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

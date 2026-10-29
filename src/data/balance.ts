@@ -91,7 +91,7 @@ export const BAL = {
      * odnowiony), pasek opada do zera, potem budowanie od nowa. Iai: poza Przepływem +iai obrażeń za punkt (zużywa Rytm),
      * w Przepływie ×flowIai i Przepływ trwa dalej.
      */
-    rhythm: { max: 40, gap: 0.06, atk: 0.0075, hurtLoss: 0.3, iai: 0.02, flow: 5, flowAtk: 0.6, flowDmg: 0.2, flowIai: 2 },
+    rhythm: { max: 40, gap: 0.04, hit: 1.5, drain: 16, atk: 0.0075, iai: 0.02, flow: 5, flowAtk: 0.6, flowDmg: 0.2, flowIai: 2 },
     /** Mikiri (pasywka Takezo): szansa na odbicie base + perLevel × (poziom − 1), najwyżej max (razem z flagą passive.parry); po odbiciu iframes s nietykalności (tylko to trafienie); kontra wokół (riposteR), +rhythm rytmu, odbity pocisk: reflect × obrażenia kart. */
     parry: { base: 0.05, perLevel: 0.006, max: 0.35, riposteR: 26, rhythm: 6, reflect: 1.5, iframes: 0.1 },
     faith: { max: 100, range: 150, heal: 0.5, graceHeal: 0.15, graceShield: 0.1, minionLife: 3, grace: 60, judgDmg: 0.01, judgExtra: 10, keep: 0.3, guardHeal: 0.004, shieldPer: 0.03, shieldCap: 0.18, sanctLife: 0.5 },
@@ -169,7 +169,9 @@ export const BAL = {
   /** Relikwie (data/relics.ts, R2): limit, wartości efektów i wad. */
   /** Bronie 0.43: Kości (szansa szóstki: baza + Szczęście × sixLuck, maks. sixMax) i budżet leczenia Sierpa krwi (ułamek maks. HP na sekundę). */
   dice: { six: 1 / 6, sixLuck: 1 / 8, sixMax: 0.5, low: 0.5, high: 1.6, blast: 0.5, blastR: 20, coinEvery: 1 },
-  drainPerSec: 0.01,
+  drainPerSec: 0.015,
+  /** Piętno Aurela (0.43): leczenie za trafienie napiętnowanego (ułamek maks. HP, w budżecie drainPerSec; do Wiary liczy się `faith` leczenia), maks. czas, przedłużanie w Uświęconej ziemi (s/s), tarcza Opiekuna za napiętnowanego w `guardR`, wybuch Włóczni świtu. */
+  brand: { heal: 0.004, faith: 0.5, max: 12, shieldCap: 0.1, sanct: 1.5, guardR: 120, shieldPer: 0.02, boom: 0.6, boomR: 24, speed: 260, life: 0.6, width: 9 },
   relics: { max: 3, offer: 3, prismWeak: 2.25, prismResist: 0.25, huntElite: 0.4, huntRegular: 0.1, cloakTime: 1, cloakCd: 8, cloakHp: 0.75, maceTime: 6, maceDmgLoss: 0.15, turncoatHp: 1.5, turncoatAura: 0.5, hornWindow: 15, chaliceHeal: 0.15, bossDmg: 1.25, shopMarkup: 1.25 },
   /** Odstęp próbek telemetrii runu (s). */
   telemetryEvery: 15,

@@ -79,6 +79,8 @@ export function updateProjectiles(run: Run, dt: number): void {
         }
       }
       // Kości (0.43): każdy rzut losuje obrażenia, „szóstka” (szansa rośnie ze Szczęściem) mnoży je mocniej.
+      // Włócznia światła: Piętno przed obrażeniami (zabity samą włócznią też wybucha przy Włóczni świtu).
+      if (pr.brand > 0) { e.brandT = Math.max(e.brandT, pr.brand); if (pr.brandBoom) e.brandBoom = true; }
       let roll = 1;
       if (pr.dice > 0) roll = rollDie(run, pr, e.x, e.y);
       run.damageEnemy(e, pr.damage * roll * (pr.returning ? pr.retMul : 1), pr.src, { kx: pr.vx, ky: pr.vy, knock: pr.knock, forceCrit: pr.forceCrit });

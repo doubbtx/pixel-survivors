@@ -388,6 +388,22 @@ const CASTS: Record<AbilityKind, Cast> = {
     run.addShake(3);
   },
 
+  lance(run, a, P) {
+    // Włócznia światła (Aurel, 0.43): lecąca włócznia przebija wszystkich na linii i nakłada Piętno; Włócznia świtu: wachlarz.
+    const p = run.player, B = BAL.brand, [dx, dy] = aimDir(run), base = Math.atan2(dy, dx), n = Math.max(1, Math.round(P('count')));
+    const dmg = P('damage') * run.stats.might * (1 + run.flag('lanceDmg'));
+    run.cardState.lanceDmg = dmg;
+    for (let k = 0; k < n; k++) {
+      const ang = base + (k - (n - 1) / 2) * 0.28;
+      const pr = run.spawnProjectile({ x: p.x, y: p.y, angle: ang, speed: B.speed * (1 + run.flag('lanceSpeed')), damage: dmg, src: a.def.name, sprite: 'lance', pierce: 999, life: B.life, radius: B.width * run.stats.area, knock: 1.5 });
+      if (!pr) continue;
+      pr.bounces = 0;
+      pr.brand = Math.min(B.max, P('duration') * run.stats.duration);
+      pr.brandBoom = !!a.def.evolved;
+    }
+    run.burst(p.x + dx * 8, p.y + dy * 8, C.yellow, 8, 50);
+  },
+
   guardian(run, a, P) {
     const p = run.player;
     for (let i = 0; i < Math.round(P('count')); i++) spawnMinion(run, p.x, p.y, P('damage') * run.stats.might, P('duration'), !!a.def.evolved, a.def.name, false, true);

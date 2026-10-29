@@ -63,7 +63,7 @@ export function resourceOnHit(run: Run, e: Enemy): void {
   if ((k !== 'focus' && k !== 'fury' && k !== 'streak' && k !== 'rhythm') || run.resGap > 0) return;
   if (k === 'rhythm') {
     run.resGap = R.rhythm.gap;
-    rhythmGain(run, 1);
+    rhythmGain(run, R.rhythm.hit);
     return;
   }
   if (k === 'streak') {
@@ -118,12 +118,16 @@ export function resourceOnHurt(run: Run, dmg: number): void {
   }
   else if (k === 'fury') furyGain(run, (R.fury.hurt * 100 * dmg) / run.stats.maxHp);
   else if (k === 'streak') run.res = 0;
-  else if (k === 'rhythm' && run.flowT <= 0) run.res *= 1 - R.rhythm.hurtLoss;
+  else if (k === 'rhythm' && run.flowT <= 0 && run.res > 0 && !run.rhythmDrain) {
+    // Rytm trzyma się, dopóki nie oberwiesz; po trafieniu opada do zera (BAL.resource.rhythm.drain na sekundę).
+    run.rhythmDrain = true;
+    run.popText(run.player.x, run.player.y - 16, 'Rhythm broken', C.salmon);
+  }
 }
 
 /** Przyrost rytmu (Takezo, poza Przepływem); pełny pasek wyzwala Przepływ. */
 export function rhythmGain(run: Run, v: number): void {
-  if (run.hero.resource.kind !== 'rhythm' || run.flowT > 0) return;
+  if (run.hero.resource.kind !== 'rhythm' || run.flowT > 0 || run.rhythmDrain) return;
   gain(run, v);
   if (run.res < resMax(run)) return;
   // Przepływ: duża szybkość ataku i obrażenia, Tysiąc cięć od razu gotowy; pasek odlicza czas do zera.
@@ -169,14 +173,13 @@ export function resourceOnHeal(run: Run, got: number): void {
   faithGain(run, (R.faith.heal * 100 * got) / run.stats.maxHp);
 }
 
-/** Przyrost wiary; pełna zamienia się w Łaskę: leczenie, tarcza i dłuższe życie sług. */
+/** Przyrost wiary; pełna zamienia się w Łaskę: leczenie i tarcza. */
 function faithGain(run: Run, v: number): void {
   gain(run, v);
   if (run.res < resMax(run)) return;
   const F = R.faith, p = run.player;
   run.res -= F.grace;
   run.addShield(run.stats.maxHp * F.graceShield * power(run), 0.3);
-  for (const m of run.minions.items) m.life += F.minionLife;
   run.heal(run.stats.maxHp * F.graceHeal * power(run));
   const f = run.addFx('ring', p.x, p.y, C.yellow, 0.4);
   if (f) f.r = 40;
@@ -257,6 +260,9 @@ export function updateResource(run: Run, dt: number): void {
   if (k === 'rhythm' && run.flowT > 0) {
     run.flowT = Math.max(0, run.flowT - dt);
     run.res = (resMax(run) * run.flowT) / run.flowMax;
+  } else if (k === 'rhythm' && run.rhythmDrain) {
+    run.res = Math.max(0, run.res - R.rhythm.drain * dt);
+    if (run.res <= 0) run.rhythmDrain = false;
   }
   if (k !== 'heat') return;
   const H = R.heat, p = run.player;

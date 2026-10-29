@@ -133,11 +133,12 @@ export const SECRETS: SecretDef[] = [
     flags: { execKeep: 0.5 }, stats: { crit: 0.1 },
   },
   {
-    id: 'saint', name: 'Święty', riddle: 'Dwunastu strażników i ani jednej rany na duszy.',
-    hint: 'Aurel: miej 12 sług naraz przy co najmniej 95% HP.', hero: 'aurel',
-    desc: 'Sługi żyją 30% dłużej, +1.5 HP na sekundę.',
-    check: (run) => run.minions.count >= 12 && run.player.hp >= run.stats.maxHp * 0.95,
-    flags: { minionLife: 0.3 }, stats: { regen: 1.5 },
+    // 0.43: Piętno zamiast sług (Włócznia światła zastąpiła Strażników).
+    id: 'saint', name: 'Święty', riddle: 'Forty marked by light, and not a single wound on the soul.',
+    hint: 'Aurel: have 40 Branded enemies at once while at 95% HP or more.', hero: 'aurel',
+    desc: 'Brand lasts 1.5 s longer, +1.5 HP per second.',
+    check: (run) => run.player.hp >= run.stats.maxHp * 0.95 && run.step % 15 === 0 && run.enemies.items.reduce((n, e) => n + (!e.dead && e.brandT > 0 ? 1 : 0), 0) >= 40,
+    flags: { 'a_guard.duration': 1.5 }, stats: { regen: 1.5 },
   },
   {
     id: 'ganryu', name: 'Ganryū', riddle: 'Piętnaście ciosów zatrzymanych, żadnej rany — jak na wyspie pojedynku.',

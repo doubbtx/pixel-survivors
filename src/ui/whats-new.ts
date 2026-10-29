@@ -18,6 +18,15 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.43',
+    lines: [
+      "Takezo's Rhythm builds faster and stays until you take damage; after a hit it drains to zero.",
+      "In the pause menu (Build tab) click or point at a card to see what it does.",
+      "Aurel has a new Q, Spear of Light, instead of Guardians: a spear that pierces a whole line of enemies and Brands them. Your hits on Branded enemies heal you, Hallowed Ground makes the Brand last longer and Guardian gives a shield for Branded enemies nearby. Your Aurel upgrades in Progress carry over to the spear.",
+      "Takezo's Two Swords now cut like a whip: long horizontal slashes to the side you face, then to the other side.",
+    ],
+  },
+  {
     version: '0.42',
     lines: [
       "Two new weapons for every hero: Blood Sickle (crescents that jump between enemies; evolves with Fang into Reaper's Moon, which heals you a little on every hit) and Dice (random damage, sixes hit harder and Luck rolls more of them; evolves with Horseshoe into Golden Six, whose sixes explode and drop coins). Both have a second evolution too (Hawk Eye, Clover).",

@@ -701,6 +701,7 @@ export function updateEnemies(run: Run, dt: number): void {
     }
 
     if (e.buffT > 0) e.buffT -= dt;
+    if (e.brandT > 0) e.brandT -= dt;
     if (e.elite) eliteTraits(run, e, dt);
     if (e.dead) continue;
 
