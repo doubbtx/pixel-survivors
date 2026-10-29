@@ -47,15 +47,18 @@ let screen: Screen;
 /** Płynne przejście między ekranami: krótkie wyciemnienie po zmianie ekranu. */
 const FADE = 0.22;
 let fadeT = 0;
+/** Stan automatycznej jakości (updateQuality niżej). */
+const QUALITY = { slowMs: 12, fastMs: 6, downAfter: 2, upAfter: 20, maxUps: 2 };
+const quality = { low: false, slowT: 0, fastT: 0, ups: 0, last: performance.now() };
 const app: App = {
   r: renderer,
   input,
   save,
-  loop: { fps: 0, updateMs: 0 },
+  loop: { fps: 0, updateMs: 0, workMs: 0 },
   go(s) { screen = s; fadeT = FADE; input.touchControls = false; input.stick = null; },
   persist() {
     writeSave(save);
-    renderer.setWorldRes(save.settings.lowFx ? 2 : 3);
+    renderer.setWorldRes(save.settings.lowFx || quality.low ? 2 : 3);
     sfx.setVolume(save.settings.volume);
     music.setVolume(save.settings.music);
   },
@@ -74,7 +77,31 @@ const bot = import.meta.env.DEV && botParams.has('bot') ? new (await import('./d
 // Podgląd stanu w konsoli i w testach (tylko serwer deweloperski): window.__screen(), telemetria bieżącego runu
 // window.__telemetry() (JSON do skopiowania z prawdziwej gry).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-if (import.meta.env.DEV) Object.assign(window, { __screen: () => screen, __sfx: sfx, __telemetry: () => JSON.stringify((screen as any).run?.telemetry ?? []) });
+if (import.meta.env.DEV) Object.assign(window, { __screen: () => screen, __sfx: sfx, __telemetry: () => JSON.stringify((screen as any).run?.telemetry ?? []), __quality: quality, __loop: () => app.loop });
+
+/**
+ * Automatyczna jakość (0.38): gdy praca klatki (logika + render) przez `downAfter` s przekracza `slowMs`, świat rysuje się
+ * w rozdzielczości 2 zamiast 3 (jak Efekty oszczędne: 2.25× mniej pikseli do wypełnienia i wklejenia). Powrót po `upAfter` s
+ * szybkich klatek, najwyżej `maxUps` razy na sesję (bez migania jakości). W bocie tylko z `&autoq=1` (pomiary wydajności).
+ */
+function updateQuality(): void {
+  const now = performance.now(), dt = Math.min(0.25, (now - quality.last) / 1000), w = app.loop.workMs;
+  quality.last = now;
+  if (save.settings.lowFx || (botParams.has('bot') && !botParams.has('autoq'))) return;
+  if (!quality.low) {
+    quality.slowT = w > QUALITY.slowMs ? quality.slowT + dt : 0;
+    if (quality.slowT < QUALITY.downAfter) return;
+    quality.low = true;
+    quality.fastT = 0;
+  } else {
+    quality.fastT = w < QUALITY.fastMs ? quality.fastT + dt : 0;
+    if (quality.fastT < QUALITY.upAfter || quality.ups >= QUALITY.maxUps) return;
+    quality.low = false;
+    quality.slowT = 0;
+    quality.ups++;
+  }
+  renderer.setWorldRes(quality.low ? 2 : 3);
+}
 
 const step = (dt: number) => {
   input.pollGamepads();
@@ -98,6 +125,7 @@ app.loop = startLoop(
     pointer.y = mouse ? input.mouse.y : -1;
     pointer.hit = false;
     screen.render();
+    updateQuality();
     canvas.style.cursor = pointer.hit ? 'pointer' : '';
     if (fadeT > 0) renderer.withAlpha(fadeT / FADE, () => renderer.rect(0, 0, W, H, C.black));
   },

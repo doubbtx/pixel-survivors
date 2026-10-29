@@ -413,6 +413,11 @@ export const BAL = {
     huntCrowd: -0.3,
     huntEscort: 2,
     arenaReward: 0.5,
+    /** Powinowactwa map (0.38): szansa na odporność / podatność węzła, mnożnik podatności, nagroda za odporność (punkty). */
+    resistChance: 0.25,
+    weakChance: 0.25,
+    weakMul: 1.5,
+    resistReward: 15,
     eliteChestEvery: 2,
     /** Szansa, że mapa nie ma bonusu. */
     noBonusChance: 0.35,

@@ -3,6 +3,12 @@
  * `{}` = wstawka (liczba, nazwa — tłumaczona osobno). Nowy napis w grze: dopisz tu jego polską wersję.
  */
 export const PL: Record<string, string> = {
+  "Weak to {}: {} damage +{}%": "Podatni na {}: obrażenia od żywiołu {} +{}%",
+  "Resists {}: {} damage -{}%, its statuses and reactions blocked, +{}% loot": "Odporni na {}: obrażenia od żywiołu {} -{}%, jego stany i reakcje zablokowane, +{}% łupu",
+  "Your build (last map): {}": "Twój build (ostatnia mapa): {}",
+  "Your build: no damage data yet": "Twój build: brak danych o obrażeniach",
+  "no elements": "bez żywiołów",
+  "Elites: {}": "Elity: {}",
   "New Expedition nodes: Ambush (survive while rings of enemies close in, the last ones with elites), Hunt (kill the biome miniboss and its escort before it escapes, for a boss chest) and Vault (an arena with wardens and treasure).": "Nowe węzły Ekspedycji: Zasadzka (przetrwaj, gdy zamykają się pierścienie wrogów, ostatnie z elitami), Polowanie (zabij minibossa biomu z eskortą, zanim ucieknie, po skrzynię bossa) i Skarbiec (arena ze strażnikami i skarbem).",
   "Balance: elite maps drop a chest from every second elite, dungeons give half the modifier reward, survival maps are shorter and act bosses are tougher.": "Balans: mapy elit dają skrzynię z co drugiej elity, lochy połowę nagrody za modyfikatory, mapy na przetrwanie są krótsze, a bossowie aktów twardsi.",
   "Fixed a rare softlock where enemies stopped appearing after a boss was pushed out by a full crowd.": "Naprawiono rzadką blokadę poziomu, gdy przy pełnym tłumie znikał boss i przestawali pojawiać się wrogowie.",

@@ -1,4 +1,5 @@
 import { C, RAMP, type Ramp } from '../core/palette';
+import type { Element } from './elements';
 
 /**
  * Poziomy kampanii są generowane z numeru (głębokości), więc kampania nie ma końca.
@@ -59,6 +60,11 @@ export interface LevelDef {
   dungeonKind?: 'portal' | 'vault';
   /** Zasadzka (Ekspedycja): pierścienie wrogów zamykają się co kilkanaście sekund, bez zwykłych okrążeń. */
   ambush?: boolean;
+  /** Powinowactwo mapy (Ekspedycja, 0.38): wrogowie podatni (×BAL.expedition.weakMul) albo odporni na żywioł (jak bossowie). */
+  weak?: Element;
+  resist?: Element;
+  /** Stałe cechy elit tej mapy (Mapa elit, Zasadzka), widoczne przed wejściem. */
+  eliteMods?: string[];
   flags?: Record<string, number>;
 }
 

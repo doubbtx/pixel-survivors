@@ -17,6 +17,10 @@ import { fmt } from '../util/format';
 import { panel, inside, hovered, button, Scroll } from './widgets';
 import { tile, iconSlot, UI } from './theme';
 import { CHUNK, groundChunk, groundBase, groundFrame } from '../gfx/ground';
+import { drawElemMark } from '../gfx/elemmark';
+import { tr } from '../core/i18n';
+import { ELEMENTS, type Element } from '../data/elements';
+import { ELITE_MODS } from '../data/enemies';
 
 const MAP_X = 8, MAP_Y = 28, MAP_W = W - 16, MAP_H = 140;
 const NODE = 20;
@@ -51,6 +55,15 @@ function nodePos(row: number, lane: number): [number, number] {
   const X = BAL.expedition;
   const step = (MAP_W - 60) / (X.rows - 1);
   return [MAP_X + 30 + row * step, MAP_Y + 34 + lane * ((MAP_H - 50) / (X.lanes - 1))];
+}
+
+/** Udział żywiołów w obrażeniach z ostatniej mapy, np. „Your build: Fire 42%, Ice 10%, other 48%”. */
+function buildElements(dmg: Partial<Record<Element | 'none', number>>): string {
+  const total = Object.values(dmg).reduce((a, b) => a + (b ?? 0), 0);
+  if (total <= 0) return 'Your build: no damage data yet';
+  const parts = (Object.keys(ELEMENTS) as Element[]).filter((k) => (dmg[k] ?? 0) / total >= 0.01)
+    .sort((a, b) => (dmg[b] ?? 0) - (dmg[a] ?? 0)).map((k) => `${tr(ELEMENTS[k].name)} ${Math.round(((dmg[k] ?? 0) / total) * 100)}%`);
+  return `Your build (last map): ${parts.length ? parts.join(', ') : tr('no elements')}`;
 }
 
 export type MapAction = { pick: number } | 'inventory' | 'menu' | null;
@@ -287,6 +300,12 @@ export class ExpeditionMapView {
         }
         // Liczba modyfikatorów mapy: kropki pod węzłem; bonus mapy: zielony znak w rogu.
         if (!picked) for (let k = 0; k < (m.mods?.length ?? 0); k++) r.rect(x - 8 + k * 3, y + NODE / 2 + 1 + bob, 2, 2, C.salmon);
+        // Powinowactwo żywiołu: znacznik (kształt dla daltonistów) w lewym dolnym rogu, kreska: zielona podatność, czerwona odporność.
+        if (m.affinity && row > cur) {
+          const ax = x - NODE / 2 + 2, ay = y + NODE / 2 - 3 + bob;
+          drawElemMark(r, m.affinity.el, ax, ay);
+          r.rect(ax - 3, ay + 4, 7, 1, m.affinity.kind === 'weak' ? C.lime : C.red);
+        }
         if (m.bonus && row > cur) { r.roundRect(x + NODE / 2 - 5, y - NODE / 2 - 2 + bob, 7, 7, 1, C.black); drawText(g, '+', x + NODE / 2 - 1.5, y - NODE / 2 - 1.5 + bob, C.lime, { align: 'center', scale: 0.75 }); }
       };
       const onRoute = !!route?.has(`${row}:${lane}`);
@@ -322,10 +341,17 @@ export class ExpeditionMapView {
       const mods = (m.mods ?? []).map((id) => MAP_MOD_BY_ID[id]);
       const [ax, ay, aw, ah] = MODS_AREA, lh = descLH(), oy = this.modScroll.begin(r, ax, ay, aw, ah);
       let my = ay + 1 - oy;
-      // Węzły-wydarzenia: najpierw opis zasad (czym różnią się od zwykłej mapy).
-      if (m.kind === 'ambush' || m.kind === 'hunt' || m.kind === 'vault') {
-        for (const l of wrapText(kind.desc, (aw - 6) / descS())) { drawText(g, l, ax, my, kind.color, DESC); my += lh; }
+      const para = (text: string, col: number) => { for (const l of wrapText(text, (aw - 6) / descS())) { drawText(g, l, ax, my, col, DESC); my += lh; } };
+      // Powinowactwo żywiołu i udział żywiołów buildu z ostatniej mapy (czy ta mapa pasuje do buildu).
+      if (m.affinity) {
+        const e = ELEMENTS[m.affinity.el];
+        const en = tr(e.name);
+        para(m.affinity.kind === 'weak' ? `Weak to ${en}: ${en} damage +${Math.round((X.weakMul - 1) * 100)}%` : `Resists ${en}: ${en} damage -${Math.round((1 - BAL.bossResist.mul) * 100)}%, its statuses and reactions blocked, +${X.resistReward}% loot`, m.affinity.kind === 'weak' ? C.lime : C.salmon);
+        para(buildElements(run.elemDmg), C.lavender);
       }
+      if (m.eliteMods) para(`Elites: ${m.eliteMods.map((k) => tr(ELITE_MODS[k].name)).join(' + ')}`, C.orange);
+      // Węzły-wydarzenia: opis zasad (czym różnią się od zwykłej mapy) po informacjach, które zależą od buildu.
+      if (m.kind === 'ambush' || m.kind === 'hunt' || m.kind === 'vault') para(kind.desc, kind.color);
       for (const mod of mods) {
         wrapText(`${mod.name}: ${mod.desc}`, (aw - 6) / descS()).forEach((l, i) => {
           drawText(g, l, ax, my, C.lgray, DESC);

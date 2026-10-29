@@ -58,6 +58,8 @@ export interface TelemetrySample {
   t: number; lt: number; wt: number; lvl: number; depth: number; pm: number; dps: number; hp: number; taken: number; kills: number; alive: number;
   /** Średni czas życia zabitych zwykłych wrogów i elit (s, -1 = brak), użycia ulta, mnożnik XP, cel poziomu. */
   life: number; eLife: number; ult: number; growth: number; goal: string;
+  /** Powinowactwo mapy ('weak:fire', 'resist:ice' albo ''). */
+  aff: string;
 }
 
 export const DEFAULT_STATS: Stats = {
@@ -443,6 +445,8 @@ export class Run {
   eliteKills = 0;
   /** Polowanie: czas spędzony w lochu (sekretne schody) nie liczy się do limitu ucieczki. */
   huntPaused = 0;
+  /** Obrażenia zadane na bieżącej (ostatniej) mapie wg żywiołu źródła — udział żywiołów buildu na mapie Ekspedycji. */
+  elemDmg: Partial<Record<Element | 'none', number>> = {};
   eliteT: number = BAL.eliteEvery;
   /** Średni DPS gracza (średnia krocząca) i wynikający z niego mnożnik siły wrogów (BAL.power). */
   dpsEma = 0;
@@ -532,6 +536,7 @@ export class Run {
     this.ambushRing = 0;
     this.eliteKills = 0;
     this.huntPaused = 0;
+    this.elemDmg = {};
     this.eliteT = BAL.eliteEvery * this.levelInfo.eliteMul * BAL.eliteGap(this.levelInfo.waveOffset);
     this.nextEvent = 0;
     this.spawnAcc = 0;
@@ -629,6 +634,7 @@ export class Run {
       life: this.lifeN ? Math.round((this.lifeSum / this.lifeN) * 100) / 100 : -1, eLife: this.eliteLifeN ? Math.round(this.eliteLifeSum / this.eliteLifeN) : -1,
       ult: this.ultUses - this.ultMark, growth: Math.round(st.growth * 100) / 100,
       goal: this.levelInfo.dungeon ? 'dungeon' : this.levelInfo.objective.kind,
+      aff: this.levelInfo.weak ? `weak:${this.levelInfo.weak}` : this.levelInfo.resist ? `resist:${this.levelInfo.resist}` : '',
     });
     this.takenMark = this.takenTotal;
     this.killsMark = this.kills;
@@ -1212,8 +1218,12 @@ export class Run {
     // Spokój (karta z osiągnięcia): więcej obrażeń po dłuższym czasie bez trafienia.
     const calm = this.flag('calm') > 0 && this.totalTime - this.lastHurtAt >= BAL.feats.calmAfter ? 1 + this.flag('calm') : 1;
     const loyal = this.loyal && src === this.weapons[0].def.name ? Math.pow(1 + BAL.loyal.dmg, this.loyal) : 1;
-    const resist = this.resistOf(e) !== undefined && damageElement(src, this.augElem) === this.resistOf(e) ? BAL.bossResist.mul : 1;
-    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * loyal * resourceDamageMul(this, src) * (1 - e.dr));
+    // Odporność (boss: żywioł biomu; mapa Ekspedycji: żywioł mapy) i podatność mapy na żywioł źródła.
+    const el = damageElement(src, this.augElem), res = this.resistOf(e);
+    const resist = res !== undefined && el === res ? BAL.bossResist.mul : 1;
+    const weak = el !== undefined && el === this.levelInfo.weak ? BAL.expedition.weakMul : 1;
+    // Podatność raz: ticki stanów (podpalenie, trucizna) dziedziczą ją przez bazę z trafienia, które je nałożyło.
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * (o.dot ? 1 : weak) * loyal * resourceDamageMul(this, src) * (1 - e.dr));
     // Statystyki (tabela obrażeń, DPS) i siła gracza (trudność, 0.35.2: bez nadwyżki ponad HP wroga) liczą tylko zadane
     // obrażenia; kradzież życia całe trafienie.
     const dealt = Math.min(dmg, Math.max(0, e.hp));
@@ -1222,7 +1232,9 @@ export class Run {
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;
-    if (!pct) this.dmgStep += dealt;
+    // Siła buildu bez powinowactwa mapy: mapa podatna / odporna działa w pełni, pogoń HP jej nie wyrównuje.
+    if (!pct) this.dmgStep += dealt / (resist * weak);
+    this.elemDmg[el ?? 'none'] = (this.elemDmg[el ?? 'none'] ?? 0) + dealt / (resist * weak);
     this.lastHitSrc = src;
     if (st.lifesteal > 0) this.heal(Math.min(dmg * st.lifesteal, st.maxHp * 0.02));
     if (o.knock) {
@@ -1282,7 +1294,7 @@ export class Run {
 
   /** Żywioł, na który wróg jest odporny: boss biomu poziomu (BAL.bossResist). */
   resistOf(e: Enemy): Element | undefined {
-    return e.boss ? BAL.bossResist.biome[this.levelInfo.biome % BAL.bossResist.biome.length] ?? undefined : undefined;
+    return e.boss ? BAL.bossResist.biome[this.levelInfo.biome % BAL.bossResist.biome.length] ?? undefined : this.levelInfo.resist;
   }
 
   /** Nakłada stan żywiołu po trafieniu (siła z `elemPower`); najpierw sprawdza reakcję z innym stanem na wrogu. */

@@ -88,7 +88,7 @@ function ringPos(run: Run, a: number, r = SPAWN_R): [number, number] {
 }
 
 /** Okrążenie: `n` zwykłych wrogów składu fali w pierścieniu wokół gracza i `elites` elit tuż za nim (zadania, Zasadzka). */
-export function encircle(run: Run, n: number, elites: number): void {
+export function encircle(run: Run, n: number, elites: number, eliteMods?: string[]): void {
   const p = run.player, mix = currentMix(run.waveTime(), run.levelInfo.biome);
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
@@ -97,7 +97,7 @@ export function encircle(run: Run, n: number, elites: number): void {
   const mods = Object.keys(ELITE_MODS);
   for (let i = 0; i < elites; i++) {
     const a = rng.range(0, Math.PI * 2);
-    spawnEnemy(run, rng.weighted(mix.filter(([id]) => id !== 'bat')), p.x + Math.cos(a) * 180, p.y + Math.sin(a) * 180, { elite: [rng.pick(mods)] });
+    spawnEnemy(run, rng.weighted(mix.filter(([id]) => id !== 'bat')), p.x + Math.cos(a) * 180, p.y + Math.sin(a) * 180, { elite: eliteMods ? [...eliteMods] : [rng.pick(mods)] });
   }
   run.addShake(4);
 }
@@ -158,7 +158,7 @@ export function updateSpawner(run: Run, dt: number): void {
       run.ambushT = X.ambushEvery;
       // Numer pierścienia z czasu mapy (po wczytaniu zapisu pierścienie nie zaczynają od nowa).
       run.ambushRing = Math.floor((t - X.ambushEvery * 0.4) / X.ambushEvery) + 1;
-      encircle(run, X.ambushRing + X.ambushGrow * run.ambushRing, run.ambushRing >= X.ambushEliteFrom ? 2 : 0);
+      encircle(run, X.ambushRing + X.ambushGrow * run.ambushRing, run.ambushRing >= X.ambushEliteFrom ? 2 : 0, run.levelInfo.eliteMods);
       run.showBanner(`Ambush! Ring ${run.ambushRing}`);
       sfx.play('boss');
     }
@@ -177,8 +177,9 @@ export function updateSpawner(run: Run, dt: number): void {
   if (run.eliteT <= 0) {
     run.eliteT = BAL.eliteEvery * run.levelInfo.eliteMul * BAL.eliteGap(waveT) / (1 + run.flag('eliteRate'));
     const mods = Object.keys(ELITE_MODS);
-    const picked = [rng.pick(mods)];
-    if (waveT > 150) {
+    // Mapa elit / Zasadzka w Ekspedycji: stałe cechy elit widoczne na mapie przed wejściem.
+    const picked = run.levelInfo.eliteMods ? [...run.levelInfo.eliteMods] : [rng.pick(mods)];
+    if (!run.levelInfo.eliteMods && waveT > 150) {
       const second = rng.pick(mods);
       if (second !== picked[0]) picked.push(second);
     }

@@ -3,6 +3,8 @@ import { rng } from '../core/rng';
 import type { Stats } from '../entities/types';
 import { BAL } from './balance';
 import { BIOMES, BIOME_CYCLE, VOID_BIOME, type LevelDef, type Objective } from './levels';
+import { ELITE_MODS } from './enemies';
+import type { Element } from './elements';
 
 /**
  * Ekspedycja: skończona wyprawa przez BAL.expedition.acts aktów. Każdy akt to mapa rzędów po kilka węzłów —
@@ -134,6 +136,10 @@ export interface MapNode {
   /** Wylosowane modyfikatory dla każdego poziomu trudności (MAP_RARITY); gracz wybiera poziom przed wejściem (chooseTier). */
   tiers?: string[][];
   bonus?: string;
+  /** Powinowactwo żywiołu (0.38): mapa podatna albo odporna na żywioł — decyzja zależna od żywiołów buildu. */
+  affinity?: { el: Element; kind: 'weak' | 'resist' };
+  /** Stałe cechy elit (Mapa elit, Zasadzka), widoczne na mapie. */
+  eliteMods?: string[];
 }
 
 export interface ExpeditionState {
@@ -219,6 +225,7 @@ export function rollActMap(act: number, tier: number, noForge = false): (MapNode
     }
     map.push(kinds.map((k) => (!k ? null : isCombat(k) ? rollMapNode(k, act, tier, used) : { kind: k })));
   }
+  rollAffinities(map, act);
   // Ukryty węzeł „?” w aktach 2-3 (zamiast losowego węzła środkowego rzędu).
   if (act >= 2 && act <= X.acts && rng.chance(X.secretChance)) {
     const row = rng.int(1, X.rows - 3), lanes = map[row].map((n, l) => (n ? l : -1)).filter((l) => l >= 0);
@@ -274,7 +281,8 @@ export function depthAt(act: number, row: number): number {
 export const nodeDepth = (ex: ExpeditionState): number => depthAt(ex.act, exRow(ex));
 
 /** Suma nagród modyfikatorów mapy (punkty %). */
-export const mapReward = (m: MapNode): number => (m.mods ?? []).reduce((s, id) => s + (MAP_MOD_BY_ID[id]?.reward ?? 0), 0) * (isArena(m.kind) ? BAL.expedition.arenaReward : 1);
+export const mapReward = (m: MapNode): number => (m.mods ?? []).reduce((s, id) => s + (MAP_MOD_BY_ID[id]?.reward ?? 0), 0) * (isArena(m.kind) ? BAL.expedition.arenaReward : 1)
+  + (m.affinity?.kind === 'resist' ? BAL.expedition.resistReward : 0);
 
 /** Flagi mapy na czas poziomu: modyfikatory, bonus, nagroda (ilość i jakość łupu). */
 /** Ekspedycja: większy tłum wrogów niż w kampanii (rośnie z aktem), dodany do modyfikatorów mapy. */
@@ -319,12 +327,49 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
     dungeon: isArena(m.kind),
     dungeonKind: m.kind === 'vault' ? 'vault' : undefined,
     ambush: m.kind === 'ambush',
+    weak: m.affinity?.kind === 'weak' ? m.affinity.el : undefined,
+    resist: m.affinity?.kind === 'resist' ? m.affinity.el : undefined,
+    eliteMods: m.eliteMods,
     // Polowanie: rzadsze zwykłe fale (pojedynek z minibossem).
     flags: crowded(m.kind === 'hunt' ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.huntCrowd } : f, act),
   };
 }
 
 export const nodeLevel = (ex: ExpeditionState): LevelDef => levelAt(ex.act, exRow(ex), currentMap(ex) ?? { kind: 'fight' });
+
+const AFFINITY_KINDS = new Set<NodeKind>(['fight', 'elite', 'ambush', 'hunt']);
+const ELEMS: Element[] = ['fire', 'ice', 'lightning', 'poison'];
+
+/**
+ * Powinowactwa żywiołów i stałe cechy elit (0.38). Bez powinowactwa w pierwszym rzędzie i w rzędzie przed bossem;
+ * najwyżej jedna odporność na rząd i zawsze do ominięcia (z każdego węzła poprzedniego rzędu da się dojść do węzła bez
+ * odporności). Na mapie odpornej elity nie są Pancerne (odporność × pancerz to ściana, nie wybór).
+ */
+function rollAffinities(map: (MapNode | null)[][], act: number): void {
+  const X = BAL.expedition;
+  // Rzędy 1..rows-3 (mapa bez rzędu bossa ma rows-1 rzędów; ostatni z nich to rząd przed bossem).
+  for (let row = 1; row < map.length - 1; row++) {
+    let resisted = false;
+    map[row].forEach((m, lane) => {
+      if (!m || !AFFINITY_KINDS.has(m.kind)) return;
+      const r = rng.next();
+      if (r < X.resistChance && !resisted && avoidable(map, row, lane)) { m.affinity = { el: rng.pick(ELEMS), kind: 'resist' }; resisted = true; }
+      else if (r >= X.resistChance && r < X.resistChance + X.weakChance) m.affinity = { el: rng.pick(ELEMS), kind: 'weak' };
+    });
+  }
+  for (const row of map) for (const m of row) {
+    if (!m || (m.kind !== 'elite' && m.kind !== 'ambush')) continue;
+    const pool = Object.keys(ELITE_MODS).filter((k) => !(k === 'armored' && m.affinity?.kind === 'resist'));
+    const a = rng.pick(pool);
+    // Akt 1: jedna cecha (wcześniej druga pojawiała się dopiero w późniejszych falach).
+    m.eliteMods = act === 1 ? [a] : [a, rng.pick(pool.filter((k) => k !== a))];
+  }
+}
+
+/** Czy odporność w (row, lane) da się ominąć: każdy węzeł rzędu wyżej, który tu prowadzi, ma też inny dostępny węzeł. */
+function avoidable(map: (MapNode | null)[][], row: number, lane: number): boolean {
+  return map[row - 1].every((p, from) => !p || !linked(from, lane) || map[row].some((n, l) => n && l !== lane && linked(from, l)));
+}
 
 /** Dwie różne opcje do wyboru (obóz, kapliczka). */
 export function rollOffer(kind: 'rest' | 'shrine'): { kind: 'rest' | 'shrine'; ids: string[] } {

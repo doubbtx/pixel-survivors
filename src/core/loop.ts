@@ -5,6 +5,8 @@ const MAX_STEPS_PER_FRAME = 5;
 export interface LoopStats {
   fps: number;
   updateMs: number;
+  /** Średnia krocząca czasu pracy klatki (logika + render, ms) — automatyczna jakość (main.ts). */
+  workMs: number;
 }
 
 /**
@@ -13,7 +15,7 @@ export interface LoopStats {
  * ograniczamy liczbę kroków, żeby nie wpaść w "spiralę śmierci".
  */
 export function startLoop(update: (dt: number) => void, render: () => void): LoopStats {
-  const stats: LoopStats = { fps: 0, updateMs: 0 };
+  const stats: LoopStats = { fps: 0, updateMs: 0, workMs: 0 };
   let acc = 0;
   let last = performance.now();
   let frames = 0;
@@ -32,6 +34,7 @@ export function startLoop(update: (dt: number) => void, render: () => void): Loo
     if (steps === MAX_STEPS_PER_FRAME) acc = 0;
     if (steps > 0) stats.updateMs = (performance.now() - t0) / steps;
     render();
+    stats.workMs += (performance.now() - t0 - stats.workMs) * 0.1;
     frames++;
     if (now - fpsTimer >= 1000) {
       stats.fps = Math.round((frames * 1000) / (now - fpsTimer));
