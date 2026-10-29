@@ -43,14 +43,18 @@ export function textWidth(s: string, scale = 1): number {
 /**
  * Teksty opisowe (umiejętności, karty, przedmioty, mapa, pauza, kolekcja): skala i odstęp linii zależne od ustawienia
  * „Text size” — Normal rysuje je pomniejszone (0.75), Large w pełnym rozmiarze (ekrany przewijają albo dzielą treść na strony).
- * Drobne etykiety HUD (LV, klawisze, liczniki) mają stałe 0.75 niezależnie od ustawienia.
+ * Drobne etykiety (LV, klawisze, liczniki, podpowiedzi) mają skalę smallS(): 0.75 przy Normal, 0.85 przy Large
+ * (żeby na telefonie najmniejszy tekst dało się przeczytać).
  */
-let descScale = 0.75;
+let descScale = 0.75, smallScale = 0.75;
 export function setTextSize(large: boolean): void {
   descScale = large ? 1 : 0.75;
+  smallScale = large ? 0.85 : 0.75;
 }
 /** Skala tekstu opisowego. */
 export const descS = (): number => descScale;
+/** Skala drobnych etykiet. */
+export const smallS = (): number => smallScale;
 /** Odstęp linii tekstu opisowego. */
 export const descLH = (): number => (descScale >= 1 ? 11 : 9);
 /** Opcje rysowania tekstu opisowego (świeże przy każdym wywołaniu, bo skala zależy od ustawienia). */

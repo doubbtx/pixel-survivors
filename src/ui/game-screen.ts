@@ -1,7 +1,7 @@
 import { tr } from '../core/i18n';
 import { W, H, type Renderer } from '../core/renderer';
 import { C, RAMP } from '../core/palette';
-import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
+import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { heroRecord, type HeroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
@@ -380,10 +380,10 @@ export class GameScreen implements Screen {
     const h = 22 + lines.length * 11 + (tut.finished ? 12 : 0);
     panel(r, x, y, w, h);
     drawText(g, title, x + 8, y + 5, C.yellow, { shadow: C.black });
-    drawText(g, tut.finished ? '' : `${Math.min(tut.step + 1, tut.total)}/${tut.total}`, x + w - 8, y + 6, C.lavender, { align: 'right', scale: 0.75 });
+    drawText(g, tut.finished ? '' : `${Math.min(tut.step + 1, tut.total)}/${tut.total}`, x + w - 8, y + 6, C.lavender, { align: 'right', scale: smallS() });
     lines.forEach((l, i) => drawText(g, l, x + 8, y + 18 + i * 11, C.white));
-    if (tut.finished) drawText(g, this.app.input.lastDevice === 'touch' ? 'Tap to continue' : 'Enter: continue', W / 2, y + h - 11, C.lime, { align: 'center', scale: 0.75 });
-    else drawText(g, 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: 0.75 });
+    if (tut.finished) drawText(g, this.app.input.lastDevice === 'touch' ? 'Tap to continue' : 'Enter: continue', W / 2, y + h - 11, C.lime, { align: 'center', scale: smallS() });
+    else drawText(g, 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: smallS() });
   }
 
   /** Koniec albo pominięcie samouczka: zapis i wybór bohatera do pierwszej Ekspedycji. */
@@ -594,7 +594,7 @@ export class GameScreen implements Screen {
   private renderRewardCounter(r: Renderer): void {
     if (!this.rewardTotal) return;
     const t = `${tr('Rewards')} ${Math.min(this.rewardTotal, this.rewardDone + 1)}/${this.rewardTotal}`;
-    drawText(r.g, t, W - 6, 3, C.gold, { align: 'right', outline: C.black, scale: 0.75 });
+    drawText(r.g, t, W - 6, 3, C.gold, { align: 'right', outline: C.black, scale: smallS() });
   }
 
   update(dt: number): void {
@@ -910,7 +910,7 @@ export class GameScreen implements Screen {
     head(`Karty (${nCards})`, cy);
     const rows = Math.max(1, Math.floor((H - 26 - (cy + 12)) / 11)), max = rows * 2;
     const shown = run.cards.length > max ? max - 1 : max;
-    if (run.cards.length) drawText(g, 'Click or point at a card: description', x0, H - 22, C.lavender, { scale: 0.75 });
+    if (run.cards.length) drawText(g, 'Click or point at a card: description', x0, H - 22, C.lavender, { scale: smallS() });
     this.cardRects = [];
     const m = this.app.input.mouse;
     let hover = -1;
@@ -936,7 +936,7 @@ export class GameScreen implements Screen {
     const y = Math.max(40, rowY - h - 3);
     panel(r, x0 - 4, y, w + 2, h);
     drawText(g, def.name, x0 + 2, y + 4, def.cursed ? C.hotpink : rarityColor(def.rarity, 0), { shadow: C.black });
-    drawText(g, def.tags.join(' / '), x0 + w - 6, y + 4, C.lavender, { align: 'right', scale: 0.75 });
+    drawText(g, def.tags.join(' / '), x0 + w - 6, y + 4, C.lavender, { align: 'right', scale: smallS() });
     let ly = y + 17;
     for (const l of lines) { drawText(g, l, x0 + 2, ly, C.white, DESC); ly += lh; }
     if (c.stacks > 1) drawText(g, `x${c.stacks}: the effect stacks`, x0 + 2, ly, C.lime, DESC);
@@ -1007,7 +1007,7 @@ export class GameScreen implements Screen {
       const x = 12 + i * (tw + 4);
       r.withAlpha(0.85, () => r.roundRect(x, 38, tw, 26, 3, C.navy, C.black));
       r.roundFrame(x + 0.5, 38.5, tw - 1, 25, 3, C.slate, 0.75);
-      drawText(g, k, x + tw / 2, 41, C.lgray, { align: 'center', scale: 0.75 });
+      drawText(g, k, x + tw / 2, 41, C.lgray, { align: 'center', scale: smallS() });
       drawText(g, v, x + tw / 2, 50, col, { align: 'center', shadow: C.black });
     });
     const modeLine = this.mode === 'endless' ? `Endless: rekord ${fmtTime(heroRecord(this.app.save, this.heroId).bestEndless)}`
@@ -1057,11 +1057,11 @@ export class GameScreen implements Screen {
       const x = END_X + 12 + i * (cw + 4);
       r.withAlpha(0.85, () => r.roundRect(x, y, cw, ch, 3, C.navy, C.black));
       r.roundFrame(x + 0.5, y + 0.5, cw - 1, ch - 1, 3, c.rec ? C.gold : C.slate, c.rec ? 1 : 0.75);
-      drawText(g, c.title, x + cw / 2, y + 3, C.lgray, { align: 'center', scale: 0.75 });
+      drawText(g, c.title, x + cw / 2, y + 3, C.lgray, { align: 'center', scale: smallS() });
       if (c.icon) drawSprite(g, c.icon, x + cw / 2, y + 18);
       drawText(g, c.value, x + cw / 2, y + 27, c.rec ? C.yellow : C.white, { align: 'center', shadow: C.black, scale: textWidth(c.value) > cw - 6 ? 0.75 : 1 });
-      drawText(g, c.note, x + cw / 2, y + 38, C.lavender, { align: 'center', scale: 0.75 });
-      if (c.rec && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: 0.75 });
+      drawText(g, c.note, x + cw / 2, y + 38, C.lavender, { align: 'center', scale: smallS() });
+      if (c.rec && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: smallS() });
     });
     // Pobite rekordy bohatera (porównanie z zapisem sprzed runu).
     const broke: string[] = [];
@@ -1100,7 +1100,7 @@ export class GameScreen implements Screen {
       drawText(g, `${Math.round((100 * dmg) / total)}%`, x1 - 55, y, C.lgray, { align: 'right' });
       drawText(g, fmt(dmg / Math.max(1, run.totalTime)), x1, y, C.lgray, { align: 'right' });
     });
-    if (all.length > 7) drawText(g, `+${all.length - 7} więcej`, x1, this.endY + this.endH - 10, C.lavender, { align: 'right', scale: 0.75 });
+    if (all.length > 7) drawText(g, `+${all.length - 7} więcej`, x1, this.endY + this.endH - 10, C.lavender, { align: 'right', scale: smallS() });
   }
 
   /** Ekran końca: wykres DPS w czasie (pomiar co BAL.dpsEvery s). */
@@ -1118,8 +1118,8 @@ export class GameScreen implements Screen {
     const px = (i: number) => x0 + ((x1 - x0) * i) / (log.length - 1), py = (v: number) => y1 - ((y1 - y0) * v) / max;
     r.withAlpha(0.3, () => { for (let i = 0; i < log.length; i++) r.rect(px(i) - 1, py(log[i]), 2, y1 - py(log[i]), C.dblue); });
     for (let i = 1; i < log.length; i++) r.line(px(i - 1), py(log[i - 1]), px(i), py(log[i]), C.gold);
-    drawText(g, '0:00', x0, y1 + 2, C.lavender, { scale: 0.75 });
-    drawText(g, fmtTime(log.length * BAL.dpsEvery), x1, y1 + 2, C.lavender, { align: 'right', scale: 0.75 });
+    drawText(g, '0:00', x0, y1 + 2, C.lavender, { scale: smallS() });
+    drawText(g, fmtTime(log.length * BAL.dpsEvery), x1, y1 + 2, C.lavender, { align: 'right', scale: smallS() });
   }
 
   /** Ekran końca: karta buildu (bohater, bronie, pasywki, przedmioty, karty, sekrety i moc bossa). */
@@ -1127,7 +1127,7 @@ export class GameScreen implements Screen {
     const r = this.app.r, g = r.g, run = this.run, x0 = END_X + 12, top = this.endY + 6;
     drawSprite(g, `${run.heroSprite}@0`, x0 + 12, top + 14, { scale: 2 });
     drawText(g, run.hero.name, x0 + 32, top, run.hero.color, { scale: 2, shadow: C.black });
-    drawText(g, `${run.hero.role}   poziom postaci ${run.level}${run.pactLevel ? `   Pakt ${run.pactLevel}` : ''}`, x0 + 32, top + 18, C.lavender, { scale: 0.75 });
+    drawText(g, `${run.hero.role}   poziom postaci ${run.level}${run.pactLevel ? `   Pakt ${run.pactLevel}` : ''}`, x0 + 32, top + 18, C.lavender, { scale: smallS() });
     // Przedmioty (8 slotów) po prawej.
     SLOTS.forEach((sl, i) => drawItemSlot(r, run.equipment[sl.id], END_X + END_W - 12 - (4 - (i % 4)) * 20, top + Math.floor(i / 4) * 20, 18, false));
     // Bronie i pasywki z poziomami.
@@ -1136,14 +1136,14 @@ export class GameScreen implements Screen {
     for (const w of run.weapons) {
       slot(r, x, wy, 18, w.def.evolved ? C.gold : C.slate);
       drawSprite(g, WEAPON_BY_ID[w.def.id].icon, x + 9, wy + 9);
-      drawText(g, w.def.evolved ? '*' : String(w.level), x + 17, wy + 9, C.white, { align: 'right', outline: C.black, scale: 0.75 });
+      drawText(g, w.def.evolved ? '*' : String(w.level), x + 17, wy + 9, C.white, { align: 'right', outline: C.black, scale: smallS() });
       x += 20;
     }
     x += 8;
     for (const p of run.passives) {
       slot(r, x, wy, 18);
       drawSprite(g, passiveIcon(p), x + 9, wy + 9);
-      drawText(g, String(p.level), x + 17, wy + 9, C.white, { align: 'right', outline: C.black, scale: 0.75 });
+      drawText(g, String(p.level), x + 17, wy + 9, C.white, { align: 'right', outline: C.black, scale: smallS() });
       x += 20;
     }
     // Karty (jeden rząd).
@@ -1152,13 +1152,13 @@ export class GameScreen implements Screen {
       const cx = x0 + i * 17, cy = wy + 22;
       const def = CARD_BY_ID[c.id];
       drawSprite(g, def.icon!, cx + 8, cy + 8);
-      if (c.stacks > 1) drawText(g, String(c.stacks), cx + 14, cy + 9, C.white, { outline: C.black, scale: 0.75 });
+      if (c.stacks > 1) drawText(g, String(c.stacks), cx + 14, cy + 9, C.white, { outline: C.black, scale: smallS() });
     });
     const extra = [
       ...[...run.secrets].map((id) => SECRET_BY_ID[id]?.name).filter(Boolean),
       run.power ? `Moc: ${BOSS_POWER_BY_ID[run.power.id].name} ${run.power.level}` : '',
     ].filter(Boolean).join(', ');
-    if (extra) drawText(g, extra, x0, this.endY + this.endH - 11, C.hotpink, { scale: 0.75 });
+    if (extra) drawText(g, extra, x0, this.endY + this.endH - 11, C.hotpink, { scale: smallS() });
   }
 }
 

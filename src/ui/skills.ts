@@ -1,6 +1,6 @@
 import type { Renderer } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText, textWidth, wrapText, DESC, descS, descLH } from '../core/font';
+import { drawText, textWidth, wrapText, DESC, descS, descLH, smallS } from '../core/font';
 import { drawSprite } from '../gfx/sprites';
 import { tr } from '../core/i18n';
 import type { AbilityDef, AbilitySlot } from '../data/heroes';
@@ -34,7 +34,7 @@ export function drawSkills(r: Renderer, list: SkillEntry[], x: number, y: number
     drawText(g, `[${skillKey(d.slot)}]`, tx, y - 1, C.lavender);
     drawText(g, d.name, tx + textWidth(`[${skillKey(d.slot)}]`) + 4, y - 1, d.color);
     const info = s.level !== undefined && d.maxLevel > 1 ? `poz. ${s.level}/${d.maxLevel}   ${s.cd}` : s.cd;
-    drawText(g, info, x + w, y - 1, C.lgray, { align: 'right', scale: 0.75 });
+    drawText(g, info, x + w, y - 1, C.lgray, { align: 'right', scale: smallS() });
     let ly = y + 10;
     for (const line of wrapText(d.desc, tw)) { drawText(g, line, tx, ly, C.white, DESC); ly += lh; }
     if (s.evo && d.evo) {

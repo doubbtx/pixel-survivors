@@ -1,6 +1,6 @@
 import { W, H, type Renderer } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText, wrapText, DESC, descS, descLH } from '../core/font';
+import { drawText, wrapText, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
@@ -180,6 +180,6 @@ export class CodexScreen implements Screen {
     }
     this.scroll.end(r, y + oy - AREA[1], ...AREA);
     button(r, W / 2 - 40, H - 22, 80, 16, 'Wstecz [Esc]');
-    drawText(g, '< > page   up/down scroll', W - 14, H - 18, C.lavender, { align: 'right', scale: 0.75 });
+    drawText(g, '< > page   up/down scroll', W - 14, H - 18, C.lavender, { align: 'right', scale: smallS() });
   }
 }

@@ -1,7 +1,7 @@
 import { W, SW, OX, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C, PAL, type Ramp } from '../core/palette';
-import { drawText, textWidth, LINE_H } from '../core/font';
+import { drawText, textWidth, LINE_H, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { UI, tile } from './theme';
 import { drawSprite } from '../gfx/sprites';
@@ -122,10 +122,10 @@ export function cardFrame(r: Renderer, x: number, y: number, w: number, h: numbe
 
 /** Plakietka na środku górnej krawędzi karty („Recommended”, „New!”). */
 export function cardBadge(r: Renderer, cx: number, y: number, text: string, col: number): void {
-  const bw = textWidth(text) * 0.75 + 10;
+  const bw = textWidth(text) * smallS() + 10;
   r.roundRect(cx - bw / 2, y - 5, bw, 10, 3, C.navy, C.black);
   r.roundFrame(cx - bw / 2 + 0.5, y - 4.5, bw - 1, 9, 3, col, 0.75);
-  drawText(r.g, text, cx, y - 3, col, { align: 'center', scale: 0.75 });
+  drawText(r.g, text, cx, y - 3, col, { align: 'center', scale: smallS() });
 }
 
 /** Ikona karty (×2) w ciemnym kole z poświatą i obręczą w kolorze kategorii. */

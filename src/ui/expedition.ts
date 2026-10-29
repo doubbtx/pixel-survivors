@@ -1,7 +1,7 @@
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input, Action } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
+import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
@@ -50,7 +50,7 @@ const TIER_W = 50, TIER_H = 14;
 const MODS_AREA = [MAP_X + 8, DET_Y + 38, 250, BTN_Y - DET_Y - 40] as const;
 const tierPos = (i: number): [number, number] => [MAP_X + MAP_W - 8 - (4 - i) * (TIER_W + 3) + 3, DET_Y + 6];
 /** Mały tekst panelu szczegółów. */
-const SMALL = { scale: 0.75 } as const;
+const SMALL: { readonly scale: number } = { get scale() { return smallS(); } };
 
 /** Środek węzła (rząd, kolumna) na ekranie. */
 function nodePos(row: number, lane: number): [number, number] {
@@ -207,9 +207,9 @@ export class ExpeditionMapView {
     const bname = ex.voidKey && !secretAct ? `${biome.name}   Klucz Pustki` : biome.name, bx = MAP_X + 4 + X.acts * 8;
     drawText(g, bname, bx, 6, ex.voidKey ? C.hotpink : C.lavender);
     // Ukończone mapy: plakietka obok nazwy biomu.
-    const mt = `mapy ${ex.cleared}`, mw = textWidth(mt) * 0.75 + 8, mx = bx + textWidth(bname) + 5;
+    const mt = `mapy ${ex.cleared}`, mw = textWidth(mt) * smallS() + 8, mx = bx + textWidth(bname) + 5;
     tile(r, mx, 7, mw, 10, C.lgray);
-    drawText(g, mt, mx + mw / 2, 7.5, C.lgray, { align: 'center', scale: 0.75 });
+    drawText(g, mt, mx + mw / 2, 7.5, C.lgray, { align: 'center', scale: smallS() });
     // Prawa strona nagłówka: plakietki stanu wyprawy.
     const bless = ex.blessing ? EX_BLESSINGS.find((b) => b.id === ex.blessing!.id) : null;
     // Esencja: nagrody modyfikatorów ukończonych map zwiększają esencję na koniec wyprawy (BAL.expedition.rewardEssence).
@@ -223,11 +223,11 @@ export class ExpeditionMapView {
     if (camp) chips.push([`${camp.name} (1)`, C.lime, `Camp bonus for the next fight: ${camp.desc}.`]);
     let cx = MAP_X + MAP_W, tip: { text: string; x: number } | null = null;
     for (const [t, col, help] of chips) {
-      const w = textWidth(t) * 0.75 + 8;
+      const w = textWidth(t) * smallS() + 8;
       cx -= w;
       if (cx < W / 2 + 90) break;
       tile(r, cx, 7, w, 10, col);
-      drawText(g, t, cx + w / 2, 7.5, col, { align: 'center', scale: 0.75 });
+      drawText(g, t, cx + w / 2, 7.5, col, { align: 'center', scale: smallS() });
       if (help && hovered(cx, 7, w, 10)) tip = { text: help, x: cx + w };
       cx -= 3;
     }
@@ -251,8 +251,8 @@ export class ExpeditionMapView {
     for (const k of legend) {
       const info = NODE_INFO[k];
       r.withAlpha(0.8, () => drawSprite(g, info.icon, lx + 5, MAP_Y + 9));
-      drawText(g, info.name, lx + 14, MAP_Y + 5, info.color, { scale: 0.75, outline: C.black });
-      lx += 19 + textWidth(info.name) * 0.75;
+      drawText(g, info.name, lx + 14, MAP_Y + 5, info.color, { scale: smallS(), outline: C.black });
+      lx += 19 + textWidth(info.name) * smallS();
     }
     // Podpowiedź plakietki pod myszą (nad legendą mapy).
     if (tip) {
@@ -281,8 +281,9 @@ export class ExpeditionMapView {
         });
       });
     }
-    // Węzły.
+    // Węzły; podpis wybranego rysowany na końcu, żeby węzeł poniżej go nie zasłaniał.
     const t = performance.now() / 1000;
+    let label: (() => void) | undefined;
     ex.map.forEach((cells, row) => cells.forEach((m, lane) => {
       if (!m) return;
       const [x, y] = nodePos(row, lane);
@@ -297,11 +298,11 @@ export class ExpeditionMapView {
         if (reachable && !picked) r.withAlpha(0.25 + 0.2 * Math.sin(t * 4 + lane), () => r.roundRect(x - NODE / 2 - 2, y - NODE / 2 - 2, NODE + 4, NODE + 4, UI.radius + 1, nodeColor(m)));
         iconSlot(r, x - NODE / 2, y - NODE / 2 + bob, NODE, picked ? C.white : visited ? C.gold : nodeColor(m), 0.8);
         drawSprite(g, NODE_INFO[m.kind].icon, x, y + bob);
-        if (picked) {
-          const nm = NODE_INFO[m.kind].name, w = textWidth(nm) * 0.75 + 6;
-          tile(r, x - w / 2, y + NODE / 2 + 3, w, 8, C.white, 0.85);
-          drawText(g, nm, x, y + NODE / 2 + 3, C.white, { align: 'center', scale: 0.75 });
-        }
+        if (picked) label = () => {
+          const nm = NODE_INFO[m.kind].name, w = textWidth(nm) * smallS() + 6;
+          tile(r, x - w / 2, y + NODE / 2 + 3, w, 9, C.white, 0.85);
+          drawText(g, nm, x, y + NODE / 2 + 3, C.white, { align: 'center', scale: smallS() });
+        };
         // Liczba modyfikatorów mapy: kropki pod węzłem; bonus mapy: zielony znak w rogu.
         if (!picked) for (let k = 0; k < (m.mods?.length ?? 0); k++) r.rect(x - 8 + k * 3, y + NODE / 2 + 1 + bob, 2, 2, C.salmon);
         // Powinowactwo żywiołu: znacznik (kształt dla daltonistów) w lewym dolnym rogu, kreska: zielona podatność, czerwona odporność.
@@ -318,10 +319,11 @@ export class ExpeditionMapView {
       // Bohater nad bieżącym węzłem (w górnej kolumnie obok węzła, żeby nie zasłaniał legendy).
       if (row === cur && visited) drawSprite(g, `${run.heroSprite}@0`, lane === 0 ? x - 17 : x, lane === 0 ? y : y - 18);
     }));
+    label?.();
 
     // Szczegóły zaznaczonego węzła i przyciski.
     panel(r, MAP_X, DET_Y, MAP_W, H - DET_Y - 4);
-    BTNS.forEach((b, i) => button(r, btnX(i), BTN_Y, b.w, BTN_H, b.label, b.act === 'go' ? { accent: C.gold, col: C.yellow, pulse: target !== undefined && !ex.offer, scale: 0.75 } : { scale: 0.75 }));
+    BTNS.forEach((b, i) => button(r, btnX(i), BTN_Y, b.w, BTN_H, b.label, b.act === 'go' ? { accent: C.gold, col: C.yellow, pulse: target !== undefined && !ex.offer, scale: smallS() } : { scale: smallS() }));
     if (ex.offer) { this.renderOffer(r); return; }
     const [drow, dlane] = this.peek ?? [cur + 1, target];
     if (dlane === undefined) return;

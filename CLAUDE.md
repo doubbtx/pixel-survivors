@@ -434,7 +434,8 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     `descS()` (skala: 0.75 albo 1), `descLH()` (odstęp linii 9 albo 11). Teksty opisowe używają DESC: umiejętności (`drawSkills`),
     strony Umiejętności i Zasób na wyborze bohatera, Arsenał, ekran Bronie i pasywki z Żywiołami, modyfikatory i podpowiedzi mapy,
     opis przedmiotu w plecaku, pauza (Umiejętności), Synergie, Pomoc; karty awansu przy dużym tekście nie zmniejszają opisu
-    (podpowiedź ustępuje, w ostateczności „...”). Drobne etykiety HUD zostają 0.75.
+    (podpowiedź ustępuje, w ostateczności „...”). Drobne etykiety (HUD, klawisze, podpowiedzi, plakietki) mają `smallS()`:
+    0.75 przy Normal, 0.85 przy Large. Nowa drobna etykieta: `scale: smallS()` i szerokość `textWidth(t) * smallS()`, nie 0.75.
   - Przewijanie: `ui/widgets.ts` `Scroll` (`update` z obszarem, `begin` → przesunięcie, `end` z wysokością treści i paskiem),
     `Input.scroll` (kółko myszy, przeciąganie palcem poza rozgrywką), akcje `pageUp`/`pageDown`, prawa gałka pada.
   - Ograniczenie błysków: `Settings.reduceFlash`, `run.reduceFlash`, `Run.blink(okres, wł.)` zamiast `run.step % n < m`
@@ -746,6 +747,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - 0.44.1: pociski gracza wydłużone wzdłuż lotu (zasada czytelności: okrągłe = wróg) — `STREAKS` i `streak()` w gfx/sprites.ts
   (wrzeciono z ogonem, grotem i białym punktem), klatki `pb_<nazwa>@<kierunek>` w `ARROW_DIRS` kierunkach dla bolt, soul, ember,
   sun; w render.ts gałąź pocisków gracza wybiera kierunek jak strzały. Nowy okrągły sprite pocisku gracza: dopisz go do STREAKS.
+- 0.44.2: najmniejszy tekst czytelniejszy na telefonie — `smallS()` w core/font.ts (0.85 przy Large, 0.75 przy Normal) zamiast
+  stałego 0.75 w etykietach HUD, plakietkach, podpowiedziach klawiszy i menu; `SMALL` (theme, expedition, build) to gettery.
+  Wyjątki zostają 0.75: tekst HP w pasku, znak „+” bonusu mapy. Pigułka `label` i plakietka klawisza rosną o 1 px przy Large,
+  podpis wybranego węzła mapy rysowany po wszystkich węzłach (nie chowa się pod węzłem niżej).
+- 0.44.3: rzadziej spotykani wrogowie przerysowani w stylu 32-bit (gfx/actors.ts, te same wymiary płócien): kultysta (kaptur
+  ze szpicem, rozcięta szata, złoty rąbek), tarczownik (pawęż z herbem, wapenrok, buzdygan), kamikaze (obręcz z nitami, żarzące
+  się pęknięcia, iskra-gwiazdka), skoczek (jasna i ciemna faseta, odłamki, iskry teleportu po okręgu), rozszczepieniec (geoda:
+  skorupa, kryształy w szczelinie, rdzeń), odbicie (rycerz z tafli szkła, refleksy, hełm z wizjerem, szklany miecz).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

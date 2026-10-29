@@ -1,6 +1,6 @@
 import { W, H, OX } from '../core/renderer';
 import { C, PAL } from '../core/palette';
-import { drawText, wrapText, textWidth, setTextSize, DESC, descS, descLH } from '../core/font';
+import { drawText, wrapText, textWidth, setTextSize, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
 import { drawSprite, drawShadow, blit, TILE } from '../gfx/sprites';
@@ -132,14 +132,14 @@ export class MainMenu implements Screen {
       drawText(g, 'Pixel Survivors', W / 2, 8, col, { align: 'center', scale: 3 });
       g.restore();
     }
-    drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 39, C.lavender, { align: 'center', scale: 0.75, outline: C.black });
-    drawText(g, `v${__APP_VERSION__}`, W - 4, H - 10, C.lavender, { align: 'right', scale: 0.75, outline: C.black });
+    drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 39, C.lavender, { align: 'center', scale: smallS(), outline: C.black });
+    drawText(g, `v${__APP_VERSION__}`, W - 4, H - 10, C.lavender, { align: 'right', scale: smallS(), outline: C.black });
     // Lewy panel: pozycje w grupach z nagłówkami.
     panel(r, MENU_X, 48, MENU_W, 166);
     MENU_GROUPS.forEach(([name, first]) => {
       const y = m.top(first) - 9;
-      drawText(g, name, MENU_X + 10, y, C.lavender, { scale: 0.75 });
-      r.withAlpha(0.5, () => r.rect(MENU_X + 10 + textWidth(name) * 0.75 + 4, y + 3.5, MENU_W - 30 - textWidth(name) * 0.75, 0.5, C.slate));
+      drawText(g, name, MENU_X + 10, y, C.lavender, { scale: smallS() });
+      r.withAlpha(0.5, () => r.rect(MENU_X + 10 + textWidth(name) * smallS() + 4, y + 3.5, MENU_W - 30 - textWidth(name) * smallS(), 0.5, C.slate));
     });
     m.render(r);
     // Prawy panel: ikona, nazwa i opis zaznaczonej pozycji; nowemu graczowi Ekspedycja jest polecana.
@@ -154,8 +154,8 @@ export class MainMenu implements Screen {
     const desc = m.sel === 1 && !unlocked(this.app.save, 'endless') ? `Locked. ${UNLOCK_BY_ID.endless.how}` : MENU_DESC[m.sel] ?? '';
     for (const l of wrapText(desc, dw - 22)) { drawText(g, l, dx + 11, ly, C.lgray); ly += 11; }
     ly += 4;
-    for (const [l, col] of this.info(m.sel)) { drawText(g, l, dx + 11, ly, col, { scale: 0.75 }); ly += 9; }
-    drawText(g, 'Strzałki / mysz: wybór   Enter: wejdź   F: pełny ekran', dx + dw / 2, 148, C.lavender, { align: 'center', scale: 0.75 });
+    for (const [l, col] of this.info(m.sel)) { drawText(g, l, dx + 11, ly, col, { scale: smallS() }); ly += 9; }
+    drawText(g, 'Strzałki / mysz: wybór   Enter: wejdź   F: pełny ekran', dx + dw / 2, 148, C.lavender, { align: 'center', scale: smallS() });
     if (this.app.save.notice) {
       panel(r, dx, 166, dw, 44, C.orange);
       wrapText(this.app.save.notice, dw - 22).slice(0, 3).forEach((l, i) => drawText(g, l, dx + 11, 172 + i * 11, C.orange));
@@ -412,7 +412,7 @@ export class HeroSelect implements Screen {
       r.withAlpha(open ? 1 : 0.3, () => drawSprite(g, `${spr}@${on && open ? animFrame(spr, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 11.5));
       drawText(g, h.name, LIST_X + 34, y + 2, open ? h.color : C.lavender, { shadow: C.black });
       if (open) drawText(g, h.role, LIST_X + 34, y + 12, C.lavender);
-      else drawText(g, UNLOCK_BY_ID[`hero:${h.id}`]?.how ?? "", LIST_X + 34, y + 14, C.lavender, { scale: 0.75 });
+      else drawText(g, UNLOCK_BY_ID[`hero:${h.id}`]?.how ?? "", LIST_X + 34, y + 14, C.lavender, { scale: smallS() });
       // Odznaka Paktu: najwyższy poziom Paktu z pokonanym bossem.
       const best = this.app.save.pacts.best[h.id] ?? 0, badge = pactBadge(best);
       if (badge) drawText(g, `${badge.name} ${best}`, LIST_X + LIST_W - 6, y + 3, badge.color, { align: 'right' });
@@ -460,7 +460,7 @@ export class HeroSelect implements Screen {
     button(r, LIST_X, BTN_Y, BACK_W, BTN_H, 'Wstecz [Esc]');
     if (heroUnlocked(this.app.save, h.id)) button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, `Start: ${h.name} [Enter]`, { accent: C.gold, col: C.yellow, pulse: true });
     else button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, 'Locked', { col: C.dgray });
-    drawText(g, 'Góra/dół: bohater    Lewo/prawo: zakładki', (LIST_X + BACK_W + W - 12 - START_W) / 2, BTN_Y + 2, C.lavender, { align: 'center', scale: 0.75 });
+    drawText(g, 'Góra/dół: bohater    Lewo/prawo: zakładki', (LIST_X + BACK_W + W - 12 - START_W) / 2, BTN_Y + 2, C.lavender, { align: 'center', scale: smallS() });
   }
 
   /** Strona ogólna: broń, pasywka, zasób w skrócie, umiejętności. */
@@ -482,9 +482,9 @@ export class HeroSelect implements Screen {
     // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa (klik: strona z opisami).
     this.skillsAt = ly;
     if (hovered(x + 8, ly, DET_W - 16, 40)) r.withAlpha(0.15, () => r.roundRect(x + 8, ly - 2, DET_W - 16, 42, 2, C.white));
-    drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 41, C.lavender, { align: 'right', scale: 0.75 });
+    drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 41, C.lavender, { align: 'right', scale: smallS() });
     // R4: drugi ultimate do wyboru.
-    if (h.altUlt) drawText(g, 'R: swap ultimate (2 to choose from)', x + 12, ly + 41, C.yellow, { scale: 0.75 });
+    if (h.altUlt) drawText(g, 'R: swap ultimate (2 to choose from)', x + 12, ly + 41, C.yellow, { scale: smallS() });
     this.kit(h).forEach((a, i) => {
       const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
       const ax = x + 12 + (i % 2) * 140, ay = ly + Math.floor(i / 2) * 20;

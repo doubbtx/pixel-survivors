@@ -4,7 +4,7 @@ import { itemColor } from '../data/items';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { C, PAL } from '../core/palette';
 import type { MapObject, MapObjectKind } from '../systems/events';
-import { drawText, textWidth } from '../core/font';
+import { drawText, textWidth, smallS } from '../core/font';
 import { drawSprite } from '../gfx/sprites';
 import type { AbilitySlot } from '../data/heroes';
 import { BAL } from '../data/balance';
@@ -231,7 +231,7 @@ function drawSecretArrows(r: Renderer, run: Run): void {
       r.g.fill();
     };
     tri(8, 6, C.black); tri(6.5, 4.5, t.col ?? C.pink);
-    const text = t.col ? t.label : `${t.label} ${Math.round(Math.sqrt(d2(t.x, t.y)) / 10)}m`, tw = textWidth(text) * 0.75 + 6;
+    const text = t.col ? t.label : `${t.label} ${Math.round(Math.sqrt(d2(t.x, t.y)) / 10)}m`, tw = textWidth(text) * smallS() + 6;
     const lx = Math.max(tw / 2 + 2, Math.min(W - tw / 2 - 2, ax - Math.cos(a) * 16)), ly = ay - Math.sin(a) * 12 - 4;
     tile(r, lx - tw / 2, ly - 1, tw, 8, undefined, 0.7);
     drawText(r.g, text, lx, ly - 0.5, t.col ?? C.pink, { align: 'center', ...SMALL });
@@ -250,17 +250,17 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
   g.beginPath(); g.rect(px, py, ps, ps); g.clip();
   drawSprite(g, `${run.heroSprite}@0`, px + ps / 2, py + ps / 2 + 2);
   g.restore();
-  const lv = `LV ${run.level}`, lw = textWidth(lv) * 0.75 + 4, flash = a.levelFlash > 0 && (run.reduceFlash || a.levelFlash % 0.2 > 0.1);
+  const lv = `LV ${run.level}`, lw = textWidth(lv) * smallS() + 4, flash = a.levelFlash > 0 && (run.reduceFlash || a.levelFlash % 0.2 > 0.1);
   r.roundRect(px + ps / 2 - lw / 2, py + ps - 4, lw, 7, 1.5, flash ? C.teal : C.black);
   r.roundFrame(px + ps / 2 - lw / 2, py + ps - 4, lw, 7, 1.5, UI.xp, UI.line);
-  drawText(g, lv, px + ps / 2, py + ps - 4.5, a.levelFlash > 0 ? C.white : UI.xp, { align: 'center', scale: 0.75 });
+  drawText(g, lv, px + ps / 2, py + ps - 4.5, a.levelFlash > 0 ? C.white : UI.xp, { align: 'center', scale: smallS() });
   // Życie: aktualna i maksymalna wartość na pasku, ślad utraconego życia, tarcza jako cienka linia pod spodem.
   const bx = px + ps + 4, bw = x + w - 3 - bx;
   meter(r, bx, py, bw, 8, a.hp, UI.life, a.hpTrail, UI.lifeTrail);
   if (a.hitFlash > 0 && !run.reduceFlash) r.withAlpha(a.hitFlash / 0.18 * 0.7, () => r.roundRect(bx, py, bw, 8, 1, C.white));
   if (run.healGlow > 0) r.withAlpha(Math.min(1, run.healGlow * 2), () => r.roundFrame(bx - 0.5, py - 0.5, bw + 1, 9, 1, C.lime, 0.75));
   if (p.shield > 0) r.rect(bx, py + 8.5, bw * Math.min(1, p.shield / st.maxHp), 1, C.cyan);
-  drawText(g, `${fmt(Math.ceil(p.hp))} / ${fmt(Math.round(st.maxHp))}`, bx + bw / 2, py + 0.3, C.white, { align: 'center', ...SMALL });
+  drawText(g, `${fmt(Math.ceil(p.hp))} / ${fmt(Math.round(st.maxHp))}`, bx + bw / 2, py + 0.3, C.white, { align: 'center', scale: 0.75, outline: C.black });
   if (a.hitT > 0) {
     const t = `-${fmt(Math.round(a.hitAmt))}`, up = (0.9 - a.hitT) * 4;
     r.withAlpha(Math.min(1, a.hitT * 3), () => drawText(g, t, x + w + 3, py - up, C.red, { outline: C.black }));
@@ -281,7 +281,7 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
   for (const [text, col] of [[ex ? `Akt ${ex.act}, głębia ${run.depth}` : `Głębia ${run.depth}`, UI.textDim], [run.pactLevel ? `Pakt ${run.pactLevel}` : '', C.red]] as const) {
     if (!text) continue;
     // Dopiski, które nie mieszczą się w karcie, są pomijane (pełna informacja jest w pauzie).
-    const tw = textWidth(text) * 0.75;
+    const tw = textWidth(text) * smallS();
     if (lx + tw > x + w - 2) break;
     drawText(g, text, lx, ry + 6.5, col, SMALL);
     lx += tw + 4;
@@ -300,7 +300,7 @@ function drawStatusRow(r: Renderer, run: Run, x: number, y: number): number {
   const maxX = UI.edge + UI.card.w + 60;
   let cx = x;
   for (const c of chips) {
-    const w = textWidth(c.text) * 0.75 + 8;
+    const w = textWidth(c.text) * smallS() + 8;
     if (cx > x && cx + w > maxX) { cx = x; y += 11; }
     tile(r, cx, y, w, 10, c.col);
     if (c.frac < 1) r.rect(cx + 1, y + 8.5, (w - 2) * c.frac, 0.75, c.col);
@@ -335,7 +335,7 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): number {
       : o.kind === 'hunt' ? `Hunt: escapes in ${fmtTime(Math.max(0, o.time - run.time + run.huntPaused))}`
       : kills ? `${fmt(run.levelKills)} / ${fmt(o.count)}` : o.kind === 'survive' && o.kills ? `Survive to ${fmtTime(o.time)} or ${fmt(run.levelKills)} / ${fmt(o.kills)}` : `Przetrwaj do ${fmtTime(o.kind === 'survive' ? o.time : 0)}`;
     meter(r, cx - bw / 2, y, bw, 3, run.objectiveProgress(), UI.reward);
-    const tw = textWidth(text) * 0.75 + (kills ? 10 : 0);
+    const tw = textWidth(text) * smallS() + (kills ? 10 : 0);
     if (kills) drawSprite(g, 'ui_skull', cx - tw / 2 + 3, y + 8.5);
     drawText(g, text, cx + (kills ? 5 : 0), y + 4, UI.text, { align: 'center', ...SMALL });
     y += 14;
@@ -345,7 +345,7 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): number {
   const items: [string, number, number][] = [];
   if (ev) items.push([`${LEVEL_EVENTS[ev.id].name} ${Math.ceil(ev.t)}s`, LEVEL_EVENTS[ev.id].color, 1]);
   if (a.combo > 0.02) items.push([a.comboText, UI.reward, a.combo]);
-  const ws = items.map(([t]) => textWidth(t) * 0.75 + 8), total = ws.reduce((s, w) => s + w, 0) + UI.gap * 2 * (items.length - 1);
+  const ws = items.map(([t]) => textWidth(t) * smallS() + 8), total = ws.reduce((s, w) => s + w, 0) + UI.gap * 2 * (items.length - 1);
   let lx = cx - total / 2;
   items.forEach(([t, col, al], i) => {
     // Etykieta wsuwa się lekko z góry przy pojawieniu się i odjeżdża przy wygaszaniu.
@@ -359,7 +359,7 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): number {
 function drawCounters(r: Renderer, run: Run, a: HudAnim): number {
   const g = r.g, y = UI.edge + UI.xpH, right = W - UI.edge;
   const kills = fmt(run.kills), gold = fmt(Math.floor(run.gold));
-  const kw = textWidth(kills) * 0.75, gw = textWidth(gold) * 0.75;
+  const kw = textWidth(kills) * smallS(), gw = textWidth(gold) * smallS();
   const x = right - Math.max(kw + gw + 34, UI.minimap.w);
   tile(r, x, y, right - x, 11);
   drawSprite(g, 'ui_skull', x + 7, y + 5.5);
@@ -421,7 +421,7 @@ function drawInventory(r: Renderer, run: Run): void {
   });
   // Nowy przedmiot w plecaku: krótkie przypomnienie nad gniazdami.
   if (run.bag.some((it) => it.fresh)) {
-    const t = '! Nowy przedmiot w plecaku (I)', tw = textWidth(t) * 0.75 + 6;
+    const t = '! Nowy przedmiot w plecaku (I)', tw = textWidth(t) * smallS() + 6;
     tile(r, UI.edge, y1 - 12, tw, 9, C.lime);
     drawText(g, t, UI.edge + 3, y1 - 11.5, C.lime, SMALL);
   }
@@ -459,9 +459,10 @@ function drawAbilities(r: Renderer, run: Run, a: HudAnim, touch: boolean): void 
       r.withAlpha(k * 0.3, () => r.roundRect(x, y, S, S, UI.radius, C.white));
     }
     // Klawisz: mała plakietka w lewym dolnym rogu; poziom umiejętności kreskami nad gniazdem.
-    const kl = sl === 'dash' && actionKey('dash') === 'Space' ? 'Spc' : actionKey(sl), kw = textWidth(kl) * 0.75 + 3;
-    r.withAlpha(0.8, () => r.roundRect(x, y + S - 6.5, kw, 6.5, 1, C.black));
-    drawText(g, kl, x + 1.5, y + S - 7.5, ready ? C.white : UI.textDim, { scale: 0.75 });
+    const kl = sl === 'dash' && actionKey('dash') === 'Space' ? 'Spc' : actionKey(sl), kw = textWidth(kl) * smallS() + 3;
+    const kh = smallS() > 0.75 ? 7.5 : 6.5;
+    r.withAlpha(0.8, () => r.roundRect(x, y + S - kh, kw, kh, 1, C.black));
+    drawText(g, kl, x + 1.5, y + S - kh - (kh > 7 ? 2 : 1), ready ? C.white : UI.textDim, { scale: smallS() });
     if (ab.def.maxLevel > 1) for (let l = 0; l < ab.level; l++) r.rect(x + 1 + l * 4, y - 2.5, 3, 1, UI.reward);
   });
 }
