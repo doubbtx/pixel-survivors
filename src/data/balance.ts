@@ -123,7 +123,12 @@ export const BAL = {
   /**
    * Siła buildu: HP wrogów dopasowuje się do średniego DPS gracza (średnia krocząca `emaSec` s), tak by przeciętny wróg
    * ginął w ok. `ttk(t)` sekundy całego DPS. Tylko w górę (mnożnik ≥ 1), z wykładnikiem `exp` (łagodniej niż 1:1) i limitem `max`.
-   * Obrażenia wrogów rosną z tym mnożnikiem (najwyżej `dmgMax`) do potęgi `dmgExp` oraz z poziomem postaci (`levelHp`, `levelDmg` na poziom).
+   * Obrażenia wrogów NIE zależą od siły buildu (0.35.1): krzywa `dmg(głębokość, czas na tej głębokości)` zastąpiła
+   * `powerMul^0.45`. Dopasowana do 35. percentyla dawnego mnożnika z telemetrii bota (21 runów Endless, 14 Ekspedycji):
+   * ×2 na głębokość, w obrębie głębokości rośnie z czasem (najwyżej ×2; na pierwszej głębokości wolniej i najwyżej ×1.6
+   * — nowi gracze i słabe buildy), sufit jak dawniej 60^0.45 ≈ 6.3. Wobec dawnego wzoru (ta sama próbka): Endless mediana
+   * ×0.84, P90 ×1.6; Ekspedycja mediana ×1.0, P90 ×1.11.
+   * Dodatkowo poziom postaci (`levelHp`, `levelDmg` na poziom).
    */
   power: {
     emaSec: 15,
@@ -131,8 +136,7 @@ export const BAL = {
     ttk: (t: number) => 0.06 + 0.06 * Math.exp(-t / 240),
     exp: 0.8,
     max: 300,
-    dmgMax: 60,
-    dmgExp: 0.45,
+    dmg: (depth: number, t: number) => Math.min(6.3, Math.pow(2, depth - 1) * (depth <= 1 ? Math.min(1.6, 1 + t / 300) : Math.min(2, 1 + t / 120))),
     levelHp: 0.01,
     levelDmg: 0.012,
   },

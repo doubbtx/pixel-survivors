@@ -31,7 +31,7 @@ export const NODE_INFO: Record<NodeKind, NodeInfo> = {
   treasure: { name: 'Skarb', icon: 'ex_chest', color: C.yellow, desc: 'Skrzynia z przedmiotem wysokiej jakości, bez walki.' },
   shop: { name: 'Sklep', icon: 'ex_shop', color: C.gold, desc: 'Sklep z przedmiotami, usługami i eliksirami.' },
   anvil: { name: 'Kowadło', icon: 'ex_anvil', color: C.cyan, desc: 'Ulepszanie i przekuwanie przedmiotów, plus darmowe odłamki.' },
-  rest: { name: 'Obóz', icon: 'ex_rest', color: C.lime, desc: 'Rest: heals, raises max HP for good and lets you pick one of two bonuses for the next map (not a dungeon).' },
+  rest: { name: 'Obóz', icon: 'ex_rest', color: C.lime, desc: 'Rest: heals, raises max HP for good and lets you pick one of two bonuses for the next map (dungeons do not use it up).' },
   shrine: { name: 'Kapliczka', icon: 'ex_shrine', color: C.yellow, desc: 'Pick one of two blessings for the next few maps.' },
   boss: { name: 'Boss', icon: 'ex_boss', color: C.salmon, desc: 'Pełny poziom z bossem na końcu aktu.' },
   secret: { name: '???', icon: 'ex_secret', color: C.hotpink, desc: 'Coś tu nie pasuje. Ścieżka, której nie było na mapie...' },

@@ -591,9 +591,12 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   Podgląd trasy: `peek` (mysz po ruchu albo R/X po zablokowaniu trudności; strzałki/Enter go zdejmują, żeby panel pokazywał
   to, w co wejdzie Enter), `routeTo` (osiągalność w przód i wstecz) podświetla drogi, zielony „+” = bonus mapy. Trudność:
   `tierOpen` (tylko przed pierwszym węzłem aktu; koniec przełączania przed lochem). Przed bossem obóz/sklep w każdej połowie
-  kolumn. Bonus obozu nie działa i nie zużywa się w lochu. Telemetria runu: `Run.telemetry` (próbka co
+  kolumn. Bonus obozu: loch go nie używa ani nie zużywa; błogosławieństwo liczy każdą mapę z walką. Podgląd Rozdarcia: tylko „???” i opis. Telemetria runu: `Run.telemetry` (próbka co
   `BAL.telemetryEvery` s: czasy, pm, dps, hp, taken, kills, alive), w bocie `BotRun.tl`, w DEV `window.__telemetry()`.
   Testy balansu botem uruchamiać na zamrożonej kopii (osobny vite na innym porcie), bo HMR przeładowuje stronę przy edycji.
+- 0.35.1 (zadanie C): obrażenia wrogów `BAL.power.dmg(głębokość, Run.depthTime())` zamiast `powerMul^0.45` (dopasowane do
+  P35 telemetrii; samouczek bez krzywej). Walidacja bez god mode (7 bohaterów × 4 runy): mediana przeżycia 82 → 80 s.
+  Następne: D (przebudowa `powerMul` HP: podłoga czasowa + ograniczone gonienie liczone z zadanych obrażeń, bez overkillu).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

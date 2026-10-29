@@ -552,7 +552,7 @@ export class Run {
     // Błogosławieństwo kapliczki Ekspedycji na kolejne mapy (trwa cały poziom).
     const bless = this.expedition?.blessing ? EX_BLESSINGS.find((b) => b.id === this.expedition!.blessing!.id) : null;
     if (bless) this.buffs.push({ name: bless.name, stats: bless.stats, t: Infinity });
-    // Bonus z obozu: tylko ta jedna mapa (zdejmowany w GameScreen.onLevelCleared); loch go nie zużywa.
+    // Bonus z obozu: tylko ta jedna mapa (zdejmowany w GameScreen.onLevelCleared); loch go nie używa ani nie zużywa.
     const camp = this.expedition?.camp && !this.levelInfo.dungeon ? CAMP_BUFFS.find((b) => b.id === this.expedition!.camp) : null;
     if (camp) this.buffs.push({ name: camp.name, stats: camp.stats, t: Infinity });
     this.indexEffects();
@@ -604,6 +604,11 @@ export class Run {
     });
     this.takenMark = this.takenTotal;
     this.killsMark = this.kills;
+  }
+
+  /** Czas na bieżącej głębokości (s): od startu poziomu, w Endless od pokonania ostatniego bossa (krzywa obrażeń wrogów). */
+  depthTime(): number {
+    return this.mode === 'endless' ? Math.max(0, this.time - (this.nextBossAt - BAL.endlessBossEvery)) : this.time;
   }
 
   /** Debug (F4): przyspiesza cel poziomu i czas fal. */

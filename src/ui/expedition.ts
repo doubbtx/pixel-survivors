@@ -99,7 +99,7 @@ export class ExpeditionMapView {
     if (offer.kind === 'rest') {
       const c = CAMP_BUFFS.find((b) => b.id === offer.ids[pick])!;
       ex.camp = c.id;
-      this.onChosen(`Next map: ${c.name} (${c.desc})`);
+      this.onChosen(`Camp: +${Math.round(X.restHeal * 100)}% HP, +${X.restMaxHp} max HP. Next map: ${c.name} (${c.desc})`);
     } else {
       const b = EX_BLESSINGS.find((x) => x.id === offer.ids[pick])!;
       ex.blessing = { id: b.id, maps: X.blessingMaps };
@@ -307,7 +307,8 @@ export class ExpeditionMapView {
     if (key !== this.modKey) { this.modKey = key; this.modScroll.reset(); }
     const x0 = MAP_X + 8, y0 = DET_Y + 6;
     drawSprite(g, kind.icon, x0 + 10, y0 + 10, { scale: 2 });
-    if (isCombat(m.kind)) {
+    // Rozdarcie w podglądzie: tylko „???” i opis (tajemnica do wejścia).
+    if (isCombat(m.kind) && !(m.kind === 'secret' && this.peek)) {
       const lv = levelAt(ex.act, drow, m);
       const rar = MAP_RARITY[m.rarity ?? 0];
       drawText(g, m.name ?? kind.name, x0 + 26, y0, m.kind === 'boss' ? kind.color : rar.color, { shadow: C.black });
@@ -427,7 +428,7 @@ export class ExpeditionMapView {
       drawText(g, `${i + 1}. ${b.name}`, x + 6, y + 4, on ? info.color : C.lgray, { shadow: C.black });
       wrapText(b.desc, (OFFER_W - 12) / descS()).slice(0, 2).forEach((l, k) => drawText(g, l, x + 6, y + 16 + k * descLH(), C.lgray, DESC));
     });
-    const note = rest ? 'Lasts one map with combat (dungeons do not use it up).' : `Lasts ${BAL.expedition.blessingMaps} maps with combat.`;
+    const note = rest ? 'Lasts one map with combat (dungeons do not use it up).' : `Lasts ${BAL.expedition.blessingMaps} maps with combat (dungeons count too).`;
     drawText(g, note, x0 + 26, DET_Y + 18 + OFFER_H + 4, C.lavender, SMALL);
   }
 

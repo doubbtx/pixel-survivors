@@ -275,6 +275,7 @@ export class GameScreen implements Screen {
       ex.cleared++;
       ex.bonus += mapReward(m);
       if (m.kind === 'secret' && !ex.voidKey) { ex.voidKey = true; this.showToast('Klucz Pustki! Po ostatnim akcie otworzy się akt 4'); }
+      // Błogosławieństwo liczy każdą mapę z walką (także loch); bonusu obozu loch nie używa ani nie zużywa.
       if (ex.blessing && --ex.blessing.maps <= 0) ex.blessing = null;
       if (m.kind !== 'dungeon') ex.camp = null;
       this.updateRecords();
@@ -412,7 +413,6 @@ export class GameScreen implements Screen {
         run.heal(run.stats.maxHp * X.restHeal);
         run.addBonus('maxHp', X.restMaxHp);
         ex.offer = rollOffer('rest');
-        this.showToast(`Camp: +${Math.round(X.restHeal * 100)}% HP, +${X.restMaxHp} max HP. Pick a bonus for the next map.`);
         this.saveSlot(false);
         break;
       case 'shrine':

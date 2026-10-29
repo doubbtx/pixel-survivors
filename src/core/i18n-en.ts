@@ -1692,7 +1692,7 @@ export const EN: Record<string, string> = {
   "Siła buildu (BAL.power)": "Build power (BAL.power)",
   "Wrogowie (głębokość 1): HP / obrażenia": "Enemies (depth 1): HP / damage",
   "Zbroja (Legendarna): maks. HP": "Armor (Legendary): max HP",
-  "mnożnik 1-{}, obrażenia ^{}, cel TTK {}-{} s": "multiplier 1-{}, damage ^{}, target TTK {}-{} s",
+  "mnożnik 1-{}, obrażenia wrogów x{}-{} wg głębokości, cel TTK {}-{} s": "multiplier 1-{}, enemy damage x{}-{} by depth, target TTK {}-{} s",
   "mnożnik czasu": "time multiplier",
   "poziom przedmiotu {}": "item level {}",
   "szybkość ruchu +100% / +200%": "movement speed +100% / +200%",

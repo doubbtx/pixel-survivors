@@ -20,8 +20,9 @@ const NOTES: { version: string; lines: string[] }[] = [
   {
     version: '0.35',
     lines: [
+      "Enemy damage no longer grows with how strong your build is: it depends on depth and on time spent at that depth, gently in the first minutes.",
       "Expedition map: point at any later node (or press R/X once the act has started) to preview it and highlight every path to it. Maps with a bonus show a green +.",
-      "Camps and shrines now offer two bonuses to choose from instead of a random one. A camp bonus is not used up by a dungeon.",
+      "Camps and shrines now offer two bonuses to choose from instead of a random one. Dungeons do not use up camp bonuses.",
       "Difficulty is set before the first node of each act and stays for the whole act. Every lane can now reach a camp or shop before the boss.",
     ],
   },

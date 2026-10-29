@@ -3,8 +3,9 @@
  * `{}` = wstawka (liczba, nazwa — tłumaczona osobno). Nowy napis w grze: dopisz tu jego polską wersję.
  */
 export const PL: Record<string, string> = {
+  "Enemy damage no longer grows with how strong your build is: it depends on depth and on time spent at that depth, gently in the first minutes.": "Obrażenia wrogów nie rosną już z siłą Twojego buildu: zależą od głębokości i czasu na tej głębokości, łagodnie w pierwszych minutach.",
   "Expedition map: point at any later node (or press R/X once the act has started) to preview it and highlight every path to it. Maps with a bonus show a green +.": "Mapa wyprawy: wskaż dowolny dalszy węzeł (albo naciśnij R/X, gdy akt już trwa), by zobaczyć jego podgląd i wszystkie drogi do niego. Mapy z bonusem mają zielony +.",
-  "Camps and shrines now offer two bonuses to choose from instead of a random one. A camp bonus is not used up by a dungeon.": "Obozy i kapliczki proponują teraz dwa bonusy do wyboru zamiast losowego. Loch nie zużywa bonusu z obozu.",
+  "Camps and shrines now offer two bonuses to choose from instead of a random one. Dungeons do not use up camp bonuses.": "Obozy i kapliczki proponują teraz dwa bonusy do wyboru zamiast losowego. Loch nie zużywa bonusu z obozu.",
   "Difficulty is set before the first node of each act and stays for the whole act. Every lane can now reach a camp or shop before the boss.": "Trudność ustawiasz przed pierwszym węzłem aktu i obowiązuje przez cały akt. Z każdej kolumny da się dojść do obozu albo sklepu przed bossem.",
   "Wayfarer": "Wędrowiec",
   "Finish act 1 of an Expedition.": "Ukończ 1. akt Ekspedycji.",
@@ -179,14 +180,13 @@ export const PL: Record<string, string> = {
   "Biome minibosses with their own attacks: Boar King, Toad Matriarch, Sand Tyrant, Shattered Knight and Void Prism. One appears on every Expedition elite map and from time to time in Endless. They drop an elite chest.": "Minibossowie biomów z własnymi atakami: Król Dzików, Matrona Ropuch, Tyran Piasków, Strzaskany Rycerz i Pryzmat Pustki. Jeden pojawia się na każdej mapie elit w Ekspedycji i co jakiś czas w Endless. Zostawiają skrzynię elity.",
   "All new enemies and minibosses have Bestiary entries.": "Wszyscy nowi wrogowie i minibossowie mają wpisy w Bestiariuszu.",
   "Fixed: four item icons lost in 0.29.3 (ring, greaves, band, charm) no longer stop the game.": "Poprawka: cztery ikony przedmiotów zgubione w 0.29.3 (pierścień, nagolenniki, obrączka, wisior) już nie przerywają gry.",
-  "Rest: heals, raises max HP for good and lets you pick one of two bonuses for the next map (not a dungeon).": "Odpoczynek: leczenie, stały bonus do maks. HP i wybór jednego z dwóch bonusów na następną mapę (nie loch).",
-  "Camp: +{}% HP, +{} max HP. Pick a bonus for the next map.": "Obóz: +{}% HP, +{} maks. HP. Wybierz bonus na następną mapę.",
-  "Next map: {} ({})": "Następna mapa: {} ({})",
+  "Rest: heals, raises max HP for good and lets you pick one of two bonuses for the next map (dungeons do not use it up).": "Odpoczynek: leczenie, stały bonus do maks. HP i wybór jednego z dwóch bonusów na następną mapę (loch go nie zużywa).",
+  "Camp: +{}% HP, +{} max HP. Next map: {} ({})": "Obóz: +{}% HP, +{} maks. HP. Następna mapa: {} ({})",
   "Pick one of two blessings for the next few maps.": "Wybierz jedno z dwóch błogosławieństw na kilka kolejnych map.",
   "Camp: pick a bonus for the next map": "Obóz: wybierz bonus na następną mapę",
   "Shrine: pick a blessing": "Kapliczka: wybierz błogosławieństwo",
   "Lasts one map with combat (dungeons do not use it up).": "Działa przez jedną mapę z walką (loch go nie zużywa).",
-  "Lasts {} maps with combat.": "Działa przez {} mapy z walką.",
+  "Lasts {} maps with combat (dungeons count too).": "Działa przez {} mapy z walką (lochy też się liczą).",
   "preview": "podgląd",
   "Difficulty (set for this act)": "Trudność (ustalona na ten akt)",
   "Camp bonus for the next fight: {}.": "Bonus z obozu na następną walkę: {}.",
