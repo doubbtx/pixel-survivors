@@ -535,5 +535,10 @@ export function rollOffer(run: Run, source: CardSource): { rarity: Rarity; cards
   if (pool.length === 0) { rarity = 'silver'; pool = cardPool(run, rarity); }
   const cards: CardDef[] = [];
   while (cards.length < 3 && pool.length) cards.push(pool.splice(Math.floor(rng.next() * pool.length), 1)[0]);
+  // Wyczerpana pula tej rzadkości (unikalne karty już zebrane): dopełnienie do 3 kartami niższej rzadkości — zawsze jest wybór.
+  for (const lower of (rarity === 'prism' ? ['gold', 'silver'] : rarity === 'gold' ? ['silver'] : []) as Rarity[]) {
+    const extra = cardPool(run, lower, cards.map((c) => c.id));
+    while (cards.length < 3 && extra.length) cards.push(extra.splice(Math.floor(rng.next() * extra.length), 1)[0]);
+  }
   return { rarity, cards };
 }
