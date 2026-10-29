@@ -1,6 +1,6 @@
 import { W } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { drawText, wrapText, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import type { App, Screen } from './app';
 import { Menu, panel } from './widgets';
@@ -48,7 +48,7 @@ export class FlashWarningScreen implements Screen {
     panel(r, 50, 60, W - 100, 104, C.orange);
     const text = 'A small part of people may have seizures when exposed to flashing lights or patterns, even without a history of epilepsy. This game has explosions, blinking warnings and fast effects. If you feel dizzy, have blurred vision or twitching, stop playing and see a doctor.';
     wrapText(text, W - 124).forEach((l, i) => drawText(g, l, 62, 70 + i * 12, C.white));
-    drawText(g, 'Reduce flashing: no blinking or white flashes (you can change it later in Settings).', W / 2, 146, C.lgray, { align: 'center', scale: 0.75 });
+    drawText(g, 'Reduce flashing: no blinking or white flashes (you can change it later in Settings).', W / 2, 146, C.lgray, { align: 'center', scale: smallS() });
     this.menu.render(r);
   }
 }

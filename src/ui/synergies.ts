@@ -1,7 +1,7 @@
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, textWidth, wrapText, DESC, descS, descLH } from '../core/font';
+import { drawText, textWidth, wrapText, DESC, descS, descLH, smallS } from '../core/font';
 import { drawSprite } from '../gfx/sprites';
 import { SYNERGIES, SYNERGY_BY_TAG, VERSATILITY, tierOf, type SynergyDef } from '../data/synergies';
 import type { Tag } from '../data/cards';
@@ -74,9 +74,9 @@ export function drawSynergyHud(r: Renderer, run: Run, x: number, y: number, maxW
   });
   if (tip) {
     const t = tip as (typeof chips)[number], text = `${t.name}: ${t.pts}/${t.goal}`;
-    const w = textWidth(text) * 0.75 + 8;
+    const w = textWidth(text) * smallS() + 8;
     tile(r, tx, ty, w, 9, t.col, 0.85);
-    drawText(r.g, text, tx + 4, ty + 0.5, t.tier > 0 ? C.yellow : UI.text, { scale: 0.75 });
+    drawText(r.g, text, tx + 4, ty + 0.5, t.tier > 0 ? C.yellow : UI.text, { scale: smallS() });
   }
   const rows = Math.ceil(chips.length / perRow);
   return y + rows * (step + 2);

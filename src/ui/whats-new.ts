@@ -1,6 +1,6 @@
 import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { drawText, wrapText, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import type { App, Screen } from './app';
 import { panel, titleBar } from './widgets';
@@ -240,6 +240,6 @@ export class WhatsNewScreen implements Screen {
       }
       y += 6;
     }
-    if (this.t > 0.3) drawText(g, 'Press any key or tap to continue', W / 2, H - 24, C.lavender, { align: 'center', scale: 0.75 });
+    if (this.t > 0.3) drawText(g, 'Press any key or tap to continue', W / 2, H - 24, C.lavender, { align: 'center', scale: smallS() });
   }
 }

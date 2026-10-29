@@ -1,6 +1,6 @@
 import type { Renderer } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText, textWidth, type TextOpts } from '../core/font';
+import { drawText, textWidth, type TextOpts, smallS } from '../core/font';
 
 /**
  * Wspólny styl HUD-u: grafitowo-granatowe płytki z lekką przezroczystością, cienka ramka (pół piksela logicznego),
@@ -43,7 +43,7 @@ export const UI = {
 } as const;
 
 /** Małe napisy HUD (3/4 rozmiaru, czarny obrys). */
-export const SMALL: TextOpts = { scale: 0.75, outline: C.black };
+export const SMALL: TextOpts = { get scale() { return smallS(); }, outline: C.black };
 export const OUT: TextOpts = { outline: C.black };
 
 /** Płytka HUD: lekko przezroczyste wypełnienie i cienka ramka. `accent` zmienia kolor ramki (wyróżnienie). */
@@ -72,17 +72,17 @@ export function iconSlot(r: Renderer, x: number, y: number, s: number, border?: 
 
 /** Mały znacznik z liczbą w rogu ikony (poziom), na ciemnym tle — nie zasłania środka ikony. */
 export function cornerTag(r: Renderer, text: string, x: number, y: number, col: number = UI.textHi): void {
-  const w = textWidth(text) * 0.75 + 2;
+  const w = textWidth(text) * smallS() + 2;
   r.withAlpha(0.75, () => r.roundRect(x - w, y - 6, w, 6, 1, C.black));
-  drawText(r.g, text, x - 1, y - 7, col, { align: 'right', scale: 0.75 });
+  drawText(r.g, text, x - 1, y - 7, col, { align: 'right', scale: smallS() });
 }
 
 /** Etykieta-pigułka (wydarzenia, kombo): płytka z napisem; `a` = krycie (animacja pojawienia się i wygaszenia). */
 export function label(r: Renderer, text: string, cx: number, y: number, col: number, a = 1): void {
   if (a <= 0) return;
-  const w = textWidth(text) * 0.75 + 8;
+  const w = textWidth(text) * smallS() + 8;
   r.withAlpha(a, () => {
-    tile(r, cx - w / 2, y, w, 9, col, 0.7);
+    tile(r, cx - w / 2, y, w, smallS() > 0.75 ? 10 : 9, col, 0.7);
     drawText(r.g, text, cx, y + 0.5, col, { align: 'center', ...SMALL });
   });
 }

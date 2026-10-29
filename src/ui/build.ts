@@ -1,7 +1,7 @@
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
+import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { WEAPON_BY_ID, FUSIONS, maxLevel, describeLevel, evolvesOf } from '../data/weapons';
@@ -16,7 +16,7 @@ import type { Run } from '../game/run';
 import { dim, panel, slot, inside, hovered, button, Scroll } from './widgets';
 
 const CELL = 22, STEP = 26, GX = 16, WY = 50, PY = 116, COLS = 6;
-const DX = 186, SMALL = { scale: 0.75 } as const;
+const DX = 186, SMALL: { readonly scale: number } = { get scale() { return smallS(); } };
 /** Przewijany panel opisu (x, y, w, h). */
 const AREA = [DX + 2, 36, W - DX - 10, H - 44] as const;
 

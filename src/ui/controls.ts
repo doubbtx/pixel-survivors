@@ -1,6 +1,6 @@
 import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
-import { drawText } from '../core/font';
+import { drawText, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { REBIND, actionKey, keyOf, setBindings, type Action } from '../core/input';
 import type { App, Screen } from './app';
@@ -64,6 +64,6 @@ export class ControlsScreen implements Screen {
     panel(r, W / 2 - 160, 32, 320, (REBIND.length + 2) * 12.5 + 8);
     this.menu.render(r);
     const tip = this.waiting ? 'Press a new key (Esc: cancel)' : 'Enter: change key. Arrows, Enter, Esc, Tab and 1-4 always work in menus.';
-    drawText(g, tip, W / 2, H - 12, this.waiting ? C.yellow : C.lavender, { align: 'center', scale: 0.75 });
+    drawText(g, tip, W / 2, H - 12, this.waiting ? C.yellow : C.lavender, { align: 'center', scale: smallS() });
   }
 }
