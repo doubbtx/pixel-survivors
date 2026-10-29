@@ -4,7 +4,7 @@ import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font
 import { sfx } from '../core/audio';
 import { heroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
-import { PASSIVE_BY_ID } from '../data/passives';
+import { passiveIcon } from '../data/passives';
 import { CARD_BY_ID } from '../data/cards';
 import { BAL } from '../data/balance';
 import { Run, type Mode, type RunSnapshot } from '../game/run';
@@ -773,7 +773,7 @@ export class GameScreen implements Screen {
     run.passives.forEach((p, i) => {
       const x = x0 + i * 19;
       slot(r, x, 184, 18);
-      drawSprite(g, PASSIVE_BY_ID[p.id].icon, x + 9, 193);
+      drawSprite(g, passiveIcon(p), x + 9, 193);
       drawText(g, String(p.level), x + 17, 192, C.white, { align: 'right', outline: C.black, scale: 0.75 });
     });
     const ex0 = px + pw - 10 - SLOTS.length * 19;
@@ -940,7 +940,7 @@ export class GameScreen implements Screen {
     x += 8;
     for (const p of run.passives) {
       slot(r, x, wy, 18);
-      drawSprite(g, PASSIVE_BY_ID[p.id].icon, x + 9, wy + 9);
+      drawSprite(g, passiveIcon(p), x + 9, wy + 9);
       drawText(g, String(p.level), x + 17, wy + 9, C.white, { align: 'right', outline: C.black, scale: 0.75 });
       x += 20;
     }

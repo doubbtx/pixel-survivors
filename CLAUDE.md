@@ -509,7 +509,15 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   - pełne sterowanie padem we wszystkich menu (Steam Deck);
   - zostają: kształty żywiołów, wyłączanie wstrząsów ekranu, autocelowanie.
 
-### Faza 4: różnorodność i uczucie mocy (v0.30–0.31) — v0.30 GOTOWE (wrogowie i minibossowie), v0.31 w planie
+### Faza 4: różnorodność i uczucie mocy (v0.30–0.32) — v0.30 GOTOWE (wrogowie i minibossowie), v0.31 GOTOWE (ewolucje), v0.32 w planie (ataki bossów, uczucie mocy, podsumowanie)
+- 0.31.0 — ewolucje (prośba gracza): `WeaponDef.evolves` (lista ścieżek; pierwsza = podstawowa), `ALT_EVOS` w data/weapons.ts
+  (wariant = kopia ewolucji podstawowej z innymi statystykami / `hybrid`, ikona `ic_<id>` = ikona ewolucji podstawowej
+  przemalowana `ramp`, żywioł jak broń bazowa). Każda pasywka ewoluuje ≥ 2 bronie (`passiveEvolves(id, hero?)` w
+  systems/levelup.ts). Opcja 'evolve' ma `id` = id ewolucji (kilka ścieżek = kilka kart). Ewolucja pasywki: `PassiveDef.evo`
+  (stats), opcja 'passiveEvolve' gdy maks. poziom + posiadana broń ewoluowana tą pasywką; `PassiveInst.evo`, zapis jako
+  [id, level, 1]; ikona `pi_<id>_evo` (gwiazda `evoStar`), `passiveIcon(p)`. Nowe pasywki `ember` (elemPower), `whetstone`
+  (critMult). Księga ewolucji `ui/codex.ts` (menu główne): strony Bronie, Pasywki, Fuzje, Umiejętności, Ulepszenia.
+  Raport bota: `build` (bronie i pasywki, `*` = po ewolucji).
 - 0.30.0 — wrogowie biomów (data/enemies.ts, zachowania w `updateBiomeEnemy` w systems/enemies.ts, parametry `BAL.biomeEnemies`,
   skład `BIOME_WAVES` w data/waves.ts dokładany przez `currentMix(t, biome)`):
   `boar` charger (stoi i miga `chargeWarn`, potem jazda `dvx/dvy`), `thornling` mortar (`run.strikes` z `seed: true` i `r`,

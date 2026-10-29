@@ -1,5 +1,5 @@
 import { C } from '../core/palette';
-import { WEAPONS } from './weapons';
+import { WEAPONS, ALT_EVOS, evolvesOf, WEAPON_BY_ID } from './weapons';
 
 /**
  * Żywioły: trafienie bronią (albo efektem) z żywiołem nakłada stan na wroga (systems/enemies.ts, game/run.ts damageEnemy).
@@ -29,6 +29,9 @@ export const WEAPON_ELEMENT: Record<string, Element> = {
   f_firearrow: 'fire', f_stormarrow: 'lightning', f_frostwhirl: 'ice', f_stormstaff: 'lightning', f_comet: 'fire', f_soulwhirl: 'poison',
   f_gravemines: 'poison', f_halo: 'fire', f_sunbeam: 'lightning', f_thunderorb: 'lightning', f_frostring: 'ice', f_firefield: 'fire', f_mirror: 'lightning',
 };
+
+// Warianty ewolucji (ALT_EVOS) mają żywioł swojej broni bazowej.
+for (const a of ALT_EVOS) { const el = WEAPON_ELEMENT[evolvesOf(WEAPON_BY_ID[a.base])[0].into] ?? WEAPON_ELEMENT[a.base]; if (el) WEAPON_ELEMENT[a.id] = el; }
 
 /** Źródła obrażeń spoza broni z żywiołem (karty, synergie, umiejętności). */
 const EXTRA_SOURCES: Record<string, Element> = {

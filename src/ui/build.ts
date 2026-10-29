@@ -4,8 +4,9 @@ import { C } from '../core/palette';
 import { drawText, wrapText, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
-import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel, describeLevel } from '../data/weapons';
-import { PASSIVE_BY_ID } from '../data/passives';
+import { WEAPON_BY_ID, FUSIONS, maxLevel, describeLevel, evolvesOf } from '../data/weapons';
+import { passiveEvolves } from '../systems/levelup';
+import { PASSIVE_BY_ID, passiveIcon } from '../data/passives';
 import { AUGMENT_BY_ID, weaponBase, augmentWorks, fusionAugments, FUSION_RULES } from '../data/augments';
 import { ELEMENTS, WEAPON_ELEMENT, ELEM, type Element } from '../data/elements';
 import { BAL } from '../data/balance';
@@ -110,7 +111,7 @@ export class BuildView {
       const [x, y] = this.cellPos(i), w = run.weapons[i], p = run.passives[i - nw];
       const on = i === this.sel || hovered(x, y, CELL, CELL);
       slot(r, x, y, CELL, i === this.sel ? C.yellow : on ? C.lavender : w?.def.evolved ? C.gold : C.slate);
-      drawSprite(g, w ? w.def.icon : PASSIVE_BY_ID[p.id].icon, x + CELL / 2, y + CELL / 2);
+      drawSprite(g, w ? w.def.icon : passiveIcon(p), x + CELL / 2, y + CELL / 2);
       drawText(g, w ? (w.def.evolved ? '*' : String(w.level)) : String(p.level), x + CELL - 2, y + CELL - 10, C.white, { align: 'right', outline: C.black });
     }
     drawText(g, 'Strzałki / mysz: wybór', GX, H - 56, C.dgray, SMALL);
@@ -160,15 +161,16 @@ export class BuildView {
       if (lost.length) text(`Nie działają tu: ${lost.join(', ')} (inny typ ataku).`, C.salmon);
     }
     // Ewolucja: broń na maks. + pasywka.
-    const evo = WEAPON_BY_ID[base]?.evolve;
-    if (evo && !d.evolved) {
-      const pas = PASSIVE_BY_ID[evo.passive], into = WEAPON_BY_ID[evo.into], maxed = w.level >= maxLevel(d), has = run.passives.some((p) => p.id === pas.id) || run.loyal > 0;
-      head(`Ewolucja: ${into.name}`, C.yellow);
+    // Ewolucje: broń na maks. + jedna z pasywek (każda daje inną ewolucję).
+    const evs = d.evolved ? [] : evolvesOf(WEAPON_BY_ID[base] ?? d);
+    if (evs.length) head(evs.length > 1 ? 'Ewolucje (wybierz jedną)' : 'Ewolucja', C.yellow);
+    evs.forEach((evo, i) => {
+      const pas = PASSIVE_BY_ID[evo.passive], into = WEAPON_BY_ID[evo.into], maxed = w.level >= maxLevel(d), has = run.passives.some((p) => p.id === pas.id) || (i === 0 && run.loyal > 0);
       recipe(r, x, y, [d.icon, maxed], [pas.icon, has], into.icon);
-      drawText(g, maxed ? 'broń na maks.' : `broń: poziom ${maxLevel(d)}`, x + 86, y, maxed ? C.lime : C.lgray, SMALL);
-      drawText(g, `${has ? 'masz' : 'brak'}: ${pas.name}`, x + 86, y + 9, has ? C.lime : C.salmon, SMALL);
+      drawText(g, into.name, x + 86, y, C.yellow, SMALL);
+      drawText(g, `${has ? 'masz' : 'brak'}: ${pas.name}${maxed ? '' : `, broń: poziom ${maxLevel(d)}`}`, x + 86, y + 9, has ? C.lime : C.salmon, SMALL);
       y += 22;
-    }
+    });
     // Fuzje: z którą bronią można połączyć (obie na maks. albo po ewolucji).
     const fus = d.fused ? [] : FUSIONS.filter((f) => f.a === base || f.b === base);
     if (fus.length) {
@@ -231,14 +233,19 @@ export class BuildView {
     drawText(g, `Poziom ${p.level}/${d.maxLevel}`, x + 28, y + 11, C.lavender);
     y += 26;
     for (const l of wrapText(`${d.desc} na każdy poziom.`, tw)) { drawText(g, l, x, y, C.white, DESC); y += descLH(); }
+    // Ewolucja pasywki: maks. poziom + broń ewoluowana tą pasywką.
+    y += 3;
+    drawText(g, p.evo ? `Evolved: ${d.evo.name}` : `Evolution: ${d.evo.name}`, x, y, C.gold);
+    y += 11;
+    for (const l of wrapText(p.evo ? d.evo.desc : `${d.evo.desc}. Needs max level and one weapon evolved with this passive.`, tw)) { drawText(g, l, x, y, p.evo ? C.yellow : C.lgray, DESC); y += descLH(); }
     // Bronie, które ta pasywka ewoluuje (zielona ramka: masz tę broń).
-    const evo = WEAPONS.filter((w) => w.evolve?.passive === p.id);
+    const evo = passiveEvolves(p.id, run.hero.id);
     if (!evo.length) return y;
     y += 3;
     drawText(g, 'Potrzebna do ewolucji', x, y, C.yellow);
     y += 12;
-    for (const w of evo) {
-      const own = run.weapons.find((v) => weaponBase(v.def) === w.id), into = WEAPON_BY_ID[w.evolve!.into];
+    for (const { base: w, into } of evo) {
+      const own = run.weapons.find((v) => weaponBase(v.def) === w.id);
       recipe(r, x, y, [w.icon, !!own && own.level >= maxLevel(w)], [d.icon, true], into.icon);
       drawText(g, into.name, x + 86, y, C.white, SMALL);
       drawText(g, own ? (own.def.evolved ? 'już ewoluowała' : `masz: ${w.name} (${own.level}/${maxLevel(w)})`) : `brak: ${w.name}`, x + 86, y + 9, own ? C.lime : C.salmon, SMALL);

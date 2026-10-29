@@ -51,7 +51,7 @@ export const AUGMENT_BY_ID: Record<string, AugmentDef> = Object.fromEntries(AUGM
 
 /** Id broni bazowej (ewolucja → broń, z której powstała). */
 export function weaponBase(def: WeaponDef): string {
-  return def.evolved ? WEAPONS.find((w) => w.evolve?.into === def.id)?.id ?? def.id : def.id;
+  return def.evolved ? WEAPONS.find((w) => w.evolves?.some((e) => e.into === def.id))?.id ?? def.id : def.id;
 }
 
 /** Bronie bazowe, z których broń się wywodzi: hybryda z fuzji = obaj rodzice, inaczej broń bazowa. */

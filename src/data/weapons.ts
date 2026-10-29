@@ -40,7 +40,8 @@ export interface WeaponDef {
   base: WeaponStats;
   /** Przyrosty na kolejnych poziomach: levels[0] = poziom 2 itd. maxLevel = levels.length + 1. */
   levels: Partial<WeaponStats>[];
-  evolve?: { passive: string; into: string };
+  /** Ewolucje: broń na maks. poziomie + pasywka `passive` → `into`. Pierwsza to ewolucja podstawowa, kolejne to warianty (ALT_EVOS). */
+  evolves?: { passive: string; into: string }[];
   evolved?: boolean;
   /** Hybryda z fuzji (FUSIONS): zajmuje slot jednej z dwóch broni-rodziców. */
   fused?: boolean;
@@ -59,7 +60,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'bolt', name: 'Magiczny pocisk', desc: 'Strzela w najbliższego wroga.', icon: 'ic_bolt', kind: 'bolt', color: C.blue, proj: 'bolt',
     base: S({ damage: 10, cooldown: 1.1, speed: 170, duration: 1.6, pierce: 1 }),
     levels: [{ amount: 1 }, { damage: 5 }, { cooldown: -0.15 }, { amount: 1 }, { damage: 5, pierce: 1 }, { amount: 1 }, { damage: 10 }],
-    evolve: { passive: 'might', into: 'bolt_evo' },
+    evolves: [{ passive: 'might', into: 'bolt_evo' }],
   },
   {
     id: 'bolt_evo', name: 'Gwiezdny grad', desc: 'Grad gwiazd przebijających wrogów.', icon: 'ic_bolt_evo', kind: 'bolt', color: C.yellow, proj: 'star',
@@ -70,7 +71,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'arrow', name: 'Strzała', desc: 'Szybkie strzały przebijające wrogów.', icon: 'ic_arrow', kind: 'bolt', color: C.peach, proj: 'arrow', hero: 'kestra',
     base: S({ damage: 12, cooldown: 0.7, speed: 230, duration: 1.2, pierce: 2 }),
     levels: [{ damage: 4 }, { amount: 1 }, { cooldown: -0.1 }, { pierce: 1, damage: 4 }, { amount: 1 }, { cooldown: -0.1 }, { damage: 10, amount: 1 }],
-    evolve: { passive: 'wings', into: 'arrow_evo' },
+    evolves: [{ passive: 'wings', into: 'arrow_evo' }],
   },
   {
     id: 'arrow_evo', name: 'Wichrowy łuk', desc: 'Nawałnica strzał niesiona wiatrem.', icon: 'ic_arrow_evo', kind: 'bolt', color: C.white, proj: 'arrow', hero: 'kestra',
@@ -81,7 +82,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'orbit', name: 'Ostrza orbity', desc: 'Ostrza krążą wokół ciebie.', icon: 'ic_orbit', kind: 'orbit', color: C.lgray, proj: 'blade',
     base: S({ damage: 8, cooldown: 0.3, amount: 2, speed: 3, knock: 2 }),
     levels: [{ amount: 1 }, { damage: 4 }, { area: 0.2 }, { amount: 1 }, { damage: 4, speed: 0.5 }, { amount: 1 }, { damage: 8 }],
-    evolve: { passive: 'hourglass', into: 'orbit_evo' },
+    evolves: [{ passive: 'hourglass', into: 'orbit_evo' }],
   },
   {
     id: 'orbit_evo', name: 'Pierścień Saturna', desc: 'Gęsty pierścień tnących ostrzy.', icon: 'ic_orbit_evo', kind: 'orbit', color: C.yellow, proj: 'blade',
@@ -92,7 +93,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'aura', name: 'Święta aura', desc: 'Rani i spowalnia wrogów wokół ciebie.', icon: 'ic_aura', kind: 'aura', color: C.yellow,
     base: S({ damage: 5, cooldown: 0.5, amount: 0, knock: 0.5 }),
     levels: [{ area: 0.15 }, { damage: 3 }, { cooldown: -0.05 }, { area: 0.15 }, { damage: 4 }, { area: 0.15 }, { damage: 6 }],
-    evolve: { passive: 'armor', into: 'aura_evo' },
+    evolves: [{ passive: 'armor', into: 'aura_evo' }],
   },
   {
     id: 'aura_evo', name: 'Cytadela', desc: 'Potężna aura odpychająca wrogów.', icon: 'ic_aura_evo', kind: 'aura', color: C.orange,
@@ -103,7 +104,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'chain', name: 'Piorun łańcuchowy', desc: 'Błyskawica skacze między wrogami.', icon: 'ic_chain', kind: 'chain', color: C.yellow,
     base: S({ damage: 14, cooldown: 1.6, pierce: 3, knock: 0 }),
     levels: [{ pierce: 1 }, { damage: 6 }, { amount: 1 }, { cooldown: -0.2 }, { pierce: 2 }, { damage: 8 }, { amount: 1 }],
-    evolve: { passive: 'clock', into: 'chain_evo' },
+    evolves: [{ passive: 'clock', into: 'chain_evo' }],
   },
   {
     id: 'chain_evo', name: 'Burza', desc: 'Nieustanna burza błyskawic.', icon: 'ic_chain_evo', kind: 'chain', color: C.blue,
@@ -114,7 +115,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'meteor', name: 'Meteor', desc: 'Z nieba spadają płonące skały.', icon: 'ic_meteor', kind: 'meteor', color: C.orange,
     base: S({ damage: 30, cooldown: 2.6, duration: 0.7, knock: 3 }),
     levels: [{ amount: 1 }, { damage: 12 }, { area: 0.2 }, { cooldown: -0.3 }, { amount: 1 }, { damage: 15 }, { area: 0.25, amount: 1 }],
-    evolve: { passive: 'lens', into: 'meteor_evo' },
+    evolves: [{ passive: 'lens', into: 'meteor_evo' }],
   },
   {
     id: 'meteor_evo', name: 'Apokalipsa', desc: 'Deszcz meteorów pustoszy pole bitwy.', icon: 'ic_meteor_evo', kind: 'meteor', color: C.red,
@@ -125,7 +126,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'boomerang', name: 'Bumerang', desc: 'Leci przed siebie i wraca.', icon: 'ic_boomerang', kind: 'boomerang', color: C.orange, proj: 'boom',
     base: S({ damage: 15, cooldown: 1.5, speed: 200, duration: 0.7, pierce: 999, knock: 2 }),
     levels: [{ damage: 5 }, { amount: 1 }, { speed: 30 }, { damage: 8 }, { amount: 1 }, { cooldown: -0.2 }, { damage: 12 }],
-    evolve: { passive: 'dup', into: 'boomer_evo' },
+    evolves: [{ passive: 'dup', into: 'boomer_evo' }],
   },
   {
     id: 'boomer_evo', name: 'Wir ostrzy', desc: 'Wirujące bumerangi tną wszystko.', icon: 'ic_boomer_evo', kind: 'boomerang', color: C.yellow, proj: 'boom',
@@ -136,7 +137,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'laser', name: 'Promień', desc: 'Przeszywa wszystkich wrogów w linii.', icon: 'ic_laser', kind: 'laser', color: C.pink,
     base: S({ damage: 6, cooldown: 2.4, duration: 0.5, knock: 0 }),
     levels: [{ damage: 2 }, { duration: 0.15 }, { amount: 1 }, { cooldown: -0.3 }, { damage: 3 }, { area: 0.4 }, { amount: 1 }],
-    evolve: { passive: 'crit', into: 'laser_evo' },
+    evolves: [{ passive: 'crit', into: 'laser_evo' }],
   },
   {
     id: 'laser_evo', name: 'Pryzmat', desc: 'Wachlarz promieni o ogromnej mocy.', icon: 'ic_laser_evo', kind: 'laser', color: C.white,
@@ -147,7 +148,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'mines', name: 'Miny', desc: 'Zostawiasz miny wybuchające przy wrogach.', icon: 'ic_mines', kind: 'mines', color: C.red, proj: 'mine',
     base: S({ damage: 35, cooldown: 2.0, duration: 7, knock: 4 }),
     levels: [{ amount: 1 }, { damage: 12 }, { cooldown: -0.3 }, { area: 0.25 }, { amount: 1 }, { damage: 18 }, { amount: 1 }],
-    evolve: { passive: 'heart', into: 'mines_evo' },
+    evolves: [{ passive: 'heart', into: 'mines_evo' }],
   },
   {
     id: 'mines_evo', name: 'Serce wulkanu', desc: 'Pola min wybuchające lawą.', icon: 'ic_mines_evo', kind: 'mines', color: C.orange, proj: 'mine',
@@ -158,7 +159,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'axe', name: 'Topór', desc: 'Szerokie cięcie przed tobą.', icon: 'ic_axe', kind: 'cleave', color: C.lgray, hero: 'borgun',
     base: S({ damage: 18, cooldown: 1.0, knock: 4 }),
     levels: [{ damage: 6 }, { area: 0.15 }, { amount: 1 }, { cooldown: -0.12 }, { damage: 8 }, { area: 0.2 }, { amount: 1, damage: 10 }],
-    evolve: { passive: 'fang', into: 'axe_evo' },
+    evolves: [{ passive: 'fang', into: 'axe_evo' }],
   },
   {
     id: 'axe_evo', name: 'Krwawy topór', desc: 'Wir cięć wokół bohatera.', icon: 'ic_axe_evo', kind: 'cleave', color: C.red, hero: 'borgun',
@@ -169,7 +170,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'staff', name: 'Ognisty kostur', desc: 'Kule ognia lecące w najbliższych wrogów.', icon: 'ic_staff', kind: 'bolt', color: C.orange, proj: 'ember', hero: 'ignara',
     base: S({ damage: 14, cooldown: 1.0, speed: 160, area: 1.2, duration: 1.5 }),
     levels: [{ damage: 5 }, { amount: 1 }, { cooldown: -0.12 }, { damage: 6, pierce: 1 }, { amount: 1 }, { cooldown: -0.1 }, { damage: 12, amount: 1 }],
-    evolve: { passive: 'lens', into: 'staff_evo' },
+    evolves: [{ passive: 'lens', into: 'staff_evo' }],
   },
   {
     id: 'staff_evo', name: 'Kostur feniksa', desc: 'Słoneczne kule przebijające wrogów.', icon: 'ic_staff_evo', kind: 'bolt', color: C.yellow, proj: 'sun', hero: 'ignara',
@@ -180,7 +181,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'souls', name: 'Duszki', desc: 'Zatrute dusze lecą w najbliższych wrogów.', icon: 'ic_souls', kind: 'bolt', color: C.pink, proj: 'soul', hero: 'morwen',
     base: S({ damage: 11, cooldown: 0.9, speed: 140, duration: 1.7, pierce: 1 }),
     levels: [{ damage: 4 }, { amount: 1 }, { cooldown: -0.1 }, { pierce: 1, damage: 4 }, { amount: 1 }, { cooldown: -0.1 }, { damage: 10, amount: 1 }],
-    evolve: { passive: 'hourglass', into: 'souls_evo' },
+    evolves: [{ passive: 'hourglass', into: 'souls_evo' }],
   },
   {
     id: 'souls_evo', name: 'Rój dusz', desc: 'Chmara dusz przenikających wrogów.', icon: 'ic_souls_evo', kind: 'bolt', color: C.salmon, proj: 'soul', hero: 'morwen',
@@ -192,7 +193,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'knives', name: 'Noże do rzucania', desc: 'Szybkie noże lecące w najbliższych wrogów.', icon: 'ic_knives', kind: 'bolt', color: C.lavender, proj: 'knife', hero: 'vesper',
     base: S({ damage: 9, cooldown: 0.5, speed: 250, duration: 0.9, pierce: 1, knock: 0.5 }),
     levels: [{ damage: 3 }, { amount: 1 }, { cooldown: -0.06 }, { pierce: 1, damage: 3 }, { amount: 1 }, { cooldown: -0.06 }, { damage: 8, amount: 1 }],
-    evolve: { passive: 'fury', into: 'knives_evo' },
+    evolves: [{ passive: 'fury', into: 'knives_evo' }],
   },
   {
     id: 'knives_evo', name: 'Wachlarz cieni', desc: 'Chmara noży przebijających wrogów.', icon: 'ic_knives_evo', kind: 'bolt', color: C.white, proj: 'knife', hero: 'vesper',
@@ -203,7 +204,7 @@ export const WEAPONS: WeaponDef[] = [
     id: 'light', name: 'Święte światło', desc: 'Z bohatera rozchodzi się pierścień światła, który rani i odpycha każdego wroga na drodze.', icon: 'ic_light', kind: 'nova', color: C.yellow, hero: 'aurel',
     base: S({ damage: 14, cooldown: 1.5, knock: 2 }),
     levels: [{ damage: 4 }, { area: 0.15 }, { cooldown: -0.2 }, { amount: 1 }, { damage: 6 }, { area: 0.15 }, { amount: 1, damage: 6 }],
-    evolve: { passive: 'herb', into: 'light_evo' },
+    evolves: [{ passive: 'herb', into: 'light_evo' }],
   },
   {
     id: 'light_evo', name: 'Promień niebios', desc: 'Szerokie pierścienie słonecznego światła, jeden po drugim, palą i odpychają wrogów.', icon: 'ic_light_evo', kind: 'nova', color: C.white, hero: 'aurel',
@@ -277,6 +278,65 @@ export const WEAPONS: WeaponDef[] = [
     base: S({ damage: 26, cooldown: 1, amount: 5, area: 2, duration: 0.9, knock: 0 }), levels: [], evolved: true, fused: true,
   },
 ];
+
+/**
+ * Warianty ewolucji (0.31): każda pasywka ewoluuje co najmniej dwie bronie. Wariant to ta sama broń po ewolucji podstawowej
+ * (wzorzec, pocisk, bohater), ale z inną pasywką i innym profilem statystyk albo efektem pocisków (`hybrid`).
+ * Ikona: ikona ewolucji podstawowej przemalowana rampą `ramp` (gfx/icons.ts).
+ */
+export interface AltEvo {
+  base: string;
+  passive: string;
+  id: string;
+  name: string;
+  desc: string;
+  color: number;
+  ramp: readonly number[];
+  stats: Partial<WeaponStats>;
+  hybrid?: WeaponDef['hybrid'];
+}
+
+const R_GOLD = [C.dbrown, C.orange, C.gold, C.yellow], R_BLOOD = [C.ddbrown, C.dred, C.red, C.salmon], R_ICE = [C.navy, C.dblue, C.blue, C.cyan];
+const R_LEAF = [C.teal, C.dgreen, C.green, C.lime], R_VOID = [C.black, C.plum, C.pink, C.salmon], R_STEEL = [C.slate, C.dgray, C.lavender, C.white];
+const R_FIRE = [C.dred, C.rust, C.orange, C.gold];
+
+export const ALT_EVOS: AltEvo[] = [
+  { base: 'bolt', passive: 'magnet', id: 'bolt_mag', name: 'Lodestar Volley', desc: 'Stars that home in on enemies.', color: C.cyan, ramp: R_ICE, stats: { damage: 30, amount: 4, pierce: 2 }, hybrid: { seek: true } },
+  { base: 'arrow', passive: 'crit', id: 'arrow_crit', name: 'Hawkeye Bow', desc: 'Fewer, heavier arrows that pierce the whole line.', color: C.gold, ramp: R_GOLD, stats: { damage: 52, amount: 3, cooldown: 0.5, pierce: 9 } },
+  { base: 'arrow', passive: 'whetstone', id: 'arrow_sharp', name: 'Razor Quiver', desc: 'Arrows split into shards when they hit.', color: C.lgray, ramp: R_STEEL, stats: { damage: 28 }, hybrid: { split: true } },
+  { base: 'orbit', passive: 'armor', id: 'orbit_armor', name: 'Bulwark Ring', desc: 'Heavy blades in a wide ring that throw enemies back.', color: C.lgray, ramp: R_STEEL, stats: { damage: 30, amount: 6, speed: 3, area: 2, knock: 5 } },
+  { base: 'aura', passive: 'herb', id: 'aura_herb', name: 'Grove Aura', desc: 'A very wide aura of thorns around the hero.', color: C.lime, ramp: R_LEAF, stats: { damage: 12, cooldown: 0.3, area: 2.8, knock: 1 } },
+  { base: 'chain', passive: 'fury', id: 'chain_fury', name: 'Thunder Rage', desc: 'Fast chains of lightning, one after another.', color: C.yellow, ramp: R_GOLD, stats: { damage: 26, cooldown: 0.5, amount: 3, pierce: 6 } },
+  { base: 'meteor', passive: 'might', id: 'meteor_might', name: 'Doom Star', desc: 'Two huge meteors that flatten a wide area.', color: C.hotpink, ramp: R_BLOOD, stats: { damage: 220, cooldown: 1.6, amount: 2, area: 2.6, knock: 6 } },
+  { base: 'meteor', passive: 'ember', id: 'meteor_ember', name: 'Cinder Storm', desc: 'A storm of small burning meteors.', color: C.orange, ramp: R_FIRE, stats: { damage: 50, cooldown: 1.2, amount: 9, area: 1.3 } },
+  { base: 'boomerang', passive: 'wings', id: 'boomer_wings', name: 'Gale Wheels', desc: 'Fast boomerangs that fly far.', color: C.cyan, ramp: R_ICE, stats: { damage: 36, cooldown: 0.7, speed: 340, duration: 1 } },
+  { base: 'boomerang', passive: 'horseshoe', id: 'boomer_luck', name: 'Lucky Return', desc: 'Boomerangs that burst on every hit.', color: C.gold, ramp: R_GOLD, stats: { damage: 34, amount: 5 }, hybrid: { blast: 0.4 } },
+  { base: 'laser', passive: 'clock', id: 'laser_clock', name: 'Chrono Beam', desc: 'Beams that fire much more often.', color: C.cyan, ramp: R_ICE, stats: { damage: 14, cooldown: 0.7, amount: 3, duration: 0.6 } },
+  { base: 'laser', passive: 'horseshoe', id: 'laser_luck', name: 'Fortune Prism', desc: 'A wide fan of six golden beams.', color: C.gold, ramp: R_GOLD, stats: { damage: 12, amount: 6, area: 2 } },
+  { base: 'mines', passive: 'magnet', id: 'mines_mag', name: 'Magnet Mines', desc: 'Mines with a huge blast radius.', color: C.blue, ramp: R_ICE, stats: { damage: 70, amount: 5, area: 2.4 } },
+  { base: 'axe', passive: 'whetstone', id: 'axe_sharp', name: "Headsman's Axe", desc: 'Slow, huge cuts that hit very hard.', color: C.lgray, ramp: R_STEEL, stats: { damage: 75, cooldown: 0.8, amount: 2, area: 1.9 } },
+  { base: 'staff', passive: 'clover', id: 'staff_luck', name: 'Star Staff', desc: 'Suns that home in on enemies.', color: C.lime, ramp: R_LEAF, stats: { damage: 30, amount: 5 }, hybrid: { seek: true } },
+  { base: 'staff', passive: 'ember', id: 'staff_ember', name: 'Inferno Staff', desc: 'Suns that explode on hit.', color: C.red, ramp: R_BLOOD, stats: { damage: 30, amount: 3 }, hybrid: { blast: 0.8 } },
+  { base: 'souls', passive: 'fang', id: 'souls_fang', name: 'Blood Souls', desc: 'Red souls that hunt enemies down.', color: C.red, ramp: R_BLOOD, stats: { damage: 30, amount: 5, pierce: 2 }, hybrid: { seek: true } },
+  { base: 'knives', passive: 'dup', id: 'knives_dup', name: 'Knife Storm', desc: 'A storm of eight knives at once.', color: C.pink, ramp: R_VOID, stats: { damage: 16, cooldown: 0.3, amount: 8 } },
+  { base: 'light', passive: 'heart', id: 'light_heart', name: 'Sun Heart', desc: 'Two wide, strong rings of light.', color: C.salmon, ramp: R_BLOOD, stats: { damage: 40, amount: 2, area: 2.2 } },
+  { base: 'light', passive: 'clover', id: 'light_luck', name: 'Blessed Light', desc: 'Five rings of light, one after another.', color: C.lime, ramp: R_LEAF, stats: { damage: 28, cooldown: 0.8, amount: 5 } },
+];
+
+for (const a of ALT_EVOS) {
+  const base = WEAPONS.find((w) => w.id === a.base)!, ref = WEAPONS.find((w) => w.id === base.evolves![0].into)!;
+  WEAPONS.push({ ...ref, id: a.id, name: a.name, desc: a.desc, icon: `ic_${a.id}`, color: a.color, base: { ...ref.base, ...a.stats }, levels: [], evolved: true, hybrid: a.hybrid ?? ref.hybrid });
+  base.evolves!.push({ passive: a.passive, into: a.id });
+}
+
+/** Ewolucje broni (pusta lista dla ewolucji i hybryd). */
+export const evolvesOf = (d: WeaponDef): { passive: string; into: string }[] => d.evolves ?? [];
+
+/** Broń bazowa i pasywka, z których powstaje ewolucja `id`. */
+export function evolveSource(id: string): { base: WeaponDef; passive: string } | undefined {
+  for (const w of WEAPONS) for (const e of evolvesOf(w)) if (e.into === id) return { base: w, passive: e.passive };
+  return undefined;
+}
 
 export const WEAPON_BY_ID: Record<string, WeaponDef> = Object.fromEntries(WEAPONS.map((w) => [w.id, w]));
 

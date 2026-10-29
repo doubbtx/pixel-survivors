@@ -281,6 +281,8 @@ export interface WeaponInst {
 export interface PassiveInst {
   id: string;
   level: number;
+  /** Pasywka po ewolucji (PassiveDef.evo). */
+  evo?: boolean;
 }
 
 export interface AbilityInst {

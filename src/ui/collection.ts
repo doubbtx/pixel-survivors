@@ -18,7 +18,8 @@ import { ACHIEVEMENTS } from '../data/achievements';
 import { FEATS } from '../data/feats';
 import { CARD_BY_ID } from '../data/cards';
 import { fmt } from '../util/format';
-import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel } from '../data/weapons';
+import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel, evolvesOf } from '../data/weapons';
+import { passiveEvolves } from '../systems/levelup';
 import { PASSIVES, PASSIVE_BY_ID } from '../data/passives';
 import { AUGMENTS, fusionAugments, FUSION_RULES } from '../data/augments';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
@@ -212,8 +213,8 @@ export class CollectionScreen implements Screen {
       drawText(g, `${w.hero ? `only ${HERO_BY_ID[w.hero].name}, ` : ''}max lv. ${maxLevel(w)}${el ? `, ${ELEMENTS[el].name.toLowerCase()}` : ''}`, X + 40, y + 12, C.dgray);
       y += 26;
       text(el ? `${w.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : w.desc, C.white);
-      if (w.evolve) {
-        const ev = WEAPON_BY_ID[w.evolve.into], pa = PASSIVE_BY_ID[w.evolve.passive];
+      for (const e of evolvesOf(w)) {
+        const ev = WEAPON_BY_ID[e.into], pa = PASSIVE_BY_ID[e.passive];
         head(`Ewolucja: ${ev.name}`, C.yellow);
         text(`Broń na poz. ${maxLevel(w)} + pasywka ${pa.name}, potem awans. ${ev.desc}`);
       }
@@ -241,11 +242,13 @@ export class CollectionScreen implements Screen {
     drawText(g, `Pasywka, poz. maks. ${p.maxLevel}`, X + 40, y + 12, C.dgray);
     y += 26;
     text(`${p.desc} na każdy poziom.`, C.white);
-    const evo = WEAPONS.filter((x) => x.evolve?.passive === p.id);
+    const evo = passiveEvolves(p.id);
     if (evo.length) {
       head('Ewoluuje bronie', C.yellow);
-      for (const x of evo) text(`${x.name} > ${WEAPON_BY_ID[x.evolve!.into].name}`);
+      for (const x of evo) text(`${x.base.name} > ${x.into.name}`);
     }
+    head(`Evolution: ${p.evo.name}`, C.gold);
+    text(`${p.evo.desc}. Needs max level and one weapon evolved with this passive.`);
     return y;
   }
 

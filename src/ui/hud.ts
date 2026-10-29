@@ -8,7 +8,7 @@ import { drawSprite } from '../gfx/sprites';
 import type { AbilitySlot } from '../data/heroes';
 import { BAL } from '../data/balance';
 import { abilityMaxCd } from '../systems/abilities';
-import { PASSIVE_BY_ID } from '../data/passives';
+import { passiveIcon } from '../data/passives';
 import { fmt, fmtTime } from '../util/format';
 import type { LoopStats } from '../core/loop';
 import { actionKey, abilitySlotPos, ABILITY_SLOT, TOUCH_PAUSE, STICK_R, type Input } from '../core/input';
@@ -382,7 +382,7 @@ function drawInventory(r: Renderer, run: Run): void {
     const pa = run.passives[i], x = UI.edge + i * step;
     if (!pa) { iconSlot(r, x, y2, S, undefined, 0.25); continue; }
     iconSlot(r, x, y2, S, UI.border);
-    drawSprite(g, PASSIVE_BY_ID[pa.id].icon, x + S / 2, y2 + S / 2);
+    drawSprite(g, passiveIcon(pa), x + S / 2, y2 + S / 2);
     cornerTag(r, String(pa.level), x + S, y2 + S);
   }
   // Moc bossa: gniazdo za bronią, odnowienie od góry, poziom kreskami.

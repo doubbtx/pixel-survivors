@@ -3,6 +3,8 @@ import { Painter } from './painter';
 import { ITEM_ICONS } from './items';
 import { CARD_ICONS_GFX } from './card-icons';
 import { HERO_ICONS } from './hero-icons';
+import { ALT_EVOS, WEAPON_BY_ID, evolvesOf } from '../data/weapons';
+import { PASSIVES } from '../data/passives';
 
 /**
  * Ikony 16×16 (piktogramy) dla broni, pasywek, umiejętności i tagów kart.
@@ -410,6 +412,21 @@ export const ICON_FNS: Record<string, IconFn> = {
     for (const x of [6.3, 8.2, 10.1]) p.thin(x, 6.3, x, 9, C.dbrown);
     p.thin(4.5, 9.5, 11.5, 9.5, C.dbrown).thin(5, 6.5, 11, 6.5, C.peach);
   },
+  pi_ember: (p) => {
+    // Żar: rozgrzany węgielek w kształcie kropli z płomykami i iskrami.
+    for (const [x, y, h] of [[5, 6, 4], [8, 3, 5.5], [11, 6, 4]] as const) p.polyShade([[x - 1.8, y + h], [x, y], [x + 1.8, y + h]], RAMP.fire);
+    p.sphere(8, 10.5, 5, 4.2, [C.ddbrown, C.dred, C.rust, C.orange]);
+    p.thin(5.5, 9.5, 8, 12, C.gold).thin(8, 12, 10.5, 9.8, C.gold).thin(7, 8.5, 9, 10, C.yellow);
+    p.dot(5.4, 8.4, C.peach).spot(2.5, 3, C.gold).spot(13.2, 2.4, C.yellow);
+  },
+  pi_whetstone: (p) => {
+    // Osełka: szary kamień ukośnie, po nim ostrze z jasną krawędzią i iskrą szlifu.
+    p.polyShade([[1.5, 11], [10, 4.5], [13, 7.5], [4.5, 14]], RAMP.stone);
+    p.thin(2.5, 11, 10, 5.3, C.white).thin(4.8, 13.2, 12.4, 7.6, C.slate);
+    p.polyShade([[6, 8.5], [14.5, 0.8], [15.2, 1.5], [7.2, 9.6]], [C.slate, C.lavender, C.lgray, C.white]);
+    p.thin(6.6, 8.6, 14.6, 1.2, C.white);
+    p.spot(5, 6.5, C.yellow).dot(4, 5.6, C.gold).dot(6.2, 5.2, C.gold);
+  },
   pi_horseshoe: (p) => {
     // Podkowa otwarta ku górze (żelazo z jasną krawędzią), otwory na gwoździe i złota iskra szczęścia.
     const pt = (a: number, r: number): [number, number] => [8 + Math.cos(a) * r, 7.5 + Math.sin(a) * r * 1.05];
@@ -726,3 +743,18 @@ export const ICON_FNS: Record<string, IconFn> = {
   },
   'tag:Klątwa': (p) => { p.ring(8, 8, 7.5, 1, C.plum); skull(p, 8, 8); p.px(5, 7, C.hotpink).px(10, 7, C.hotpink); },
 };
+
+/** Znaczek ewolucji pasywki: złota czteroramienna gwiazda w prawym górnym rogu na ciemnym tle. */
+function evoStar(p: Painter): void {
+  p.disc(13, 3, 2.9, C.black);
+  p.poly([[13, -0.2], [13.8, 2.2], [16.2, 3], [13.8, 3.8], [13, 6.2], [12.2, 3.8], [9.8, 3], [12.2, 2.2]], C.gold);
+  p.poly([[13, 1.2], [13.5, 2.5], [14.8, 3], [13.5, 3.5], [13, 4.8], [12.5, 3.5], [11.2, 3], [12.5, 2.5]], C.yellow).spot(12.67, 2.67, C.white);
+}
+
+// Warianty ewolucji broni (data/weapons.ts ALT_EVOS): ikona ewolucji podstawowej przemalowana rampą wariantu.
+for (const a of ALT_EVOS) {
+  const src = WEAPON_BY_ID[evolvesOf(WEAPON_BY_ID[a.base])[0].into].icon;
+  ICON_FNS[`ic_${a.id}`] = (p) => { ICON_FNS[src](p); p.recolor(a.ramp); };
+}
+// Ewolucje pasywek: ikona pasywki ze złotą gwiazdą.
+for (const d of PASSIVES) ICON_FNS[`${d.icon}_evo`] = (p) => { ICON_FNS[d.icon](p); evoStar(p); };

@@ -122,7 +122,7 @@ export interface RunSnapshot {
   hp: number;
   /** Broń: id, poziom i bonusy z jakości ulepszeń (od 0.10). */
   weapons: [string, number, WeaponBonus?][];
-  passives: [string, number][];
+  passives: [string, number, number?][];
   abilities: Record<AbilitySlot, number>;
   cards: [string, number][];
   rerolls: number;
@@ -965,6 +965,7 @@ export class Run {
     for (const p of this.passives) {
       const def = PASSIVE_BY_ID[p.id];
       s[def.stat] += def.perLevel * p.level;
+      if (p.evo) add(def.evo.stats);
     }
     for (const c of this.cards) {
       const def = CARD_BY_ID[c.id];
@@ -1675,7 +1676,7 @@ export class Run {
       hero: this.hero.id, mode: this.mode, depth: nextDepth, inProgress,
       level: this.level, xp: this.xp, gold: this.gold, kills: this.kills, totalTime: this.totalTime, hp: this.player.hp,
       weapons: this.weapons.map((w) => [w.def.id, w.level, { ...w.bonus }]),
-      passives: this.passives.map((p) => [p.id, p.level]),
+      passives: this.passives.map((p) => (p.evo ? [p.id, p.level, 1] : [p.id, p.level])),
       abilities: { q: ab.q.level, e: ab.e.level, dash: ab.dash.level, ult: ab.ult.level },
       cards: this.cards.map((c) => [c.id, c.stacks]),
       rerolls: this.rerolls, skips: this.skips, banishes: this.banishes, cardRerolls: this.cardRerolls,
@@ -1719,7 +1720,7 @@ export class Run {
       w.level = lvl;
       w.bonus = { ...bonus };
     }
-    run.passives = s.passives.filter(([id]) => PASSIVE_BY_ID[id]).map(([id, level]) => ({ id, level }));
+    run.passives = s.passives.filter(([id]) => PASSIVE_BY_ID[id]).map(([id, level, evo]) => ({ id, level, evo: !!evo }));
     for (const slot of ['q', 'e', 'dash', 'ult'] as AbilitySlot[]) run.abilities[slot].level = s.abilities[slot];
     for (const slot of s.abilityEvo ?? []) if (run.abilities[slot].def.evo) run.abilities[slot].def = evolveAbility(run.abilities[slot].def);
     run.cards = s.cards.filter(([id]) => CARD_BY_ID[id]).map(([id, stacks]) => ({ id, stacks }));

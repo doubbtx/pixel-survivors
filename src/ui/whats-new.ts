@@ -18,6 +18,15 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.31',
+    lines: [
+      "Every passive now evolves at least two weapons: 20 new weapon evolutions, each a variant of the weapon's evolution with its own profile (homing, splitting, bursting, more or heavier attacks). With several passives you choose the evolution.",
+      "Passive evolutions: a passive at max level evolves once you evolved a weapon with it (gold star icon, extra bonus).",
+      "New passives: Ember (elemental power) and Whetstone (critical damage).",
+      "Level up cards, the build view and the Arsenal show what each passive evolves. New Evolution book in the main menu: all weapon, passive and ability evolutions, fusions, qualities and augments, and how to get them.",
+    ],
+  },
+  {
     version: '0.30',
     lines: [
       "New enemies in every biome, each with its own attack and a warning before it: Boar (charge line), Thornling (seeds into marked circles), Bog Toad (leaps, landing shadow), Drowner (hides under the mud, ripples), Salamander (flame cone), Scorpion (sniper line), Splitter (splits in two) and Reflection (slices across your path).",
@@ -92,7 +101,10 @@ export class WhatsNewScreen implements Screen {
     drawText(g, "What's new", W / 2, 12, C.yellow, { align: 'center', scale: 2, outline: C.black });
     panel(r, x, 42, w, H - 76, C.gold);
     let y = 52;
+    // Starsza wersja tylko wtedy, gdy zmieści się cała w ramce (nowsza zawsze).
+    const height = (n: { lines: string[] }) => 20 + n.lines.reduce((h, l) => h + wrapText(l, w - 34).length * 11 + 3, 0);
     for (const n of this.notes) {
+      if (n !== this.notes[0] && y + height(n) > H - 38) break;
       drawText(g, `Version ${n.version}`, x + 12, y, C.gold);
       y += 14;
       for (const l of n.lines) {

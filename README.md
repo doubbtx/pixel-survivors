@@ -447,6 +447,13 @@ src/
 - 0.30.1: the Expedition camp (Rest) also gives a random bonus for the next fight (Sharpened blades +35% damage, Morning drill +35% attack speed, Hearty meal +40 max HP and +2 HP/s, Scouted ahead +60% XP and +25% gold, Quiet night +20% damage and speed), shown on the map. Full effects (glows, shadows, vignette, extra particles) are off for good and the Effects option is gone. Icons: nearly symmetric icons are centered automatically, new Volley and Arrow Hail arrows, symmetric Synergy, chest, Shrapnel, Legion and Skills tag.
 - Bestiary entries for all of them. Test bot: `bot=gallery foes=boar,toad` screenshots chosen enemies and their warnings.
 
+**Evolutions for every passive (0.31.0)**:
+- Every passive evolves at least two weapons. 20 new weapon evolutions (`ALT_EVOS`), each a variant of that weapon's evolution in its colors with its own profile: Lodestar Volley, Hawkeye Bow, Razor Quiver, Bulwark Ring, Grove Aura, Thunder Rage, Doom Star, Cinder Storm, Gale Wheels, Lucky Return, Chrono Beam, Fortune Prism, Magnet Mines, Headsman's Axe, Star Staff, Inferno Staff, Blood Souls, Knife Storm, Sun Heart, Blessed Light. A weapon with several matching passives offers each evolution as its own card.
+- Passive evolutions: a passive at max level plus a weapon evolved with it offers its evolution (gold star icon, extra stats on top of the levels), e.g. Might → Titan Might, Heart → Giant's Heart.
+- New passives: Ember (+12% elemental power per level) and Whetstone (+15% critical damage per level).
+- Level up cards say what a passive evolves; the build view and the Arsenal list every evolution path and the passive evolution.
+- Evolution book (main menu): weapon, passive and ability evolutions, fusions, upgrade qualities and augments, each as an icon recipe with how to get it.
+
 ### Jak przetestować
 
 1. `npm run dev` → Endless → Nowy run → bohater (albo Ekspedycja → Nowa ekspedycja).

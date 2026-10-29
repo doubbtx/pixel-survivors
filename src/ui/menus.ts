@@ -17,6 +17,7 @@ import { drawSkills } from './skills';
 import { setLang, type Lang } from '../core/i18n';
 import { music, MENU_MOOD } from '../core/music';
 import { GameScreen } from './game-screen';
+import { CodexScreen } from './codex';
 import { CollectionScreen } from './collection';
 import { MetaScreen } from './meta';
 import { BalanceScreen } from './balance';
@@ -93,10 +94,11 @@ export class MainMenu implements Screen {
       { label: () => (unlocked(app.save, 'endless') ? 'Endless (bez końca)' : 'Endless (locked)'), act: () => (unlocked(app.save, 'endless') ? app.go(new SlotScreen(app, 'endless')) : sfx.play('hurt')) },
       { label: () => (app.save.meta.unassigned > 0 ? `Rozwój (${fmt(app.save.meta.unassigned)} do rozdania)` : 'Rozwój bohaterów'), act: () => app.go(new MetaScreen(app, this)) },
       { label: () => 'Kolekcja i osiągnięcia', act: () => app.go(new CollectionScreen(app, this)) },
+      { label: () => 'Evolution book', act: () => app.go(new CodexScreen(app, this)) },
       { label: () => 'Rekordy', act: () => app.go(new RecordsScreen(app)) },
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-    ], MENU_X + MENU_W / 2, 68, MENU_W - 12, 16, { 2: 12, 5: 12 });
+    ], MENU_X + MENU_W / 2, 66, MENU_W - 12, 15, { 2: 10, 6: 10 });
     music.setMood(MENU_MOOD);
   }
 
@@ -172,8 +174,8 @@ export class MainMenu implements Screen {
 
 /** Menu główne: lewy panel z pozycjami (grupy: od indeksu) i ikony pozycji w panelu opisu. */
 const MENU_X = 18, MENU_W = 196;
-const MENU_GROUPS: [string, number][] = [['GRAJ', 0], ['POSTĘP', 2], ['INNE', 5]];
-const MENU_ICON = ['ex_boss', 'ic_orbit_evo', 'syn_all', 'ex_chest', 'cd_gold', 'tag:Umiejętności', 'ex_anvil'];
+const MENU_GROUPS: [string, number][] = [['GRAJ', 0], ['POSTĘP', 2], ['INNE', 6]];
+const MENU_ICON = ['ex_boss', 'ic_orbit_evo', 'syn_all', 'ex_chest', 'ic_bolt_evo', 'cd_gold', 'tag:Umiejętności', 'ex_anvil'];
 
 /** Opisy pozycji menu głównego (kolejność jak w menu). */
 const MENU_DESC = [
@@ -181,6 +183,7 @@ const MENU_DESC = [
   'One endless level, a boss every few minutes, harder and harder. Essence depends on how long you survive.',
   'Hero trees bought with essence from Expeditions and Endless.',
   'Karty i bany, unikaty, Księga sekretów, bestiariusz i osiągnięcia.',
+  'Every weapon, passive and ability evolution, every fusion, quality and augment, and how to get them in a run.',
   'Najlepsze wyniki bohaterów w każdym trybie.',
   'Sterowanie, zasady, żywioły, synergie, zasoby, moce, tryby.',
   'Dźwięk, celowanie, widoczność efektów, podpowiedzi.',

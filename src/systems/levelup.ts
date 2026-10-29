@@ -1,7 +1,7 @@
 import { rng } from '../core/rng';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
-import { WEAPONS, WEAPON_BY_ID, FUSIONS, fusionOf, maxLevel, describeLevel, type WeaponDef } from '../data/weapons';
+import { WEAPONS, WEAPON_BY_ID, FUSIONS, fusionOf, maxLevel, describeLevel, evolvesOf, type WeaponDef } from '../data/weapons';
 import type { WeaponInst } from '../entities/types';
 import { PASSIVES, PASSIVE_BY_ID } from '../data/passives';
 import { describeAbilityLevel, evolveAbility, type AbilitySlot } from '../data/heroes';
@@ -18,7 +18,7 @@ import { RARITIES } from '../data/items';
  * 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts); 'augment' = augment broni (data/augments.ts);
  * 'fusion' = połączenie dwóch broni w hybrydę (data/weapons.ts FUSIONS, `id` = id hybrydy).
  */
-export type OptionKind = 'weaponNew' | 'weaponUp' | 'passiveNew' | 'passiveUp' | 'ability' | 'abilityEvolve' | 'evolve' | 'fusion' | 'augment' | 'stat';
+export type OptionKind = 'weaponNew' | 'weaponUp' | 'passiveNew' | 'passiveUp' | 'passiveEvolve' | 'ability' | 'abilityEvolve' | 'evolve' | 'fusion' | 'augment' | 'stat';
 
 /** Jedna karta wyboru przy awansie. */
 export interface Option {
@@ -44,7 +44,7 @@ export interface Option {
 const tagsOf = (stat: keyof Stats): Tag[] => (STAT_TAG[stat] ? [STAT_TAG[stat]!] : []);
 
 const WEIGHTS: Record<OptionKind, number> = {
-  evolve: 6, abilityEvolve: 6, fusion: 6, weaponUp: 2.2, passiveUp: 1.4, ability: 1.6, weaponNew: 1.2, passiveNew: 1, augment: 1.1, stat: 1,
+  evolve: 6, abilityEvolve: 6, passiveEvolve: 6, fusion: 6, weaponUp: 2.2, passiveUp: 1.4, ability: 1.6, weaponNew: 1.2, passiveNew: 1, augment: 1.1, stat: 1,
 };
 
 /** Przepis: ikony składników i ikona wyniku (karta awansu rysuje „A + B → C”). */
@@ -61,23 +61,43 @@ function weaponRecipe(run: Run, def: WeaponDef): Recipe | undefined {
     const w = other ? ownedBase(run, other) : undefined;
     if (w && w.def !== def) return { parts: [def.icon, w.def.icon], result: WEAPON_BY_ID[f.into].icon };
   }
-  const ev = def.evolve;
+  // Ewolucja: najpierw ta, do której masz już pasywkę.
+  const evs = evolvesOf(def), ev = evs.find((e) => run.passives.some((p) => p.id === e.passive)) ?? evs[0];
   return ev ? { parts: [def.icon, PASSIVE_BY_ID[ev.passive].icon], result: WEAPON_BY_ID[ev.into].icon } : undefined;
+}
+
+/** Ścieżki ewolucji przez pasywkę `id` dla broni dostępnych temu bohaterowi (broń bazowa → ewolucja). */
+export function passiveEvolves(id: string, hero?: string): { base: WeaponDef; into: WeaponDef }[] {
+  const out: { base: WeaponDef; into: WeaponDef }[] = [];
+  for (const w of WEAPONS) {
+    if (hero && w.hero && w.hero !== hero) continue;
+    for (const e of evolvesOf(w)) if (e.passive === id) out.push({ base: w, into: WEAPON_BY_ID[e.into] });
+  }
+  return out;
 }
 
 /** Przepis pasywki: posiadana broń, którą ta pasywka ewoluuje. */
 function passiveRecipe(run: Run, id: string): Recipe | undefined {
-  const w = run.weapons.find((x) => x.def.evolve?.passive === id);
-  return w ? { parts: [w.def.icon, PASSIVE_BY_ID[id].icon], result: WEAPON_BY_ID[w.def.evolve!.into].icon } : undefined;
+  for (const w of run.weapons) {
+    const e = evolvesOf(w.def).find((x) => x.passive === id);
+    if (e) return { parts: [w.def.icon, PASSIVE_BY_ID[id].icon], result: WEAPON_BY_ID[e.into].icon };
+  }
+  return undefined;
 }
 
-/** Podpowiedź ewolucji dla broni: jaka pasywka jest potrzebna. */
+/** Podpowiedź ewolucji dla broni: które pasywki ją ewoluują (posiadana z dopiskiem). */
 function evolveHint(run: Run, def: WeaponDef): string {
-  const ev = def.evolve;
-  if (!ev) return '';
-  const p = PASSIVE_BY_ID[ev.passive];
-  const has = run.passives.some((x) => x.id === ev.passive);
-  return `Ewolucja: max poziom + ${p.name}${has ? ' (masz)' : ''}`;
+  const evs = evolvesOf(def);
+  if (!evs.length) return '';
+  const names = evs.map((e) => `${PASSIVE_BY_ID[e.passive].name}${run.passives.some((x) => x.id === e.passive) ? ' (masz)' : ''}`);
+  return `Ewolucja: max poziom + ${names.join(' / ')}`;
+}
+
+/** Czy pasywka może ewoluować: maks. poziom i jedna z broni, które ewoluuje, jest już po tej ewolucji. */
+function passiveEvoReady(run: Run, id: string, level: number): boolean {
+  const d = PASSIVE_BY_ID[id];
+  if (level < d.maxLevel) return false;
+  return run.weapons.some((w) => passiveEvolves(id).some((x) => x.into.id === w.def.id));
 }
 
 /** Broń gotowa do fuzji: na maks. poziomie albo po ewolucji (hybryda już nie łączy się dalej). */
@@ -99,8 +119,10 @@ function fusionHint(run: Run, def: WeaponDef): string {
 
 /** Podpowiedź dla pasywki: którą posiadaną broń pozwala rozwinąć w ewolucję. */
 function passiveHint(run: Run, id: string): string {
-  const w = run.weapons.find((x) => x.def.evolve?.passive === id);
-  return w ? `Potrzebna do ewolucji: ${w.def.name}` : '';
+  const w = run.weapons.find((x) => evolvesOf(x.def).some((e) => e.passive === id));
+  if (w) return `Potrzebna do ewolucji: ${w.def.name}`;
+  const all = passiveEvolves(id, run.hero.id).map((x) => x.base.name);
+  return all.length ? `Evolves: ${all.join(', ')}` : '';
 }
 
 /** Wszystkie możliwe ulepszenia w obecnym stanie runu. */
@@ -108,16 +130,19 @@ function candidates(run: Run): Option[] {
   const out: Option[] = [];
   const ownedW = new Set(run.weapons.map((w) => w.def.id));
   // Broń bazowa, której ewolucję albo fuzję już masz, nie wraca do oferty.
-  for (const d of WEAPONS) if (d.evolve && ownedW.has(d.evolve.into)) ownedW.add(d.id);
+  for (const d of WEAPONS) if (evolvesOf(d).some((e) => ownedW.has(e.into))) ownedW.add(d.id);
   for (const f of FUSIONS) if (ownedW.has(f.into)) { ownedW.add(f.a); ownedW.add(f.b); }
   const ownedP = new Map(run.passives.map((p) => [p.id, p.level]));
 
   for (const w of run.weapons) {
-    const ev = w.def.evolve;
-    // Wierność broni: ewolucja bez pasywki.
-    if (w.level >= maxLevel(w.def) && ev && (ownedP.has(ev.passive) || run.loyal > 0)) {
-      const into = WEAPON_BY_ID[ev.into];
-      out.push({ kind: 'evolve', id: w.def.id, name: into.name, desc: into.desc, hint: `Zastępuje: ${w.def.name}`, icon: into.icon, tag: 'Ewolucja', color: into.color, tags: WEAPON_TAGS[into.kind], recipe: { parts: [w.def.icon, PASSIVE_BY_ID[ev.passive].icon], result: into.icon } });
+    const evs = evolvesOf(w.def);
+    // Każda ścieżka z posiadaną pasywką to osobna opcja (id = ewolucja); Wierność broni: ewolucja podstawowa bez pasywki.
+    const ready = w.level >= maxLevel(w.def) ? evs.filter((e, i) => ownedP.has(e.passive) || (i === 0 && run.loyal > 0)) : [];
+    if (ready.length) {
+      for (const ev of ready) {
+        const into = WEAPON_BY_ID[ev.into];
+        out.push({ kind: 'evolve', id: ev.into, name: into.name, desc: into.desc, hint: `Zastępuje: ${w.def.name}`, icon: into.icon, tag: 'Ewolucja', color: into.color, tags: WEAPON_TAGS[into.kind], recipe: { parts: [w.def.icon, PASSIVE_BY_ID[ev.passive].icon], result: into.icon } });
+      }
     } else if (w.level < maxLevel(w.def)) {
       // Jakość ulepszenia: dodatkowe bonusy broni (Szczęście podnosi szansę na lepszą).
       const q = rollQuality(run.luck()), bonus = rollWeaponBonus(w.def, q);
@@ -156,6 +181,10 @@ function candidates(run: Run): Option[] {
   }
   for (const p of run.passives) {
     const d = PASSIVE_BY_ID[p.id];
+    if (!p.evo && passiveEvoReady(run, p.id, p.level)) {
+      const evIcon = `${d.icon}_evo`, w = run.weapons.find((x) => passiveEvolves(p.id).some((e) => e.into.id === x.def.id))!;
+      out.push({ kind: 'passiveEvolve', id: d.id, name: d.evo.name, desc: d.evo.desc, hint: `Upgrades: ${d.name}`, icon: evIcon, tag: 'Ewolucja', color: C.gold, tags: [], recipe: { parts: [d.icon, w.def.icon], result: evIcon } });
+    }
     if (p.level < d.maxLevel) out.push({ kind: 'passiveUp', id: d.id, name: d.name, desc: d.desc, hint: passiveHint(run, d.id), icon: d.icon, tag: `Poziom ${p.level + 1}/${d.maxLevel}`, color: C.white, tags: [], recipe: passiveRecipe(run, d.id) });
   }
   if (run.passives.length < BAL.passiveSlots) {
@@ -190,7 +219,7 @@ export function reachesThreshold(run: Run, t: Tag): boolean {
  * > rozwój posiadanej broni > reszta. Prosta heurystyka — ma pomóc, nie grać za gracza.
  */
 export function optionScore(run: Run, o: Option): number {
-  let s = { evolve: 100, fusion: 98, abilityEvolve: 95, augment: 24, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, stat: 0 }[o.kind];
+  let s = { evolve: 100, fusion: 98, abilityEvolve: 95, passiveEvolve: 90, augment: 24, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, stat: 0 }[o.kind];
   s += (o.quality ?? 0) * 6;
   if (o.tags.some((t) => reachesThreshold(run, t))) s += 40;
   if (o.hint.startsWith('Potrzebna do ewolucji') || o.hint.endsWith('(masz)') || o.hint.startsWith('Fuzja z')) s += 25;
@@ -212,7 +241,7 @@ function statOptions(): Option[] {
  */
 export function generateOptions(run: Run, count: number, exclude: Option[] = []): Option[] {
   const pool = candidates(run).filter((o) => !exclude.some((x) => key(x) === key(o)));
-  const evo = pool.find((o) => o.kind === 'evolve' || o.kind === 'abilityEvolve' || o.kind === 'fusion');
+  const evo = pool.find((o) => o.kind === 'evolve' || o.kind === 'abilityEvolve' || o.kind === 'passiveEvolve' || o.kind === 'fusion');
   const out: Option[] = evo ? pool.splice(pool.indexOf(evo), 1) : [];
   while (out.length < count && pool.length) {
     const pick = rng.weighted(pool.map((o) => [o, WEIGHTS[o.kind]] as const));
@@ -241,8 +270,8 @@ export function applyOption(run: Run, o: Option): void {
       break;
     }
     case 'evolve': {
-      const w = run.weapons.find((x) => x.def.id === o.id)!;
-      const into = w.def.evolve!.into;
+      const w = run.weapons.find((x) => evolvesOf(x.def).some((e) => e.into === o.id))!;
+      const into = o.id;
       if (run.basicWeaponId === w.def.id) run.basicWeaponId = into;
       w.def = WEAPON_BY_ID[into];
       w.level = 1;
@@ -266,6 +295,10 @@ export function applyOption(run: Run, o: Option): void {
       break;
     case 'passiveUp':
       run.passives.find((p) => p.id === o.id)!.level++;
+      break;
+    case 'passiveEvolve':
+      run.passives.find((p) => p.id === o.id)!.evo = true;
+      run.showBanner(`Evolution: ${o.name}`);
       break;
     case 'ability':
       run.abilities[o.id as AbilitySlot].level++;
