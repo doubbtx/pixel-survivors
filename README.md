@@ -497,6 +497,7 @@ src/
 - 0.44.3 (enemy art): the cultist, shieldbearer, kamikaze, blinker, splitter and reflection are redrawn with the same detail as the newer enemies. The shieldbearer now actually carries a shield, the splitter is a cracked geode and the reflection is a knight made of glass.
 - 0.45.1 (release prep): a release build without developer tools (test keys, debug mode and the balance preview stay only in the test version), and an automatic check for untranslated text on every screen.
 - 0.46.3 (polish): hint boxes no longer cover text: on level up, cards and boss powers the key help line steps aside, in the shop they replace the status line and on the map they sit in the map's corner. The main menu got a castle with lit windows on the hills, drifting clouds, shooting stars, fireflies and a glowing logo. Redrawn: summoner, drowned one, toad and angel wings; the eye no longer shows a checkered eyelid when it blinks.
+- 0.47.1 (art): every biome has its own boss (Swamp Queen, Magma Lord of the wastes, Eye of the Void, Heart of the Void), and act guardians got their own looks (crowned Boar King and Toad Matriarch, crimson Sand Tyrant, dark Shattered Knight and more). Weather in every biome (pollen and fireflies, rain and fog, ash and embers, drifting motes, twinkling stars). Enemies die by material: slimes splash, golems crumble, crystals shatter. Burning, frozen, shocked and poisoned enemies are easier to spot, and ultimates send a wave across the screen.
 
 ### Jak przetestować
 

@@ -277,7 +277,7 @@ function build(name: string): HTMLCanvasElement {
   // Klatki animacji: '<nazwa>@<klatka>' (postacie, efekty, strzały, dekoracje).
   const [base, fs] = name.split('@');
   const f = Number(fs ?? 0);
-  if (base.startsWith('boss')) return boss(BIOMES[Number(base.slice(4))], f).canvas();
+  if (base.startsWith('boss')) return boss(BIOMES[Number(base.slice(4))], f, Number(base.slice(4))).canvas();
   if (ACTORS[base]) return ACTORS[base](f).canvas();
   // Skórka bohatera: '<bohater>~<odznaka>@<klatka>' (data/pacts.ts PACT_BADGES).
   if (base.includes('~')) {

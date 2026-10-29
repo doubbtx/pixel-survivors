@@ -547,6 +547,8 @@ export class Run {
   healNumbers = true;
   /** Oszczędne efekty (ustawienie): mniej cząsteczek i iskier; render pomija cienie, poświaty i winietę. */
   lowFx = false;
+  /** Czas runu (totalTime) ostatniego użycia ultimate — tylko do efektu na ekranie (game/render.ts). */
+  ultAt = -9;
   /** Dostępność (Ustawienia): kształty żywiołów i tryb łatwy (słabsi wrogowie, flagi w indexEffects). */
   elemShapes = false;
   easy = false;
