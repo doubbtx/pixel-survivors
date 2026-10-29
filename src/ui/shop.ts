@@ -24,6 +24,8 @@ const ROW_Y = [52, 108, 164];
 const FORGE_SERVICES = new Set(['stone', 'ore', 'bless', 'dragon']);
 const DET_X = 278, DET_W = 196;
 const BTN_Y = 236;
+/** Przesunięcie treści panelu usługi / rozbudowy w dół: blok wyśrodkowany w panelu szczegółów (bez pustego dołu). */
+const OY = 18;
 /** Przyciski pod listą (x, szerokość): odśwież, ekwipunek, kowadło, wyjście — wspólne dla rysowania i kliknięć. */
 const BTNS = { refresh: [10, 58], inv: [72, 56], anvil: [132, 46], close: [182, 88] } as const;
 
@@ -211,34 +213,34 @@ export class ShopView {
       // Rozbudowa sklepu: co daje następny poziom.
       const U = BAL.shopUpgrade, lvl = run.shopLevel, cx = DET_X + DET_W / 2;
       panel(r, DET_X, 34, DET_W, 196);
-      drawSprite(g, 'sh_upgrade', cx, 66, { scale: 2 });
-      drawText(g, `Rozbudowa sklepu (${lvl}/${U.max})`, cx, 92, C.white, { align: 'center', shadow: C.black });
+      drawSprite(g, 'sh_upgrade', cx, 66 + OY, { scale: 2 });
+      drawText(g, `Rozbudowa sklepu (${lvl}/${U.max})`, cx, 92 + OY, C.white, { align: 'center', shadow: C.black });
       const lines = lvl >= U.max ? ['Sklep w pełni rozbudowany.'] : [
         `Lepsza jakość przedmiotów (+${Math.round(U.luck * 100)}%).`,
         `Wszystko ${Math.round(U.discount * 100)}% taniej.`,
         lvl + 1 === 3 || lvl + 1 === 5 ? '+1 miejsce na przedmiot!' : 'Na poziomie 3 i 5: +1 przedmiot.',
         'Działa do końca runu.',
       ];
-      lines.forEach((l, i) => drawText(g, l, cx, 112 + i * 12, i === 2 ? C.lime : C.lgray, { align: 'center' }));
+      lines.forEach((l, i) => drawText(g, l, cx, 112 + OY + i * 12, i === 2 ? C.lime : C.lgray, { align: 'center' }));
     } else {
       const svc = e.kind === 'service' ? SERVICES.find((s) => s.id === e.id)! : null;
       const el = e.kind === 'elixir' ? ELIXIR_BY_ID[e.id] : null;
       const col = el ? C.pink : C.gold;
       panel(r, DET_X, 34, DET_W, 196);
       const cx = DET_X + DET_W / 2;
-      r.withAlpha(0.25, () => r.circle(cx, 66, 19, col, true));
-      r.withAlpha(0.7, () => r.circle(cx, 66, 15, C.black, true));
-      r.circle(cx, 66, 16, col);
-      drawSprite(g, svc ? svc.icon : el!.icon, cx, 66, { scale: 2 });
-      drawText(g, svc ? svc.name : el!.name, cx, 92, C.white, { align: 'center', shadow: C.black });
-      let ly = 110;
+      r.withAlpha(0.25, () => r.circle(cx, 66 + OY, 19, col, true));
+      r.withAlpha(0.7, () => r.circle(cx, 66 + OY, 15, C.black, true));
+      r.circle(cx, 66 + OY, 16, col);
+      drawSprite(g, svc ? svc.icon : el!.icon, cx, 66 + OY, { scale: 2 });
+      drawText(g, svc ? svc.name : el!.name, cx, 92 + OY, C.white, { align: 'center', shadow: C.black });
+      let ly = 110 + OY;
       for (const l of wrapText(svc ? svc.desc : elixirLine(el!, shop.depth), DET_W - 20)) {
         drawText(g, l, cx, ly, C.lgray, { align: 'center' });
         ly += 11;
       }
       const left = shop.stock[svc ? svc.id : `elixir:${el!.id}`] ?? 0;
-      drawText(g, `Zostało: ${left}`, cx, 160, C.lavender, { align: 'center' });
-      if (el) drawText(g, `Kupione eliksiry: ${run.elixirsBought}`, cx, 174, C.lavender, { align: 'center' });
+      drawText(g, `Zostało: ${left}`, cx, 160 + OY, C.lavender, { align: 'center' });
+      if (el) drawText(g, `Kupione eliksiry: ${run.elixirsBought}`, cx, 174 + OY, C.lavender, { align: 'center' });
     }
     if (!avail) return;
     button(r, DET_X, BTN_Y, DET_W, 16, `Kup za ${price} zł`, { col: run.gold >= price ? C.yellow : C.red, accent: C.gold, pulse: run.gold >= price });

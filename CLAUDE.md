@@ -712,6 +712,15 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   skrzyżowanymi mieczami), ikona cechy zachowania nad paskiem życia elity `trait_<kind>` (korona, flaga, duch, odłamki),
   wzmocnienie Dowódcy `buffmark` (złota strzałka) zamiast kropki; rysunki w gfx/objects.ts. Test układu `scripts/layout.cjs`
   (`npm run layout`, opis w Testowaniu).
+- 0.42.1 (drugi pełny przegląd UI): szeroki ekran — `SW` (logiczna szerokość ekranu ≥ W) i `OX` (przesunięcie
+  interfejsu) w core/renderer.ts: na oknach szerszych niż 16:9 (przy wypełnianiu) świat ma pełną szerokość (VW = SW / VIEW_S),
+  interfejs W × H na środku (transformacja z przesunięciem), `Renderer.cover` na przyciemnienia, `clear` i `toLogical` z OX;
+  celowanie myszą (systems/player.ts) dodaje OX, promień pojawiania wrogów `spawnR()` rośnie z półprzekątną widoku, strzałki
+  sekretów w HUD liczone z SW; tło menu głównego na całą szerokość. Na 16:9 SW = W, OX = 0. Nowe ekrany: tła i przyciemnienia
+  na cały ekran przez `cover` / `-OX..SW`, nie `0..W`. Baner HUD pod środkowym blokiem (`drawCenter` zwraca dolną krawędź),
+  z dala od napisów serii zabójstw. Kowadło i Pakty z przyciskiem „Wstecz [Esc]”, podpis Paktów pod wstęgą, tytuły wyboru
+  bohatera `PICK_TITLE` (wzorzec „{}: wybierz bohatera” łapał polski „Endless: {}”), opis karty awansu przy dużym tekście
+  najpierw w 85%, przyciski podglądu przy wyborze 72×14, treść usługi sklepu wyśrodkowana (`OY`).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

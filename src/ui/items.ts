@@ -152,7 +152,7 @@ export class LootView {
         act: () => { if (run.bag.length < BAL.bagSize) { run.stash(it); this.finish(''); } },
       },
       { label: () => `Rozłóż (+${salvageGold(it, run.stats.greed)} zł, +${salvageShards(it)} odł.)`, act: () => { run.salvage(it); this.finish(''); } },
-    ], W / 2, 214, 200, 15);
+    ], W / 2, 211, 200, 14);
     sfx.play(it.rarity >= 3 || it.super || it.unique ? 'levelup' : 'chest');
   }
 

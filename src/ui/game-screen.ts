@@ -475,11 +475,11 @@ export class GameScreen implements Screen {
   }
 
   private peekBtn(i: number): [number, number, number, number] {
-    return [4 + i * 66, H - 15, 64, 12];
+    return [4 + i * 74, H - 16, 72, 14];
   }
 
   private renderPeekBar(r: Renderer): void {
-    PEEK_LABELS.forEach((l, i) => button(r, ...this.peekBtn(i), l, { scale: 0.75 }));
+    PEEK_LABELS.forEach((l, i) => button(r, ...this.peekBtn(i), l, { scale: 0.9 }));
   }
 
   private openPause(): void {
@@ -777,7 +777,7 @@ export class GameScreen implements Screen {
    */
   private renderPause(): void {
     const r = this.app.r, g = r.g, run = this.run, s = run.stats, ex = run.expedition;
-    r.withAlpha(0.78, () => r.rect(0, 0, W, H, C.black));
+    r.withAlpha(0.78, () => r.cover(C.black));
     // Lewa kolumna: tytuł, miejsce w runie, menu, ostrzeżenie o poddaniu.
     panel(r, PL, 8, PLW, H - 16);
     drawText(g, 'Pauza', PL + PLW / 2, 15, C.yellow, { align: 'center', scale: 2, outline: C.black });
@@ -1119,7 +1119,7 @@ const HINT_BOX: Partial<Record<string, HintBox>> = {
   levelup: { x: 10, y: 232, w: W - 20 },
   cards: { x: 10, y: 232, w: W - 20 },
   power: { x: 10, y: 222, w: W - 20 },
-  loot: { x: 8, y: 212, w: 128 },
+  loot: { x: 8, y: 207, w: 128 },
   map: { x: 14, y: H - 8, w: 240, up: true },
   shop: { x: 6, y: 232, w: 266, up: true },
   anvil: { x: 10, y: 181, w: 208, up: true },

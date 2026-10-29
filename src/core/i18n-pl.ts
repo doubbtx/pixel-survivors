@@ -668,4 +668,6 @@ export const PL: Record<string, string> = {
   "While it builds: +{} attack speed per point. Getting hit drains it to zero ({} per second).": "W trakcie budowania: +{} szybkości ataku za punkt. Oberwanie sprawia, że opada do zera ({} na sekundę).",
   "Spear of Light [Q]": "Włócznia światła [Q]",
   "Dawn Spear [Q]": "Włócznia świtu [Q]",
+  "Expedition: choose a hero": "Ekspedycja: wybierz bohatera",
+  "Endless: choose a hero": "Endless: wybierz bohatera",
 };
