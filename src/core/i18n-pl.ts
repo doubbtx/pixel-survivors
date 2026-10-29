@@ -746,4 +746,6 @@ export const PL: Record<string, string> = {
   "More enemies": "Więcej wrogów",
   "Enemies +50% HP, +30% damage": "Wrogowie +50% HP, +30% obrażeń",
   "Torment: levels above Nightmare for experienced players. Win an Expedition on Nightmare to open Torment 1, then each win opens the next (up to 10). Press T on the map before the first fight; every level adds one rule and more essence.": "Udręka: poziomy ponad Koszmarem dla doświadczonych. Wygraj Ekspedycję na Koszmarze, żeby otworzyć Udrękę 1, a każda kolejna wygrana otwiera następną (do 10). Wciśnij T na mapie przed pierwszą walką; każdy poziom dodaje jedną zasadę i więcej esencji.",
+  'Tutorial done! Start an Expedition. Essence from every run goes to Progress, new cards to Collection.': 'Samouczek ukończony! Zacznij Ekspedycję. Esencja z każdego runu idzie na Rozwój, nowe karty do Kolekcji.',
+  'Clearer late game: Earthquake, Solar Flare and Death Mark show a visible area, crowds over 500 enemies skip the white hit flash and enemy bullets are capped (except bosses). After the tutorial you land in the main menu.': 'Czytelniejsza późna gra: Trzęsienie ziemi, Rozbłysk słońca i Znak śmierci pokazują widoczny obszar, przy ponad 500 wrogach znika biały błysk trafień, a liczba wrogich pocisków ma limit (poza bossami). Po samouczku trafiasz do menu głównego.',
 };

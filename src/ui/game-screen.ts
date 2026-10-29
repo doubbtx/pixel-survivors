@@ -32,7 +32,7 @@ import { rollItem } from '../data/items';
 import { advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth, rollOffer, MAP_RARITY } from '../data/expedition';
 import { music } from '../core/music';
 import { ExpeditionMapView } from './expedition';
-import { Hints, hintShowing, type HintBox } from './hints';
+import { Hints, type HintBox } from './hints';
 import { HelpScreen } from './help';
 import { CodexScreen } from './codex';
 import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
@@ -399,11 +399,12 @@ export class GameScreen implements Screen {
     else drawText(g, 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: smallS() });
   }
 
-  /** Koniec albo pominięcie samouczka: zapis i wybór bohatera do pierwszej Ekspedycji. */
+  /** Koniec albo pominięcie samouczka: zapis i menu główne (Ekspedycja polecana, komunikat o Rozwoju i Kolekcji). */
   private endTutorial(): void {
     this.app.save.tutorialDone = true;
+    this.app.save.notice ||= 'Tutorial done! Start an Expedition. Essence from every run goes to Progress, new cards to Collection.';
     this.app.persist();
-    this.app.go(new HeroSelect(this.app, 'expedition'));
+    this.app.go(new MainMenu(this.app));
   }
 
   /** Kolejny baner odblokowania, gdy poprzedni komunikat zniknął. */
@@ -509,7 +510,7 @@ export class GameScreen implements Screen {
    */
   private peekFromPick(): boolean {
     const inp = this.app.input, m = inp.mouse, from = this.state;
-    const hit = (i: number) => inp.pressed('click') && !this.peekHidden() && inside(m.x, m.y, ...this.peekBtn(i));
+    const hit = (i: number) => inp.pressed('click') && inside(m.x, m.y, ...this.peekBtn(i));
     if (inp.pressed('build') || hit(0)) { this.openBuild(from); return true; }
     if (inp.pressed('inventory') || hit(1)) { this.openInventory(from); return true; }
     if (inp.pressed('synergies') || hit(2)) { this.openSynergies(from); return true; }
@@ -520,13 +521,7 @@ export class GameScreen implements Screen {
     return [4 + i * 74, H - 16, 72, 14];
   }
 
-  /** Na awansie, kartach i mocy podpowiedź zajmuje dół ekranu (linia klawiszy i przyciski podglądu) na swoje 6 s. */
-  private peekHidden(): boolean {
-    return hintShowing() && PEEK_UNDER_HINT.has(this.state);
-  }
-
   private renderPeekBar(r: Renderer): void {
-    if (this.peekHidden()) return;
     PEEK_LABELS.forEach((l, i) => button(r, ...this.peekBtn(i), l, { scale: 0.9 }));
   }
 
@@ -1186,11 +1181,11 @@ export class GameScreen implements Screen {
  * Miejsce podpowiedzi w każdej nakładce: wolny pas pod przyciskami albo obok nich, tak żeby nie zasłaniała tytułu,
  * legendy ani przycisków (podpis z klawiszami pod spodem może przykryć, podpowiedź mówi to samo).
  */
-const PEEK_UNDER_HINT = new Set(['levelup', 'cards', 'power']);
 const HINT_BOX: Partial<Record<string, HintBox>> = {
-  levelup: { x: 10, y: 233, w: W - 20 },
-  cards: { x: 10, y: 233, w: W - 20 },
-  power: { x: 10, y: 222, w: W - 20 },
+  // Prawa część dołu: lewy dolny róg zajmują przyciski podglądu C/I/Y (playtest 3).
+  levelup: { x: 232, y: 232, w: W - 240 },
+  cards: { x: 232, y: 232, w: W - 240 },
+  power: { x: 232, y: 222, w: W - 240 },
   loot: { x: 8, y: 207, w: 128 },
   // Mapa: w prawym dolnym rogu obszaru mapy (dalekie węzły), nie na szczegółach węzła pod spodem.
   map: { x: W - 14 - 246, y: 164, w: 246, up: true },

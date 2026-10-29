@@ -486,7 +486,9 @@ const CASTS: Record<AbilityKind, Cast> = {
       run.enemiesInCircle(p.x, p.y, r, (e) => run.damageEnemy(e, P('damage') * U.quakeDmg * run.stats.might, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 5, stun: e.boss ? 0 : stun }));
       const f = run.addFx('ring', p.x, p.y, C.brown, 0.35);
       if (f) f.r = r;
-      run.burst(p.x, p.y, C.brown, 14, 90);
+      const d = run.addFx('disc', p.x, p.y, C.tan, 0.5);
+      if (d) { d.r = r; d.a0 = 0.3; }
+      for (let k = 0; k < 10; k++) { const ang = (k / 10) * Math.PI * 2; run.burst(p.x + Math.cos(ang) * r * 0.9, p.y + Math.sin(ang) * r * 0.9, C.brown, 3, 40); }
       run.addShake(4);
       sfx.play('explode');
     });
@@ -500,7 +502,12 @@ const CASTS: Record<AbilityKind, Cast> = {
     const r = (P('radius') + P('blast')) * (1 + U.flareHeatR * heat) * run.stats.area, dmg = P('damage') * U.flareDmg * (1 + U.flareHeat * heat) * run.stats.might;
     const f = run.addFx('ring', p.x, p.y, C.gold, U.flareDelay);
     if (f) f.r = r;
+    // Ładowanie: złoty krąg zbiera się wokół bohatera; wybuch: jasny dysk na cały promień (półprzezroczysty, G2).
+    const charge = run.addFx('disc', p.x, p.y, C.orange, U.flareDelay);
+    if (charge) { charge.r = r * 0.5; charge.a0 = 0.25; }
     const boom = () => {
+      const d = run.addFx('disc', p.x, p.y, C.yellow, 0.5);
+      if (d) { d.r = r; d.a0 = 0.4; }
       run.enemiesInCircle(p.x, p.y, r, (e) => run.damageEnemy(e, dmg, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 6 }));
       const ring = run.addFx('ring', p.x, p.y, C.yellow, 0.4);
       if (ring) ring.r = r;

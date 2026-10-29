@@ -26,6 +26,8 @@ export function fireVolley(run: Run, x: number, y: number, v: Volley, base: numb
     // Pierścień z luką: pomijamy pociski najbliżej kąta bazowego (po obu stronach).
     if (gap && (i < Math.ceil(gap / 2) || n - i <= Math.floor(gap / 2))) continue;
     const a = v.shape === 'fan' || v.shape === 'shotgun' ? base + (i - (n - 1) / 2) * (v.spread ?? 0.2) : base + (i * TAU) / n;
+    // Twardy limit pocisków poza walką z bossem (playtest 3: 665-746 w Endless od 10. minuty przy pełnej mapie).
+    if (!run.boss && run.bullets.count >= BAL.enemyBulletHardCap) return;
     const b = run.bullets.obtain();
     if (!b) return;
     const var_ = v.speedVar ?? 0.35;

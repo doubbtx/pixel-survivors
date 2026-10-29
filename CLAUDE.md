@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.46.1)
+## Stan (wersja 0.46.3)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -724,6 +724,10 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   sumowane do flag każdej mapy w `levelAt(..., torment)`, bez łagodnego startu). Odblokowanie: wygrana wyprawy na najwyższym
   poziomie map albo na Udręce N → `save.tormentMax` N+1 (do `BAL.torment.max`). Wybór: T / przycisk na mapie tylko przed
   pierwszą walką aktu 1 (`ex.torment`, `save.exTorment`), zasady w okienku po wskazaniu. Esencja ×(1 + 0.15·N). Bot `&torment=N`.
+- 0.46.2 (playtest 3, top 5): linia „R: zmień ultimate” w dolnym rzędzie ekranu bohatera (wyrównana do prawej); HINT_BOX
+  levelup/cards/power od x 232 (nie zasłania C/I/Y); `BAL.enemyBulletHardCap` 400 w fireVolley (poza bossem); fx 'disc'
+  (wypełnione koło + obrys) dla Earthquake / Solar Flare / Death Mark; błysk trafienia wyłączony przy ≥ `BAL.readability.flashCrowd`
+  (500) wrogach; koniec samouczka → MainMenu z `save.notice` (Rozwój, Kolekcja) zamiast HeroSelect. 0.46.1 = druga sesja.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula
@@ -766,9 +770,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   wypisuje też napisy bez tłumaczenia (`trMisses`) ze wszystkich odwiedzonych ekranów.
   Legenda mapy Ekspedycji zmniejsza tekst (do 0.75) i odstępy, gdy rodzaje węzłów się nie mieszczą; wiersz „Wrogowie”
   odsuwa nazwę o szerokość sprite'a (dzik nie dotyka napisu).
-- 0.46.1: podpowiedzi nie zasłaniają treści — `hintShowing()` (ui/hints.ts): na awansie, kartach i mocy ramka zajmuje miejsce
-  linii klawiszy i przycisków podglądu (`PEEK_UNDER_HINT`, klik w ukryte przyciski nie działa), w sklepie zastępuje linię stanu
-  i klawiszy, na mapie stoi w prawym dolnym rogu obszaru mapy. `npm run layout` ma warianty `hints=1`, `small=1`, `wide=1`
+- 0.46.3: podpowiedzi nie zasłaniają treści — `hintShowing()` (ui/hints.ts): na awansie, kartach i mocy (ramka w prawej części
+  dołu, 0.46.2) chowa się linia klawiszy pod ramką, w sklepie ramka zastępuje linię stanu i klawiszy, na mapie stoi w prawym dolnym rogu obszaru mapy. `npm run layout` ma warianty `hints=1`, `small=1`, `wide=1`
   (20:9), `touch=1` (zrzuty w /tmp/layout-shots/<wariant>-<język>) — przed wydaniem uruchom wszystkie. Menu główne: zamek
   z migoczącymi oknami na dalszym wzgórzu (`castle`), chmury, spadająca gwiazda, świetliki, miękka poświata i przebłysk logo,
   w defiladzie nowsi wrogowie. Przerysowani: przywoływacz (płaszcz z piór, pas z kości, kostur ze szponem), topielec

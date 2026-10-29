@@ -496,7 +496,7 @@ src/
 - 0.44.2 (readability): with Text size set to Large (the default on phones) the smallest labels are bigger: HUD counters, key badges on skills, map legend, button hints and menu notes. The selected map node's name is no longer hidden under the node below it.
 - 0.44.3 (enemy art): the cultist, shieldbearer, kamikaze, blinker, splitter and reflection are redrawn with the same detail as the newer enemies. The shieldbearer now actually carries a shield, the splitter is a cracked geode and the reflection is a knight made of glass.
 - 0.45.1 (release prep): a release build without developer tools (test keys, debug mode and the balance preview stay only in the test version), and an automatic check for untranslated text on every screen.
-- 0.46.1 (polish): hint boxes no longer cover text: on level up, cards and boss powers they take the place of the key help line, in the shop they replace the status line and on the map they sit in the map's corner. The main menu got a castle with lit windows on the hills, drifting clouds, shooting stars, fireflies and a glowing logo. Redrawn: summoner, drowned one, toad and angel wings; the eye no longer shows a checkered eyelid when it blinks.
+- 0.46.3 (polish): hint boxes no longer cover text: on level up, cards and boss powers the key help line steps aside, in the shop they replace the status line and on the map they sit in the map's corner. The main menu got a castle with lit windows on the hills, drifting clouds, shooting stars, fireflies and a glowing logo. Redrawn: summoner, drowned one, toad and angel wings; the eye no longer shows a checkered eyelid when it blinks.
 
 ### Jak przetestować
 
