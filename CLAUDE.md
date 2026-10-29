@@ -569,6 +569,11 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   `drawEvoRow` w ui/levelup.ts zamiast napisu; Księga ewolucji w menu pauzy (CodexScreen z powrotem do GameScreen).
 - 0.34.2: Rytm przebudowany (w grze nie ma walki „poza walką”, więc dawny zanik nie działał): budowanie → Przepływ
   (`Run.flowT/flowMax`, flaga `rhythm.flow`), potem od zera; Takezo tymczasowo w START_HEROES.
+- 0.34.3 (audyt, para Tech Lead + Game Designer): `Renderer.line` — grube / półprzezroczyste / długie linie to jeden wypełniony
+  czworokąt (dawniej kwadrat w×w na każdy krok Bresenhama: 28% czasu klatki i kumulacja przezroczystości), przycinanie
+  Liang-Barsky (`clipSegment`) do widoku, guard NaN; `Renderer.fan` (stożek Salamandry). Pomiar (Ignara, t=900, ~1000 wrogów):
+  render p95 17.9→12.9 ms, fillRect 34%→1.5%. Następne z audytu: obrażenia wrogów niezależne od DPS gracza (`power.dmgExp`),
+  telemetria runów, przebudowa `powerMul` (gonienie DPS gracza), auto worldRes=2 (endWorld ~29%).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

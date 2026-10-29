@@ -467,7 +467,7 @@ function drawWorld(run: Run, r: Renderer): void {
         const k = 1 - e.actT / BOSS_TELL, kind = BOSS_TELLS[bossStyle(run, e.phase)][e.phase][e.nextAlt], on = run.blink(8, 5) ? 0.9 : 0.5;
         if (kind === 'aim') {
           const a = Math.atan2(p.y - e.y, p.x - e.x), L = 220 * ZOOM;
-          r.withAlpha(0.2 + 0.2 * k, () => r.line(ex, ey, ex + Math.cos(a) * L, ey + Math.sin(a) * L, C.red, 6));
+          r.withAlpha(0.3 + 0.25 * k, () => r.line(ex, ey, ex + Math.cos(a) * L, ey + Math.sin(a) * L, C.red, 6));
           r.withAlpha(on, () => r.line(ex, ey, ex + Math.cos(a) * L * k, ey + Math.sin(a) * L * k, C.red, 2));
         } else if (kind === 'ring') {
           r.withAlpha(on, () => r.circle(ex, ey, (e.radius * e.scale + 10 + 70 * k) * ZOOM, C.red));
@@ -823,16 +823,14 @@ function drawTell(r: Renderer, run: Run, e: Enemy, ex: number, ey: number): void
     case 'flamer': {
       if (e.dashT <= 0) return;
       const L = 60 * ZOOM, a0 = e.shootA - B.flameCone, a1 = e.shootA + B.flameCone, k = 1 - e.dashT / B.flameWarn;
-      r.withAlpha(0.18 + 0.2 * k, () => {
-        for (let a = a0; a <= a1; a += 0.06) r.line(ex, ey, ex + Math.cos(a) * L, ey + Math.sin(a) * L, C.orange, 2);
-      });
+      r.withAlpha(0.18 + 0.2 * k, () => r.fan(ex, ey, L, a0, a1, C.orange));
       r.withAlpha(0.8, () => { r.line(ex, ey, ex + Math.cos(a0) * L, ey + Math.sin(a0) * L, C.red, 1); r.line(ex, ey, ex + Math.cos(a1) * L, ey + Math.sin(a1) * L, C.red, 1); });
       return;
     }
     case 'sniper': {
       if (e.dashT <= 0) return;
       const L = 260 * ZOOM, locked = e.dashT <= B.snipeAim * 0.4;
-      r.withAlpha(locked ? 0.95 : 0.45, () => r.line(ex, ey, ex + Math.cos(e.shootA) * L, ey + Math.sin(e.shootA) * L, locked ? C.red : C.salmon, 1));
+      r.withAlpha(locked ? 0.95 : 0.7, () => r.line(ex, ey, ex + Math.cos(e.shootA) * L, ey + Math.sin(e.shootA) * L, locked ? C.red : C.salmon, 1));
       return;
     }
   }

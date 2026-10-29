@@ -232,8 +232,29 @@ export class Renderer {
 
   /** Linia Bresenhama o grubości `w` pikseli logicznych, krokowana co podziałkę siatki prymitywów (gładkie skosy w świecie). */
   line(x0: number, y0: number, x1: number, y1: number, col: number, w = 1): void {
+    // NaN / nieskończoność (np. kierunek z zerowej prędkości): nic do rysowania (Bresenham zrobiłby 1500·d pustych kroków).
+    if (!Number.isFinite(x0 + y0 + x1 + y1)) return;
+    // Przycięcie odcinka do widoku (z marginesem grubości): długie linie poza ekranem nic nie kosztują.
+    const m = w + 1, maxX = (this.g === this.wg ? VW : W) + m, maxY = (this.g === this.wg ? VH : H) + m;
+    const c = clipSegment(x0, y0, x1, y1, -m, -m, maxX, maxY);
+    if (!c) return;
+    [x0, y0, x1, y1] = c;
     this.g.fillStyle = PAL[col];
-    const d = this.dens;
+    const d = this.dens, len = Math.hypot(x1 - x0, y1 - y0);
+    // Grube, półprzezroczyste albo długie linie: jeden wypełniony czworokąt (z kwadratowymi końcami jak dawniej).
+    // Stary sposób (kwadrat w×w na każdym kroku) kosztował długość·gęstość wywołań i nakładał przezroczystość.
+    if (w > 1 || this.g.globalAlpha < 1 || len * d > 48) {
+      const h = w / 2, ux = len > 0 ? (x1 - x0) / len : 1, uy = len > 0 ? (y1 - y0) / len : 0;
+      const g = this.g;
+      g.beginPath();
+      g.moveTo(x0 - ux * h - uy * h, y0 - uy * h + ux * h);
+      g.lineTo(x1 + ux * h - uy * h, y1 + uy * h + ux * h);
+      g.lineTo(x1 + ux * h + uy * h, y1 + uy * h - ux * h);
+      g.lineTo(x0 - ux * h + uy * h, y0 - uy * h - ux * h);
+      g.closePath();
+      g.fill();
+      return;
+    }
     x0 = Math.round(x0 * d); y0 = Math.round(y0 * d); x1 = Math.round(x1 * d); y1 = Math.round(y1 * d);
     const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
@@ -248,6 +269,17 @@ export class Renderer {
     }
   }
 
+  /** Wypełniony wycinek koła (stożek) od kąta a0 do a1: jedna ścieżka, jednolita przezroczystość. */
+  fan(x: number, y: number, r: number, a0: number, a1: number, col: number): void {
+    const g = this.g;
+    g.fillStyle = PAL[col];
+    g.beginPath();
+    g.moveTo(x, y);
+    g.arc(x, y, r, a0, a1);
+    g.closePath();
+    g.fill();
+  }
+
   /** Rysowanie z przezroczystością (cienie, poświaty, przyciemnienia). Zagnieżdżone wywołania mnożą przezroczystość. */
   withAlpha(a: number, fn: () => void): void {
     const prev = this.g.globalAlpha;
@@ -255,4 +287,17 @@ export class Renderer {
     fn();
     this.g.globalAlpha = prev;
   }
+}
+
+/** Przycięcie odcinka do prostokąta (Liang-Barsky); null, gdy odcinek jest całkiem poza. */
+function clipSegment(x0: number, y0: number, x1: number, y1: number, minX: number, minY: number, maxX: number, maxY: number): [number, number, number, number] | null {
+  const dx = x1 - x0, dy = y1 - y0;
+  let t0 = 0, t1 = 1;
+  const p = [-dx, dx, -dy, dy], q = [x0 - minX, maxX - x0, y0 - minY, maxY - y0];
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) { if (q[i] < 0) return null; continue; }
+    const t = q[i] / p[i];
+    if (p[i] < 0) { if (t > t1) return null; if (t > t0) t0 = t; } else { if (t < t0) return null; if (t < t1) t1 = t; }
+  }
+  return [x0 + dx * t0, y0 + dy * t0, x0 + dx * t1, y0 + dy * t1];
 }
