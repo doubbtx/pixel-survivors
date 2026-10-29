@@ -18,6 +18,7 @@ import type { Run } from './run';
 import type { Enemy } from '../entities/types';
 import { taskTarget } from '../systems/tasks';
 import { drawElemMark } from '../gfx/elemmark';
+import { BOSS_TELL, BOSS_TELLS, bossStyle } from '../systems/enemies';
 
 const MARGIN = 40;
 /** Siła wspólnej korekty barwnej sceny (0..1). */
@@ -460,6 +461,21 @@ function drawWorld(run: Run, r: Renderer): void {
       if (e.actT > 0 && e.actT < 0.6) {
         const k = e.actT / 0.6, R = (e.radius * e.scale + 6 + 30 * k) * ZOOM;
         r.withAlpha(0.8 - 0.5 * k, () => r.circle(ex, ey, R, C.yellow));
+      }
+      // Zapowiedź rodzaju ataku (0.33): linia w gracza, rozszerzający się pierścień wokół bossa albo zaciskający się krąg pod graczem.
+      if (e.actT > 0 && e.actT < BOSS_TELL) {
+        const k = 1 - e.actT / BOSS_TELL, kind = BOSS_TELLS[bossStyle(run, e.phase)][e.phase][e.nextAlt], on = run.blink(8, 5) ? 0.9 : 0.5;
+        if (kind === 'aim') {
+          const a = Math.atan2(p.y - e.y, p.x - e.x), L = 220 * ZOOM;
+          r.withAlpha(0.2 + 0.2 * k, () => r.line(ex, ey, ex + Math.cos(a) * L, ey + Math.sin(a) * L, C.red, 6));
+          r.withAlpha(on, () => r.line(ex, ey, ex + Math.cos(a) * L * k, ey + Math.sin(a) * L * k, C.red, 2));
+        } else if (kind === 'ring') {
+          r.withAlpha(on, () => r.circle(ex, ey, (e.radius * e.scale + 10 + 70 * k) * ZOOM, C.red));
+        } else if (kind === 'player') {
+          const R = (90 - 60 * k) * ZOOM;
+          r.withAlpha(on, () => r.circle(X(p.x), Y(p.y), R, C.red));
+          r.withAlpha(0.12, () => r.circle(X(p.x), Y(p.y), R, C.red, true));
+        }
       }
       if (e.dashT > 0.5) {
         const d = Math.hypot(e.dvx, e.dvy) || 1, L = 0.5 * d * ZOOM;

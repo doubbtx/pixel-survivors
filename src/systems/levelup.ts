@@ -275,6 +275,7 @@ export function applyOption(run: Run, o: Option): void {
       if (run.basicWeaponId === w.def.id) run.basicWeaponId = into;
       w.def = WEAPON_BY_ID[into];
       w.level = 1;
+      run.celebrate(w.def.name);
       break;
     }
     case 'fusion': {
@@ -286,8 +287,7 @@ export function applyOption(run: Run, o: Option): void {
       a.def = WEAPON_BY_ID[o.id];
       a.level = 1;
       run.weapons = run.weapons.filter((w) => w !== b);
-      run.showBanner(`Fuzja: ${a.def.name}!`);
-      run.freeze(0.3);
+      run.celebrate(a.def.name, true);
       break;
     }
     case 'passiveNew':
@@ -298,7 +298,7 @@ export function applyOption(run: Run, o: Option): void {
       break;
     case 'passiveEvolve':
       run.passives.find((p) => p.id === o.id)!.evo = true;
-      run.showBanner(`Evolution: ${o.name}`);
+      run.celebrate(o.name);
       break;
     case 'ability':
       run.abilities[o.id as AbilitySlot].level++;
@@ -306,6 +306,7 @@ export function applyOption(run: Run, o: Option): void {
     case 'abilityEvolve': {
       const a = run.abilities[o.id as AbilitySlot];
       a.def = evolveAbility(a.def);
+      run.celebrate(a.def.name);
       break;
     }
     case 'augment':

@@ -464,6 +464,12 @@ src/
 - 7 hero cards, a Progression tree (Earth, Water, Fire, Void), unlock: win an Expedition with Borgun or Vesper (granted on load if you already have such a win).
 - Polish: English names inside Polish templates are translated piece by piece (`toPolish` in core/i18n.ts).
 
+**Bosses, power and run summary (0.33.0)**:
+- Every boss style has a third attack in each phase (12 new): Cross Fire, Abyss Bloom, Final Spiral; Spore Ring, Bog Rain, Hydra; Flame Fan, Burning Circle, Meteor Barrage; Void Lance, Mirror Blink, Collapse. Attacks rotate in a fixed order, and 0.7 s before each one its name appears above the boss with a warning that fits it: an aiming line, a ring around the boss or a closing circle under the player.
+- Critical hits have their own sound, a flash ring and '!' on the number ('!!' for double crits). Evolutions, fusions and passive evolutions pause the game for a moment with rings, sparks and a fanfare. Elite kills show "Elite slain!" with a gold ring; Lucky find bursts gold.
+- Kill streaks (kills at most 0.8 s apart): Rampage at 25, Massacre at 60, Carnage at 120, Annihilation at 250.
+- End screen: new first tab Highlights (best weapon, peak DPS, biggest hit, longest combo, best kill streak, with Record! badges) and the list of hero records broken this run. New hero records: peak DPS, longest combo, best kill streak.
+
 ### Jak przetestować
 
 1. `npm run dev` → Endless → Nowy run → bohater (albo Ekspedycja → Nowa ekspedycja).

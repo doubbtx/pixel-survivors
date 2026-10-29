@@ -176,6 +176,8 @@ export interface RunSnapshot {
   secrets?: string[];
   /** DPS co 5 s (wykres na ekranie końca). */
   dpsLog?: number[];
+  /** Wyróżnienia runu: najdłuższe kombo, seria zabójstw, najmocniejsze trafienie i jego źródło. */
+  highlights?: [number, number, number, string];
 }
 
 /**
@@ -235,6 +237,15 @@ export class Run {
   strikes: { x: number; y: number; t: number; foe?: number; seed?: boolean; r?: number }[] = [];
   stormT = 0;
   combo = 0;
+  /** Wyróżnienia runu (0.33, ekran końca): najdłuższe kombo, najlepsza seria zabójstw, najmocniejsze trafienie. */
+  bestCombo = 0;
+  bestStreak = 0;
+  maxHit = 0;
+  maxHitSrc = '';
+  /** Seria zabójstw: liczba i czas ostatniego zabójstwa; krok ostatniego efektu krytyka (limit efektów w tłumie). */
+  streakN = 0;
+  streakT = -9;
+  private critFxStep = -99;
   /** Sekrety map (systems/mapsecrets.ts): czas do kolejnego, odurzenie (odwrócone sterowanie, s), tytuł sekretnego bossa w HUD,
    * bossowie pokonani bez trafienia (trofea). */
   secretT: number = BAL.secretsMap.every * 0.6;
@@ -1164,15 +1175,25 @@ export class Run {
     if (n) {
       n.x = e.x + rng.range(-3, 3);
       n.y = e.y - e.radius - 2;
-      n.life = crit ? 0.7 : 0.5;
+      n.life = crit ? 0.8 : 0.5;
       n.big = crit;
-      n.text = fmt(dmg);
+      // Krytyk: wykrzyknik, podwójny krytyk (Nadkrytyk): dwa.
+      n.text = fmt(dmg) + (mult > st.critMult ? '!!' : crit ? '!' : '');
       n.col = REACTION_COL[src] ?? (o.dot ? (src === 'Trucizna' ? C.lime : C.orange) : mult > st.critMult ? C.orange : crit ? C.yellow : C.white);
     }
     if (!this.lowFx && this.sparksThisStep < BAL.fx.sparksPerStep && rng.chance(0.5)) {
       this.sparksThisStep++;
       const s = this.addFx('spark', e.x + rng.range(-2, 2), e.y + rng.range(-3, 1), C.white, 0.16);
       if (s) s.r = crit ? 2 : 1;
+    }
+    if (!o.dot && dmg > this.maxHit) { this.maxHit = dmg; this.maxHitSrc = src; }
+    // Krytyk (0.33): trzask i błysk w miejscu trafienia (co kilka kroków, żeby tłum nie zagłuszył gry).
+    if (crit && !o.dot && this.step - this.critFxStep >= BAL.streak.critFxEvery) {
+      this.critFxStep = this.step;
+      sfx.play('crit');
+      const f = this.addFx('ring', e.x, e.y, mult > st.critMult ? C.orange : C.yellow, 0.12);
+      if (f) f.r = 5 + e.radius * e.scale;
+      if (!this.reduceFlash) this.burst(e.x, e.y - 2, C.white, 3, 70);
     }
     if (o.dot) { if (e.hp <= 0 && !e.dead) this.killEnemy(e); return; }
     // Trafienia procentowe i reakcji nie nakładają żywiołów (inaczej reakcje napędzałyby się same).
@@ -1337,10 +1358,17 @@ export class Run {
     taskOnKill(this, e);
     secretsOnKill(this, e);
     comboOnKill(this);
+    this.bestCombo = Math.max(this.bestCombo, this.combo);
+    this.onStreakKill();
     featsOnKill(this, e);
     forgeKillDrops(this, e);
     this.emit('onKill', e);
     if (e.elite) {
+      // Zabicie elity (0.33): napis, złoty krąg i wybuch, niezależnie od zatrzymania klatki wyżej.
+      this.popText(e.x, e.y - 14, 'Elite slain!', C.gold);
+      const ring = this.addFx('ring', e.x, e.y, C.gold, 0.35);
+      if (ring) ring.r = 34;
+      sfx.play('explode');
       this.dropChest(e.x, e.y, 'elite');
       for (let i = 0; i < 5; i++) this.spawnPickup(e.x + rng.range(-8, 8), e.y + rng.range(-8, 8), 'coin', 1);
       this.pendingCards.push('elite');
@@ -1624,6 +1652,33 @@ export class Run {
     return p;
   }
 
+  /** Seria zabójstw: liczy zabójstwa w odstępach najwyżej BAL.streak.gap s; przy progach napis, dźwięk i wstrząs. */
+  private onStreakKill(): void {
+    const S = BAL.streak;
+    if (this.totalTime - this.streakT > S.gap) this.streakN = 0;
+    this.streakT = this.totalTime;
+    this.streakN++;
+    this.bestStreak = Math.max(this.bestStreak, this.streakN);
+    const tier = (S.tiers as readonly number[]).indexOf(this.streakN);
+    if (tier < 0) return;
+    const p = this.player, col = [C.yellow, C.orange, C.red, C.hotpink][tier];
+    this.popText(p.x, p.y - 28, `${S.names[tier]}! x${this.streakN}`, col);
+    sfx.play('streak');
+    this.addShake(1 + tier);
+  }
+
+  /** Chwila ewolucji (broń, umiejętność, pasywka, fuzja): zatrzymanie, baner, złoty krąg i fanfara. */
+  celebrate(name: string, fusion = false): void {
+    const p = this.player;
+    this.freeze(BAL.streak.evolveFreeze);
+    this.showBanner(fusion ? `Fusion: ${name}!` : `Evolution: ${name}!`);
+    for (const [r, t] of [[30, 0.35], [55, 0.5]] as const) { const f = this.addFx('ring', p.x, p.y, C.gold, t); if (f) f.r = r; }
+    this.burst(p.x, p.y, C.gold, 26, 90);
+    this.burst(p.x, p.y, C.white, 10, 60);
+    this.addShake(3);
+    sfx.play('evolve');
+  }
+
   /** Szczęście: statystyka bohatera (pasywka Podkowa, karty, synergie) plus flaga `itemLuck` (afiks Fortuna, karty, nagrody map). */
   luck(): number {
     return Math.max(0, this.stats.luck + this.flag('itemLuck'));
@@ -1635,7 +1690,12 @@ export class Run {
     // Szczęśliwy traf: Legendarny przedmiot albo unikat z dowolnego łupu.
     if (rng.chance(L.jackpot * (1 + this.luck()))) {
       this.showBanner('Szczęśliwy traf!');
-      sfx.play('levelup');
+      // Szczęśliwy traf (0.33): złoty deszcz iskier, napis nad bohaterem i krótkie zatrzymanie.
+      this.popText(this.player.x, this.player.y - 20, 'Lucky find!', C.gold);
+      this.burst(this.player.x, this.player.y, C.gold, 30, 100);
+      this.burst(this.player.x, this.player.y, C.yellow, 14, 60);
+      this.freeze(0.2);
+      sfx.play('evolve');
       if (rng.chance(L.jackpotUnique)) {
         const item = rollUnique(this.depth);
         this.uniquesFound.add(item.unique!);
@@ -1736,6 +1796,7 @@ export class Run {
       scrolls: { ...this.scrolls },
       secrets: [...this.secrets],
       dpsLog: [...this.dpsLog],
+      highlights: [this.bestCombo, this.bestStreak, this.maxHit, this.maxHitSrc],
     };
   }
 
@@ -1769,6 +1830,7 @@ export class Run {
     run.mats = { ...run.mats, ...s.mats };
     run.secrets = new Set(s.secrets ?? []);
     run.dpsLog = s.dpsLog ?? [];
+    if (s.highlights) [run.bestCombo, run.bestStreak, run.maxHit, run.maxHitSrc] = s.highlights;
     for (const v of run.dmgBySource.values()) run.dmgTotal += v;
     run.dpsMark = run.dmgTotal;
     run.scrolls = { ...run.scrolls, ...s.scrolls };
@@ -1821,7 +1883,7 @@ function newEnemy(): Enemy {
     flash: 0, slowT: 0, slowF: 0, stunT: 0, shootT: 0, shootA: 0, age: 0, dead: false, elite: null, boss: false,
     scale: 1, dr: 0, regen: 0, extraRing: false, burstLeft: 0, burstT: 0, touchCd: 0, abilT: 0,
     burnT: 0, burnDps: 0, chill: 0, shockT: 0, poisonT: 0, poisonStacks: 0, poisonUnit: 0, dotT: 0, reactT: 0, brittle: 0, hitStamp: new Int32Array(SLOT_COUNT),
-    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0,
+    phase: 0, invuln: 0, actT: 0, dashT: 0, dvx: 0, dvy: 0, z: 0, hidden: false, tx: 0, ty: 0, nextAlt: 0, told: false,
   };
 }
 

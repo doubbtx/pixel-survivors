@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.33',
+    lines: [
+      "Bosses: a third attack in every phase (12 new attacks) and clearer warnings: the attack name appears above the boss, with an aiming line, a ring around the boss or a closing circle under you.",
+      "More power: critical hits crack, flash and show '!' (double crits '!!'), evolutions and fusions pause the game for a moment with a fanfare, elite kills and Lucky finds stand out, kill streaks call out Rampage, Massacre, Carnage and Annihilation.",
+      "Run summary: a new Highlights tab with the best weapon, peak DPS, biggest hit, longest combo and best kill streak, plus the hero records you broke.",
+    ],
+  },
+  {
     version: '0.32',
     lines: [
       "New hero Takezo, a swordsman with two swords inspired by Miyamoto Musashi. Q Helm Splitter: an overhead strike into a spot in front of you. E Thousand Cuts: slashes in a cone, more of them with attack speed. R Iai: dash, sheathe, and everything on the path is cut.",

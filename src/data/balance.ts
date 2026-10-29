@@ -433,6 +433,8 @@ export const BAL = {
    * „Soczystość”: zatrzymanie klatki (s) po zabiciu elity / bossa i po mocnym trafieniu gracza (ułamek maks. HP),
    * minimalny odstęp między zatrzymaniami; powyżej tylu wrogów liczby obrażeń tylko dla krytyków (czytelność późnej gry).
    */
+  /** Serie zabójstw (0.33): zabójstwa w odstępach najwyżej `gap` s; progi napisów i ich nazwy. Ewolucja: zatrzymanie `evolveFreeze` s. */
+  streak: { gap: 0.8, tiers: [25, 60, 120, 250], names: ['Rampage', 'Massacre', 'Carnage', 'Annihilation'], evolveFreeze: 0.35, critFxEvery: 4 },
   juice: { hitstopElite: 0.07, hitstopBoss: 0.3, hitstopHurt: 0.05, hurtBig: 0.15, hitstopGap: 0.4, numbersCritOnly: 350 },
   /** Limity efektów (wydajność przy masowych wybuchach): cząsteczki na krok, efekty wybuchów na krok i odległość scalania, obłoczki śmierci. */
   fx: { particlesPerStep: 160, sparksPerStep: 12, boomsPerStep: 6, boomMerge: 24, poofCap: 140 },

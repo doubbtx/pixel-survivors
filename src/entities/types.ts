@@ -98,6 +98,9 @@ export interface Enemy extends Poolable {
   /** Wysokość nad ziemią (skok Ropuchy; rysowanie wyżej), schowany pod ziemią (Topielec: poza siatką, bez trafień) i cel ataku. */
   z: number;
   hidden: boolean;
+  /** Boss: następny atak fazy (0-2) i czy jego zapowiedź (nazwa) już się pokazała. */
+  nextAlt: number;
+  told: boolean;
   tx: number;
   ty: number;
   /** Pozostałe salwy serii i czas do następnej. */

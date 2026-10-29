@@ -20,6 +20,10 @@ export interface HeroRecord {
   /** Ekspedycja: najwięcej ukończonych węzłów i liczba ukończonych wypraw. */
   bestExpedition: number;
   expeditionWins: number;
+  /** Rekordy z wyróżnień runu (0.33): szczytowy DPS, najdłuższe kombo, najdłuższa seria zabójstw. */
+  bestDps?: number;
+  bestCombo?: number;
+  bestStreak?: number;
 }
 
 /**

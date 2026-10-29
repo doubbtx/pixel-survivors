@@ -6,7 +6,7 @@
 export type SfxName =
   | 'shoot' | 'hit' | 'kill' | 'pickup' | 'levelup' | 'hurt' | 'dash'
   | 'ability' | 'explode' | 'boss' | 'select' | 'chest' | 'zap'
-  | 'burn' | 'freeze' | 'shock' | 'poison' | 'react' | 'hover';
+  | 'burn' | 'freeze' | 'shock' | 'poison' | 'react' | 'hover' | 'crit' | 'streak' | 'evolve';
 
 interface Tone {
   wave: OscillatorType | 'noise';
@@ -54,6 +54,20 @@ const TONES: Record<SfxName, Tone[]> = {
     { wave: 'noise', f0: 2500, f1: 400, dur: 0.12, vol: 0.07, gap: 0 },
   ],
   hover: [{ wave: 'triangle', f0: 880, f1: 990, dur: 0.025, vol: 0.03, gap: 40 }],
+  // Uczucie mocy (0.33): ostry, wysoki trzask krytyka, fanfara serii zabójstw i narastający akord ewolucji.
+  crit: [
+    { wave: 'square', f0: 1500, f1: 2400, dur: 0.035, vol: 0.05, gap: 70 },
+    { wave: 'noise', f0: 4000, f1: 1500, dur: 0.05, vol: 0.05, gap: 0 },
+  ],
+  streak: [
+    { wave: 'square', f0: 440, f1: 880, dur: 0.07, vol: 0.07, gap: 300 },
+    { wave: 'square', f0: 660, f1: 1320, dur: 0.12, vol: 0.07, gap: 0 },
+  ],
+  evolve: [
+    { wave: 'triangle', f0: 262, f1: 523, dur: 0.25, vol: 0.1, gap: 400 },
+    { wave: 'square', f0: 392, f1: 784, dur: 0.3, vol: 0.07, gap: 0 },
+    { wave: 'triangle', f0: 523, f1: 1046, dur: 0.45, vol: 0.09, gap: 0 },
+  ],
 };
 
 class Audio {

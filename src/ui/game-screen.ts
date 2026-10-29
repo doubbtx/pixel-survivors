@@ -2,7 +2,7 @@ import { W, H } from '../core/renderer';
 import { C, RAMP } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
-import { heroRecord } from '../core/save';
+import { heroRecord, type HeroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
 import { passiveIcon } from '../data/passives';
 import { CARD_BY_ID } from '../data/cards';
@@ -107,6 +107,8 @@ export class GameScreen implements Screen {
   private endMenu: Menu;
   /** Zakładka ekranu końca: obrażenia, wykres DPS, karta buildu. */
   private endPage = 0;
+  /** Rekordy bohatera sprzed runu (do „pobitych rekordów” w podsumowaniu). */
+  private recStart: HeroRecord;
 
   /** Samouczek (game/tutorial.ts): bez zapisu, rekordów, esencji i odblokowań; gracz nie może zginąć. */
   private readonly tut: Tutorial | null;
@@ -123,6 +125,7 @@ export class GameScreen implements Screen {
     this.run.skin = heroSkins(app.save.pacts.best[heroId] ?? 0).some((b) => b.id === skin) ? skin : '';
     this.run.lore = loreMuls(app.save.bestiary);
     this.bossSeen = this.run.bossKills;
+    this.recStart = { ...heroRecord(app.save, heroId) };
     this.hints = new Hints(app.save, () => app.persist());
     this.run.cardBans = new Set(app.save.collection.banned);
     this.run.knownCards = new Set(app.save.collection.seen);
@@ -226,6 +229,9 @@ export class GameScreen implements Screen {
     // Odznaki Paktu: najwyższy poziom Paktu, z którym bohater pokonał bossa.
     const pacts = this.app.save.pacts.best;
     if (run.bossKills > 0 && !run.easy) pacts[this.heroId] = Math.max(pacts[this.heroId] ?? 0, run.pactLevel);
+    rec.bestDps = Math.max(rec.bestDps ?? 0, ...run.dpsLog, 0);
+    rec.bestCombo = Math.max(rec.bestCombo ?? 0, run.bestCombo);
+    rec.bestStreak = Math.max(rec.bestStreak ?? 0, run.bestStreak);
     if (this.mode === 'endless') rec.bestEndless = Math.max(rec.bestEndless, run.totalTime);
     else rec.bestExpedition = Math.max(rec.bestExpedition, run.expedition!.cleared);
   }
@@ -639,7 +645,7 @@ export class GameScreen implements Screen {
       case 'end':
         this.endMenu.update(inp);
         if (inp.pressed('inventory') || inp.pressed('left') || inp.pressed('right')) {
-          this.endPage = (this.endPage + (inp.pressed('left') ? 2 : 1)) % 3;
+          this.endPage = (this.endPage + (inp.pressed('left') ? END_TABS.length - 1 : 1)) % END_TABS.length;
           sfx.play('select');
         }
         END_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.endTab(i))) this.endPage = i; });
@@ -828,7 +834,8 @@ export class GameScreen implements Screen {
 
   /** Prostokąt zakładki `i` ekranu końca (rysowanie i kliknięcie z jednego miejsca). */
   private endTab(i: number): [number, number, number, number] {
-    return [END_X + i * ((END_W + 4) / 3), this.endY - 17, (END_W - 8) / 3, 14];
+    const n = END_TABS.length;
+    return [END_X + i * ((END_W + 4) / n), this.endY - 17, (END_W + 4) / n - 4, 14];
   }
 
   private renderEnd(): void {
@@ -875,10 +882,57 @@ export class GameScreen implements Screen {
       button(r, ...this.endTab(i), t, { active: i === this.endPage, accent: C.gold });
     });
     panel(r, END_X, this.endY, END_W, this.endH);
-    if (this.endPage === 0) this.renderDamage();
-    else if (this.endPage === 1) this.renderDpsGraph();
+    if (this.endPage === 0) this.renderHighlights();
+    else if (this.endPage === 1) this.renderDamage();
+    else if (this.endPage === 2) this.renderDpsGraph();
     else this.renderBuild();
     this.endMenu.render(r);
+  }
+
+  /**
+   * Ekran końca, wyróżnienia (0.33): najlepsza broń, szczytowy DPS, najmocniejsze trafienie, najdłuższe kombo i seria zabójstw
+   * (złota plakietka „Record!”, gdy pobity), a pod spodem lista rekordów bohatera pobitych w tym runie.
+   */
+  private renderHighlights(): void {
+    const r = this.app.r, g = r.g, run = this.run, before = this.recStart, ex = run.expedition;
+    const all = [...run.dmgBySource.entries()].sort((a, b) => b[1] - a[1]);
+    const total = all.reduce((sum, x) => sum + x[1], 0) || 1, top = all[0];
+    const topW = top ? run.weapons.find((w) => w.def.name === top[0]) : undefined;
+    const peak = Math.max(0, ...run.dpsLog);
+    const cards: { title: string; value: string; note: string; icon?: string; rec: boolean }[] = [
+      { title: 'Best weapon', value: top ? top[0] : '-', note: top ? `${Math.round((100 * top[1]) / total)}% of damage` : '', icon: topW?.def.icon, rec: false },
+      { title: 'Peak DPS', value: fmt(peak), note: `average ${fmt(total / Math.max(1, run.totalTime))}`, icon: 'cd_tempest', rec: peak > (before.bestDps ?? 0) && peak > 0 },
+      { title: 'Biggest hit', value: fmt(run.maxHit), note: run.maxHitSrc, icon: 'pi_crit', rec: false },
+      { title: 'Longest combo', value: String(run.bestCombo), note: 'kills, no hits taken', icon: 'pi_fury', rec: run.bestCombo > (before.bestCombo ?? 0) && run.bestCombo > 0 },
+      { title: 'Best kill streak', value: String(run.bestStreak), note: 'quick kills', icon: 'cd_explode', rec: run.bestStreak > (before.bestStreak ?? 0) && run.bestStreak > 0 },
+    ];
+    const cw = (END_W - 24 - 4 * 4) / 5, ch = 48, y = this.endY + 6;
+    cards.forEach((c, i) => {
+      const x = END_X + 12 + i * (cw + 4);
+      r.withAlpha(0.85, () => r.roundRect(x, y, cw, ch, 3, C.navy, C.black));
+      r.roundFrame(x + 0.5, y + 0.5, cw - 1, ch - 1, 3, c.rec ? C.gold : C.slate, c.rec ? 1 : 0.75);
+      drawText(g, c.title, x + cw / 2, y + 3, C.lgray, { align: 'center', scale: 0.75 });
+      if (c.icon) drawSprite(g, c.icon, x + cw / 2, y + 18);
+      drawText(g, c.value, x + cw / 2, y + 27, c.rec ? C.yellow : C.white, { align: 'center', shadow: C.black, scale: textWidth(c.value) > cw - 6 ? 0.75 : 1 });
+      drawText(g, c.note, x + cw / 2, y + 38, C.dgray, { align: 'center', scale: 0.75 });
+      if (c.rec && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: 0.75 });
+    });
+    // Pobite rekordy bohatera (porównanie z zapisem sprzed runu).
+    const broke: string[] = [];
+    if (run.totalTime > before.bestTime && before.bestTime > 0) broke.push(`Longest run: ${fmtTime(run.totalTime)}`);
+    if (run.kills > before.bestKills && before.bestKills > 0) broke.push(`Most kills: ${fmt(run.kills)}`);
+    if (run.level > before.bestLevel && before.bestLevel > 0) broke.push(`Highest level: ${run.level}`);
+    if (this.mode === 'endless' && run.totalTime > before.bestEndless && before.bestEndless > 0) broke.push(`Endless: ${fmtTime(run.totalTime)}`);
+    if (ex && ex.cleared > before.bestExpedition && before.bestExpedition > 0) broke.push(`Expedition: ${ex.cleared} maps`);
+    for (const c of cards) if (c.rec && (c.title === 'Peak DPS' ? (before.bestDps ?? 0) : c.title === 'Longest combo' ? (before.bestCombo ?? 0) : (before.bestStreak ?? 0)) > 0) broke.push(`${c.title}: ${c.value}`);
+    const ly = y + ch + 5, room = Math.max(0, Math.floor((this.endY + this.endH - ly - 13) / 10)) * 2;
+    drawText(g, broke.length ? 'Records broken' : 'No records broken this time', END_X + 12, ly, broke.length ? C.gold : C.dgray);
+    if (broke.length > room) broke.splice(room - 1, broke.length, `+${broke.length - room + 1} more`);
+    broke.forEach((t, i) => {
+      const bx = END_X + 16 + (i % 2) * (END_W / 2 - 10), by = ly + 11 + Math.floor(i / 2) * 10;
+      drawText(g, '-', bx, by, C.gold);
+      drawText(g, t, bx + 6, by, C.yellow);
+    });
   }
 
   /** Ekran końca: obrażenia per źródło (suma, udział i DPS, pasek udziału). */
@@ -961,5 +1015,5 @@ export class GameScreen implements Screen {
 }
 
 /** Zakładki ekranu końca runu i panel pod nimi. */
-const END_TABS = ['Obrażenia', 'Wykres DPS', 'Build'];
+const END_TABS = ['Highlights', 'Obrażenia', 'Wykres DPS', 'Build'];
 const END_X = 12, END_W = W - 24, END_BOTTOM = 210;

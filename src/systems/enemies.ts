@@ -78,9 +78,11 @@ function updateBoss(run: Run, e: Enemy, dt: number, dx: number, dy: number, dist
   const frac = e.hp / e.maxHp;
   const phase = frac > 0.66 ? 0 : frac > 0.33 ? 1 : 2;
   // Serce Pustki (sekretny biom): w każdej fazie walczy jak inny boss.
-  const style = run.levelInfo.biome === VOID_BIOME ? VOID_STYLES[phase] : run.levelInfo.biome % BOSS_STYLES.length;
+  const style = bossStyle(run, phase);
   if (phase !== e.phase) {
     e.phase = phase;
+    e.nextAlt = 0;
+    e.told = false;
     e.invuln = 1.2;
     e.dashT = 0;
     e.actT = 2;
@@ -113,9 +115,41 @@ function updateBoss(run: Run, e: Enemy, dt: number, dx: number, dy: number, dist
   }
   e.actT -= dt;
   if (e.actT > 0 && e.actT < 0.5 && run.blink(6, 3)) e.flash = 2; // zapowiedź ataku
+  // Nazwa nadchodzącego ataku nad bossem (0.33), razem z zapowiedzią w render.ts (linia, pierścień albo krąg pod graczem).
+  if (e.actT > 0 && e.actT < BOSS_TELL && !e.told) {
+    e.told = true;
+    run.popText(e.x, e.y - e.radius * e.scale - 10, BOSS_NAMES[style][phase][e.nextAlt], C.yellow);
+  }
   if (e.actT > 0) return;
-  const alt = (e.phase + Math.floor(e.age / 3)) % 2; // na zmianę dwa ataki fazy
+  // Trzy ataki fazy po kolei (0.33: trzeci atak w każdej fazie).
+  const alt = e.nextAlt;
   e.actT = BOSS_STYLES[style](run, e, phase, alt, dmg, dx, dy, dist);
+  e.nextAlt = (alt + 1) % 3;
+  e.told = false;
+}
+
+/** Czas zapowiedzi ataku bossa (nazwa i znak w render.ts). */
+export const BOSS_TELL = 0.7;
+
+/** Nazwy ataków bossów [styl][faza][atak] (po angielsku, polski w core/i18n-pl.ts). */
+const BOSS_NAMES: string[][][] = [
+  [['Buckshot', 'Gap Rings', 'Cross Fire'], ['Blossom', 'Stream', 'Abyss Bloom'], ['Minefield', 'Snake Waves', 'Final Spiral']],
+  [['Acid Rain', 'Slime Brood', 'Spore Ring'], ['Swamp Flowers', 'Bog Nets', 'Bog Rain'], ['Toxic Field', 'Tide', 'Hydra']],
+  [['Fire Rings', 'Burning Charge', 'Flame Fan'], ['Ember Rain', 'Double Buckshot', 'Burning Circle'], ['Inferno', 'Stampede', 'Meteor Barrage']],
+  [['Void Blink', 'Void Stream', 'Void Lance'], ['Spiral', 'Twin Gaps', 'Mirror Blink'], ['Void Gaze', 'Phase Shift', 'Collapse']],
+];
+
+/** Rodzaj zapowiedzi ataku [styl][faza][atak]: 'aim' linia w gracza, 'ring' pierścień wokół bossa, 'player' krąg pod graczem, '' sama nazwa. */
+export const BOSS_TELLS: string[][][] = [
+  [['aim', 'aim', 'ring'], ['ring', 'aim', 'aim'], ['ring', 'aim', 'ring']],
+  [['aim', 'ring', 'ring'], ['ring', 'player', 'player'], ['ring', 'aim', 'aim']],
+  [['aim', 'aim', 'aim'], ['player', 'aim', 'player'], ['player', 'aim', 'player']],
+  [['ring', 'aim', 'aim'], ['ring', 'aim', 'ring'], ['aim', 'aim', 'player']],
+];
+
+/** Styl bossa (biom; Serce Pustki zmienia styl z fazą) — wspólne dla logiki i zapowiedzi w render.ts. */
+export function bossStyle(run: Run, phase: number): number {
+  return run.levelInfo.biome === VOID_BIOME ? VOID_STYLES[phase] : run.levelInfo.biome % BOSS_STYLES.length;
 }
 
 type BossAttack = (run: Run, e: Enemy, phase: number, alt: number, dmg: number, dx: number, dy: number, dist: number) => number;
@@ -152,17 +186,20 @@ const BOSS_STYLES: BossAttack[] = [
   (run, e, phase, alt, dmg, dx, dy, dist) => {
     const aim = () => aimAt(run, e);
     if (phase === 0) {
+      if (alt === 2) { sequence(run, e, 6, 0.12, (k) => { for (let q = 0; q < 4; q++) fireVolley(run, e.x, e.y, { shape: 'fan', count: 2, speed: 90, spread: 0.1, sprite: 'eb_pink' }, k * 0.12 + (q * TAU) / 4, dmg); }); return 2.8; }
       if (alt === 0) fireVolley(run, e.x, e.y, B_SHOTGUN, aim(), dmg);
       else sequence(run, e, 2, 0.45, () => fireVolley(run, e.x, e.y, B_GAP, aim() + rng.range(-1.2, 1.2), dmg));
       return 2.8;
     }
     if (phase === 1) {
+      if (alt === 2) { sequence(run, e, 3, 0.35, (k) => fireVolley(run, e.x, e.y, { ...B_GAP, count: 24, speed: 55 + k * 12, sprite: 'eb_pink' }, aim() + (k % 2 ? 0.5 : -0.5), dmg)); return 3; }
       if (alt === 0) sequence(run, e, 2, 0.45, (k) => fireVolley(run, e.x, e.y, B_FLOWER, k * 0.3, dmg));
       else sequence(run, e, 5, 0.12, () => fireVolley(run, e.x, e.y, B_STREAM, aim(), dmg));
       if (rng.chance(0.35)) bossCharge(e, dx, dy, dist);
       else if (rng.chance(0.3)) for (let i = 0; i < 6; i++) spawnEnemy(run, 'slime', e.x + Math.cos((i * TAU) / 6) * 20, e.y + Math.sin((i * TAU) / 6) * 20);
       return 3.2;
     }
+    if (alt === 2) { sequence(run, e, 16, 0.06, (k) => { fireVolley(run, e.x, e.y, { shape: 'ring', count: 2, speed: 80, sprite: 'eb_pink' }, k * 0.33, dmg); fireVolley(run, e.x, e.y, { shape: 'ring', count: 2, speed: 80, sprite: 'eb_big' }, -k * 0.33, dmg); }); return 2.6; }
     if (alt === 0) {
       fireVolley(run, e.x, e.y, B_MINEFIELD, rng.range(0, TAU), dmg);
       sequence(run, e, 2, 0.9, (k) => { if (k) fireVolley(run, e.x, e.y, B_GAP, aim(), dmg); });
@@ -175,6 +212,7 @@ const BOSS_STYLES: BossAttack[] = [
     const aim = () => aimAt(run, e);
     const acid: Volley = { shape: 'fan', count: 6 + phase, speed: 82, spread: 0.2, acc: -20, minV: 34, sprite: 'eb_cyan' };
     if (phase === 0) {
+      if (alt === 2) { fireVolley(run, e.x, e.y, { shape: 'ring', count: 20, speed: 18, acc: 70, minV: 18, sprite: 'eb_cyan' }, rng.range(0, TAU), dmg); return 2.3; }
       if (alt === 0) sequence(run, e, 4, 0.3, (k) => fireVolley(run, e.x, e.y, acid, k % 2 ? leadAim(run, e, 82) : aim() + rng.range(-0.3, 0.3), dmg));
       else {
         for (let i = 0; i < 8; i++) spawnEnemy(run, 'slime', e.x + Math.cos((i * TAU) / 8) * 26, e.y + Math.sin((i * TAU) / 8) * 26);
@@ -183,6 +221,11 @@ const BOSS_STYLES: BossAttack[] = [
       return 2.3;
     }
     if (phase === 1) {
+      if (alt === 2) {
+        const p = run.player, M = BAL.biomeEnemies;
+        for (let i = 0; i < 7; i++) { const a = rng.range(0, TAU), d = i ? rng.range(20, 80) : 0; run.strikes.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d, t: 0.9 + i * 0.12, foe: dmg * 1.4, seed: true, r: M.mortarR }); }
+        return 2.5;
+      }
       if (alt === 0) sequence(run, e, 3, 0.35, (k) => fireVolley(run, e.x, e.y, { ...B_FLOWER, count: 14 }, k * 0.25, dmg));
       else {
         // Bagno: sieci pod graczem i wokół niego (spowalniają), w tym czasie kwas w miejsce, gdzie gracz będzie.
@@ -192,6 +235,7 @@ const BOSS_STYLES: BossAttack[] = [
       }
       return 2.5;
     }
+    if (alt === 2) { const a = aim(); sequence(run, e, 2, 0.5, () => { for (const o of [-0.7, 0, 0.7]) fireVolley(run, e.x, e.y, { ...B_WAVE, sprite: 'eb_cyan' }, a + o, dmg); }); return 2.1; }
     if (alt === 0) {
       fireVolley(run, e.x, e.y, { ...B_MINEFIELD, sprite: 'eb_cyan', count: 26 }, rng.range(0, TAU), dmg);
       sequence(run, e, 4, 0.4, (k) => fireVolley(run, e.x, e.y, acid, k % 2 ? leadAim(run, e, 82) : aim(), dmg));
@@ -206,15 +250,23 @@ const BOSS_STYLES: BossAttack[] = [
     const aim = () => aimAt(run, e);
     const ring: Volley = { shape: 'gapRing', count: 26, gap: 4, speed: 70, sprite: 'eb_orange' };
     if (phase === 0) {
+      if (alt === 2) { const a = aim(); sequence(run, e, 4, 0.18, (k) => fireVolley(run, e.x, e.y, { ...B_SHOTGUN, sprite: 'eb_orange' }, a - 0.6 + k * 0.4, dmg)); return 2.8; }
       if (alt === 0) sequence(run, e, 2, 0.5, () => fireVolley(run, e.x, e.y, ring, aim() + rng.range(-1, 1), dmg));
       else { bossCharge(e, dx, dy, dist, 210); fireVolley(run, e.x, e.y, { ...B_SHOTGUN, sprite: 'eb_orange' }, aim(), dmg); }
       return 2.8;
     }
     if (phase === 1) {
+      if (alt === 2) {
+        const p = run.player;
+        for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; run.strikes.push({ x: p.x + Math.cos(a) * 55, y: p.y + Math.sin(a) * 55, t: 0.9, foe: dmg * 1.5 }); }
+        run.strikes.push({ x: p.x, y: p.y, t: 1.6, foe: dmg * 1.5 });
+        return 3;
+      }
       if (alt === 0) markStrikes(run, 6, dmg * 1.5);
       else sequence(run, e, 2, 0.3, () => fireVolley(run, e.x, e.y, { ...B_SHOTGUN, count: 9, sprite: 'eb_orange' }, aim(), dmg));
       return 3;
     }
+    if (alt === 2) { markStrikes(run, 12, dmg * 1.5); bossCharge(e, dx, dy, dist, 220); return 2.5; }
     if (alt === 0) { markStrikes(run, 9, dmg * 1.5); fireVolley(run, e.x, e.y, ring, aim(), dmg); }
     else { bossCharge(e, dx, dy, dist, 240); sequence(run, e, 2, 0.6, () => fireVolley(run, e.x, e.y, { ...B_MINEFIELD, count: 22 }, rng.range(0, TAU), dmg)); }
     return 2.5;
@@ -223,14 +275,21 @@ const BOSS_STYLES: BossAttack[] = [
   (run, e, phase, alt, dmg) => {
     const aim = () => aimAt(run, e);
     if (phase === 0) {
+      if (alt === 2) { sequence(run, e, 5, 0.12, () => fireVolley(run, e.x, e.y, { shape: 'fan', count: 1, speed: 210, sprite: 'eb_big' }, leadAim(run, e, 210), dmg * 1.3)); return 2.8; }
       if (alt === 0) { bossBlink(run, e); fireVolley(run, e.x, e.y, { ...B_GAP, sprite: 'eb_blue' }, aim(), dmg); }
       else sequence(run, e, 8, 0.1, () => fireVolley(run, e.x, e.y, B_STREAM, aim(), dmg));
       return 2.8;
     }
     if (phase === 1) {
+      if (alt === 2) { sequence(run, e, 2, 0.6, () => { bossBlink(run, e); fireVolley(run, e.x, e.y, { shape: 'ring', count: 18, speed: 60, sprite: 'eb_blue' }, rng.range(0, TAU), dmg); }); return 3; }
       if (alt === 0) sequence(run, e, 10, 0.08, (k) => fireVolley(run, e.x, e.y, { ...B_SPIN(4), sprite: 'eb_blue', speed: 70 }, k * 0.2, dmg));
       else sequence(run, e, 2, 0.5, () => fireVolley(run, e.x, e.y, { ...B_GAP, count: 28, sprite: 'eb_blue' }, aim(), dmg));
       return 3;
+    }
+    if (alt === 2) {
+      const p = run.player;
+      for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU; fireVolley(run, p.x + Math.cos(a) * 120, p.y + Math.sin(a) * 120, { shape: 'fan', count: 1, speed: 55, sprite: 'eb_blue' }, a + Math.PI, dmg); }
+      return 2.4;
     }
     // Wzrok pustki: strumień obracający się wokół bossa.
     const base = aim() - 1.2;

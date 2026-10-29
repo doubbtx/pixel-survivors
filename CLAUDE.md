@@ -509,7 +509,7 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   - pełne sterowanie padem we wszystkich menu (Steam Deck);
   - zostają: kształty żywiołów, wyłączanie wstrząsów ekranu, autocelowanie.
 
-### Faza 4: różnorodność i uczucie mocy (v0.30–0.33) — v0.30 GOTOWE (wrogowie i minibossowie), v0.31 GOTOWE (ewolucje), v0.32 GOTOWE (bohater Takezo), v0.33 w planie (ataki bossów, uczucie mocy, podsumowanie)
+### Faza 4: różnorodność i uczucie mocy (v0.30–0.33) — v0.30 GOTOWE (wrogowie i minibossowie), v0.31 GOTOWE (ewolucje), v0.32 GOTOWE (bohater Takezo), v0.33 GOTOWE (ataki bossów, uczucie mocy, podsumowanie) — FAZA 4 ZAKOŃCZONA
 - 0.31.0 — ewolucje (prośba gracza): `WeaponDef.evolves` (lista ścieżek; pierwsza = podstawowa), `ALT_EVOS` w data/weapons.ts
   (wariant = kopia ewolucji podstawowej z innymi statystykami / `hybrid`, ikona `ic_<id>` = ikona ewolucji podstawowej
   przemalowana `ramp`, żywioł jak broń bazowa). Każda pasywka ewoluuje ≥ 2 bronie (`passiveEvolves(id, hero?)` w
@@ -535,6 +535,12 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   gfx/hero-icons.ts (`katana`, `slashArc`), sprite `takezo` w gfx/actors.ts. Karty h_t_*, drzewko takezo (Earth/Water/
   Fire/Void), odblokowanie 'hero:takezo' (rekordy; `grantUnlocks` także przy wczytaniu w main.ts). Lista bohaterów:
   ROW_H 27. Tłumaczenie: `toPolish` dzieli polskie szablony z angielskimi wstawkami; ui/meta.ts tłumaczy kawałki osobno.
+- 0.33.0 — bossowie: trzeci atak w każdej fazie (`alt === 2` w BOSS_STYLES), ataki po kolei (`Enemy.nextAlt`), nazwa nad
+  bossem `BOSS_TELL` s przed atakiem (`BOSS_NAMES`, `Enemy.told`), zapowiedź wg `BOSS_TELLS` ('aim' / 'ring' / 'player')
+  w render.ts (`bossStyle`). Uczucie mocy: `sfx` 'crit' / 'streak' / 'evolve', efekt krytyka co `BAL.streak.critFxEvery`
+  kroków, liczby z '!', `Run.celebrate` (ewolucje, fuzje, ewolucje pasywek), seria zabójstw `onStreakKill` (BAL.streak),
+  elity i Szczęśliwy traf. Podsumowanie: zakładka Highlights (`renderHighlights`), `Run.bestCombo/bestStreak/maxHit`
+  (w snapshocie `highlights`), rekordy `HeroRecord.bestDps/bestCombo/bestStreak`, porównanie z `recStart`.
 - Minibossowie biomów: `boarking`, `toadqueen`, `sandtyrant`, `shatterknight`, `voidprism` (`BIOME_MINIBOSS` wg biomu),
   zachowanie 'warden' z własną listą `MINIBOSS_ATTACKS[id]` (4 ataki; w szale drugi atak `(pick + 2) % n`). Skok Matrony
   w `updateWarden` (łuk `miniLeapH`, pierścień przy lądowaniu), zapowiedź szarży/skoku w `drawTell` case 'warden' (także
