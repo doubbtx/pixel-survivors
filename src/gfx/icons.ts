@@ -65,9 +65,11 @@ function shield(p: Painter, ramp: readonly number[], emblem: number): void {
   p.line(8, 4, 8, 11, emblem).line(5, 6, 11, 6, emblem);
 }
 
+/** Skrzydło: pełna sylwetka od barku (prawa góra) do końca lotek (lewo), falista tylna krawędź, rysy między lotkami, jasna krawędź natarcia. */
 function wing(p: Painter, ramp: readonly number[]): void {
-  p.polyShade([[1.5, 11], [7, 3], [14.5, 1.5], [12, 5], [14, 6.5], [10, 9], [12, 10.5], [6, 13]], ramp);
-  p.line(4, 10, 10, 5, ramp[1]).line(6, 11, 11, 8, ramp[1]).line(7, 4, 13, 2, C.white);
+  p.polyShade([[14.5, 1], [10, 1.8], [5.5, 4.5], [1, 9], [3.2, 9.6], [1.8, 12.5], [5, 11.5], [4.8, 14.5], [7.8, 12], [9, 14], [10.8, 10.2], [12.8, 11], [13.6, 6.5], [15, 4]], ramp);
+  for (const [x0, y0, x1, y1] of [[11, 4.5, 3.2, 9.6], [11.8, 6, 5, 11.5], [12.4, 7.5, 7.8, 12], [13, 8.5, 10.8, 10.2]] as const) p.thin(x0, y0, x1, y1, ramp[1]);
+  p.thin(14, 1.3, 5.5, 4.7, C.white).thin(5.5, 4.7, 1.5, 8.8, ramp[3]);
 }
 
 function flame(p: Painter, cx: number, cy: number, s: number): void {
@@ -97,7 +99,12 @@ export const ICON_FNS: Record<string, IconFn> = {
   ...CARD_ICONS_GFX,
   ...HERO_ICONS,
   // ===================== bronie =====================
-  ic_bolt: (p) => { p.sphere(9.5, 6.5, 4, 4, RAMP.blue).px(8, 5, C.white).px(4, 11, C.blue).px(2, 13, C.cyan).px(6, 10, C.cyan); },
+  ic_bolt: (p) => {
+    // Magiczny pocisk: świecąca kula z ogonem komety i iskrami.
+    p.stroke(2, 14, 6, 10, C.dblue).stroke(3, 13.5, 7, 9.5, C.blue).thin(2.5, 12.5, 7.5, 8.5, C.cyan);
+    p.sphere(10, 6, 4.4, 4.4, RAMP.blue).sphere(9.2, 5.2, 1.8, 1.8, [C.cyan, C.white, C.white]);
+    p.px(13.5, 1.5, C.cyan).px(3, 8, C.cyan).px(14, 10, C.white);
+  },
   ic_bolt_evo: (p) => {
     p.poly([[9, 1], [10.6, 5.5], [15, 5.8], [11.6, 8.8], [12.8, 13.5], [9, 10.8], [5.2, 13.5], [6.4, 8.8], [3, 5.8], [7.4, 5.5]], C.gold);
     p.poly([[9, 3.5], [10, 6.5], [12.5, 6.8], [10.5, 8.6], [11.2, 11.3], [9, 9.6], [6.8, 11.3], [7.5, 8.6], [5.5, 6.8], [8, 6.5]], C.yellow);
@@ -112,9 +119,11 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.line(7, 4, 12, 4, C.cyan).line(8, 12, 13, 12, C.cyan).px(13, 5, C.white).px(14, 11, C.white);
   },
   ic_staff: (p) => {
-    p.line(3, 14, 10, 7, C.brown).line(4, 14, 11, 7, C.dbrown);
-    p.ring(11.5, 5, 3, 1, C.gold);
-    flame(p, 11.5, 5, 0.45);
+    // Kostur ognia: drzewce ze słojami, złote ramię i duża kula płomienia.
+    p.line(2, 15, 9, 8, C.dbrown).thin(2.5, 14, 9, 7.5, C.clay);
+    p.ring(11, 5.5, 3.8, 1, C.gold).thin(8.5, 3, 10, 2, C.yellow);
+    p.sphere(11, 5.5, 3, 3, RAMP.fire).sphere(10.4, 4.8, 1.4, 1.4, [C.gold, C.yellow, C.white]);
+    p.px(14.5, 1.5, C.orange).px(15, 4, C.gold);
   },
   ic_staff_evo: (p) => {
     p.line(2, 14, 9, 7, C.brown).line(3, 14, 10, 7, C.dbrown);
@@ -122,9 +131,11 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.sphere(11, 5, 3.5, 3.5, [C.orange, C.gold, C.yellow, C.white]).px(10, 4, C.white);
   },
   ic_souls: (p) => {
-    for (const [x, y, s] of [[5, 10, 3], [11, 5, 2.6], [12, 12, 2]] as const) {
-      p.sphere(x, y, s, s, [C.plum, C.pink, C.salmon, C.white]).px(x - 1, y - 1, C.white);
-      p.px(x + s, y + 1, C.lime);
+    // Dusze: trzy ogniki z falującymi ogonami i czarnymi oczami.
+    for (const [x, y, sz] of [[5, 6, 3], [11, 5, 2.4], [9.5, 11.5, 2.6]] as const) {
+      p.stroke(x, y + sz * 0.6, x - sz * 0.6, y + sz * 1.7, C.plum).stroke(x - sz * 0.6, y + sz * 1.7, x + sz * 0.2, y + sz * 2.4, C.pink);
+      p.sphere(x, y, sz, sz * 1.05, [C.plum, C.pink, C.salmon, C.white]);
+      p.px(x - sz * 0.4, y - 0.2, C.black).px(x + sz * 0.3, y - 0.2, C.black);
     }
   },
   ic_souls_evo: (p) => {
@@ -136,10 +147,12 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.sphere(8, 8, 2.4, 2.4, RAMP.bone).px(7, 8, C.black).px(9, 8, C.black);
   },
   ic_orbit: (p) => {
-    p.sphere(8, 8, 2.5, 2.5, RAMP.blue);
-    for (let k = 0; k < 3; k++) {
-      const a = (k * TAU) / 3 - 0.5, x = 8 + Math.cos(a) * 5.5, y = 8 + Math.sin(a) * 5.5;
-      p.poly([[x, y - 2.5], [x + 2, y], [x, y + 2.5], [x - 2, y]], C.lgray).px(Math.round(x) - 1, Math.round(y) - 1, C.white);
+    // Orbita: świecący rdzeń, eliptyczny tor i trzy kryształy na nim (jasna ściana od światła).
+    for (let a = 0; a < TAU; a += 0.06) p.spot(8 + Math.cos(a) * 6.3, 8 + Math.sin(a) * 3.2, Math.sin(a) > 0 ? C.lavender : C.slate);
+    p.sphere(8, 8, 2.6, 2.6, RAMP.blue).px(7.3, 7.3, C.white);
+    for (const a of [-2.2, 0.3, 2.3]) {
+      const x = 8 + Math.cos(a) * 6.3, y = 8 + Math.sin(a) * 3.2;
+      p.poly([[x, y - 2.8], [x + 1.8, y], [x, y + 2.8], [x - 1.8, y]], C.cyan).poly([[x, y - 2.8], [x, y + 2.8], [x - 1.8, y]], C.white).px(x + 0.5, y + 0.5, C.blue);
     }
   },
   ic_orbit_evo: (p) => {
@@ -170,7 +183,12 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.poly([[1, 0.5], [7, 6], [5, 8]], C.red).poly([[5, 0.5], [10, 6], [8, 7]], C.orange).poly([[0.5, 5], [6, 10], [4, 11]], C.orange);
     p.sphere(10, 10, 4.5, 4.5, RAMP.red).px(9, 8, C.salmon).px(11, 11, C.ddbrown);
   },
-  ic_boomerang: (p) => { p.polyShade([[1.5, 4], [7.5, 1.5], [14.5, 5], [12.5, 8], [7.5, 5], [3.5, 8.5]], RAMP.wood); p.line(3, 4, 7, 2, C.gold); },
+  ic_boomerang: (p) => {
+    // Bumerang: wygięte ramiona z jaśniejszą krawędzią, słoje drewna i łuk ruchu.
+    p.polyShade([[1.5, 9], [7.5, 2.5], [9.5, 3.5], [5, 9], [9.5, 13], [14.5, 12], [13, 14.5], [7.5, 15], [3.5, 12]], RAMP.wood);
+    p.thin(2.5, 9, 7.5, 3.5, C.tan).thin(5, 10, 9, 13.8, C.clay).spot(6, 7, C.dbrown).spot(8.5, 12.5, C.dbrown);
+    for (let a = -1.4; a < 0.2; a += 0.14) p.spot(10 + Math.cos(a) * 5.5, 8 + Math.sin(a) * 5.5, C.lgray);
+  },
   ic_boomer_evo: (p) => {
     for (let k = 0; k < 3; k++) {
       const a = (k * TAU) / 3, c = Math.cos(a), s = Math.sin(a);
@@ -179,14 +197,25 @@ export const ICON_FNS: Record<string, IconFn> = {
     }
     p.sphere(8, 8, 1.8, 1.8, RAMP.stone);
   },
-  ic_laser: (p) => { p.line(1, 3, 13, 13, C.pink).line(2, 2, 14, 12, C.pink).line(1, 2, 14, 13, C.white).sphere(2.5, 2.5, 2, 2, RAMP.purple); },
+  ic_laser: (p) => {
+    // Laser: fioletowy kryształ-emiter i szeroka wiązka z jasnym rdzeniem, iskry na końcu.
+    p.line(4.5, 3.5, 15, 14, C.plum).line(3.5, 4.5, 14, 15, C.plum).line(4, 4, 14.5, 14.5, C.pink).thin(4.3, 4.3, 14.5, 14.5, C.white).thin(4.8, 4.3, 15, 14.5, C.white);
+    p.polyShade([[3, 0.5], [6.5, 3.5], [3.5, 6.5], [0.5, 3]], RAMP.purple).px(2.5, 2.5, C.white);
+    p.px(15, 12, C.white).px(12, 15, C.pink).px(15, 15, C.salmon);
+  },
   ic_laser_evo: (p) => {
     p.polyShade([[8, 2], [13, 12], [3, 12]], [C.slate, C.lavender, C.lgray, C.white]);
     p.line(13, 9, 15, 7, C.red).line(13, 10, 15, 10, C.yellow).line(13, 11, 15, 13, C.cyan).line(0, 8, 5, 8, C.white);
   },
   ic_mines: (p) => {
-    p.px(8, 1, C.lavender).px(8, 14, C.lavender).px(1, 8, C.lavender).px(14, 8, C.lavender).px(3, 3, C.lavender).px(13, 13, C.lavender);
-    p.sphere(8, 8, 5, 5, RAMP.night).rect(7, 7, 2, 2, C.red).px(7, 7, C.salmon);
+    // Mina: stalowa kula z kolcami, nity i czerwona dioda.
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * TAU + 0.2;
+      p.stroke(8 + Math.cos(a) * 4, 8.5 + Math.sin(a) * 4, 8 + Math.cos(a) * 6.8, 8.5 + Math.sin(a) * 6.8, k < 4 ? C.dgray : C.lavender);
+    }
+    p.sphere(8, 8.5, 5, 5, RAMP.night).thin(4.5, 7, 7, 4.5, C.dgray);
+    p.sphere(8, 8.5, 1.6, 1.6, [C.dred, C.red, C.salmon, C.white]);
+    p.spot(5.5, 10.5, C.slate).spot(10.5, 10.5, C.slate);
   },
   ic_mines_evo: (p) => {
     p.polyShade([[1, 14.5], [6, 5], [10, 5], [15, 14.5]], RAMP.wood);
@@ -325,12 +354,20 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.sphere(6.5, 6.5, 4, 4, RAMP.blue).ring(6.5, 6.5, 5.5, 1.6, C.gold).px(5, 4, C.white).px(4, 5, C.cyan);
   },
   pi_dup: (p) => {
-    p.sphere(5.5, 6, 3.6, 3.6, RAMP.purple).sphere(10.5, 10, 3.6, 3.6, RAMP.blue);
-    p.px(4, 5, C.white).px(9, 9, C.white).line(8, 4, 12, 4, C.lgray).line(12, 4, 12, 6, C.lgray);
+    // Duplikator: pocisk i jego kopia (półprzezroczysta poświata), strzałka podwojenia.
+    p.sphere(10.5, 10, 4, 4, RAMP.blue).sphere(9.6, 9, 1.6, 1.6, [C.cyan, C.white, C.white]);
+    p.sphere(5.5, 5.5, 3.6, 3.6, [C.navy, C.dblue, C.blue, C.cyan]).px(4.6, 4.6, C.white);
+    p.stroke(6, 10.5, 6, 14, C.lime).stroke(4.5, 12.2, 7.5, 12.2, C.lime);
   },
   pi_magnet: (p) => {
-    p.rect(2, 4, 4, 7, C.red).rect(10, 4, 4, 7, C.red).rect(2, 9, 12, 4, C.red).rect(3, 5, 1, 7, C.salmon).rect(4, 11, 8, 1, C.salmon);
-    p.rect(2, 2, 4, 2, C.lgray).rect(10, 2, 4, 2, C.lgray).px(2, 2, C.white).px(10, 2, C.white);
+    // Magnes podkowiasty: cieniowane czerwone ramiona, stalowe końcówki, linie pola i przyciągany kryształ.
+    for (let a = 0; a <= Math.PI; a += 0.08) {
+      p.spot(8 + Math.cos(a) * 5, 8 + Math.sin(a) * 5, a < 1.4 ? C.salmon : C.red).spot(8 + Math.cos(a) * 3.6, 8 + Math.sin(a) * 3.6, C.dred);
+    }
+    p.block(2.2, 4, 2.8, 4, RAMP.red).block(11, 4, 2.8, 4, RAMP.red);
+    p.block(2.2, 1.5, 2.8, 2.6, RAMP.stone).block(11, 1.5, 2.8, 2.6, RAMP.stone);
+    p.thin(6, 1, 6.5, 3.5, C.cyan).thin(10, 1, 9.5, 3.5, C.cyan);
+    p.poly([[8, 1], [9.2, 2.6], [8, 4.2], [6.8, 2.6]], C.cyan).px(7.6, 2.2, C.white);
   },
   pi_crit: (p) => {
     p.poly([[1, 8], [5, 4], [11, 4], [15, 8], [11, 12], [5, 12]], C.cream);
@@ -352,8 +389,12 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.px(12, 12, C.white).px(13, 13, C.lime);
   },
   pi_fury: (p) => {
-    p.polyShade([[3, 14], [5, 6], [9, 2], [12, 4], [10, 9], [13, 12], [8, 15]], RAMP.fire);
-    p.line(2, 4, 6, 1, C.yellow).line(1, 8, 4, 6, C.yellow).line(12, 1, 15, 3, C.yellow).px(8, 7, C.white);
+    // Furia: zaciśnięta pięść w czerwonej aurze, płomienie gniewu.
+    p.sphere(8, 9, 7, 6.5, [C.ddbrown, C.dred, C.dred, C.red]);
+    for (const [x, y] of [[3, 3], [8, 1], [13, 3]] as const) p.polyShade([[x, y], [x + 1.6, y + 4], [x - 1.6, y + 4]], RAMP.fire);
+    p.polyShade([[4.5, 6], [11.5, 6], [12, 10], [11, 13.5], [5, 13.5], [4, 10]], RAMP.skin);
+    for (const x of [6.3, 8.2, 10.1]) p.thin(x, 6.3, x, 9, C.dbrown);
+    p.thin(4.5, 9.5, 11.5, 9.5, C.dbrown).thin(5, 6.5, 11, 6.5, C.peach);
   },
   pi_horseshoe: (p) => {
     // Podkowa otwarta ku górze (żelazo z jasną krawędzią), otwory na gwoździe i złota iskra szczęścia.
@@ -388,15 +429,21 @@ export const ICON_FNS: Record<string, IconFn> = {
     arrow(p, 4, 7, 4, 13, C.lgray, C.gold); arrow(p, 8, 8, 8, 14, C.lgray, C.gold); arrow(p, 12, 7, 12, 13, C.lgray, C.gold);
   },
   ab_b_charge: (p) => {
-    p.line(1, 5, 5, 5, C.orange).line(0, 8, 5, 8, C.gold).line(1, 11, 5, 11, C.orange);
-    p.sphere(10, 8.5, 4.5, 4.5, RAMP.stone).rect(8, 9, 6, 1, C.black).line(7, 5, 6, 2, C.cream).line(13, 5, 14, 2, C.cream);
+    // Szarża: rogaty hełm pochylony do przodu, smugi pędu i pył spod nóg.
+    p.stroke(0.5, 5, 5, 5, C.orange).stroke(0, 8.5, 5, 8.5, C.gold).stroke(0.5, 12, 5, 12, C.orange);
+    p.sphere(10, 9, 4.6, 4.4, RAMP.stone).rect(6.5, 9, 7.5, 1.3, C.black).rect(9.5, 9, 1.3, 3.5, C.black);
+    p.polyShade([[6.5, 6], [3.5, 1.5], [5.5, 2], [8, 5.5]], RAMP.bone).polyShade([[13, 6], [15.5, 1.5], [13.5, 2], [11, 5.5]], RAMP.bone);
+    p.thin(7, 6, 11, 5, C.white).spot(5, 14, C.tan).spot(3, 13.5, C.clay);
   },
   ab_b_slam: (p) => {
-    for (let a = Math.PI; a < TAU; a += 0.06) p.px(8 + Math.cos(a) * 7, 12 + Math.sin(a) * 3.2, C.gold);
-    p.rect(1, 12, 14, 3, C.dbrown).rect(1, 12, 14, 1, C.brown);
-    p.line(8, 12, 5, 15, C.black).line(8, 12, 12, 15, C.black).line(8, 12, 8, 15, C.black);
-    p.sphere(8, 6, 3.6, 3.4, RAMP.skin).rect(6, 2, 4, 2, C.dgray).px(6, 5, C.dbrown).px(9, 5, C.dbrown);
-    p.px(2, 9, C.lgray).px(14, 8, C.lgray).px(3, 6, C.brown).px(13, 5, C.brown);
+    // Uderzenie: wielki młot wbity w ziemię, pęknięcia rozchodzące się od miejsca trafienia, fala i odłamki.
+    for (let a = Math.PI; a < TAU; a += 0.06) p.spot(8 + Math.cos(a) * 7.3, 13 + Math.sin(a) * 2.8, C.gold);
+    p.block(0.5, 13, 15, 2.5, RAMP.wood);
+    p.thin(8, 13.2, 3.5, 15.5, C.black).thin(8, 13.2, 12.5, 15.5, C.black).thin(8, 13.2, 7.5, 15.5, C.black);
+    p.line(13.5, 1, 9, 6, C.dbrown).thin(13, 0.8, 8.6, 5.4, C.clay);
+    p.polyShade([[3, 6.5], [9.5, 3.5], [12.5, 9], [6, 12.5]], RAMP.stone);
+    p.thin(3.5, 7, 9.5, 4, C.white).rect(6.6, 6.2, 2.2, 2.2, C.gold);
+    p.spot(1.5, 9, C.lgray).spot(14, 9.5, C.lgray).spot(2.5, 11.5, C.clay).spot(13.5, 11.8, C.clay);
   },
   ab_b_leap: (p) => {
     p.polyShade([[5, 3], [10, 3], [10, 9], [14, 11], [14, 14], [4, 14], [4, 9]], RAMP.wood);
@@ -414,10 +461,11 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.sphere(8, 8, 1.8, 1.8, RAMP.bone);
   },
   ab_i_blink: (p) => {
-    p.ring(4.5, 9, 3, 1, C.dblue).ring(11.5, 7, 3.5, 1, C.cyan);
-    p.px(11.5, 7, C.white).px(4.5, 9, C.blue);
-    for (let x = 6; x <= 9; x += 2) p.px(x, 8, C.lavender);
-    sparkle(p, 13, 2);
+    // Mignięcie: gasnący kontur w miejscu startu, smuga iskier i rozbłysk w miejscu przybycia.
+    p.sphere(4, 10, 2.6, 3.4, [C.navy, C.dblue, C.dblue, C.blue]).px(4, 9, C.cyan);
+    for (let k = 0; k < 5; k++) p.spot(6 + k * 1.4, 9 - k * 1.1, k % 2 ? C.cyan : C.white);
+    for (let k = 0; k < 8; k++) { const a = (k / 8) * TAU; p.thin(12 + Math.cos(a) * 1.5, 4 + Math.sin(a) * 1.5, 12 + Math.cos(a) * (k % 2 ? 3 : 3.8), 4 + Math.sin(a) * (k % 2 ? 3 : 3.8), k % 2 ? C.cyan : C.white); }
+    p.sphere(12, 4, 1.6, 1.6, [C.blue, C.cyan, C.white]);
   },
   ab_i_inferno: (p) => {
     p.rect(1, 13, 14, 2, C.dred).rect(1, 13, 14, 1, C.rust);
@@ -427,11 +475,14 @@ export const ICON_FNS: Record<string, IconFn> = {
     }
   },
   ab_m_raise: (p) => {
-    p.rect(1, 13, 14, 2, C.dbrown).rect(1, 13, 14, 1, C.brown);
-    for (const [x, s] of [[5, 1], [11, 0.8]] as const) {
-      p.poly([[x - 3 * s, 8], [x + 3 * s, 8], [x + 1, 13], [x - 1, 13]], C.lavender);
-      p.sphere(x, 6, 3 * s, 3 * s, [C.slate, C.lavender, C.lgray, C.white]).px(x - 1, 6, C.lime).px(x + 1, 6, C.lime);
+    // Wskrzeszenie: dwie czaszki wynurzające się z rozkopanej ziemi, kościste ręce i zielona poświata.
+    p.block(0.5, 11.5, 15, 4, RAMP.wood).thin(1, 12, 15, 12, C.clay);
+    for (const [x, y] of [[5, 8], [11, 7]] as const) {
+      p.sphere(x, y, 2.8, 2.6, RAMP.bone).rect(x - 1.8, y - 0.2, 1.3, 1.2, C.black).rect(x + 0.5, y - 0.2, 1.3, 1.2, C.black);
+      p.px(x - 1.3, y + 0.2, C.lime).px(x + 1, y + 0.2, C.lime).rect(x - 1.2, y + 2, 2.4, 1.4, C.lgray);
     }
+    p.stroke(1.5, 11.5, 1, 8, C.lgray).stroke(14.5, 11.5, 15, 8.5, C.lgray).spot(1, 7.5, C.white).spot(15, 8, C.white);
+    p.px(3, 2, C.lime).px(13.5, 2.5, C.lime).px(8, 1, C.green);
   },
   ab_m_curse: (p) => {
     p.sphere(8, 11, 7, 3.5, [C.black, C.teal, C.dgreen, C.green]);
@@ -440,8 +491,10 @@ export const ICON_FNS: Record<string, IconFn> = {
     p.line(4, 2, 5, 4, C.lime).line(12, 2, 11, 4, C.lime);
   },
   ab_m_shade: (p) => {
-    p.sphere(10, 8, 4, 5, [C.black, C.plum, C.plum, C.pink]).px(9, 7, C.lime).px(11, 7, C.lime);
-    for (let x = 1; x <= 6; x += 2) p.line(x, 6 + (x % 3), x + 2, 6 + (x % 3), C.plum).line(x, 10, x + 1, 10, C.dgray);
+    // Cień: upiorna postać w kapturze z rozwianym dołem, zielone oczy i smugi ruchu.
+    p.polyShade([[10, 1.5], [14, 6], [14.5, 11], [12, 15], [10.5, 12.5], [8.5, 15], [6.5, 11], [6.5, 6]], [C.black, C.plum, C.plum, C.pink]);
+    p.sphere(10.3, 6.5, 2.4, 2.6, [C.black, C.black, C.navy]).spot(9.3, 6.5, C.lime).spot(11, 6.5, C.lime);
+    p.stroke(0.5, 5, 5.5, 5, C.plum).stroke(1.5, 8.5, 6, 8.5, C.pink).stroke(0.5, 12, 5.5, 12, C.plum);
   },
   ab_m_legion: (p) => {
     for (const [x, y] of [[4, 9], [8, 7], [12, 9]] as const) {
@@ -581,8 +634,11 @@ export const ICON_FNS: Record<string, IconFn> = {
     flame(p, 8, 9, 0.6);
   },
   sc_talisman: (p) => {
-    p.line(8, 1, 8, 4, C.brown).sphere(8, 9, 5, 5.5, RAMP.green);
-    p.rect(6, 7, 4, 4, C.dgreen).px(7, 8, C.lime).px(8, 9, C.lime);
+    // Zwój ochronny: talizman na sznurku, złota oprawa, zielony kamień z wyrytym znakiem.
+    p.thin(8, 0.5, 5, 4, C.tan).thin(8, 0.5, 11, 4, C.tan);
+    p.ring(8, 9, 5.6, 1, C.gold).sphere(8, 9, 4.6, 4.6, RAMP.green);
+    p.poly([[8, 6], [10.4, 9], [8, 12], [5.6, 9]], C.dgreen).thin(8, 6.6, 8, 11.4, C.lime).thin(6.3, 9, 9.7, 9, C.lime);
+    p.px(6, 6.5, C.white).spot(8, 3.6, C.gold);
   },
 
   // ===================== moce bossów (data/enemies.ts BOSS_POWERS): oko otchłani + wzór salwy =====================

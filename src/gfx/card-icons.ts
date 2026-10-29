@@ -58,8 +58,12 @@ export const CARD_ICONS_GFX: Record<string, (p: Painter) => void> = {
     p.poly([[9, 2], [5, 9], [8, 9], [6, 14], [11, 7], [8, 7], [10, 2]], C.yellow).px(8, 4, C.white);
   },
   cd_glass: (p) => {
-    p.block(2, 7, 9, 5, RAMP.stone).rect(10, 8, 5, 3, C.dgray).sphere(4, 13, 2, 2, RAMP.wood);
-    p.line(5, 4, 8, 7, C.cyan).line(9, 3, 9, 6, C.cyan).px(12, 5, C.white).px(4, 9, C.white);
+    // Szklane działo: lufa z pękniętego szkła (jasne odblaski, rysy) na drewnianym kole, błysk wystrzału.
+    p.polyShade([[2, 9], [11, 4.5], [13, 8], [4, 12.5]], [C.dblue, C.blue, C.cyan, C.white]);
+    p.thin(3, 9.2, 11, 5.2, C.white).thin(6, 7.6, 7.5, 10.5, C.navy).thin(7.5, 10.5, 9, 9.5, C.navy);
+    p.sphere(5, 12.5, 2.6, 2.6, RAMP.wood).px(5, 12.5, C.ddbrown);
+    for (let k = 0; k < 5; k++) { const a = -1.2 + k * 0.3; p.thin(13, 6, 13 + Math.cos(a) * 3, 6 + Math.sin(a) * 3, C.yellow); }
+    p.spot(13.2, 6, C.white);
   },
   cd_fever: (p) => {
     p.rect(7, 1, 3, 10, C.lgray).rect(8, 4, 1, 8, C.red);

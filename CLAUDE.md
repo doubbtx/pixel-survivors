@@ -455,6 +455,11 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
     używa Q, E, uniku i R w tłumie, `scripts/bot.cjs` robi zrzut po każdej (gra stoi do zrzutu: `Bot.frozen`), /tmp/bot-shots/gallery.
   - 0.29.2: ikona Sieci (`ab_k_net`, `netIcon` w gfx/icons.ts: złapany szlam pod jasną linką, obciążniki) i Lodowej sieci
     (`ab_k_net_evo`, niebieski szlam, kolory lodu); sieć w grze w tych samych kolorach (szara linka).
+  - 0.29.3: przegląd ikon (arkusz wszystkich ICON_FNS w powiększeniu): przerobione przedmioty (hełm, kaptur, napierśnik,
+    kolczuga, szata, rękawica, karwasz, buty, skrzydlaty sandał, sygnet, naszyjnik, maska demona, płaszcz, pazury, nagolennik,
+    obrączka), bronie (pocisk, kostur, dusze, orbita, bumerang, laser, miny), umiejętności (sztylet Vesper `dagger`, Krok cienia,
+    Zniknięcie, Anioł stróż, Szarża, Uderzenie, Cień, Mignięcie, Wskrzeszenie), pasywki (skrzydło `wing`, Duplikator, Furia,
+    Magnes), karta Szklane działo, zwój Talizman. Zasada: 3 tony z rampy, światło z lewej góry, detale `thin`/`spot`/`stroke`.
   - Nie zrobione: szersza logiczna rozdzielczość na ekranach 20:9 (telefon ma pasy po bokach, interfejs nie zajmuje więcej miejsca).
 ## Plan dalej (przed wydaniem)
 
