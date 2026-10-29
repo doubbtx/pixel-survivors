@@ -2324,4 +2324,5 @@ export const EN: Record<string, string> = {
   "Teraz": "Now",
   "Następny poziom": "Next level",
   "Odblokowanie": "Unlock",
+  "Synergie [Y]": "Synergies [Y]",
 };

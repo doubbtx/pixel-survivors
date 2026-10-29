@@ -186,6 +186,8 @@ export interface RunSnapshot {
   scrolls?: Partial<Record<ScrollId, number>>;
   /** Obudzone sekrety (od 0.15). */
   secrets?: string[];
+  relics?: string[];
+  pendingRelics?: number;
   /** DPS co 5 s (wykres na ekranie końca). */
   dpsLog?: number[];
   /** Wyróżnienia runu: najdłuższe kombo, seria zabójstw, najmocniejsze trafienie i jego źródło. */
@@ -448,6 +450,14 @@ export class Run {
   eliteKills = 0;
   /** Polowanie: czas spędzony w lochu (sekretne schody) nie liczy się do limitu ucieczki. */
   huntPaused = 0;
+  /** Relikwie (data/relics.ts, R2): posiadane (kolejność zdobycia), oferty do pokazania, wzmocnienie dowódcy gracza, odnowienie Płaszcza. */
+  relics: string[] = [];
+  pendingRelics = 0;
+  cmdBuffT = 0;
+  /** Sierp krwi: pozostały budżet leczenia (HP), odnawiany co sekundę do BAL.drainPerSec × maks. HP; Kości: czas ostatniej monety. */
+  drainLeft = 0;
+  diceCoinT = -99;
+  cloakCd = 0;
   /** Sztandary elit (R3): wrogowie w strefie się leczą, gracz w strefie dostaje więcej obrażeń. */
   banners: { x: number; y: number; t: number }[] = [];
   inBanner = false;
@@ -673,14 +683,20 @@ export class Run {
   /** Sztandary elit: odliczanie, leczenie wrogów w strefie (co krok, ułamek maks. HP), gracz w strefie. */
   private updateBanners(dt: number): void {
     this.inBanner = false;
+    if (this.cmdBuffT > 0) this.cmdBuffT -= dt;
+    if (this.cloakCd > 0) this.cloakCd -= dt;
+    this.drainLeft = Math.min(this.stats.maxHp * BAL.drainPerSec, this.drainLeft + this.stats.maxHp * BAL.drainPerSec * dt);
     if (!this.banners.length) return;
     const T = BAL.eliteTraits, p = this.player;
     for (const b of this.banners) {
       b.t -= dt;
       if ((p.x - b.x) ** 2 + (p.y - b.y) ** 2 < T.bannerR * T.bannerR) this.inBanner = true;
+      // Przeniewierca (relikwia): sztandar wzmacnia gracza, wrogowie się nie leczą.
+      if (this.relic('turncoat')) continue;
       this.enemiesInCircle(b.x, b.y, T.bannerR, (e) => { if (!e.boss) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * T.bannerRegen * dt); });
     }
     if (this.banners.some((b) => b.t <= 0)) this.banners = this.banners.filter((b) => b.t > 0);
+    if (this.inBanner && this.relic('turncoat')) this.cmdBuffT = Math.max(this.cmdBuffT, BAL.eliteTraits.buffT);
   }
 
   /** Czytelność w tłumie: dużo pocisków wrogów blisko bohatera przygasza jego ataki (tryb 'auto'). */
@@ -693,10 +709,15 @@ export class Run {
     this.fxDim += ((this.fxDimOn ? 1 : 0) - this.fxDim) * Math.min(1, dt / R.ema);
   }
 
+  /** Czy gracz ma relikwię. */
+  relic(id: string): boolean {
+    return this.relics.includes(id);
+  }
+
   /** Mnożnik obrażeń słabnącego bossa (po BAL.bossSoften.after s walki rośnie do 1 + max). */
   bossSoftMul(e: Enemy): number {
-    const S = BAL.bossSoften, a = e.age - S.after;
-    return a > 0 ? 1 + S.max * Math.min(1, a / S.ramp) : 1;
+    const S = BAL.bossSoften, h = this.relic('hourglass'), a = e.age - (h ? S.after / 2 : S.after);
+    return a > 0 ? 1 + (h ? S.max * 2 : S.max) * Math.min(1, a / S.ramp) : 1;
   }
 
   /** Suma obrażeń przyjętych w runie (całe trafienia przed tarczą) — telemetria sytuacji. */
@@ -1015,6 +1036,15 @@ export class Run {
   }
 
   /** Tekst unoszący się nad światem (np. "Egzekucja!"). */
+  /** Leczenie z trafienia Sierpa krwi: ułamek maks. HP, w ramach sekundowego budżetu (nie skaluje się z obrażeniami). */
+  drainHeal(frac: number): void {
+    if (this.relic('chalice')) return;
+    const h = Math.min(this.drainLeft, this.stats.maxHp * frac);
+    if (h <= 0) return;
+    this.drainLeft -= h;
+    this.heal(h);
+  }
+
   popText(x: number, y: number, text: string, col: number): void {
     const n = this.dmgNums.obtain();
     if (!n) return;
@@ -1156,6 +1186,8 @@ export class Run {
     s.greed *= 1 + this.flag('mapGold');
     s.growth *= 1 + this.flag('mapXp');
     for (const k in BAL.softCaps) s[k as keyof Stats] = BAL.softCap(s[k as keyof Stats], BAL.softCaps[k as keyof Stats]!);
+    // Płaszcz cienia (relikwia): mniej maks. HP.
+    if (this.relic('cloak')) s.maxHp *= BAL.relics.cloakHp;
     s.maxHp = Math.max(1, s.maxHp);
     const oldMax = this.stats.maxHp;
     this.stats = s;
@@ -1279,13 +1311,19 @@ export class Run {
     const loyal = this.loyal && src === this.weapons[0].def.name ? Math.pow(1 + BAL.loyal.dmg, this.loyal) : 1;
     // Odporność (boss: żywioł biomu; mapa Ekspedycji: żywioł mapy) i podatność mapy na żywioł źródła.
     const el = damageElement(src, this.augElem), res = this.resistOf(e);
-    const resist = res !== undefined && el === res ? BAL.bossResist.mul : 1;
-    const weak = el !== undefined && el === this.levelInfo.weak ? BAL.expedition.weakMul : 1;
+    // Odłamek pryzmatu (relikwia): powinowactwa mapy mocniejsze w obie strony (odporność bossa bez zmian).
+    const prism = this.relic('prism');
+    const resist = res !== undefined && el === res ? (prism && !e.boss ? BAL.relics.prismResist : BAL.bossResist.mul) : 1;
+    const weak = el !== undefined && el === this.levelInfo.weak ? (prism ? BAL.relics.prismWeak : BAL.expedition.weakMul) : 1;
+    // Znak łowcy: elity i minibossowie więcej, zwykli mniej; wzmocnienie dowódcy gracza (Buława, Przeniewierca).
+    const hunt = this.relic('huntmark') && !e.boss ? (e.elite ? 1 + BAL.relics.huntElite : 1 - BAL.relics.huntRegular) : 1;
+    // Aura dowódcy (Buława/Przeniewierca); Buława bez aury: kara obrażeń.
+    const cmd = this.cmdBuffT > 0 ? 1 + BAL.eliteTraits.dmg : this.relic('mace') ? 1 - BAL.relics.maceDmgLoss : 1;
     // Długa walka z bossem: boss słabnie (BAL.bossSoften); pogoń HP tego nie wyrównuje.
     const soft = e.boss && !this.dungeon ? this.bossSoftMul(e) : 1;
     if (soft > 1 && !this.bossSoftShown) { this.bossSoftShown = true; this.showBanner(`${this.levelInfo.bossName} weakens!`); }
     // Podatność raz: ticki stanów (podpalenie, trucizna) dziedziczą ją przez bazę z trafienia, które je nałożyło.
-    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * (o.dot ? 1 : weak) * soft * loyal * resourceDamageMul(this, src) * (1 - e.dr));
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * (o.dot ? 1 : weak) * soft * hunt * cmd * loyal * resourceDamageMul(this, src) * (1 - e.dr));
     // Statystyki (tabela obrażeń, DPS) i siła gracza (trudność, 0.35.2: bez nadwyżki ponad HP wroga) liczą tylko zadane
     // obrażenia; kradzież życia całe trafienie.
     const dealt = Math.min(dmg, Math.max(0, e.hp));
@@ -1529,6 +1567,8 @@ export class Run {
       if (!escort && (!counted || this.eliteKills % X.eliteChestEvery === 0)) this.dropChest(e.x, e.y, 'elite');
       for (let i = 0; i < 5; i++) this.spawnPickup(e.x + rng.range(-8, 8), e.y + rng.range(-8, 8), 'coin', 1);
       if (!escort) this.pendingCards.push('elite');
+      if (this.relic('mace')) this.cmdBuffT = Math.max(this.cmdBuffT, BAL.relics.maceTime);
+      if (this.relic('chalice')) this.heal(this.stats.maxHp * BAL.relics.chaliceHeal);
     } else if (e.boss) {
       this.onBossKilled();
     } else if (e.def.id === 'goldslime') {
@@ -1551,6 +1591,9 @@ export class Run {
     this.pendingLoot.push(this.rollLoot('boss'));
     this.pendingCards.push('boss');
     this.pendingPowers++;
+    // Relikwia: boss aktu w Ekspedycji (nie kurhan i nie ostatni — wyprawa by się skończyła), w Endless boss parzystej głębokości (bez kurhanu).
+    const ex = this.expedition, lastAct = ex && (ex.act > BAL.expedition.acts || (ex.act === BAL.expedition.acts && !ex.voidKey));
+    if (!this.dungeon && (ex ? this.levelInfo.boss && !lastAct : this.depth % 2 === 0)) this.pendingRelics++;
     this.bossKills++;
     forgeBossDrops(this);
     // Bezbłędnie: boss pokonany bez trafienia — dodatkowa moc bossa (trofeum).
@@ -1683,7 +1726,7 @@ export class Run {
       this.popText(p.x, p.y - 10, 'Nimb!', C.yellow);
       return false;
     }
-    let dmg = base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this) * (this.inBanner ? 1 + BAL.eliteTraits.bannerTaken : 1);
+    let dmg = base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this) * (this.inBanner && !this.relic('turncoat') ? 1 + BAL.eliteTraits.bannerTaken : 1);
     const total = dmg;
     this.takenTotal += total;
     const absorbed = Math.min(p.shield, dmg);
@@ -1691,6 +1734,8 @@ export class Run {
     dmg -= absorbed;
     p.hp -= dmg;
     this.cardState['sec.ganryu'] = 0;
+    // Płaszcz cienia (relikwia): po trafieniu chwila nietykalności.
+    if (this.relic('cloak') && this.cloakCd <= 0) { p.iframes = Math.max(p.iframes, BAL.relics.cloakTime); this.cloakCd = BAL.relics.cloakCd; this.burst(p.x, p.y, C.lavender, 12, 60); }
     p.hurtCd = BAL.hurtFlash;
     this.hurtFx = 0.25;
     p.flash = 6;
@@ -1793,7 +1838,7 @@ export class Run {
     pr.forceCrit = s.forceCrit ?? false;
     pr.t = 0;
     pr.bounces = this.flag('bounce');
-    pr.retarget = 0; pr.split = 0; pr.splitEnd = 0; pr.retMul = 1; pr.blast = 0;
+    pr.retarget = 0; pr.split = 0; pr.splitEnd = 0; pr.retMul = 1; pr.blast = 0; pr.drain = 0; pr.dice = 0; pr.sixBlast = false;
     return pr;
   }
 
@@ -1957,7 +2002,7 @@ export class Run {
       runHits: this.runHits, hitlessLevels: this.hitlessLevels, feats: [...this.featsRun],
       mats: { ...this.mats },
       scrolls: { ...this.scrolls },
-      secrets: [...this.secrets],
+      secrets: [...this.secrets], relics: [...this.relics], pendingRelics: this.pendingRelics,
       dpsLog: [...this.dpsLog],
       highlights: [this.bestCombo, this.bestStreak, this.maxHit, this.maxHitSrc],
     };
@@ -1992,6 +2037,8 @@ export class Run {
     run.pacts = { ...s.pacts };
     run.mats = { ...run.mats, ...s.mats };
     run.secrets = new Set(s.secrets ?? []);
+    run.relics = s.relics ?? [];
+    run.pendingRelics = s.pendingRelics ?? 0;
     run.dpsLog = s.dpsLog ?? [];
     if (s.highlights) [run.bestCombo, run.bestStreak, run.maxHit, run.maxHitSrc] = s.highlights;
     for (const v of run.dmgBySource.values()) run.dmgTotal += v;
@@ -2054,7 +2101,7 @@ function newProjectile(): Projectile {
   return {
     _i: -1, x: 0, y: 0, vx: 0, vy: 0, life: 0, damage: 0, radius: 2, pierce: 0, hits: [], sprite: '', src: '',
     kind: 'normal', returning: false, knock: 0, forceCrit: false, t: 0, bounces: 0,
-    retarget: 0, split: 0, splitEnd: 0, retMul: 1, blast: 0,
+    retarget: 0, split: 0, splitEnd: 0, retMul: 1, blast: 0, drain: 0, dice: 0, sixBlast: false,
   };
 }
 

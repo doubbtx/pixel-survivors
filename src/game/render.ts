@@ -19,6 +19,9 @@ import type { Enemy } from '../entities/types';
 import { taskTarget } from '../systems/tasks';
 import { drawElemMark } from '../gfx/elemmark';
 import { situationRing } from '../systems/situations';
+
+/** Pociski z 4 klatkami obrotu (sprite `${nazwa}0..3`): Sierp krwi, Kości. */
+const SPIN = new Set(['sickle', 'dice', 'gdice']);
 import { BOSS_TELL, BOSS_TELLS, bossStyle } from '../systems/enemies';
 
 const MARGIN = 40;
@@ -624,6 +627,8 @@ function drawWorld(run: Run, r: Renderer): void {
             r.rect(x - Math.cos(d) * rr * 0.5 + Math.cos(a) * (rr - 2), y - Math.sin(d) * rr * 0.5 + Math.sin(a) * (rr - 2), 2, 2, C.white);
           }
         });
+      } else if (SPIN.has(pr.sprite)) {
+        drawSprite(g, `${pr.sprite}${Math.floor(pr.t * 14) & 3}`, x, y);
       } else {
         drawSprite(g, pr.sprite, x, y);
       }

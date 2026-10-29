@@ -70,6 +70,8 @@ export interface ShopState {
   refreshes: number;
   /** Poziom rozbudowy sklepu (z runu; starsze zapisy go nie mają = 1). */
   level?: number;
+  /** Narzut cen (relikwia Mapa pielgrzyma). */
+  markup?: number;
 }
 
 /** Przedmioty sklepu: rozbudowa daje lepszą jakość i dodatkowe miejsca (poziom 3 i 5). */
@@ -79,7 +81,7 @@ export function rollShopItems(depth: number, luck: number, level: number): Item[
 }
 
 /** Mnożnik cen z rabatu rozbudowy. */
-const discount = (shop: ShopState) => 1 - BAL.shopUpgrade.discount * ((shop.level ?? 1) - 1);
+const discount = (shop: ShopState) => (1 - BAL.shopUpgrade.discount * ((shop.level ?? 1) - 1)) * (shop.markup ?? 1);
 
 /** Nowa oferta sklepu przed poziomem `depth`. */
 export function rollShop(run: Run, depth: number): ShopState {
@@ -89,7 +91,7 @@ export function rollShop(run: Run, depth: number): ShopState {
   const stock: Record<string, number> = {};
   for (const s of SERVICES) stock[s.id] = BAL.shopStock[s.id];
   for (const e of elixirs) stock[`elixir:${e}`] = BAL.shopStock.elixir;
-  return { depth, items: rollShopItems(depth, run.luck(), run.shopLevel), elixirs, stock, refreshes: 0, level: run.shopLevel };
+  return { depth, items: rollShopItems(depth, run.luck(), run.shopLevel), elixirs, stock, refreshes: 0, level: run.shopLevel, markup: run.relic('pilgrim') ? BAL.relics.shopMarkup : 1 };
 }
 
 export function itemPrice(it: Item, shop: ShopState): number {
@@ -112,6 +114,8 @@ export function shopUpgradePrice(shop: ShopState): number {
 }
 
 export function refreshPrice(shop: ShopState): number {
+  // Mapa pielgrzyma: pierwsze odświeżenie w każdym sklepie za darmo.
+  if ((shop.markup ?? 1) > 1 && shop.refreshes === 0) return 0;
   return Math.round(BAL.shopRefresh * BAL.shopScale(shop.depth) * Math.pow(2, shop.refreshes));
 }
 

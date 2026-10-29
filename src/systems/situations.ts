@@ -161,7 +161,7 @@ export function updateSituations(run: Run, dt: number, waveT: number): void {
   // Biomowe trochę częściej (tożsamość biomu), ogólne zawsze w puli.
   const def = rng.weighted(pool.map((d) => [d, d.biomes ? 1.4 : 1] as [SitDef, number]));
   const late = waveT > S.lateAfter;
-  run.situationT = rng.range(...(late ? S.everyLate : S.every));
+  run.situationT = rng.range(...(late ? S.everyLate : S.every)) * (run.relic('warhorn') ? 0.5 : 1);
   const scale = Math.min(1, waveT / 600);
   run.situation = { id: def.id, t: S.warn, a: rng.range(0, Math.PI * 2), spots: [] };
   run.situation.spots = def.plan(scale, run.situation.a);
@@ -208,6 +208,9 @@ export function situationKill(run: Run, e: Enemy): void {
   if (act.left > 0) return;
   for (let i = 0; i < S.coins; i++) run.spawnPickup(p.x + rng.range(-20, 20), p.y + rng.range(-20, 20), 'coin', 1);
   run.showBanner('Broken!');
+  // Róg wojenny: skrzynia elity; Kielich krwi: leczenie.
+  if (run.relic('warhorn') && run.totalTime - act.t0 <= BAL.relics.hornWindow) run.dropChest(p.x, p.y, 'elite');
+  if (run.relic('chalice')) run.heal(run.stats.maxHp * BAL.relics.chaliceHeal);
   run.burst(p.x, p.y, C.gold, 20, 70);
   sfx.play('chest');
   logSituation(run, 'broken');

@@ -70,6 +70,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
     e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp')) * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (run.expedition && run.levelInfo.boss && !run.dungeon ? BAL.expedition.bossHp : 1);
     e.speed = def.speed;
     run.boss = e;
+    if (run.relic('hourglass') && !run.dungeon) e.damage *= BAL.relics.bossDmg;
     run.bossSoftShown = false;
   }
   return e;
@@ -187,6 +188,8 @@ export function updateSpawner(run: Run, dt: number): void {
     const mods = Object.keys(ELITE_MODS).filter((k) => traitsOn || !ELITE_MODS[k].kind);
     // Mapa elit / Zasadzka w Ekspedycji: stałe cechy elit widoczne na mapie przed wejściem.
     const picked = run.levelInfo.eliteMods ? [...run.levelInfo.eliteMods] : [rng.pick(mods)];
+    // Przeniewierca: częściej dowódcy i sztandary (żeby zaleta w ogóle działała).
+    if (!run.levelInfo.eliteMods && traitsOn && run.relic('turncoat') && rng.chance(BAL.relics.turncoatAura)) picked[0] = rng.pick(['commander', 'banner']);
     if (!run.levelInfo.eliteMods && waveT > 150) {
       const second = rng.pick(mods);
       if (eliteCompatible(picked, second)) picked.push(second);
@@ -194,6 +197,8 @@ export function updateSpawner(run: Run, dt: number): void {
     const [x, y] = ringPos(run, rng.range(0, Math.PI * 2));
     const base = rng.weighted(currentMix(waveT, run.levelInfo.biome).filter(([id]) => id !== 'bat'));
     const e = spawnEnemy(run, base, x, y, { elite: picked });
+    // Przeniewierca (wada): elity z cechą zachowania mają więcej HP.
+    if (e && run.relic('turncoat') && picked.some((k) => ELITE_MODS[k].kind)) e.maxHp = e.hp = e.maxHp * BAL.relics.turncoatHp;
     if (e) run.showBanner(`Elita: ${picked.map((k) => ELITE_MODS[k].name).join(', ')}`);
   }
 

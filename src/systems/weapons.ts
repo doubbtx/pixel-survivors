@@ -87,6 +87,8 @@ function fireProjectile(run: Run, w: WeaponInst, s: EffWeapon, angle: number, fo
   if (hy?.blast) pr.blast = Math.max(pr.blast, hy.blast);
   if (hy?.split) pr.split = 1;
   if (hy?.seek) pr.retarget = 2;
+  if (hy?.drain) pr.drain = hy.drain;
+  if (hy?.dice) { pr.dice = hy.dice; pr.sixBlast = !!hy.sixBlast; }
 }
 
 /** Pocisk-odłamek z augmentu (bez dalszych augmentów). */
@@ -101,7 +103,7 @@ const NOVA_R = 62, NOVA_T = 0.3, NOVA_STEPS = 8;
 function weaponSound(w: WeaponInst): SfxName {
   const d = w.def;
   switch (d.kind) {
-    case 'bolt': return d.proj === 'arrow' ? 'w_arrow' : d.proj === 'knife' ? 'w_knife' : d.proj === 'ember' || d.proj === 'sun' ? 'w_fire' : d.proj === 'soul' ? 'w_soul' : 'w_bolt';
+    case 'bolt': return d.proj === 'arrow' ? 'w_arrow' : d.proj === 'knife' || d.proj === 'sickle' || d.proj === 'dice' || d.proj === 'gdice' ? 'w_knife' : d.proj === 'ember' || d.proj === 'sun' ? 'w_fire' : d.proj === 'soul' ? 'w_soul' : 'w_bolt';
     case 'chain': return 'w_chain';
     case 'nova': return 'w_nova';
     case 'laser': return 'w_laser';

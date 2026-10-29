@@ -1,9 +1,23 @@
 import { C } from '../core/palette';
 import { VIEW_W, VIEW_H } from '../core/renderer';
 import { BAL } from '../data/balance';
+import { rng } from '../core/rng';
+import type { Projectile } from '../entities/types';
 import type { Run } from '../game/run';
 import { shardProjectile } from './weapons';
 import { terrainBlocker, hitTerrain } from './terrain';
+
+/** Rzut Kości: zwykle x0.5–1.6, szóstka x`pr.dice` (złoty napis; Złota szóstka: wybuch i moneta, limit monet na sekundę). */
+function rollDie(run: Run, pr: Projectile, x: number, y: number): number {
+  const D = BAL.dice;
+  if (!rng.chance(Math.min(D.sixMax, D.six + Math.max(0, run.stats.luck) * D.sixLuck))) return rng.range(D.low, D.high);
+  run.popText(x, y - 8, '6!', C.gold);
+  if (pr.sixBlast) {
+    run.explode(x, y, D.blastR, pr.damage * pr.dice * D.blast, pr.src, C.gold, 2);
+    if (run.totalTime - run.diceCoinT >= D.coinEvery) { run.diceCoinT = run.totalTime; run.spawnPickup(x, y, 'coin', 1); }
+  }
+  return pr.dice;
+}
 
 /** Pociski gracza: ruch, bumerangi, kolizje przez spatial hash, przebicia. */
 export function updateProjectiles(run: Run, dt: number): void {
@@ -64,7 +78,11 @@ export function updateProjectiles(run: Run, dt: number): void {
           break;
         }
       }
-      run.damageEnemy(e, pr.damage * (pr.returning ? pr.retMul : 1), pr.src, { kx: pr.vx, ky: pr.vy, knock: pr.knock, forceCrit: pr.forceCrit });
+      // Kości (0.43): każdy rzut losuje obrażenia, „szóstka” (szansa rośnie ze Szczęściem) mnoży je mocniej.
+      let roll = 1;
+      if (pr.dice > 0) roll = rollDie(run, pr, e.x, e.y);
+      run.damageEnemy(e, pr.damage * roll * (pr.returning ? pr.retMul : 1), pr.src, { kx: pr.vx, ky: pr.vy, knock: pr.knock, forceCrit: pr.forceCrit });
+      if (pr.drain > 0) run.drainHeal(pr.drain);
       // Augmenty (data/augments.ts): odłamki na boki, wybuch przy trafieniu.
       const dir = Math.atan2(pr.vy, pr.vx);
       if (pr.split) for (const d of [-0.7, 0.7]) shardProjectile(run, pr.x, pr.y, dir + d, pr.damage * 0.4, pr.src, pr.sprite);

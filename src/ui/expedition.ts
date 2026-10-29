@@ -39,8 +39,10 @@ function btnX(i: number): number {
 /** Legenda: tylko rodzaje obecne na mapie aktu (kolejność stała). */
 const LEGEND: NodeKind[] = ['fight', 'elite', 'ambush', 'hunt', 'dungeon', 'vault', 'treasure', 'shop', 'anvil', 'rest', 'shrine', 'boss', 'secret'];
 /** Karty wyboru obozu / kapliczki (lewy górny róg, rozmiar). */
-const OFFER_W = 150, OFFER_H = 40;
-const offerPos = (i: number): [number, number] => [MAP_X + 60 + i * (OFFER_W + 8), DET_Y + 18];
+const OFFER_H = 40;
+/** Szerokość karty oferty (2 albo 3 opcje — Mapa pielgrzyma). */
+const offerW = (n: number) => (n > 2 ? 112 : 150);
+const offerPos = (i: number, n = 2): [number, number] => [MAP_X + 60 + i * (offerW(n) + 8), DET_Y + 18];
 
 /** Przyciski poziomu trudności w prawym górnym rogu panelu szczegółów (lewy górny róg przycisku). */
 const TIER_W = 50, TIER_H = 14;
@@ -99,11 +101,13 @@ export class ExpeditionMapView {
     const ex = this.run.expedition!, offer = ex.offer;
     if (!offer) return false;
     const m = input.mouse;
-    if (input.pressed('left') || input.pressed('up') || input.pressed('right') || input.pressed('down')) { this.offerSel = 1 - this.offerSel; sfx.play('select'); }
-    let pick = input.pressed('confirm') ? this.offerSel : input.pressed('n1') ? 0 : input.pressed('n2') ? 1 : -1;
+    const n = offer.ids.length;
+    if (input.pressed('left') || input.pressed('up')) { this.offerSel = (this.offerSel + n - 1) % n; sfx.play('select'); }
+    if (input.pressed('right') || input.pressed('down')) { this.offerSel = (this.offerSel + 1) % n; sfx.play('select'); }
+    let pick = input.pressed('confirm') ? this.offerSel : input.pressed('n1') ? 0 : input.pressed('n2') ? 1 : input.pressed('n3') && n > 2 ? 2 : -1;
     offer.ids.forEach((_, i) => {
-      const [x, y] = offerPos(i);
-      if (!inside(m.x, m.y, x, y, OFFER_W, OFFER_H)) return;
+      const [x, y] = offerPos(i, n);
+      if (!inside(m.x, m.y, x, y, offerW(n), OFFER_H)) return;
       if (m.lastMove !== this.lastMouse) this.offerSel = i;
       if (input.pressed('click')) pick = i;
     });
@@ -453,11 +457,12 @@ export class ExpeditionMapView {
     drawSprite(g, info.icon, x0 + 10, y0 + 10, { scale: 2 });
     drawText(g, rest ? 'Camp: pick a bonus for the next map' : 'Shrine: pick a blessing', x0 + 26, y0, info.color, { shadow: C.black });
     offer.ids.forEach((id, i) => {
-      const b = (rest ? CAMP_BUFFS : EX_BLESSINGS).find((x) => x.id === id)!, [x, y] = offerPos(i), on = i === this.offerSel;
-      r.roundRect(x, y, OFFER_W, OFFER_H, UI.radius, on ? C.navy : C.black);
-      r.roundFrame(x, y, OFFER_W, OFFER_H, UI.radius, on ? info.color : C.slate, on ? 1 : 0.6);
+      const n = offer.ids.length, OW = offerW(n);
+      const b = (rest ? CAMP_BUFFS : EX_BLESSINGS).find((x) => x.id === id)!, [x, y] = offerPos(i, n), on = i === this.offerSel;
+      r.roundRect(x, y, OW, OFFER_H, UI.radius, on ? C.navy : C.black);
+      r.roundFrame(x, y, OW, OFFER_H, UI.radius, on ? info.color : C.slate, on ? 1 : 0.6);
       drawText(g, `${i + 1}. ${b.name}`, x + 6, y + 4, on ? info.color : C.lgray, { shadow: C.black });
-      wrapText(b.desc, (OFFER_W - 12) / descS()).slice(0, 2).forEach((l, k) => drawText(g, l, x + 6, y + 16 + k * descLH(), C.lgray, DESC));
+      wrapText(b.desc, (OW - 12) / descS()).slice(0, 2).forEach((l, k) => drawText(g, l, x + 6, y + 16 + k * descLH(), C.lgray, DESC));
     });
     const note = rest ? 'Lasts one map with combat (dungeons do not use it up).' : `Lasts ${BAL.expedition.blessingMaps} maps with combat (dungeons count too).`;
     drawText(g, note, x0 + 26, DET_Y + 18 + OFFER_H + 4, C.lavender, SMALL);

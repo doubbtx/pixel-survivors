@@ -170,6 +170,10 @@ export interface Projectile extends Poolable {
   splitEnd: number;
   retMul: number;
   blast: number;
+  /** Bronie 0.43: leczenie (ułamek maks. HP) za trafienie (Sierp krwi), mnożnik „szóstki” Kości (0 = zwykły pocisk), szóstka wybucha i daje monetę. */
+  drain: number;
+  dice: number;
+  sixBlast: boolean;
 }
 
 export interface EnemyBullet extends Poolable {

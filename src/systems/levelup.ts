@@ -8,7 +8,7 @@ import { describeAbilityLevel, evolveAbility, type AbilitySlot } from '../data/h
 import type { Run } from '../game/run';
 import type { Tag } from '../data/cards';
 import type { Stats } from '../entities/types';
-import { WEAPON_TAGS, STAT_TAG, SYNERGY_BY_TAG, tierOf } from '../data/synergies';
+import { weaponTags, STAT_TAG, SYNERGY_BY_TAG, tierOf } from '../data/synergies';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { AUGMENTS, weaponBase, augmentWorks, fusionAugments } from '../data/augments';
 import { rollQuality, rollWeaponBonus, addWeaponBonus, bonusLines, type WeaponBonus } from '../data/upgrades';
@@ -146,7 +146,7 @@ function candidates(run: Run): Option[] {
     if (ready.length) {
       for (const ev of ready) {
         const into = WEAPON_BY_ID[ev.into];
-        out.push({ kind: 'evolve', id: ev.into, name: into.name, desc: into.desc, hint: `Zastępuje: ${w.def.name}`, icon: into.icon, tag: 'Ewolucja', color: into.color, tags: WEAPON_TAGS[into.kind], recipe: { parts: [w.def.icon, PASSIVE_BY_ID[ev.passive].icon], result: into.icon } });
+        out.push({ kind: 'evolve', id: ev.into, name: into.name, desc: into.desc, hint: `Zastępuje: ${w.def.name}`, icon: into.icon, tag: 'Ewolucja', color: into.color, tags: weaponTags(into), recipe: { parts: [w.def.icon, PASSIVE_BY_ID[ev.passive].icon], result: into.icon } });
       }
     } else if (w.level < maxLevel(w.def)) {
       // Jakość ulepszenia: dodatkowe bonusy broni (Szczęście podnosi szansę na lepszą).
@@ -189,7 +189,7 @@ function candidates(run: Run): Option[] {
       if (!offerable(d, taken)) continue;
       const el = WEAPON_ELEMENT[d.id];
       const desc = el ? `${d.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : d.desc;
-      out.push({ kind: 'weaponNew', id: d.id, name: d.name, desc, hint: loyalHint || fusionHint(run, d) || evolveHint(run, d), icon: d.icon, tag: 'Nowa broń', color: d.color, tags: WEAPON_TAGS[d.kind], recipe: weaponRecipe(run, d) });
+      out.push({ kind: 'weaponNew', id: d.id, name: d.name, desc, hint: loyalHint || fusionHint(run, d) || evolveHint(run, d), icon: d.icon, tag: 'Nowa broń', color: d.color, tags: weaponTags(d), recipe: weaponRecipe(run, d) });
     }
   }
   for (const p of run.passives) {

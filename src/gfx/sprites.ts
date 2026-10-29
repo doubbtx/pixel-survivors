@@ -3,7 +3,7 @@ import { Rng } from '../core/rng';
 import { BIOMES, type Biome } from '../data/levels';
 import { BADGE_BY_ID } from '../data/pacts';
 import { Painter, canvasRes, HI } from './painter';
-import { ICON_FNS } from './icons';
+import { ICON_FNS, crescentPts, die } from './icons';
 import { ACTORS, boss } from './actors';
 import { shrine, swordStone, portal, taskStone, totem, cover, barrel, spikes, fountain, rune, mural, mushroom, stairs, barrow, grove } from './objects';
 import { spark, poof, boom, arrowSprite, prop, uiSkull } from './world';
@@ -93,6 +93,20 @@ function boomerang(frame: number): Painter {
   const [[ax, ay], [bx, by]] = rotPts([[4, 4.6], [9, 4.6]], 6.5, 6.5, (frame * Math.PI) / 2);
   p.thin(ax, ay, bx, by, C.rust); // słoje drewna
   return p.outline(C.dbrown);
+}
+
+/** Sierp krwi w locie: obracający się półksiężyc (4 klatki). */
+function sickle(frame: number): Painter {
+  const p = new Painter(11, 11, HI), a = (frame * Math.PI) / 2;
+  p.polyShade(crescentPts(5.5, 5.5, 4.6, 2, a), [C.dred, C.red, C.salmon, C.white]);
+  return p.outline(C.ddbrown);
+}
+
+/** Kostka w locie: ścianki zmieniają się z klatkami (wygląda jak toczenie). */
+function dieSprite(frame: number, gold: boolean): Painter {
+  const p = new Painter(9, 9, HI);
+  die(p, 1, 1, 7, [2, 5, 3, 6][frame], gold ? [C.dbrown, C.orange, C.gold, C.yellow] : [C.slate, C.lgray, C.white, C.white], gold ? C.ddbrown : C.red);
+  return p.outline(gold ? C.dbrown : C.slate);
 }
 
 function mine(lit: boolean): Painter {
@@ -196,6 +210,9 @@ const BUILDERS: Record<string, () => Painter> = {
   star, blade, knife,
   boom0: () => boomerang(0), boom1: () => boomerang(1), boom2: () => boomerang(2), boom3: () => boomerang(3),
   mine0: () => mine(false), mine1: () => mine(true),
+  sickle0: () => sickle(0), sickle1: () => sickle(1), sickle2: () => sickle(2), sickle3: () => sickle(3),
+  dice0: () => dieSprite(0, false), dice1: () => dieSprite(1, false), dice2: () => dieSprite(2, false), dice3: () => dieSprite(3, false),
+  gdice0: () => dieSprite(0, true), gdice1: () => dieSprite(1, true), gdice2: () => dieSprite(2, true), gdice3: () => dieSprite(3, true),
   eb_red: () => orb(9, RAMP.red, C.dred),
   eb_pink: () => orb(9, RAMP.purple, C.plum),
   eb_orange: () => orb(9, RAMP.fire, C.dred),

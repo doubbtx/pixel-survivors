@@ -1,4 +1,4 @@
-import { W, H } from '../core/renderer';
+import { W, H, type Renderer } from '../core/renderer';
 import { C, RAMP } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
@@ -39,6 +39,7 @@ import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 import { MetaScreen } from './meta';
 import { HERO_BY_ID } from '../data/heroes';
 import { PowerPickView } from './powers';
+import { RelicPickView } from './relics';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { Tutorial } from '../game/tutorial';
 import { grantUnlocks, maxTier, unlocked, type UnlockCtx, type UnlockDef } from '../data/unlocks';
@@ -50,7 +51,9 @@ import { BOSS_POWER_BY_ID } from '../data/enemies';
 import { WEAPON_BY_ID, maxLevel } from '../data/weapons';
 import { SECRET_BY_ID } from '../data/secrets';
 
-type State = 'play' | 'levelup' | 'cards' | 'power' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'build' | 'pause' | 'map' | 'end';
+const PEEK_LABELS = ['Build [C]', 'Plecak [I]', 'Synergie [Y]'];
+
+type State = 'play' | 'levelup' | 'cards' | 'power' | 'relic' | 'loot' | 'inventory' | 'shop' | 'anvil' | 'synergies' | 'build' | 'pause' | 'map' | 'end';
 
 /** Krótka blokada wejścia po otwarciu nakładki — żeby wciśnięty akurat klawisz nie wybrał karty. */
 const OVERLAY_DELAY = 0.3;
@@ -69,6 +72,7 @@ export class GameScreen implements Screen {
   private levelUp: LevelUpView | null = null;
   private cardPick: CardPickView | null = null;
   private powerPick: PowerPickView | null = null;
+  private relicPick: RelicPickView | null = null;
   private loot: LootView | null = null;
   private inventory: InventoryView | null = null;
   private shop: ShopView | null = null;
@@ -76,6 +80,7 @@ export class GameScreen implements Screen {
   private build: BuildView | null = null;
   /** Stan, do którego wraca podgląd broni i pasywek (gra albo pauza). */
   private buildReturn: State = 'pause';
+  private synReturn: State = 'pause';
   /** Statystyki diagnostyczne w HUD (F3 / `), nie zapisywane. */
   private diag = false;
   /** Prawa kolumna pauzy: 0 postać (statystyki, bronie, karty), 1 umiejętności z opisami. */
@@ -140,7 +145,7 @@ export class GameScreen implements Screen {
       { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
       { label: () => 'Ekwipunek', act: () => this.openInventory('pause') },
       { label: () => 'Bronie i pasywki [C]', act: () => this.openBuild('pause') },
-      { label: () => 'Synergie', act: () => { this.synergies = new SynergyView(this.run); this.state = 'synergies'; this.delay = 0.1; } },
+      { label: () => 'Synergie', act: () => this.openSynergies('pause') },
       { label: () => 'Evolution book', act: () => app.go(new CodexScreen(app, this)) },
       { label: () => 'Pomoc', act: () => app.go(new HelpScreen(app, this)) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
@@ -412,11 +417,11 @@ export class GameScreen implements Screen {
       case 'rest':
         run.heal(run.stats.maxHp * X.restHeal);
         run.addBonus('maxHp', X.restMaxHp);
-        ex.offer = rollOffer('rest');
+        ex.offer = rollOffer('rest', run.relic('pilgrim') ? 3 : 2);
         this.saveSlot(false);
         break;
       case 'shrine':
-        ex.offer = rollOffer('shrine');
+        ex.offer = rollOffer('shrine', run.relic('pilgrim') ? 3 : 2);
         this.saveSlot(false);
         break;
     }
@@ -444,6 +449,34 @@ export class GameScreen implements Screen {
     this.buildReturn = from;
     this.state = 'build';
     this.delay = 0.1;
+  }
+
+  private openSynergies(from: State): void {
+    this.synergies = new SynergyView(this.run);
+    this.synReturn = from;
+    this.state = 'synergies';
+    this.delay = 0.1;
+  }
+
+  /**
+   * Podgląd przy wyborze (awans, karty, moc, relikwia, łup): C = build (bronie, pasywki, fuzje), I/Tab = plecak,
+   * Y = synergie — klawiszem albo klikiem w przyciski pod ofertą; po zamknięciu wraca do tego samego wyboru.
+   */
+  private peekFromPick(): boolean {
+    const inp = this.app.input, m = inp.mouse, from = this.state;
+    const hit = (i: number) => inp.pressed('click') && inside(m.x, m.y, ...this.peekBtn(i));
+    if (inp.pressed('build') || hit(0)) { this.openBuild(from); return true; }
+    if (inp.pressed('inventory') || hit(1)) { this.openInventory(from); return true; }
+    if (inp.pressed('synergies') || hit(2)) { this.openSynergies(from); return true; }
+    return false;
+  }
+
+  private peekBtn(i: number): [number, number, number, number] {
+    return [4 + i * 66, H - 15, 64, 12];
+  }
+
+  private renderPeekBar(r: Renderer): void {
+    PEEK_LABELS.forEach((l, i) => button(r, ...this.peekBtn(i), l, { scale: 0.75 }));
   }
 
   private openPause(): void {
@@ -505,6 +538,10 @@ export class GameScreen implements Screen {
       this.powerPick = new PowerPickView(run);
       this.state = 'power';
       this.hints.show('power');
+    } else if (run.pendingRelics > 0) {
+      run.pendingRelics--;
+      this.relicPick = new RelicPickView(run);
+      this.state = 'relic';
     } else {
       return false;
     }
@@ -571,6 +608,7 @@ export class GameScreen implements Screen {
         }
         break;
       case 'levelup':
+        if (this.peekFromPick()) break;
         if (this.levelUp!.update(inp)) {
           run.pendingLevels--;
           this.state = this.overlayReturn;
@@ -578,18 +616,28 @@ export class GameScreen implements Screen {
         }
         break;
       case 'cards':
+        if (this.peekFromPick()) break;
         if (this.cardPick!.update(inp)) {
           this.state = this.overlayReturn;
           this.openPending();
         }
         break;
       case 'power':
+        if (this.peekFromPick()) break;
         if (this.powerPick!.update(inp)) {
           this.state = this.overlayReturn;
           this.openPending();
         }
         break;
+      case 'relic':
+        if (this.peekFromPick()) break;
+        if (this.relicPick!.update(inp)) {
+          this.state = this.overlayReturn;
+          this.openPending();
+        }
+        break;
       case 'loot': {
+        if (this.peekFromPick()) break;
         const res = this.loot!.update(inp);
         if (res.done) {
           if (res.note) this.showToast(res.note);
@@ -609,7 +657,7 @@ export class GameScreen implements Screen {
         if (this.anvil!.update(inp, dt)) { this.state = this.anvilReturn; this.delay = 0.1; }
         break;
       case 'synergies':
-        if (this.synergies!.update(inp)) { this.state = 'pause'; this.delay = 0.1; }
+        if (this.synergies!.update(inp)) { this.state = this.synReturn; this.delay = 0.1; }
         break;
       case 'build':
         if (this.build!.update(inp)) { this.state = this.buildReturn; this.delay = 0.1; }
@@ -664,15 +712,23 @@ export class GameScreen implements Screen {
     switch (this.state) {
       case 'levelup':
         this.levelUp!.render(r);
+        this.renderPeekBar(r);
         break;
       case 'cards':
         this.cardPick!.render(r);
+        this.renderPeekBar(r);
         break;
       case 'power':
         this.powerPick!.render(r);
+        this.renderPeekBar(r);
+        break;
+      case 'relic':
+        this.relicPick!.render(r);
+        this.renderPeekBar(r);
         break;
       case 'loot':
         this.loot!.render(r);
+        this.renderPeekBar(r);
         break;
       case 'inventory':
         this.inventory!.render(r);

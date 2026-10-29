@@ -1,4 +1,5 @@
 import { C } from '../core/palette';
+import type { Tag } from './cards';
 
 /**
  * Definicje broni. Nowa broń = nowy wpis tutaj (+ ewentualnie nowy `kind` w systems/weapons.ts,
@@ -46,9 +47,11 @@ export interface WeaponDef {
   /** Hybryda z fuzji (FUSIONS): zajmuje slot jednej z dwóch broni-rodziców. */
   fused?: boolean;
   /** Efekty pocisków hybrydy: wybuch przy trafieniu (ułamek obrażeń), rozszczepienie, naprowadzanie. */
-  hybrid?: { blast?: number; split?: boolean; seek?: boolean };
+  hybrid?: { blast?: number; split?: boolean; seek?: boolean; drain?: number; dice?: number; sixBlast?: boolean };
   /** Broń dostępna tylko dla tego bohatera. */
   hero?: string;
+  /** Dodatkowe tagi synergii (0.43) obok tagów wzorca; ewolucje mają własne. */
+  tags?: Tag[];
 }
 
 const S = (o: Partial<WeaponStats>): WeaponStats => ({
@@ -226,6 +229,28 @@ export const WEAPONS: WeaponDef[] = [
   },
   // ---- hybrydy z fuzji (FUSIONS); ikony ic_f_* w gfx/icons.ts ----
   {
+    id: 'sickle', name: 'Blood Sickle', desc: 'Blood sickles that jump to the next enemy.', icon: 'ic_sickle', kind: 'bolt', color: C.red, proj: 'sickle', tags: ['Życie'],
+    base: S({ damage: 7, cooldown: 1.2, amount: 2, speed: 150, area: 1.2, duration: 1.6 }), hybrid: { seek: true },
+    levels: [{ amount: 1 }, { damage: 3 }, { cooldown: -0.15 }, { pierce: 1 }, { damage: 4 }, { amount: 1 }, { damage: 6 }],
+    evolves: [{ passive: 'fang', into: 'sickle_evo' }],
+  },
+  {
+    id: 'sickle_evo', name: "Reaper's Moon", desc: 'Crescents that hunt enemies down. Every hit heals you a little.', icon: 'ic_sickle_evo', kind: 'bolt', color: C.salmon, proj: 'sickle', tags: ['Życie'],
+    base: S({ damage: 24, cooldown: 0.55, amount: 4, speed: 200, area: 1.4, duration: 2, pierce: 2, knock: 1.5 }), hybrid: { seek: true, drain: 0.004 },
+    levels: [], evolved: true,
+  },
+  {
+    id: 'dice', name: 'Dice', desc: 'Thrown dice deal random damage; a six hits three times as hard. Luck rolls more sixes.', icon: 'ic_dice', kind: 'bolt', color: C.white, proj: 'dice', tags: ['Krytyk'],
+    base: S({ damage: 6, cooldown: 1, amount: 2, speed: 160, duration: 1.4, knock: 1.5 }), hybrid: { dice: 3 },
+    levels: [{ amount: 1 }, { damage: 3 }, { cooldown: -0.15 }, { pierce: 1 }, { damage: 3 }, { amount: 1 }, { damage: 6 }],
+    evolves: [{ passive: 'horseshoe', into: 'dice_evo' }],
+  },
+  {
+    id: 'dice_evo', name: 'Golden Six', desc: 'Golden dice: a six hits four times as hard, explodes and drops a coin.', icon: 'ic_dice_evo', kind: 'bolt', color: C.gold, proj: 'gdice', tags: ['Krytyk'],
+    base: S({ damage: 20, cooldown: 0.5, amount: 4, speed: 200, duration: 1.8, pierce: 2, knock: 2 }), hybrid: { dice: 4, sixBlast: true },
+    levels: [], evolved: true,
+  },
+  {
     id: 'f_firearrow', name: 'Płonące strzały', desc: 'Strzały wybuchające ogniem przy trafieniu.', icon: 'ic_f_firearrow', kind: 'bolt', color: C.orange, proj: 'arrow', hero: 'kestra',
     base: S({ damage: 36, cooldown: 0.42, amount: 4, speed: 300, duration: 1.4, pierce: 4, knock: 2 }), levels: [], evolved: true, fused: true, hybrid: { blast: 0.6 },
   },
@@ -333,6 +358,8 @@ export const ALT_EVOS: AltEvo[] = [
   { base: 'knives', passive: 'dup', id: 'knives_dup', name: 'Knife Storm', desc: 'A storm of eight knives at once.', color: C.pink, ramp: R_VOID, stats: { damage: 16, cooldown: 0.3, amount: 8 } },
   { base: 'light', passive: 'heart', id: 'light_heart', name: 'Sun Heart', desc: 'Two wide, strong rings of light.', color: C.salmon, ramp: R_BLOOD, stats: { damage: 40, amount: 2, area: 2.2 } },
   { base: 'katana', passive: 'whetstone', id: 'katana_sharp', name: 'Book of the Void', desc: 'Few, wide cuts that hit very hard.', color: C.lavender, ramp: R_VOID, stats: { damage: 62, cooldown: 0.65, amount: 2, area: 1.8 } },
+  { base: 'sickle', passive: 'crit', id: 'sickle_crit', name: 'Crimson Crescent', desc: 'Fast, sharp crescents that pierce many enemies.', color: C.hotpink, ramp: R_VOID, stats: { damage: 40, amount: 3, cooldown: 0.5, speed: 260, pierce: 4 }, hybrid: { seek: true } },
+  { base: 'dice', passive: 'clover', id: 'dice_clover', name: 'Four-Leaf Dice', desc: 'Six dice at once; every six explodes.', color: C.lime, ramp: R_LEAF, stats: { damage: 16, amount: 6 }, hybrid: { dice: 3, sixBlast: true } },
   { base: 'light', passive: 'clover', id: 'light_luck', name: 'Blessed Light', desc: 'Five rings of light, one after another.', color: C.lime, ramp: R_LEAF, stats: { damage: 28, cooldown: 0.8, amount: 5 } },
 ];
 

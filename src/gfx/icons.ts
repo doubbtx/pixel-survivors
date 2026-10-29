@@ -105,6 +105,25 @@ function fuseMark(p: Painter): void {
   p.px(1, 0, C.hotpink).px(0, 1, C.hotpink).px(2, 1, C.hotpink).px(1, 2, C.hotpink).px(1, 1, C.white);
 }
 
+/** Półksiężyc: łuk zewnętrzny (promień R) minus przesunięty łuk wewnętrzny, wypukły w stronę kąta `rot`. */
+export function crescentPts(cx: number, cy: number, R: number, cut: number, rot: number): [number, number][] {
+  const pts: [number, number][] = [], n = 14, span = 2.3;
+  for (let i = 0; i <= n; i++) { const a = rot - span + (2 * span * i) / n; pts.push([cx + Math.cos(a) * R, cy + Math.sin(a) * R]); }
+  const ix = cx - Math.cos(rot) * cut, iy = cy - Math.sin(rot) * cut, r = R * 0.9;
+  for (let i = n; i >= 0; i--) { const a = rot - span * 0.82 + (2 * span * 0.82 * i) / n; pts.push([ix + Math.cos(a) * r, iy + Math.sin(a) * r]); }
+  return pts;
+}
+
+/** Kostka do gry: zaokrąglony kwadrat z oczkami (1–6). */
+export function die(p: Painter, x: number, y: number, s: number, face: number, body: readonly number[], pip: number): void {
+  p.polyShade([[x + 1, y], [x + s - 1, y], [x + s, y + 1], [x + s, y + s - 1], [x + s - 1, y + s], [x + 1, y + s], [x, y + s - 1], [x, y + 1]], body as number[]);
+  const q = s / 4, c = s / 2, P: Record<number, [number, number][]> = {
+    1: [[c, c]], 2: [[q, q], [s - q, s - q]], 3: [[q, q], [c, c], [s - q, s - q]], 4: [[q, q], [s - q, q], [q, s - q], [s - q, s - q]],
+    5: [[q, q], [s - q, q], [c, c], [q, s - q], [s - q, s - q]], 6: [[q, q], [s - q, q], [q, c], [s - q, c], [q, s - q], [s - q, s - q]],
+  };
+  for (const [px, py] of P[face]) p.spot(x + px - 0.3, y + py - 0.3, pip);
+}
+
 function boltShape(p: Painter, ox: number, oy: number, col: number = C.yellow): void {
   p.poly([[ox + 8, oy + 1], [ox + 3, oy + 8], [ox + 7, oy + 8], [ox + 5, oy + 15], [ox + 12, oy + 6], [ox + 8, oy + 6], [ox + 10, oy + 1]], col);
   p.line(ox + 8, oy + 2, ox + 5, oy + 7, C.white);
@@ -115,6 +134,29 @@ export const ICON_FNS: Record<string, IconFn> = {
   ...CARD_ICONS_GFX,
   ...HERO_ICONS,
   // ===================== bronie =====================
+  ic_sickle: (p) => {
+    // Sierp krwi: drewniany trzonek i zakrzywione ostrze z czerwoną krawędzią, kropla krwi.
+    p.stroke(3, 15, 7, 9, C.dbrown).thin(3.5, 14.5, 7, 9.5, C.clay);
+    p.polyShade(crescentPts(9, 6.5, 6, 2.6, -0.5), [C.slate, C.lgray, C.lavender, C.white]);
+    p.poly(crescentPts(9, 6.5, 6, 4.6, -0.5), C.red);
+    p.px(13, 12, C.red).px(13, 13, C.dred);
+  },
+  ic_sickle_evo: (p) => {
+    // Księżyc żniwiarza: krwawy półksiężyc z poświatą i kroplami.
+    p.polyShade(crescentPts(8, 8, 7, 3, -0.6), [C.dred, C.red, C.salmon, C.white]);
+    p.poly(crescentPts(8, 8, 7, 1.3, -0.6), C.salmon);
+    p.px(4, 13, C.red).px(3, 14, C.dred).px(13, 14, C.salmon);
+    sparkle(p, 12, 4);
+  },
+  ic_dice: (p) => {
+    die(p, 1, 6, 8, 3, [C.slate, C.lgray, C.white, C.white], C.dgray);
+    die(p, 7, 2, 8, 6, [C.slate, C.lgray, C.white, C.white], C.red);
+  },
+  ic_dice_evo: (p) => {
+    die(p, 2, 3, 11, 6, [C.dbrown, C.orange, C.gold, C.yellow], C.ddbrown);
+    sparkle(p, 14, 2);
+    p.px(1, 14, C.gold).px(14, 14, C.yellow);
+  },
   ic_bolt: (p) => {
     // Magiczny pocisk: świecąca kula z ogonem komety i iskrami.
     p.stroke(2, 14, 6, 10, C.dblue).stroke(3, 13.5, 7, 9.5, C.blue).thin(2.5, 12.5, 7.5, 8.5, C.cyan);

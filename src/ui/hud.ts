@@ -1,3 +1,4 @@
+import { RELIC_BY_ID } from '../data/relics';
 import { W, H, VIEW_W, VIEW_H, type Renderer } from '../core/renderer';
 import { itemColor } from '../data/items';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
@@ -407,6 +408,14 @@ function drawInventory(r: Renderer, run: Run): void {
     if (fr > 0) r.withAlpha(0.6, () => r.rect(x, y1, S, S * fr, C.black));
     for (let l = 0; l < run.power.level; l++) r.rect(x + 1 + l * 4, y1 - 3, 3, 1.5, C.pink);
   }
+  // Relikwie (0.42): złote gniazda za pasywkami; Płaszcz przyciemnia się w czasie odnowienia.
+  run.relics.forEach((id, k) => {
+    const def = RELIC_BY_ID[id], x = UI.edge + BAL.passiveSlots * step + 3 + k * step;
+    if (!def) return;
+    iconSlot(r, x, y2, S, C.gold);
+    drawSprite(g, def.icon, x + S / 2, y2 + S / 2);
+    if (id === 'cloak' && run.cloakCd > 0) r.withAlpha(0.6, () => r.rect(x, y2, S, S * Math.min(1, run.cloakCd / BAL.relics.cloakCd), C.black));
+  });
   // Nowy przedmiot w plecaku: krótkie przypomnienie nad gniazdami.
   if (run.bag.some((it) => it.fresh)) {
     const t = '! Nowy przedmiot w plecaku (I)', tw = textWidth(t) * 0.75 + 6;

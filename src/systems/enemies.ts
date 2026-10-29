@@ -630,7 +630,9 @@ function eliteTraits(run: Run, e: Enemy, dt: number): void {
   e.traitT -= dt;
   if (has('commander') && e.traitT <= 0) {
     e.traitT = T.stamp;
-    run.enemiesInCircle(e.x, e.y, T.auraR, (o) => { if (o !== e && !o.boss) o.buffT = T.buffT; });
+    // Przeniewierca (relikwia): aura dowódcy wzmacnia gracza zamiast wrogów.
+    if (run.relic('turncoat')) { const p = run.player; if (Math.hypot(p.x - e.x, p.y - e.y) < T.auraR) run.cmdBuffT = Math.max(run.cmdBuffT, T.buffT); }
+    else run.enemiesInCircle(e.x, e.y, T.auraR, (o) => { if (o !== e && !o.boss) o.buffT = T.buffT; });
   }
   if (has('banner') && e.traitT <= 0) {
     e.traitT = T.bannerEvery;

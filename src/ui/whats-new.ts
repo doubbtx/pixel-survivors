@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.42',
+    lines: [
+      "Two new weapons for every hero: Blood Sickle (crescents that jump between enemies; evolves with Fang into Reaper's Moon, which heals you a little on every hit) and Dice (random damage, sixes hit harder and Luck rolls more of them; evolves with Horseshoe into Golden Six, whose sixes explode and drop coins). Both have a second evolution too (Hawk Eye, Clover).",
+      "While choosing a level up, card, boss power, relic or loot you can look at your build (C), backpack (I) and synergies (Y), or click the buttons in the bottom left. You return to the same choice.",
+      "Relics: after an Expedition act boss (and every second Endless boss) pick 1 of 3 relics. They last the whole run (max 3) and each changes a rule of the game with a real price, like the Blood Chalice: elite kills and broken situations heal, but meat no longer does.",
+    ],
+  },
+  {
     version: '0.41',
     lines: [
       "Takezo has his own secret: Ganryū (parry 15 attacks in a row without getting hit).",

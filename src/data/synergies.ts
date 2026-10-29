@@ -31,6 +31,9 @@ export const STAT_TAG: Partial<Record<keyof Stats, Tag>> = {
   amount: 'Pociski', projSpeed: 'Pociski',
 };
 
+/** Tagi broni do pokazania na kartach: wzorzec + dodatkowe tagi broni (bez powtórzeń). */
+export const weaponTags = (d: { kind: WeaponKind; tags?: Tag[] }): Tag[] => [...new Set([...WEAPON_TAGS[d.kind], ...(d.tags ?? [])])];
+
 /** Tagi wzorców broni (ewolucja dziedziczy tagi wzorca). */
 export const WEAPON_TAGS: Record<WeaponKind, Tag[]> = {
   bolt: ['Pociski'],
@@ -202,6 +205,7 @@ export function tagPoints(run: Run): Record<Tag, number> {
     const f = w.def.fused ? fusionOf(w.def.id) : undefined;
     const kinds = f ? [WEAPON_BY_ID[f.a].kind, WEAPON_BY_ID[f.b].kind] : [w.def.kind];
     for (const k of kinds) for (const t of WEAPON_TAGS[k]) add(t, w.def.evolved ? 2 : 1);
+    for (const t of w.def.tags ?? []) add(t, w.def.evolved ? 2 : 1);
   }
   for (const p of run.passives) add(STAT_TAG[PASSIVE_BY_ID[p.id].stat]);
   for (const c of run.cards) for (const t of CARD_BY_ID[c.id].tags) add(t, c.stacks);

@@ -5,7 +5,7 @@ export type Action =
   | 'up' | 'down' | 'left' | 'right'
   | 'q' | 'e' | 'dash' | 'ult'
   | 'pause' | 'confirm' | 'back' | 'click' | 'inventory' | 'fullscreen'
-  | 'reroll' | 'skip' | 'banish' | 'anvil' | 'build'
+  | 'reroll' | 'skip' | 'banish' | 'anvil' | 'build' | 'synergies'
   | 'n1' | 'n2' | 'n3' | 'n4' | 'pageUp' | 'pageDown'
   | 'debug' | 'debugTime' | 'debugLevel' | 'debugLoot';
 
@@ -21,7 +21,7 @@ const FIXED: Record<string, Action[]> = {
 export const REBIND: [Action, string][] = [
   ['up', 'KeyW'], ['down', 'KeyS'], ['left', 'KeyA'], ['right', 'KeyD'],
   ['q', 'KeyQ'], ['e', 'KeyE'], ['dash', 'Space'], ['ult', 'KeyR'],
-  ['inventory', 'KeyI'], ['build', 'KeyC'], ['skip', 'KeyX'], ['banish', 'KeyB'], ['anvil', 'KeyK'], ['pause', 'KeyP'],
+  ['inventory', 'KeyI'], ['build', 'KeyC'], ['synergies', 'KeyY'], ['skip', 'KeyX'], ['banish', 'KeyB'], ['anvil', 'KeyK'], ['pause', 'KeyP'],
 ];
 const DEFAULT_KEY = Object.fromEntries(REBIND) as Partial<Record<Action, string>>;
 

@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.41.3)
+## Stan (wersja 0.42.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -669,6 +669,24 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 
 - 0.41.3: sekret Takezo `ganryu` (data/secrets.ts): `sec.ganryu` = odbicia Mikiri pod rząd (tryParry +1, zerowane w
   hurtPlayer przy obrażeniach), 15 → Przepływ +2.5 s (`rhythm.flow`), +10% obrażeń. Każdy bohater ma teraz swój sekret.
+
+- 0.42.0 (R2, relikwie): data/relics.ts (`RELICS`, `mode` 'expedition' dla Pryzmatu i Pielgrzyma), `BAL.relics`,
+  `Run.relics` / `pendingRelics` (w snapshocie), `Run.relic(id)`. Źródło: `onBossKilled` — Ekspedycja: boss aktu poza
+  lochem i nie ostatni (wyprawa trwa dalej), Endless: boss parzystej głębokości poza lochem. Wybór: ui/relics.ts
+  (`RelicPickView`, stan 'relic' po mocach w `openPending`; przy limicie 3 drugi krok wymiany, Esc = zostaw). HUD: złote
+  gniazda za pasywkami. Efekty: Róg (sytuacje x2, skrzynia elity przy rozbiciu w 15 s), Klepsydra (bossSoftMul od połowy
+  czasu, max x2; boss +25% obrażeń poza lochem), Znak łowcy (elity +40%, zwykli -10%), Pryzmat (weak 2.25 / resist 0.25),
+  Pielgrzym (oferty obozu/kapliczki po 3, pierwsze odświeżenie darmowe, sklep x1.25), Przeniewierca (aura dowódcy i
+  sztandar dają graczowi `cmdBuffT`, dowódcy/sztandary częściej, elity z cechą +50% HP), Buława (zabicie elity → aura 6 s,
+  bez aury -15% obrażeń), Płaszcz (1 s iframes co 8 s, -25% maks. HP), Kielich (rozbicie/elita leczą 15%, mięso nie).
+  Podgląd przy wyborze: `peekFromPick` w game-screen (stany levelup/cards/power/relic/loot) — C build, I/Tab plecak,
+  Y synergie (nowa akcja `synergies`, do zmiany w Sterowaniu) albo przyciski `peekBtn`; powrót przez build/inv/synReturn.
+  Nowe bronie ogólne: `sickle` (Sierp krwi, bolt z `hybrid.seek`, ewolucja z `fang` → `sickle_evo` z `hybrid.drain` 0.4%
+  maks. HP za trafienie w budżecie `BAL.drainPerSec` 1%/s — `Run.drainHeal`, przez `heal`, nie działa z Kielichem; alt z
+  `crit`) i `dice` (Kości, `hybrid.dice` = mnożnik szóstki, rzut w `rollDie` w projectiles.ts: x0.5–1.6 albo szóstka z
+  szansą 1/6 + stats.luck/8, maks. 0.5; ewolucja z `horseshoe` → `dice_evo` z `sixBlast` (wybuch + moneta co 1 s); alt z
+  `clover`). `WeaponDef.tags` dodaje tagi synergii obok tagów wzorca (`weaponTags`). Sprite'y obrotowe `SPIN` w render.ts
+  (`sickle0..3`, `dice0..3`, `gdice0..3`), ikony z `crescentPts` / `die` w gfx/icons.ts.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

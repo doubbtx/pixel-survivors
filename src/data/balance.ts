@@ -166,6 +166,11 @@ export const BAL = {
    * znika na `phaseTime` s i pojawia się do `phaseStep` px bliżej gracza.
    */
   eliteTraits: { from: 150, auraR: 70, stamp: 0.25, buffT: 0.35, speed: 0.25, dmg: 0.25, kids: 3, kidHp: 1.5, bannerEvery: 8, bannerR: 50, bannerLife: 6, bannerRegen: 0.03, bannerTaken: 0.2, phaseEvery: 4, phaseTime: 1, phaseStep: 40 },
+  /** Relikwie (data/relics.ts, R2): limit, wartości efektów i wad. */
+  /** Bronie 0.43: Kości (szansa szóstki: baza + Szczęście × sixLuck, maks. sixMax) i budżet leczenia Sierpa krwi (ułamek maks. HP na sekundę). */
+  dice: { six: 1 / 6, sixLuck: 1 / 8, sixMax: 0.5, low: 0.5, high: 1.6, blast: 0.5, blastR: 20, coinEvery: 1 },
+  drainPerSec: 0.01,
+  relics: { max: 3, offer: 3, prismWeak: 2.25, prismResist: 0.25, huntElite: 0.4, huntRegular: 0.1, cloakTime: 1, cloakCd: 8, cloakHp: 0.75, maceTime: 6, maceDmgLoss: 0.15, turncoatHp: 1.5, turncoatAura: 0.5, hornWindow: 15, chaliceHeal: 0.15, bossDmg: 1.25, shopMarkup: 1.25 },
   /** Odstęp próbek telemetrii runu (s). */
   telemetryEvery: 15,
   /** Maks. spawnów na sekundę (żeby fala nie pojawiała się w jednej klatce). */

@@ -373,8 +373,8 @@ function avoidable(map: (MapNode | null)[][], row: number, lane: number): boolea
 }
 
 /** Dwie różne opcje do wyboru (obóz, kapliczka). */
-export function rollOffer(kind: 'rest' | 'shrine'): { kind: 'rest' | 'shrine'; ids: string[] } {
-  const pool = (kind === 'rest' ? CAMP_BUFFS : EX_BLESSINGS).map((b) => b.id);
-  const a = rng.pick(pool);
-  return { kind, ids: [a, rng.pick(pool.filter((id) => id !== a))] };
+export function rollOffer(kind: 'rest' | 'shrine', n = 2): { kind: 'rest' | 'shrine'; ids: string[] } {
+  const pool = (kind === 'rest' ? CAMP_BUFFS : EX_BLESSINGS).map((b) => b.id), ids: string[] = [];
+  while (ids.length < n && pool.length) ids.push(pool.splice(Math.floor(rng.next() * pool.length), 1)[0]);
+  return { kind, ids };
 }

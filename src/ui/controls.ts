@@ -10,7 +10,7 @@ import { Menu, panel, titleBar } from './widgets';
 const ACTION_NAME: Partial<Record<Action, string>> = {
   up: 'Move up', down: 'Move down', left: 'Move left', right: 'Move right',
   q: 'Ability Q', e: 'Ability E', dash: 'Dodge', ult: 'Ultimate',
-  inventory: 'Backpack', build: 'Weapons and passives', skip: 'Skip / salvage', banish: 'Banish', anvil: 'Anvil', pause: 'Pause',
+  inventory: 'Backpack', build: 'Weapons and passives', synergies: 'Synergies', skip: 'Skip / salvage', banish: 'Banish', anvil: 'Anvil', pause: 'Pause',
 };
 
 /**

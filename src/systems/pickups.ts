@@ -50,7 +50,8 @@ export function updatePickups(run: Run, dt: number): void {
     if (!it.flying || !fly(run, it, dt)) continue;
     switch (it.kind) {
       case 'meat':
-        run.heal(run.stats.maxHp * 0.3 * (1 + run.flag('meatHeal')));
+        // Kielich krwi (relikwia): jedzenie nie leczy.
+        if (!run.relic('chalice')) run.heal(run.stats.maxHp * 0.3 * (1 + run.flag('meatHeal')));
         sfx.play('pickup');
         break;
       case 'magnet':
