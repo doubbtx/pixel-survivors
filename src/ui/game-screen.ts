@@ -58,6 +58,8 @@ type State = 'play' | 'levelup' | 'cards' | 'power' | 'relic' | 'loot' | 'invent
 
 /** Krótka blokada wejścia po otwarciu nakładki — żeby wciśnięty akurat klawisz nie wybrał karty. */
 const OVERLAY_DELAY = 0.3;
+/** Kolejne okno tego samego rodzaju (awanse pod rząd): krócej, ale nie zero — przytrzymany Enter nie wybierze przypadkiem. */
+const REPEAT_DELAY = 0.12;
 /** Pauza: lewa kolumna z menu (x, szerokość) i drobny tekst podsumowania. */
 const PL = 8, PLW = 150;
 const PAUSE_TABS = ['Postać', 'Build', 'Umiejętności'];
@@ -74,6 +76,10 @@ export class GameScreen implements Screen {
   private cardPick: CardPickView | null = null;
   private powerPick: PowerPickView | null = null;
   private relicPick: RelicPickView | null = null;
+  /** Seria nagród (0.44): ile było w kolejce na początku, ile już otwartych, rodzaj ostatniego okna. */
+  private rewardTotal = 0;
+  private rewardDone = 0;
+  private lastPick: State | null = null;
   private loot: LootView | null = null;
   private inventory: InventoryView | null = null;
   private shop: ShopView | null = null;
@@ -543,37 +549,52 @@ export class GameScreen implements Screen {
   }
 
   /** Otwiera nakładkę dla zaległych nagród: łup → awans → karta → moc bossa. */
+  /**
+   * Następna nagroda w kolejce (0.44, playtest 2): najpierw najważniejsze decyzje — relikwia, moc bossa, karty — potem awanse,
+   * łup na końcu. Przy ≥3 nagrodach naraz (np. po bossie) licznik „Rewards 4/14” u góry; kolejne okno tego samego rodzaju
+   * (np. awanse pod rząd) otwiera się szybciej.
+   */
   private openPending(): boolean {
     const run = this.run;
-    if (run.pendingLoot.length > 0) {
-      this.loot = new LootView(run, run.pendingLoot.shift()!);
-      this.state = 'loot';
-      this.hints.show('loot');
-      if (this.loot.item.unique) this.hints.show('unique');
+    const left = run.pendingLoot.length + run.pendingLevels + run.pendingCards.length + run.pendingPowers + run.pendingRelics;
+    if (!left) { this.rewardTotal = 0; this.rewardDone = 0; this.lastPick = null; return false; }
+    if (!this.rewardTotal) { this.rewardDone = 0; this.rewardTotal = left >= 3 ? left : 0; }
+    else this.rewardDone++;
+    if (run.pendingRelics > 0) {
+      run.pendingRelics--;
+      this.relicPick = new RelicPickView(run);
+      this.state = 'relic';
+    } else if (run.pendingPowers > 0) {
+      run.pendingPowers--;
+      this.powerPick = new PowerPickView(run);
+      this.state = 'power';
+      this.hints.show('power');
+    } else if (run.pendingCards.length > 0) {
+      this.cardPick = new CardPickView(run, run.pendingCards.shift()!);
+      this.state = 'cards';
+      this.hints.show('cards');
     } else if (run.pendingLevels > 0) {
       this.levelUp = new LevelUpView(run);
       this.state = 'levelup';
       this.hints.show('levelup');
       if (this.levelUp.options.some((o) => o.kind === 'augment')) this.hints.show('augment');
       if (this.levelUp.options.some((o) => o.kind === 'fusion')) this.hints.show('fusion');
-    } else if (run.pendingCards.length > 0) {
-      this.cardPick = new CardPickView(run, run.pendingCards.shift()!);
-      this.state = 'cards';
-      this.hints.show('cards');
-    } else if (run.pendingPowers > 0) {
-      run.pendingPowers--;
-      this.powerPick = new PowerPickView(run);
-      this.state = 'power';
-      this.hints.show('power');
-    } else if (run.pendingRelics > 0) {
-      run.pendingRelics--;
-      this.relicPick = new RelicPickView(run);
-      this.state = 'relic';
     } else {
-      return false;
+      this.loot = new LootView(run, run.pendingLoot.shift()!);
+      this.state = 'loot';
+      this.hints.show('loot');
+      if (this.loot.item.unique) this.hints.show('unique');
     }
-    this.delay = OVERLAY_DELAY;
+    this.delay = this.state === this.lastPick ? REPEAT_DELAY : OVERLAY_DELAY;
+    this.lastPick = this.state;
     return true;
+  }
+
+  /** Licznik serii nagród nad nakładką („Rewards 4/14”). */
+  private renderRewardCounter(r: Renderer): void {
+    if (!this.rewardTotal) return;
+    const t = `${tr('Rewards')} ${Math.min(this.rewardTotal, this.rewardDone + 1)}/${this.rewardTotal}`;
+    drawText(r.g, t, W - 6, 3, C.gold, { align: 'right', outline: C.black, scale: 0.75 });
   }
 
   update(dt: number): void {
@@ -745,22 +766,27 @@ export class GameScreen implements Screen {
       case 'levelup':
         this.levelUp!.render(r);
         this.renderPeekBar(r);
+        this.renderRewardCounter(r);
         break;
       case 'cards':
         this.cardPick!.render(r);
         this.renderPeekBar(r);
+        this.renderRewardCounter(r);
         break;
       case 'power':
         this.powerPick!.render(r);
         this.renderPeekBar(r);
+        this.renderRewardCounter(r);
         break;
       case 'relic':
         this.relicPick!.render(r);
         this.renderPeekBar(r);
+        this.renderRewardCounter(r);
         break;
       case 'loot':
         this.loot!.render(r);
         this.renderPeekBar(r);
+        this.renderRewardCounter(r);
         break;
       case 'inventory':
         this.inventory!.render(r);

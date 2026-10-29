@@ -687,4 +687,11 @@ export const PL: Record<string, string> = {
   "Flow": "Przepływ",
   "Takezo's Flow (full Rhythm) now lasts until you take damage instead of a few seconds.": "Przepływ Takezo (pełny Rytm) trwa teraz do momentu oberwania zamiast kilku sekund.",
   "Fixes from the second playtest: the Easy mode offer remembers defeats after reloading, Takezo's and Aurel's ability texts are fully translated, Y closes Synergies, situations, quests and events after the quiet start come one by one, DPS shows whole numbers.": "Poprawki z drugiego playtestu: propozycja trybu łatwego pamięta porażki po przeładowaniu, opisy umiejętności Takezo i Aurela są w pełni przetłumaczone, Y zamyka Synergie, sytuacje, zadania i wydarzenia po spokojnym starcie przychodzą po kolei, DPS jako liczby całkowite.",
+  "Rewards": "Nagrody",
+  "Take all to backpack": "Wszystko do plecaka",
+  "To backpack": "Do plecaka",
+  "salvaged": "rozłożone",
+  "After a boss the most important choices come first (relic, boss power, cards), then level ups, loot last. A counter in the corner shows how many rewards are left, and level ups in a row open faster.": "Po bossie najpierw najważniejsze decyzje (relikwia, moc bossa, karty), potem awanse, a łup na końcu. Licznik w rogu pokazuje, ile nagród zostało, a kolejne awanse otwierają się szybciej.",
+  "Loot: 'Take all to backpack' puts this item and the other regular items waiting in the queue into your backpack at once (uniques and legendaries still get their own window).": "Łup: „Wszystko do plecaka” wkłada ten i pozostałe zwykłe przedmioty z kolejki do plecaka naraz (unikaty i legendy mają dalej osobne okno).",
+  "Readability: only enemies you can see on screen shoot, there are fewer enemy bullets at once (each hits a bit harder), your own big explosions are half transparent and your hero is always drawn on top of your attacks.": "Czytelność: strzelają tylko wrogowie widoczni na ekranie, wrogich pocisków jest naraz mniej (każdy trafia trochę mocniej), twoje duże wybuchy są półprzezroczyste, a bohater jest zawsze rysowany nad twoimi atakami.",
 };

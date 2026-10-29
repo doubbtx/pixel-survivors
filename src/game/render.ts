@@ -574,13 +574,17 @@ function drawWorld(run: Run, r: Renderer): void {
     const k = d.life / DUST_LIFE;
     r.withAlpha(0.55 * k, () => r.circle(d.x, d.y - (1 - k) * 2, 1.5 + (1 - k) * 2.5, C.lgray, true));
   }
-  if (!blink && run.outcome !== 'dead') r.withAlpha(ghost ? 0.55 : 1, () => {
-    const scale = ult.def.kind === 'titan' && ult.activeT > 0 ? 2 : 1;
-    const frame = p.moving || p.dashT > 0 ? animFrame(run.heroSprite, run.step, 0) : 0;
-    // Drgnięcie przy trafieniu (o piksel w bok), ściśnięcie przy użyciu umiejętności, oddech w miejscu.
-    const jx = p.flash > 0 && !run.reduceFlash ? (run.step % 4 < 2 ? 1 : -1) : 0;
-    drawSprite(g, `${run.heroSprite}@${frame}`, px + jx, py, { flash: p.flash > 0 && !run.reduceFlash, scale, flipX: p.fx < 0, squash: heroSquash(run, anim, p.moving) });
-  });
+  const drawHero = (a: number) => {
+    if (blink || run.outcome === 'dead') return;
+    r.withAlpha(a, () => {
+      const scale = ult.def.kind === 'titan' && ult.activeT > 0 ? 2 : 1;
+      const frame = p.moving || p.dashT > 0 ? animFrame(run.heroSprite, run.step, 0) : 0;
+      // Drgnięcie przy trafieniu (o piksel w bok), ściśnięcie przy użyciu umiejętności, oddech w miejscu.
+      const jx = p.flash > 0 && !run.reduceFlash ? (run.step % 4 < 2 ? 1 : -1) : 0;
+      drawSprite(g, `${run.heroSprite}@${frame}`, px + jx, py, { flash: p.flash > 0 && !run.reduceFlash, scale, flipX: p.fx < 0, squash: heroSquash(run, anim, p.moving) });
+    });
+  };
+  drawHero(ghost ? 0.55 : 1);
   if (p.shield > 0) {
     // Tarcza: jeden czytelny pierścień (bez nakładających się poświat).
     r.withAlpha(0.6, () => r.circle(px, py + 1, 13, C.cyan));
@@ -676,7 +680,10 @@ function drawWorld(run: Run, r: Renderer): void {
         case 'boom': {
           const n = FX_FRAMES[f.kind];
           const fr = Math.min(n - 1, Math.floor((1 - k) * n));
-          drawSprite(g, `${f.kind}@${fr}`, X(f.x), Y(f.y), { scale: Math.max(1, Math.round(f.r)) });
+          const sc = Math.max(1, Math.round(f.r));
+          // Duże wybuchy gracza półprzezroczyste (0.44, playtest 2: wybuch zasłaniał środek ekranu).
+          if (f.kind === 'boom' && sc >= 3) r.withAlpha(0.5, () => drawSprite(g, `${f.kind}@${fr}`, X(f.x), Y(f.y), { scale: sc }));
+          else drawSprite(g, `${f.kind}@${fr}`, X(f.x), Y(f.y), { scale: sc });
           break;
         }
         case 'fade': {
@@ -706,6 +713,9 @@ function drawWorld(run: Run, r: Renderer): void {
       }
     }
   });
+
+  // Bohater jeszcze raz nad efektami ataków (0.44): własne wybuchy i pociski nie zasłaniają postaci (pod pociskami wrogów).
+  drawHero(ghost ? 0.55 : 1);
 
   // Pociski wrogów (0.40: nad efektami ataków gracza, żeby nie ginęły w trafieniach i wybuchach): najpierw poświaty (jedna zmiana przezroczystości dla wszystkich), potem kule.
   // Przy bardzo dużej liczbie pocisków poświaty są pomijane (wydajność).

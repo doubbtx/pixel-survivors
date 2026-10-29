@@ -63,6 +63,8 @@ export interface TelemetrySample {
   aff: string;
   /** Sytuacja w toku (id) albo ''. */
   sit: string;
+  /** Wrogie pociski w grze (0.44: czytelność). */
+  bul?: number;
 }
 
 export const DEFAULT_STATS: Stats = {
@@ -679,6 +681,7 @@ export class Run {
       ult: this.ultUses - this.ultMark, growth: Math.round(st.growth * 100) / 100,
       goal: this.levelInfo.dungeon ? 'dungeon' : this.levelInfo.objective.kind,
       sit: this.sitActive?.id ?? this.situation?.id ?? '',
+      bul: this.bullets.count,
       aff: this.levelInfo.weak ? `weak:${this.levelInfo.weak}` : this.levelInfo.resist ? `resist:${this.levelInfo.resist}` : '',
     });
     this.takenMark = this.takenTotal;

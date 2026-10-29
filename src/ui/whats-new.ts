@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.44',
+    lines: [
+      "After a boss the most important choices come first (relic, boss power, cards), then level ups, loot last. A counter in the corner shows how many rewards are left, and level ups in a row open faster.",
+      "Loot: 'Take all to backpack' puts this item and the other regular items waiting in the queue into your backpack at once (uniques and legendaries still get their own window).",
+      "Readability: only enemies you can see on screen shoot, there are fewer enemy bullets at once (each hits a bit harder), your own big explosions are half transparent and your hero is always drawn on top of your attacks.",
+    ],
+  },
+  {
     version: '0.43.5',
     lines: [
       "Fixes from the second playtest: the Easy mode offer remembers defeats after reloading, Takezo's and Aurel's ability texts are fully translated, Y closes Synergies, situations, quests and events after the quiet start come one by one, DPS shows whole numbers.",

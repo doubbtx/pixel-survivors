@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.43.5)
+## Stan (wersja 0.44.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -705,6 +705,11 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   `rhythm.flow` (węzeł t_max, karta h_t_max, sekret Ganryū), jeszcze tyle sekund Przepływu, potem opadanie od pełnego.
 - 0.43.5 (playtest 2): `earlyDeaths` w loadSave; tr() wstawek w pauzie (pasywka, zasób, ewolucje w skills.ts); Y zamyka
   Synergie; łagodny start: zadanie +20 s, wydarzenie +40 s po ciszy (`gentle.stagger`); DPS zaokrąglany; podpis ekranu relikwii pod kartami.
+- 0.44.0 (playtest 2, krytyka Agenta 2): `openPending` w kolejności relikwia → moc → karty → awanse → łup; seria ≥3 nagród:
+  licznik `rewardTotal/rewardDone` („Rewards 4/14”), ten sam rodzaj pod rząd `REPEAT_DELAY` 0.12 s. LootView: „Take all to
+  backpack” (`takeAll`, bez unikatów/legend). Strzelają tylko widoczni wrogowie (`BAL.shootMargin`, boss zawsze),
+  `enemyBulletSoftCap` 500 → 320, `bulletDmg` 1.1 → 1.35 (A/B bot: mediana przeżycia 64.5 vs 61.5 s; pociski w 3 min ~340
+  zamiast 400-580); telemetria `bul`. Render: bohater drugi raz nad efektami gracza (`drawHero`), 'boom' skala ≥3 z alfą 0.5.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

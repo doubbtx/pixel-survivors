@@ -1,3 +1,4 @@
+import { VIEW_W, VIEW_H } from '../core/renderer';
 import { rng } from '../core/rng';
 import { sfx } from '../core/audio';
 import { C } from '../core/palette';
@@ -823,7 +824,10 @@ export function updateEnemies(run: Run, dt: number): void {
         e.shootT -= dt;
         // Zapowiedź salwy: wróg miga.
         if (sh?.windup && e.shootT < sh.windup && dist < sh.range && run.blink(6, 3)) e.flash = 2;
-        if (e.shootT <= 0 && run.bullets.count < BAL.enemyBulletSoftCap) {
+        // Strzelają tylko wrogowie widoczni na ekranie (playtest 2: pociski spoza kadru z góry i z dołu); boss zawsze.
+        const seen = e.boss || (e.x > run.camX - BAL.shootMargin && e.x < run.camX + VIEW_W + BAL.shootMargin && e.y > run.camY - BAL.shootMargin && e.y < run.camY + VIEW_H + BAL.shootMargin);
+        if (e.shootT <= 0 && !seen) e.shootT = 0.3;
+        else if (e.shootT <= 0 && run.bullets.count < BAL.enemyBulletSoftCap) {
           if (sh && dist < sh.range) {
             shoot(run, e, sh, dmg);
             e.burstLeft = (sh.burst ?? 1) - 1;

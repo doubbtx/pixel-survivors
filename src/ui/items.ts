@@ -3,6 +3,7 @@ import type { Input } from '../core/input';
 import { C } from '../core/palette';
 import { drawText, wrapText, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
+import { tr } from '../core/i18n';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { fmt } from '../util/format';
@@ -133,6 +134,20 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
  * Nakładka łupu: nowy przedmiot obok aktualnie założonego w tym slocie.
  * Wybór: załóż / do plecaka / rozłóż na złoto.
  */
+/** Unikat albo legenda: zawsze osobne okno łupu. */
+const special = (it: Item): boolean => !!it.unique || it.rarity >= RARITIES.length - 1;
+
+/** „Wszystko do plecaka”: bieżący i zwykłe przedmioty z kolejki łupu; zwraca podsumowanie do komunikatu. */
+function takeAll(run: Run, first: Item): string {
+  const items = [first, ...run.pendingLoot.filter((l) => !special(l.item)).map((l) => l.item)];
+  run.pendingLoot = run.pendingLoot.filter((l) => special(l.item));
+  let stashed = 0, gold = 0;
+  for (const it of items) {
+    if (run.bag.length < BAL.bagSize) { run.stash(it); stashed++; } else gold += run.salvage(it);
+  }
+  return gold > 0 ? `${tr('To backpack')}: ${stashed}, ${tr('salvaged')}: +${fmt(gold)} zł` : `${tr('To backpack')}: ${stashed}`;
+}
+
 export class LootView {
   readonly item: Item;
   private menu: Menu;
@@ -153,6 +168,13 @@ export class LootView {
       },
       { label: () => `Rozłóż (+${salvageGold(it, run.stats.greed)} zł, +${salvageShards(it)} odł.)`, act: () => { run.salvage(it); this.finish(''); } },
     ], W / 2, 211, 200, 14);
+    // Seria łupu (0.44, playtest 2: po bossie 3 okna łupu pod rząd): ten i dalsze zwykłe przedmioty z kolejki naraz do
+    // plecaka (pełny plecak: rozłożone); unikaty i legendy zostają w kolejce na osobne okno.
+    const rest = () => run.pendingLoot.filter((l) => !special(l.item)).length;
+    if (rest() > 0 && !special(it)) {
+      this.menu.items.push({ label: () => `${tr('Take all to backpack')} (${rest() + 1})`, act: () => this.finish(takeAll(run, it)) });
+      this.menu.y -= 14;
+    }
     sfx.play(it.rarity >= 3 || it.super || it.unique ? 'levelup' : 'chest');
   }
 
@@ -173,13 +195,15 @@ export class LootView {
     const title = it.unique ? 'Unikat!' : this.source === 'boss' ? 'Łup bossa!' : this.source === 'elite' ? 'Skrzynia elity!' : 'Przedmiot!';
     drawText(r.g, title, W / 2, 10, it.super ? C.yellow : itemColor(it), { align: 'center', scale: 2, outline: C.black });
     const cur = run.equipment[run.slotFor(it)];
+    // Przy czwartej opcji („Wszystko do plecaka”) karty niższe, żeby menu ich nie zasłaniało.
+    const ch = this.menu.items.length > 3 ? 152 : 168;
     // Pusty slot: jeden szerszy panel (nie ma z czym porównać), inaczej nowy obok założonego.
     if (!cur) {
-      drawItemCard(r, it, W / 2 - 150, 40, 300, 168, null, false, run.stats);
+      drawItemCard(r, it, W / 2 - 150, 40, 300, ch, null, false, run.stats);
     } else {
-      drawItemCard(r, it, 18, 40, 216, 168, cur, false, run.stats);
+      drawItemCard(r, it, 18, 40, 216, ch, cur, false, run.stats);
       drawText(r.g, 'Założone', 246 + 108, 30, C.lavender, { align: 'center' });
-      drawItemCard(r, cur, 246, 40, 216, 168, undefined, false, run.stats);
+      drawItemCard(r, cur, 246, 40, 216, ch, undefined, false, run.stats);
     }
     this.menu.render(r);
   }

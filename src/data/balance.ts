@@ -546,7 +546,7 @@ export const BAL = {
   /** Promień "rdzenia" gracza dla pocisków wrogów (mniejszy niż postać — uczciwe przeciskanie się przez luki). */
   playerBulletR: 2,
   /** Obrażenia pocisków jako ułamek obrażeń wroga: pocisków jest mało, ale każdy boli (zwykli wrogowie / boss). */
-  bulletDmg: 1.1,
+  bulletDmg: 1.35,
   bossBulletDmg: 1.1,
 
   // --- limity wydajnościowe ---
@@ -555,7 +555,9 @@ export const BAL = {
   particleCap: 1600,
   enemyBulletCap: 2600,
   /** Powyżej tej liczby pocisków zwykli wrogowie wstrzymują ogień (boss strzela zawsze) — czytelność. */
-  enemyBulletSoftCap: 500,
+  /** 0.44: 500 → 320 (playtest 2: 400-580 pocisków w 3-6 min); strzelają tylko widoczni (margines shootMargin), a pocisk mocniejszy (bulletDmg). */
+  enemyBulletSoftCap: 320,
+  shootMargin: 10,
   projectileCap: 2600,
 
   // --- dropy ---
