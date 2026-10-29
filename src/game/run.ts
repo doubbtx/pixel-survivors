@@ -448,6 +448,8 @@ export class Run {
   eliteKills = 0;
   /** Polowanie: czas spędzony w lochu (sekretne schody) nie liczy się do limitu ucieczki. */
   huntPaused = 0;
+  /** Baner „boss słabnie” pokazany dla bieżącego bossa. */
+  bossSoftShown = false;
   /** Sytuacje (systems/situations.ts): zapowiedź, aktywna formacja, odliczanie, ostatnia (bez powtórek), dziennik wyników. */
   situation: { id: string; t: number; a: number; spots: Spot[] } | null = null;
   sitActive: { uid: number; id: string; left: number; keys: number; keysLeft: number; t0: number; taken0: number } | null = null;
@@ -512,7 +514,10 @@ export class Run {
   /** Ograniczenie błysków (Ustawienia, dostępność): miganie zastępuje stały kolor, bez białych błysków trafień. */
   reduceFlash = false;
   /** Ukryte pociski gracza (ustawienie): nadal działają, tylko nie są rysowane. */
-  playerFx: PlayerFx = 'visible';
+  playerFx: PlayerFx = 'auto';
+  /** Tryb 'auto' ataków gracza: przygaszenie 0..1 (wygładzone) i stan z histerezą (BAL.readability). */
+  fxDim = 0;
+  private fxDimOn = false;
 
   constructor(heroId: string, readonly mode: Mode, depth = 1, fresh = true) {
     this.hero = HERO_BY_ID[heroId];
@@ -619,7 +624,7 @@ export class Run {
     const o = this.levelInfo.objective;
     // Polowanie: cel wykonany po zabiciu minibossa albo gdy uciekł (limit czasu).
     if (o.kind === 'hunt') { const t = this.time - this.huntPaused; return this.huntKilled || t >= o.time ? 1 : Math.min(0.99, t / o.time); }
-    return Math.min(1, o.kind === 'survive' ? this.time / o.time : this.levelKills / o.count);
+    return Math.min(1, o.kind === 'survive' ? Math.max(this.time / o.time, o.kills ? this.levelKills / o.kills : 0) : this.levelKills / o.count);
   }
 
   /** Czas fal: czas poziomu + przesunięcie głębokości (skład fal, elity, gęstość salw, siła buildu). */
@@ -661,6 +666,22 @@ export class Run {
     return this.mode === 'endless' ? Math.max(0, this.time - (this.nextBossAt - BAL.endlessBossEvery)) : this.time;
   }
 
+  /** Czytelność w tłumie: dużo pocisków wrogów blisko bohatera przygasza jego ataki (tryb 'auto'). */
+  private updateFxDim(dt: number): void {
+    if (this.playerFx !== 'auto') { this.fxDim = 0; return; }
+    const R = BAL.readability, p = this.player, r2 = R.radius * R.radius;
+    let n = 0;
+    for (const b of this.bullets.items) if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < r2 && ++n >= R.on) break;
+    this.fxDimOn = this.fxDimOn ? n > R.off : n >= R.on;
+    this.fxDim += ((this.fxDimOn ? 1 : 0) - this.fxDim) * Math.min(1, dt / R.ema);
+  }
+
+  /** Mnożnik obrażeń słabnącego bossa (po BAL.bossSoften.after s walki rośnie do 1 + max). */
+  bossSoftMul(e: Enemy): number {
+    const S = BAL.bossSoften, a = e.age - S.after;
+    return a > 0 ? 1 + S.max * Math.min(1, a / S.ramp) : 1;
+  }
+
   /** Suma obrażeń przyjętych w runie (całe trafienia przed tarczą) — telemetria sytuacji. */
   takenSoFar(): number {
     return this.takenTotal;
@@ -687,6 +708,7 @@ export class Run {
     this.xpPulse = Math.max(0, this.xpPulse - dt);
     this.confusedT = Math.max(0, this.confusedT - dt);
     this.updatePower(dt);
+    this.updateFxDim(dt);
     if (this.step % Math.round(BAL.telemetryEvery * 60) === 0) this.sample();
     this.explosionsThisStep = 0;
     this.boomSpots.length = 0;
@@ -1241,8 +1263,11 @@ export class Run {
     const el = damageElement(src, this.augElem), res = this.resistOf(e);
     const resist = res !== undefined && el === res ? BAL.bossResist.mul : 1;
     const weak = el !== undefined && el === this.levelInfo.weak ? BAL.expedition.weakMul : 1;
+    // Długa walka z bossem: boss słabnie (BAL.bossSoften); pogoń HP tego nie wyrównuje.
+    const soft = e.boss && !this.dungeon ? this.bossSoftMul(e) : 1;
+    if (soft > 1 && !this.bossSoftShown) { this.bossSoftShown = true; this.showBanner(`${this.levelInfo.bossName} weakens!`); }
     // Podatność raz: ticki stanów (podpalenie, trucizna) dziedziczą ją przez bazę z trafienia, które je nałożyło.
-    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * (o.dot ? 1 : weak) * loyal * resourceDamageMul(this, src) * (1 - e.dr));
+    const dmg = Math.max(0.01, base * mult * rage * shock * brittle * big * lore * calm * resist * (o.dot ? 1 : weak) * soft * loyal * resourceDamageMul(this, src) * (1 - e.dr));
     // Statystyki (tabela obrażeń, DPS) i siła gracza (trudność, 0.35.2: bez nadwyżki ponad HP wroga) liczą tylko zadane
     // obrażenia; kradzież życia całe trafienie.
     const dealt = Math.min(dmg, Math.max(0, e.hp));
@@ -1252,7 +1277,7 @@ export class Run {
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;
     // Siła buildu bez powinowactwa mapy: mapa podatna / odporna działa w pełni, pogoń HP jej nie wyrównuje.
-    if (!pct) this.dmgStep += dealt / (resist * weak);
+    if (!pct) this.dmgStep += dealt / (resist * weak * soft);
     this.elemDmg[el ?? 'none'] = (this.elemDmg[el ?? 'none'] ?? 0) + dealt / (resist * weak);
     this.lastHitSrc = src;
     if (st.lifesteal > 0) this.heal(Math.min(dmg * st.lifesteal, st.maxHp * 0.02));

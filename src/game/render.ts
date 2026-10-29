@@ -172,8 +172,10 @@ function drawWorld(run: Run, r: Renderer): void {
   if (run.bgDim > 0) r.withAlpha(run.bgDim, () => r.rect(0, 0, VW, VH, C.black));
 
   // Ataki gracza (ustawienie): przygaszone = półprzezroczyste i bez poświat, ukryte = pominięte (działają dalej).
-  const atkOn = run.playerFx !== 'hidden', glow = run.playerFx === 'visible';
-  const atk = (fn: () => void) => { if (atkOn) { if (glow) fn(); else r.withAlpha(0.35, fn); } };
+  // 'auto': jak widoczne, ale przygaszane (run.fxDim), gdy blisko bohatera jest dużo pocisków wrogów.
+  const autoA = run.playerFx === 'auto' ? 1 - (1 - BAL.readability.alpha) * run.fxDim : 1;
+  const atkOn = run.playerFx !== 'hidden', glow = run.playerFx === 'visible' || (run.playerFx === 'auto' && run.fxDim < 0.5);
+  const atk = (fn: () => void) => { if (atkOn) { if (run.playerFx === 'dim') r.withAlpha(0.35, fn); else if (autoA < 1) r.withAlpha(autoA, fn); else fn(); } };
 
   // Aury broni i tytana: półprzezroczyste pole + pulsujący brzeg.
   const ult = run.abilities.ult;
@@ -607,30 +609,6 @@ function drawWorld(run: Run, r: Renderer): void {
     }
   });
 
-  // Pociski wrogów: najpierw poświaty (jedna zmiana przezroczystości dla wszystkich), potem kule.
-  // Przy bardzo dużej liczbie pocisków poświaty są pomijane (wydajność).
-  if (fancy && run.bullets.count < 600) {
-    lit(g, (glow) => {
-      for (const b of run.bullets.items) if (vis(b.x, b.y)) glow(X(b.x), Y(b.y), b.radius * ZOOM + 8, BULLET_GLOW[b.sprite] ?? C.red, 0.55);
-    });
-  }
-  // Wyraźne pociski (Ustawienia): ciemna obwódka pod każdym pociskiem.
-  // Krótki ślad za pociskiem (dwa bledsze odbicia wstecz wzdłuż lotu) i jasny rdzeń: wrogie pociski są okrągłe,
-  // ze śladem i rdzeniem, pociski gracza — wydłużone, bez śladu. Przy bardzo wielu pociskach ślad jest pomijany.
-  const trails = run.bullets.count < 700;
-  for (const b of run.bullets.items) {
-    if (!vis(b.x, b.y)) continue;
-    const bx = X(b.x), by = Y(b.y);
-    if (trails) {
-      const sp = Math.hypot(b.vx, b.vy) || 1, k = Math.min(1, 60 / sp) * 0.045 * ZOOM;
-      r.withAlpha(0.18, () => drawSprite(g, b.sprite, bx - b.vx * k * 2, by - b.vy * k * 2));
-      r.withAlpha(0.38, () => drawSprite(g, b.sprite, bx - b.vx * k, by - b.vy * k));
-    }
-    if (run.bulletOutline) r.circle(bx, by, b.radius * ZOOM + 1.5, C.black, true);
-    drawSprite(g, b.sprite, bx, by);
-    r.rect(bx - 0.67, by - 0.67, 1.34, 1.34, C.white);
-  }
-
   // Cząsteczki i efekty (trafienia, wybuchy, błyski) — też ataki gracza.
   atk(() => {
     for (const pt of run.particles.items) {
@@ -676,6 +654,30 @@ function drawWorld(run: Run, r: Renderer): void {
     }
   });
 
+  // Pociski wrogów (0.40: nad efektami ataków gracza, żeby nie ginęły w trafieniach i wybuchach): najpierw poświaty (jedna zmiana przezroczystości dla wszystkich), potem kule.
+  // Przy bardzo dużej liczbie pocisków poświaty są pomijane (wydajność).
+  if (fancy && run.bullets.count < 600) {
+    lit(g, (glow) => {
+      for (const b of run.bullets.items) if (vis(b.x, b.y)) glow(X(b.x), Y(b.y), b.radius * ZOOM + 8, BULLET_GLOW[b.sprite] ?? C.red, 0.55);
+    });
+  }
+  // Wyraźne pociski (Ustawienia): ciemna obwódka pod każdym pociskiem.
+  // Krótki ślad za pociskiem (dwa bledsze odbicia wstecz wzdłuż lotu) i jasny rdzeń: wrogie pociski są okrągłe,
+  // ze śladem i rdzeniem, pociski gracza — wydłużone, bez śladu. Przy bardzo wielu pociskach ślad jest pomijany.
+  const trails = run.bullets.count < 700;
+  for (const b of run.bullets.items) {
+    if (!vis(b.x, b.y)) continue;
+    const bx = X(b.x), by = Y(b.y);
+    if (trails) {
+      const sp = Math.hypot(b.vx, b.vy) || 1, k = Math.min(1, 60 / sp) * 0.045 * ZOOM;
+      r.withAlpha(0.18, () => drawSprite(g, b.sprite, bx - b.vx * k * 2, by - b.vy * k * 2));
+      r.withAlpha(0.38, () => drawSprite(g, b.sprite, bx - b.vx * k, by - b.vy * k));
+    }
+    if (run.bulletOutline) r.circle(bx, by, b.radius * ZOOM + 1.5, C.black, true);
+    drawSprite(g, b.sprite, bx, by);
+    r.rect(bx - 0.67, by - 0.67, 1.34, 1.34, C.white);
+  }
+
   // Wspólne światło sceny (pełne efekty): korekta barwna biomu mnoży całą scenę (ziemia, postacie, pociski razem),
   // potem ciepłe światło bohatera rozjaśnia okolicę. Napisy i znaczniki rysowane później zostają czyste.
   if (fancy) {
@@ -691,7 +693,8 @@ function drawWorld(run: Run, r: Renderer): void {
   for (const n of run.dmgNums.items) {
     if (!vis(n.x, n.y)) continue;
     const pop = n.big && n.life > 0.55 ? 1.25 : 1;
-    r.withAlpha(Math.min(1, n.life * 5), () => drawLabel(g, n.text, X(n.x), Y(n.y) - 6, n.col, C.black, n.big ? pop : 0.75));
+    // Tryb 'auto': liczby przygaszane razem z atakami gracza (nie zasłaniają pocisków wrogów w tłumie).
+    r.withAlpha(Math.min(1, n.life * 5) * autoA, () => drawLabel(g, n.text, X(n.x), Y(n.y) - 6, n.col, C.black, n.big ? pop : 0.75));
   }
 
   // Wydarzenia poziomu: zabarwione niebo i kręgi ostrzegawcze piorunów burzy.

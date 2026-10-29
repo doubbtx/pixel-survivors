@@ -153,7 +153,7 @@ export const HEROES: HeroDef[] = [
   },
   {
     id: 'borgun', name: 'Borgun', role: 'Wojownik', sprite: 'borgun', color: C.red,
-    base: { maxHp: 150, speed: 52, armor: 4, regen: 0.3 },
+    base: { maxHp: 150, speed: 52, armor: 4, regen: 0.3, might: 1.15 },
     weapon: 'axe',
     tags: ['Tarcze', 'Obszar'],
     passive: { name: 'Żelazna wola', desc: 'Zabójstwa dają tarczę (0.5% HP każde, do 3% HP na sekundę, maks. 15% HP).', kind: 'killShield', value: 0.15 },
@@ -186,7 +186,7 @@ export const HEROES: HeroDef[] = [
   },
   {
     id: 'ignara', name: 'Ignara', role: 'Mag ognia', sprite: 'ignara', color: C.orange,
-    base: { maxHp: 85, speed: 58, cdr: 0.1, elemPower: 0.15 },
+    base: { maxHp: 95, speed: 58, cdr: 0.1, elemPower: 0.15 },
     weapon: 'staff',
     tags: ['Ogień', 'Umiejętności'],
     passive: { name: 'Echo mocy', desc: 'Co 3. użycie Q lub E powtarza się po chwili za darmo.', kind: 'echoCast', value: 3 },
@@ -319,7 +319,7 @@ export const HEROES: HeroDef[] = [
   {
     // Takezo (0.32): szermierz na wzór Miyamoto Musashiego — dwa miecze (Niten Ichi-ryū), rytm walki (hyōshi), cięcie iai.
     id: 'takezo', name: 'Takezo', role: 'Swordsman', sprite: 'takezo', color: C.blue,
-    base: { maxHp: 105, speed: 60, atkSpeed: 0.1 },
+    base: { maxHp: 105, speed: 60, atkSpeed: 0.1, might: 1.08 },
     weapon: 'katana',
     tags: ['Szybkość', 'Krytyk'],
     passive: { name: 'Mikiri', desc: '5% chance to parry a hit or a projectile at level 1, +0.6% per level (max 35%, cards included): no damage, a counter cut around you and +6 Rhythm. Parried projectiles fly back at enemies.', kind: 'parry', value: 20 },

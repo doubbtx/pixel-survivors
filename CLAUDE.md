@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.39.0)
+## Stan (wersja 0.40.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -644,6 +644,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   failed / lost), `sit` w telemetrii, `sits` w bocie; boss kasuje zapowiedź. Przywoływacz z sytuacji ma limit `summonCap`.
   A/B (bez god): przeżycie mediana 72 → 72 s; bot god rozbija formacje w 1-8 s (bez obrażeń) — do strojenia skali na
   prawdziwych runach (telemetria `sitLog`).
+
+- 0.40.0 (B2, B3, G2, B4 krok 1): `Objective survive.kills` (Ekspedycja: przetrwaj albo zabij tylu, ilu na mapie
+  „pokonaj”, `surviveKills`), `BAL.bossSoften` (`Run.bossSoftMul`: po 90 s walki boss dostaje do ×2, baner, „Weakened” na
+  pasku; bez lochu), `PlayerFx 'auto'` (domyślne nowych zapisów; `Run.updateFxDim` z histerezą `BAL.readability`, ataki
+  i liczby obrażeń przygaszane), pociski wrogów rysowane nad cząsteczkami i fx. Bohaterowie: Ignara maxHp 95, Borgun
+  might 1.15, Takezo 1.08 (UWAGA: `HeroDef.base` NADPISUJE domyślne statystyki — might 1.15, nie 0.15). Bot: `&style=
+  kite|melee|auto` (melee dla broni 'cleave'). A/B: mapa „przetrwaj” P50 130 → 48 s, boss Ekspedycji P90 78 → 50 s,
+  przeżycie bez god mediana 68.5 → 67 s (Borgun 140 → 233 s — do sprawdzenia botem melee, potem obszar zamiast might).
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

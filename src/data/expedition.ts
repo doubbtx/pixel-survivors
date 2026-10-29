@@ -312,7 +312,8 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
   const objective: Objective = m.kind === 'hunt' ? { kind: 'hunt', time: X.huntLimit }
     : m.kind === 'ambush' ? { kind: 'survive', time: Math.round(X.objTime(act) * short * X.ambushScale / 10) * 10 }
     : (row + act) % 2 === 0
-      ? { kind: 'survive', time: Math.round(X.objTime(act) * (boss ? 1 : X.surviveScale) / 10) * 10 }
+      // Zwykła walka „przetrwaj”: albo zabij tylu, ilu na mapie „pokonaj” (silny build kończy szybciej, 0.40).
+      ? { kind: 'survive', time: Math.round(X.objTime(act) * (boss ? 1 : X.surviveScale) / 10) * 10, kills: boss ? undefined : Math.round(X.objKills(act) * short * X.surviveKills / 10) * 10 }
       : { kind: 'kills', count: Math.round(X.objKills(act) * short / 10) * 10 };
   const f = m.kind === 'secret' ? { enemyHp: 0.5, enemyDmg: 0.3, mapLoot: 1, mapGold: 1 } : mapFlags(m);
   return {

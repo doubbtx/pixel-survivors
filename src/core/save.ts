@@ -33,7 +33,8 @@ export interface HeroRecord {
 export type AimMode = 'auto' | 'mixed' | 'manual';
 
 /** Ataki gracza: widoczne, przygaszone (półprzezroczyste, bez poświat) albo ukryte (działają dalej). */
-export type PlayerFx = 'visible' | 'dim' | 'hidden';
+/** Ataki gracza: 'auto' (0.40) — widoczne, przygaszane, gdy blisko bohatera jest dużo pocisków wrogów. */
+export type PlayerFx = 'auto' | 'visible' | 'dim' | 'hidden';
 
 /** Nowe ustawienia nie wymagają migracji: brakujące pola dostają wartości domyślne przy wczytaniu. */
 export interface Settings {
@@ -205,7 +206,7 @@ function defaults(): SaveData {
     settings: { volume: 0.5, music: 0.4, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
-      playerFx: 'visible', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en',
+      playerFx: 'auto', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en',
       textLarge: true, reduceFlash: false, flashWarned: false, keys: {} },
     records: {},
     slots: { endless: null, expedition: null },

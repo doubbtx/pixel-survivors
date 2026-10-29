@@ -1,4 +1,5 @@
 import { BAL } from '../data/balance';
+import { WEAPON_BY_ID } from '../data/weapons';
 import { ENEMIES } from '../data/enemies';
 import type { App, Screen } from '../ui/app';
 import type { Action } from '../core/input';
@@ -56,6 +57,8 @@ export class Bot {
   private readonly maxTime: number;
   private readonly tier: number;
   private readonly god: boolean;
+  /** Styl ruchu (`&style=kite|melee|auto`): auto = melee dla bohaterów z bronią wręcz (cięcie), inaczej kite. */
+  private readonly style: string;
   private runIdx = 0;
   private cur: GameScreen | null = null;
   private wander = Math.random() * Math.PI * 2;
@@ -85,6 +88,7 @@ export class Bot {
     this.maxTime = Number(params.get('time') ?? 300);
     this.turbo = Math.max(1, Number(params.get('turbo') ?? 1));
     this.god = params.get('god') === '1';
+    this.style = params.get('style') ?? 'auto';
     // Pomiar balansu: `&pmax=1e6` zdejmuje sufit mnożnika siły (BAL.power.max), żeby telemetria pokazała prawdziwy zakres.
     if (params.has('pmax')) (BAL.power as { max: number }).max = Number(params.get('pmax'));
     this.tier = Math.max(1, Math.min(4, Number(params.get('tier') ?? 1)));
@@ -184,10 +188,13 @@ export class Bot {
   /** Ruch: ucieczka od wrogów i pocisków (ważona odległością), potem kryształy i skrzynie, inaczej wędrówka. */
   private play(run: any, dt: number): void { // eslint-disable-line @typescript-eslint/no-explicit-any
     const inp = this.app.input, p = run.player;
-    let fx = 0, fy = 0, near = 0;
+    // Walka wręcz (Borgun, Takezo): zwykli wrogowie odpychają dopiero z bliska, a bot idzie do najbliższego (zasięg cięcia).
+    const melee = this.style === 'melee' || (this.style === 'auto' && WEAPON_BY_ID[run.hero.weapon]?.kind === 'cleave');
+    let fx = 0, fy = 0, near = 0, closest: { x: number; y: number } | null = null, cd = 160 * 160;
     for (const e of run.enemies.items) {
       if (e.dead) continue;
-      const dx = p.x - e.x, dy = p.y - e.y, d2 = dx * dx + dy * dy, R = e.boss ? 140 : 70;
+      const dx = p.x - e.x, dy = p.y - e.y, d2 = dx * dx + dy * dy, R = e.boss ? 140 : melee ? 22 : 70;
+      if (melee && !e.boss && d2 < cd) { cd = d2; closest = e; }
       if (d2 > R * R) continue;
       const d = Math.sqrt(d2) + 1, w = (e.boss ? 3 : 1) * (R - d) / R / d;
       fx += dx * w; fy += dy * w;
@@ -213,6 +220,10 @@ export class Bot {
     if (goal) {
       const dx = goal.x - p.x, dy = goal.y - p.y, d = Math.hypot(dx, dy) || 1;
       fx += (dx / d) * 0.6; fy += (dy / d) * 0.6;
+    }
+    if (melee && closest && cd > 26 * 26) {
+      const dx = closest.x - p.x, dy = closest.y - p.y, d = Math.sqrt(cd);
+      fx += (dx / d) * 0.7; fy += (dy / d) * 0.7;
     }
     const threat = Math.hypot(fx, fy);
     if (!goal && threat < 0.15) {

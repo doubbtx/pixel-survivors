@@ -70,6 +70,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
     e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp')) * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (run.expedition && run.levelInfo.boss && !run.dungeon ? BAL.expedition.bossHp : 1);
     e.speed = def.speed;
     run.boss = e;
+    run.bossSoftShown = false;
   }
   return e;
 }

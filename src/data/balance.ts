@@ -152,6 +152,13 @@ export const BAL = {
    * nagroda za rozbicie: monety, Rytuał: skrzynia elity, gdy obaj przywoływacze zginą w `ritualWindow` s.
    */
   situations: { first: 30, every: [75, 100] as [number, number], everyLate: [60, 80] as [number, number], lateAfter: 600, warn: 2, eventGap: 20, expire: 60, coins: 8, ritualWindow: 20 },
+  /** Czytelność (0.40): tryb 'auto' ataków gracza — przygaszenie przy ≥ `on` pociskach wrogów w promieniu, koniec przy ≤ `off`. */
+  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55 },
+  /**
+   * Boss słabnie (0.40): po `after` s walki otrzymuje coraz więcej obrażeń, do ×(1 + `max`) po kolejnych `ramp` s
+   * (długie walki słabych buildów; bossowie aktów i Endless, bez Króla z kurhanu, strażników i minibossów).
+   */
+  bossSoften: { after: 90, ramp: 60, max: 1 },
   /** Odstęp próbek telemetrii runu (s). */
   telemetryEvery: 15,
   /** Maks. spawnów na sekundę (żeby fala nie pojawiała się w jednej klatce). */
@@ -439,6 +446,8 @@ export const BAL = {
     fightScale: 0.75,
     /** Cel czasowy zwykłej walki krótszy niż zabójczy (0.37: mapy „przetrwaj” trwały ~4× dłużej niż „pokonaj”, telemetria). */
     surviveScale: 0.5,
+    /** Mapa „przetrwaj” kończy się też po tylu zabójstwach (× liczby z mapy „pokonaj”). */
+    surviveKills: 1,
     /** HP bossa aktu ponad zwykły wzór (0.37: walki trwały medianę 6-9 s; przy ×4 bot god P50 19 s, P90 119 s — ×3 z zapasem dla słabszych buildów). */
     bossHp: 3,
     /** Dodatkowy tłum wrogów na mapach Ekspedycji (flaga enemyCount) w akcie. */

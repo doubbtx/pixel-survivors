@@ -316,6 +316,9 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): void {
     const b = run.boss, bw = 150;
     drawText(g, run.bossTitle ?? run.levelInfo.bossName, cx, y - 1, C.salmon, { align: 'center', ...SMALL });
     meter(r, cx - bw / 2, y + 7, bw, 5, b.hp / b.maxHp, C.pink);
+    // Boss słabnie (długa walka): napis z mnożnikiem nad paskiem.
+    const soft = run.dungeon ? 1 : run.bossSoftMul(b);
+    if (soft > 1) drawText(g, `Weakened x${soft.toFixed(1)}`, cx + bw / 2, y - 1, C.yellow, { align: 'right', ...SMALL });
     drawSprite(g, 'ui_skull', cx - bw / 2 - 8, y + 9.5);
     y += 15;
     const res = run.resistOf(b);
@@ -326,7 +329,7 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): void {
     const text = run.dungeon ? `Loch: fala ${run.dungeon.wave}/${run.dungeon.kind === 'vault' ? BAL.secretsMap.vaultWaves : BAL.events.dungeonWaves}${run.dungeon.cleared ? ', oczyszczony' : ''}`
       : run.mode === 'endless' ? `Boss za ${fmtTime(Math.max(0, run.nextBossAt - run.time))}`
       : o.kind === 'hunt' ? `Hunt: escapes in ${fmtTime(Math.max(0, o.time - run.time + run.huntPaused))}`
-      : kills ? `${fmt(run.levelKills)} / ${fmt(o.count)}` : `Przetrwaj do ${fmtTime(o.kind === 'survive' ? o.time : 0)}`;
+      : kills ? `${fmt(run.levelKills)} / ${fmt(o.count)}` : o.kind === 'survive' && o.kills ? `Survive to ${fmtTime(o.time)} or ${fmt(run.levelKills)} / ${fmt(o.kills)}` : `Przetrwaj do ${fmtTime(o.kind === 'survive' ? o.time : 0)}`;
     meter(r, cx - bw / 2, y, bw, 3, run.objectiveProgress(), UI.reward);
     const tw = textWidth(text) * 0.75 + (kills ? 10 : 0);
     if (kills) drawSprite(g, 'ui_skull', cx - tw / 2 + 3, y + 8.5);

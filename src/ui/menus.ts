@@ -525,8 +525,8 @@ export class RecordsScreen implements Screen {
 }
 
 const AIM_MODES: AimMode[] = ['auto', 'mixed', 'manual'];
-const FX_MODES: PlayerFx[] = ['visible', 'dim', 'hidden'];
-const FX_LABEL: Record<PlayerFx, string> = { visible: 'widoczne', dim: 'przygaszone', hidden: 'ukryte' };
+const FX_MODES: PlayerFx[] = ['auto', 'visible', 'dim', 'hidden'];
+const FX_LABEL: Record<PlayerFx, string> = { auto: 'automatyczne', visible: 'widoczne', dim: 'przygaszone', hidden: 'ukryte' };
 const AIM_LABEL: Record<AimMode, string> = { auto: 'automatyczne', mixed: 'mieszane', manual: 'ręczne' };
 const AIM_HINT: Record<AimMode, string> = {
   auto: 'Umiejętności zawsze celują w najbliższego wroga.',
@@ -612,7 +612,7 @@ export class SettingsScreen implements Screen {
         opt('Przyciemnienie tła', () => DIM_LABEL[Math.max(0, DIM_LEVELS.indexOf(s.bgDim))], dim, () => 'Ciemniejsze podłoże i dekoracje: postacie, wrogowie i pociski bardziej odcinają się od tła.'),
         sw('Wyraźne pociski wrogów', () => yes(s.bulletOutline), toggle('bulletOutline'), 'Pociski wrogów dostają ciemną obwódkę, lepiej odcinają się od tła i efektów.'),
         sw('Znacznik gracza', () => yes(s.playerMarker), toggle('playerMarker'), 'Pulsujący krąg pod twoją postacią, łatwo ją znaleźć w tłumie.'),
-        opt('Ataki gracza', () => FX_LABEL[s.playerFx] ?? FX_LABEL.visible, fx, () => 'Twoje pociski, aury, strefy i błyski trafień: przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.'),
+        opt('Ataki gracza', () => FX_LABEL[s.playerFx] ?? FX_LABEL.visible, fx, () => 'Twoje pociski, aury, strefy i błyski trafień: automatyczne (przygaszane, gdy blisko jest dużo pocisków wrogów), przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.'),
         sw('Kształty żywiołów', () => yes(s.elemShapes), toggle('elemShapes'), 'Dla daltonistów: każdy żywioł ma też własny kształt (ogień trójkąt, lód romb, błyskawica zygzak, trucizna kropla).'),
         sw('Liczby obrażeń', () => yes(s.damageNumbers), toggle('damageNumbers'), 'Liczby nad trafionymi wrogami (obrażenia gracza zawsze widać).'),
         sw('Liczby leczenia', () => yes(s.healNumbers), toggle('healNumbers'), 'Zielone liczby nad postacią: ile HP odzyskałeś (co pół sekundy).'),

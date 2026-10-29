@@ -2099,7 +2099,7 @@ export const EN: Record<string, string> = {
   "Trening (jeden poziom)": "Training (one level)",
   "Trudność: {}": "Difficulty: {}",
   "Trzy krótkie poziomy z bossami jeden po drugim, więcej XP i złota. Na jedną przerwę.": "Three short boss levels back to back, with more XP and gold. Perfect for a quick break.",
-  "Twoje pociski, aury, strefy i błyski trafień: przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.": "Your projectiles, auras, zones and hit flashes: dimmed (semi-transparent) or hidden. They still work, and enemy projectiles are easier to see.",
+  "Twoje pociski, aury, strefy i błyski trafień: automatyczne (przygaszane, gdy blisko jest dużo pocisków wrogów), przygaszone (półprzezroczyste) albo ukryte. Działają dalej, a pociski wrogów widać lepiej.": "Your projectiles, auras, zones and hit flashes: automatic (dimmed when many enemy bullets are close), dimmed (semi-transparent) or hidden. They keep working, and enemy bullets are easier to see.",
   "Twój czas dziś: {}": "Your time today: {}",
   "Twój najlepszy czas dziś: {}": "Your best time today: {}",
   "Ukończone węzły: {}": "Nodes cleared: {}",

@@ -18,6 +18,15 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.40',
+    lines: [
+      "Readability: enemy bullets are drawn above your hits and explosions, and the new automatic setting for your attacks dims them (and damage numbers) when many enemy bullets are close to you.",
+      "Expedition survival maps also end once you defeat as many enemies as a kill map asks for, so strong builds finish them faster.",
+      "Long boss fights: after 90 seconds a boss weakens and takes more and more damage (up to double).",
+      "Heroes: Ignara +10 max HP, Borgun +15% damage, Takezo +8% damage.",
+    ],
+  },
+  {
     version: '0.39',
     lines: [
       "Situations: every minute or so enemies arrive in a formation that asks for a specific answer: a shield wall with shooters behind it, crossfire from four sides, a kamikaze swarm, a ritual of summoners, and one per biome (a stampede, attackers from below, a desert ambush, a mirror dance). A 2-second warning shows where they come from.",

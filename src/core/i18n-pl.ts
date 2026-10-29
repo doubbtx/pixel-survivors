@@ -3,6 +3,14 @@
  * `{}` = wstawka (liczba, nazwa — tłumaczona osobno). Nowy napis w grze: dopisz tu jego polską wersję.
  */
 export const PL: Record<string, string> = {
+  "Readability: enemy bullets are drawn above your hits and explosions, and the new automatic setting for your attacks dims them (and damage numbers) when many enemy bullets are close to you.": "Czytelność: pociski wrogów rysują się nad Twoimi trafieniami i wybuchami, a nowe automatyczne ustawienie ataków przygasza je (i liczby obrażeń), gdy blisko jest dużo pocisków wrogów.",
+  "Expedition survival maps also end once you defeat as many enemies as a kill map asks for, so strong builds finish them faster.": "Mapy przetrwania w Ekspedycji kończą się też po pokonaniu tylu wrogów, ilu wymaga mapa zabójcza, więc silne buildy kończą je szybciej.",
+  "Long boss fights: after 90 seconds a boss weakens and takes more and more damage (up to double).": "Długie walki z bossem: po 90 sekundach boss słabnie i otrzymuje coraz więcej obrażeń (do podwójnych).",
+  "Heroes: Ignara +10 max HP, Borgun +15% damage, Takezo +8% damage.": "Bohaterowie: Ignara +10 maks. HP, Borgun +15% obrażeń, Takezo +8% obrażeń.",
+  "{} weakens!": "{} słabnie!",
+  "Weakened x{}": "Osłabiony x{}",
+  "Survive {} or defeat {} enemies": "Przetrwaj {} albo pokonaj {} wrogów",
+  "Survive to {} or {} / {}": "Przetrwaj do {} albo {} / {}",
   "Situations: every minute or so enemies arrive in a formation that asks for a specific answer: a shield wall with shooters behind it, crossfire from four sides, a kamikaze swarm, a ritual of summoners, and one per biome (a stampede, attackers from below, a desert ambush, a mirror dance). A 2-second warning shows where they come from.": "Sytuacje: mniej więcej co minutę wrogowie przychodzą w formacji, która wymaga konkretnej odpowiedzi: mur tarcz ze strzelcami za nim, krzyżowy ogień z czterech stron, rój samobójców, rytuał przywoływaczy i po jednej w każdym biomie (stado, atak spod ziemi, pustynna zasadzka, lustrzany taniec). Dwusekundowe ostrzeżenie pokazuje, skąd nadchodzą.",
   "Break a formation for a handful of gold; kill both ritual summoners within 20 seconds for an elite chest.": "Rozbita formacja daje garść złota; zabicie obu przywoływaczy rytuału w 20 sekund daje skrzynię elity.",
   "Shield wall": "Mur tarcz",

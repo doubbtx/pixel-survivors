@@ -6,7 +6,8 @@ import type { Element } from './elements';
  * Co 4 poziomy biomy się powtarzają z kolejnym numerem rzymskim i coraz silniejszymi wrogami.
  */
 /** Cel poziomu; 'hunt' (Ekspedycja, Polowanie): zabij minibossa, zanim ucieknie po `time` s. */
-export type Objective = { kind: 'survive'; time: number } | { kind: 'kills'; count: number } | { kind: 'hunt'; time: number };
+/** 'survive' z `kills` (Ekspedycja, 0.40): przetrwaj albo zabij tylu wrogów — co pierwsze. */
+export type Objective = { kind: 'survive'; time: number; kills?: number } | { kind: 'kills'; count: number } | { kind: 'hunt'; time: number };
 
 export interface Biome {
   name: string;
@@ -98,5 +99,7 @@ export function levelDef(depth: number, isVoid = false): LevelDef {
 
 export function objectiveLabel(o: Objective): string {
   if (o.kind === 'hunt') return `Hunt the miniboss (${o.time} s)`;
-  return o.kind === 'survive' ? `Przetrwaj ${Math.floor(o.time / 60)}:${String(o.time % 60).padStart(2, '0')}` : `Pokonaj ${o.count} wrogów`;
+  if (o.kind === 'kills') return `Pokonaj ${o.count} wrogów`;
+  const t = `${Math.floor(o.time / 60)}:${String(o.time % 60).padStart(2, '0')}`;
+  return o.kills ? `Survive ${t} or defeat ${o.kills} enemies` : `Przetrwaj ${t}`;
 }
