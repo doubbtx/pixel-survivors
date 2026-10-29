@@ -1,4 +1,4 @@
-import { Renderer, W, H } from './core/renderer';
+import { Renderer } from './core/renderer';
 import { C } from './core/palette';
 import { Input, setBindings } from './core/input';
 import { startLoop } from './core/loop';
@@ -130,6 +130,6 @@ app.loop = startLoop(
     screen.render();
     updateQuality();
     canvas.style.cursor = pointer.hit ? 'pointer' : '';
-    if (fadeT > 0) renderer.withAlpha(fadeT / FADE, () => renderer.rect(0, 0, W, H, C.black));
+    if (fadeT > 0) renderer.withAlpha(fadeT / FADE, () => renderer.cover(C.black));
   },
 );

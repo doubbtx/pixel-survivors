@@ -1,5 +1,6 @@
 import { C } from '../core/palette';
 import { rng } from '../core/rng';
+import { VIEW_W, VIEW_H } from '../core/renderer';
 import { sfx } from '../core/audio';
 import { BAL } from '../data/balance';
 import { ENEMIES, ELITE_MODS, BIOME_MINIBOSS, eliteCompatible } from '../data/enemies';
@@ -8,8 +9,11 @@ import type { Enemy } from '../entities/types';
 import type { Run } from '../game/run';
 import { updateSituations } from './situations';
 
-/** Promień, na którym pojawiają się wrogowie — tuż poza ekranem (półprzekątna ≈ 184 px). */
-const SPAWN_R = 196;
+/**
+ * Promień, na którym pojawiają się wrogowie — tuż poza ekranem: co najmniej 196 jednostek (półprzekątna widoku 16:9 ≈ 184),
+ * na szerokim ekranie (telefony 20:9) więcej, żeby nie wyskakiwali przy bocznych krawędziach.
+ */
+const spawnR = (): number => Math.max(196, Math.hypot(VIEW_W, VIEW_H) / 2 + 12);
 
 export interface SpawnOpts {
   elite?: string[];
@@ -86,7 +90,7 @@ function freeSlot(run: Run): void {
   if (e) run.enemies.release(e);
 }
 
-function ringPos(run: Run, a: number, r = SPAWN_R): [number, number] {
+function ringPos(run: Run, a: number, r = spawnR()): [number, number] {
   return [run.player.x + Math.cos(a) * r, run.player.y + Math.sin(a) * r];
 }
 
@@ -211,7 +215,7 @@ export function updateSpawner(run: Run, dt: number): void {
   const mix = currentMix(waveT, run.levelInfo.biome);
   while (run.spawnAcc >= 1) {
     run.spawnAcc -= 1;
-    const [x, y] = ringPos(run, rng.range(0, Math.PI * 2), SPAWN_R + rng.range(0, 30));
+    const [x, y] = ringPos(run, rng.range(0, Math.PI * 2), spawnR() + rng.range(0, 30));
     // Złoty szlam: rzadki, uciekający wróg pełen złota.
     if (run.goldSlimeT <= 0 && rng.chance(BAL.events.goldSlimeChance * (1 + run.flag('goldSlimeRate'))) && !run.enemies.items.some((e) => !e.dead && e.def.id === 'goldslime')) {
       run.goldSlimeT = BAL.events.goldSlimeGap;

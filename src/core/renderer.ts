@@ -17,6 +17,12 @@ export let VIEW_S = 1;
 export let VIEW_W = W / ZOOM;
 export let VIEW_H = H / ZOOM;
 export let VW = W;
+/**
+ * Szeroki ekran (telefony 20:9): logiczna szerokość ekranu `SW` ≥ W i przesunięcie interfejsu `OX` = (SW − W) / 2.
+ * Świat wypełnia całą szerokość, interfejs (W × H) zostaje wyśrodkowany. Na 16:9 i w trybie ostrych pikseli SW = W, OX = 0.
+ */
+export let SW = W;
+export let OX = 0;
 export let VH = H;
 
 /**
@@ -76,7 +82,7 @@ export class Renderer {
 
   private applyZoom(): void {
     VIEW_S = Math.max(1, Math.round(this.k * this.zoom) / this.k);
-    VW = W / VIEW_S;
+    VW = SW / VIEW_S;
     VH = H / VIEW_S;
     VIEW_W = VW / ZOOM;
     VIEW_H = VH / ZOOM;
@@ -95,15 +101,19 @@ export class Renderer {
     const fit = Math.min(window.innerWidth / W, window.innerHeight / H);
     const dpr = window.devicePixelRatio || 1;
     const css = this.fill || fit < 1 ? fit : Math.floor(fit);
+    // Okno szersze niż 16:9 (przy wypełnianiu): ekran logiczny poszerzony do proporcji okna, interfejs na środku.
+    const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+    SW = this.fill && aspect > W / H + 0.02 ? Math.round(H * aspect) : W;
+    OX = (SW - W) / 2;
     this.k = Math.min(4, Math.max(2, Math.ceil(css * dpr - 0.01)));
-    this.display.width = W * this.k;
+    this.display.width = SW * this.k;
     this.display.height = H * this.k;
-    this.display.style.width = `${Math.floor(W * css)}px`;
+    this.display.style.width = `${Math.floor(SW * css)}px`;
     this.display.style.height = `${Math.floor(H * css)}px`;
     this.display.style.imageRendering = this.fill ? 'auto' : 'pixelated';
     // Zmiana rozmiaru płótna zeruje stan kontekstu.
     this.ui.imageSmoothingEnabled = false;
-    this.ui.setTransform(this.k, 0, 0, this.k, 0, 0);
+    this.ui.setTransform(this.k, 0, 0, this.k, OX * this.k, 0);
     this.applyZoom();
   }
 
@@ -115,18 +125,23 @@ export class Renderer {
   /** Wkleja świat do bufora (powiększenie VIEW_S, piksele równe) i wraca do rysowania UI. */
   endWorld(): void {
     this.g = this.ui;
-    this.ui.drawImage(this.world, 0, 0, (this.world.width / this.worldRes) * VIEW_S, (this.world.height / this.worldRes) * VIEW_S);
+    this.ui.drawImage(this.world, -OX, 0, (this.world.width / this.worldRes) * VIEW_S, (this.world.height / this.worldRes) * VIEW_S);
   }
 
   /** Przelicza współrzędne zdarzenia (px ekranu) na piksele logiczne bufora. */
   toLogical(clientX: number, clientY: number): { x: number; y: number } {
     const r = this.display.getBoundingClientRect();
-    return { x: ((clientX - r.left) / r.width) * W, y: ((clientY - r.top) / r.height) * H };
+    return { x: ((clientX - r.left) / r.width) * SW - OX, y: ((clientY - r.top) / r.height) * H };
   }
 
   clear(col: number): void {
     this.g.fillStyle = PAL[col];
-    this.g.fillRect(0, 0, W, H);
+    this.g.fillRect(-OX, 0, SW, H);
+  }
+
+  /** Prostokąt na cały ekran (także pasy po bokach interfejsu na szerokim ekranie): przyciemnienia, przejścia. */
+  cover(col: number): void {
+    this.rect(-OX, 0, SW, H, col);
   }
 
   /** Siatka prymitywów (podziałki na piksel logiczny): w świecie piksele płótna świata, jak w sprite'ach; w UI piksele logiczne. */

@@ -1,4 +1,4 @@
-import { W, H, type Renderer } from '../core/renderer';
+import { W, SW, OX, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C, PAL, type Ramp } from '../core/palette';
 import { drawText, textWidth, LINE_H } from '../core/font';
@@ -151,9 +151,9 @@ export function moreArrow(r: Renderer, x: number, y: number, dir: 1 | -1, col: n
 
 /** Przyciemnienie świata pod nakładkami (pauza, awans) + ciemniejsza wstęga na tytuł ze złotymi liniami. */
 export function dim(r: Renderer): void {
-  r.withAlpha(0.65, () => r.rect(0, 0, W, H, C.black));
-  r.withAlpha(0.8, () => r.rect(0, 4, W, 30, C.black));
-  r.withAlpha(0.6, () => { r.rect(0, 4, W, 0.5, C.gold); r.rect(0, 33.5, W, 0.5, C.gold); });
+  r.withAlpha(0.65, () => r.cover(C.black));
+  r.withAlpha(0.8, () => r.rect(-OX, 4, SW, 30, C.black));
+  r.withAlpha(0.6, () => { r.rect(-OX, 4, SW, 0.5, C.gold); r.rect(-OX, 33.5, SW, 0.5, C.gold); });
 }
 
 /**
@@ -161,8 +161,8 @@ export function dim(r: Renderer): void {
  * dopasowany do tytułu w `y`, żeby nie zachodził na zakładki i przyciski pod nim.
  */
 export function titleBar(r: Renderer, text: string, y: number, col: number = C.yellow): void {
-  r.withAlpha(0.9, () => r.rect(0, y - 3, W, 25, C.navy));
-  r.withAlpha(0.6, () => { r.rect(0, y - 3, W, 0.5, C.gold); r.rect(0, y + 21.5, W, 0.5, C.gold); });
+  r.withAlpha(0.9, () => r.rect(-OX, y - 3, SW, 25, C.navy));
+  r.withAlpha(0.6, () => { r.rect(-OX, y - 3, SW, 0.5, C.gold); r.rect(-OX, y + 21.5, SW, 0.5, C.gold); });
   drawText(r.g, text, W / 2, y, col, { align: 'center', scale: 2, outline: C.black });
 }
 

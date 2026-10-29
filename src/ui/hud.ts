@@ -1,5 +1,5 @@
 import { RELIC_BY_ID } from '../data/relics';
-import { W, H, VIEW_W, VIEW_H, type Renderer } from '../core/renderer';
+import { W, H, SW, OX, VIEW_W, VIEW_H, type Renderer } from '../core/renderer';
 import { itemColor } from '../data/items';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { C, PAL } from '../core/palette';
@@ -197,7 +197,8 @@ const ARROW_MX = 26, ARROW_MY = 52;
  * i najbliższa pęknięta ściana. Z nazwą i odległością.
  */
 function drawSecretArrows(r: Renderer, run: Run): void {
-  const p = run.player, k = W / VIEW_W;
+  // Świat na całą szerokość ekranu (SW), interfejs przesunięty o OX: współrzędne strzałek w układzie interfejsu.
+  const p = run.player, k = SW / VIEW_W;
   const targets: { x: number; y: number; label: string; col?: number }[] = [];
   let mush: MapObject | null = null;
   const d2 = (x: number, y: number) => (x - p.x) ** 2 + (y - p.y) ** 2;
@@ -216,8 +217,8 @@ function drawSecretArrows(r: Renderer, run: Run): void {
   const sit = run.situation;
   if (sit && !situationRing(sit.id)) targets.push({ x: p.x + Math.cos(sit.a) * 400, y: p.y + Math.sin(sit.a) * 400, label: situationName(sit.id), col: C.red });
   for (const t of targets) {
-    const sx = (t.x - run.camX) * k, sy = (t.y - run.camY) * k;
-    if (sx > 0 && sx < W && sy > 0 && sy < H) continue;
+    const sx = (t.x - run.camX) * k - OX, sy = (t.y - run.camY) * k;
+    if (sx > -OX && sx < W + OX && sy > 0 && sy < H) continue;
     const cx = W / 2, cy = H / 2, dx = sx - cx, dy = sy - cy;
     const s = Math.min((W / 2 - ARROW_MX) / Math.max(1e-6, Math.abs(dx)), (H / 2 - ARROW_MY) / Math.max(1e-6, Math.abs(dy)));
     const ax = cx + dx * s, ay = cy + dy * s, a = Math.atan2(dy, dx);
@@ -310,7 +311,8 @@ function drawStatusRow(r: Renderer, run: Run, x: number, y: number): number {
 }
 
 /** Zegar, jeden pasek celu z licznikiem (albo pasek bossa), etykiety wydarzenia i kombo. */
-function drawCenter(r: Renderer, run: Run, a: HudAnim): void {
+/** Środek górnej krawędzi: zegar, cel albo pasek bossa, wydarzenie i kombo. Zwraca dolną krawędź (baner pod spodem). */
+function drawCenter(r: Renderer, run: Run, a: HudAnim): number {
   const g = r.g, cx = W / 2;
   drawText(g, fmtTime(run.time), cx, UI.edge + UI.xpH - 1, C.white, { align: 'center', scale: 1.5, ...OUT });
   let y = UI.edge + UI.xpH + 15;
@@ -350,6 +352,7 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): void {
     label(r, t, lx + ws[i] / 2, y - (1 - al) * 3, col, al);
     lx += ws[i] + UI.gap * 2;
   });
+  return y + (items.length ? 10 : 0);
 }
 
 /** Zabójstwa i złoto w jednym wierszu (prawy górny róg, szerokość minimapy). Zwraca dolną krawędź. */
@@ -502,7 +505,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
   const statusBottom = drawStatusRow(r, run, UI.edge, cardBottom + UI.gap + 1);
   drawSynergyHud(r, run, UI.edge, statusBottom + UI.gap + 1, UI.card.w);
 
-  drawCenter(r, run, a);
+  const centerBottom = drawCenter(r, run, a);
 
   let ry = drawCounters(r, run, a) + UI.gap;
   const mw = UI.minimap.w;
@@ -510,10 +513,11 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
   if (run.task) drawTask(r, run, W - UI.edge - 96, ry, 96);
   drawSecretArrows(r, run);
 
-  // Baner (zapowiedzi, fazy bossa, elity): wąska wstęga, wsuwa się i znika.
+  // Baner (zapowiedzi, fazy bossa, elity): wąska wstęga tuż pod środkowym blokiem, wsuwa się i znika. Wysoko, z dala od
+  // głowy bohatera, nad którą wylatują napisy serii zabójstw (wcześniej nachodziły na baner).
   if (run.bannerT > 0) {
     const big = run.banner.length <= 26, sc = big ? 1.25 : 0.9;
-    const tw = textWidth(run.banner) * sc + 24, th = big ? 15 : 11, by = 62;
+    const tw = textWidth(run.banner) * sc + 24, th = big ? 15 : 11, by = centerBottom + 3;
     const al = Math.min(1, run.bannerT * 3, (2.5 - run.bannerT) * 6 + 0.2);
     r.withAlpha(al, () => {
       tile(r, W / 2 - tw / 2, by, tw, th, undefined, 0.75);

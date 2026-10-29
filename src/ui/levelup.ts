@@ -51,11 +51,15 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   const descMax = room - hint.length;
   // Opis, który się nie mieści: zwykle małym tekstem (więcej linii w tym samym miejscu), przy dużym tekście ucięty z „...”.
   const small = big.length > descMax && descS() < 1;
+  // Duży tekst: najpierw o stopień mniejszy (85%), a ucięty „...” dopiero, gdy i tak się nie mieści.
+  const mid = big.length > descMax && descS() >= 1 ? wrapText(o.desc, (CARD_W - 14) / 0.85) : null;
+  const fitsMid = !!mid && mid.length <= Math.floor((descMax * 11) / 10);
+  const sc = small ? 0.75 : fitsMid ? 0.85 : 1, lh = small ? 9 : fitsMid ? 10 : 11;
   const lines = small ? wrapText(o.desc, (CARD_W - 14) / 0.75).slice(0, Math.floor((descMax * 11) / 9))
-    : big.length > descMax ? [...big.slice(0, descMax - 1), `${big[descMax - 1]}...`] : big;
+    : fitsMid ? mid! : big.length > descMax ? [...big.slice(0, descMax - 1), `${big[descMax - 1]}...`] : big;
   for (const line of lines) {
-    drawText(r.g, line, cx, ly, C.lgray, { align: 'center', scale: small ? 0.75 : 1 });
-    ly += small ? 9 : 11;
+    drawText(r.g, line, cx, ly, C.lgray, { align: 'center', scale: sc });
+    ly += lh;
   }
   for (const line of hint) {
     drawText(r.g, line, cx, ly + 2, C.lavender, { align: 'center' });

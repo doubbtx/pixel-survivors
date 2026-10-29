@@ -198,7 +198,7 @@ export class ExpeditionMapView {
   render(r: Renderer): void {
     const g = r.g, run = this.run, ex = run.expedition!;
     const X = BAL.expedition;
-    r.withAlpha(0.82, () => r.rect(0, 0, W, H, C.black));
+    r.withAlpha(0.82, () => r.cover(C.black));
     const secretAct = ex.act > X.acts;
     drawText(g, secretAct ? 'Ekspedycja - akt 4: Pustka' : `Ekspedycja - akt ${ex.act}/${X.acts}`, W / 2, 4, secretAct ? C.hotpink : C.yellow, { align: 'center', scale: 2, outline: C.black });
     // Lewa strona nagłówka: biom aktu i postęp aktów (kropki).

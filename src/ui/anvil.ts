@@ -293,7 +293,7 @@ export class AnvilView {
       if (this.hammer <= 0) this.finishStrike();
       return false;
     }
-    const back = input.pressed('back') || input.pressed('pause') || (input.pressed('click') && inside(input.mouse.x, input.mouse.y, 6, 8, 70, 18));
+    const back = input.pressed('back') || input.pressed('pause') || (input.pressed('click') && inside(input.mouse.x, input.mouse.y, 6, 9, 54, 16));
     if (this.cardButtons(input)) { this.lastMouse = input.mouse.lastMove; return false; }
     if (this.stage === 'pick') {
       if (back) return true;
@@ -326,22 +326,22 @@ export class AnvilView {
     const g = r.g, run = this.run;
     dim(r);
     drawText(g, 'Kowadło', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    drawText(g, '[Esc] wróć', 10, 12, C.lgray, { outline: C.black });
+    button(r, 6, 9, 54, 16, 'Wstecz [Esc]', { scale: 0.85 });
     drawSprite(g, 'coin', W - 118, 18);
     drawText(g, fmt(run.gold), W - 110, 13, C.yellow, { outline: C.black });
     drawSprite(g, 'sh_shard', W - 58, 18);
     drawText(g, fmt(run.shards), W - 50, 13, C.cyan, { outline: C.black });
     // Zapasy kuźni: materiały (lewo) i zwoje (przy tytule).
     MATERIALS.forEach((m, i) => {
-      drawSprite(g, m.icon, 64 + i * 25, 18);
-      drawText(g, String(run.mats[m.id]), 72 + i * 25, 13, run.mats[m.id] ? m.color : C.lavender, { outline: C.black });
+      drawSprite(g, m.icon, 70 + i * 24, 18);
+      drawText(g, String(run.mats[m.id]), 78 + i * 24, 13, run.mats[m.id] ? m.color : C.lavender, { outline: C.black });
     });
     SCROLLS.forEach((s, i) => {
       drawSprite(g, s.icon, 296 + i * 22, 18);
       drawText(g, String(run.scrolls[s.id]), 304 + i * 22, 13, run.scrolls[s.id] ? s.color : C.lavender, { outline: C.black });
     });
 
-    panel(r, 6, 32, 216, 152, this.stage === 'target' ? C.yellow : C.lavender);
+    panel(r, 6, 32, 216, 152, this.stage === 'target' ? C.yellow : undefined);
     drawText(g, 'Założone', GRID_X, 35, C.lavender);
     drawText(g, `Plecak ${run.bag.length}/${BAL.bagSize}`, GRID_X, 69, C.lavender);
     for (let cy = 0; cy < ROWS; cy++) {

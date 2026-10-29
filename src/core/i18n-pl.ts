@@ -624,4 +624,6 @@ export const PL: Record<string, string> = {
   "Four-Leaf Dice": "Czterolistne kości",
   "Six dice at once; every six explodes.": "Sześć kości naraz; każda szóstka wybucha.",
   "Two new weapons for every hero: Blood Sickle (crescents that jump between enemies; evolves with Fang into Reaper's Moon, which heals you a little on every hit) and Dice (random damage, sixes hit harder and Luck rolls more of them; evolves with Horseshoe into Golden Six, whose sixes explode and drop coins). Both have a second evolution too (Hawk Eye, Clover).": "Dwie nowe bronie dla każdego bohatera: Sierp krwi (półksiężyce przeskakujące między wrogami; z Kłem ewoluuje w Księżyc żniwiarza, który przy każdym trafieniu trochę cię leczy) i Kości (losowe obrażenia, szóstki trafiają mocniej, a Szczęście daje ich więcej; z Podkową ewoluują w Złotą szóstkę, której szóstki wybuchają i dają monety). Obie mają też drugą ewolucję (Oko sokoła, Koniczyna).",
+  "Expedition: choose a hero": "Ekspedycja: wybierz bohatera",
+  "Endless: choose a hero": "Endless: wybierz bohatera",
 };

@@ -1,4 +1,4 @@
-import { W, H } from '../core/renderer';
+import { W, H, OX } from '../core/renderer';
 import { C, PAL } from '../core/palette';
 import { drawText, wrapText, textWidth, setTextSize, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
@@ -35,14 +35,16 @@ const PARADE = ['slime', 'bat', 'golem', 'eye', 'wisp', 'spinner'];
 function menuBackdrop(app: App, t: number): void {
   const r = app.r, g = r.g;
   const groundY = H - 58;
+  // Szeroki ekran: tło od lewej do prawej krawędzi okna (L..R), interfejs zostaje na środku.
+  const L = -OX, R = W + OX;
   const sky = g.createLinearGradient(0, 0, 0, groundY);
   sky.addColorStop(0, PAL[C.black]);
   sky.addColorStop(0.7, PAL[C.navy]);
   sky.addColorStop(1, PAL[C.slate]);
   g.fillStyle = sky;
-  g.fillRect(0, 0, W, H);
-  for (let i = 0; i < 70; i++) {
-    const x = ((i * 97 + t * (2 + (i % 3) * 2)) % (W + 20)) - 10;
+  g.fillRect(L, 0, R - L, H);
+  for (let i = 0; i < 90; i++) {
+    const x = L + ((i * 97 + t * (2 + (i % 3) * 2)) % (R - L + 20)) - 10;
     const y = (i * 53) % (groundY - 40);
     const tw = (Math.sin(t * 2 + i) + 1) / 2;
     r.withAlpha(0.4 + 0.6 * tw, () => r.rect(x, y, i % 7 === 0 ? 1 : 0.5, i % 7 === 0 ? 1 : 0.5, i % 5 === 0 ? C.white : C.lgray));
@@ -62,14 +64,15 @@ function menuBackdrop(app: App, t: number): void {
   for (const [col, base, amp, speed, freq] of [[C.navy, groundY - 34, 12, 4, 0.021], [C.black, groundY - 14, 10, 10, 0.034]] as const) {
     g.fillStyle = PAL[col];
     g.beginPath();
-    g.moveTo(0, groundY);
-    for (let x = 0; x <= W; x += 4) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin((x + t * speed) * freq)) - 6 * Math.sin((x + t * speed) * freq * 2.7));
-    g.lineTo(W, groundY);
+    g.moveTo(L, groundY);
+    for (let x = L; x <= R + 4; x += 4) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin((x + t * speed) * freq)) - 6 * Math.sin((x + t * speed) * freq * 2.7));
+    g.lineTo(R + 4, groundY);
     g.fill();
   }
   const off = Math.floor(t * 30) % TILE;
-  for (let x = -off; x < W; x += TILE) for (let y = groundY; y < H; y += TILE) blit(g, `tile0_${((x + off) / TILE + y) % 10}`, x, y);
-  r.rect(0, groundY, W, 1, C.black);
+  const x0 = L - ((L % TILE) + TILE) % TILE - off;
+  for (let x = x0; x < R; x += TILE) for (let y = groundY; y < H; y += TILE) blit(g, `tile0_${(((x + off) / TILE + y) % 10 + 10) % 10}`, x, y);
+  r.rect(L, groundY, R - L, 1, C.black);
   const walk = (name: string, x: number, flip: boolean, k: number) => {
     const y = groundY + 22 + Math.round(Math.abs(Math.sin(t * 8 + k)) * -2);
     drawShadow(g, x, groundY + 32, 14);
@@ -198,6 +201,8 @@ function isNewPlayer(app: App): boolean {
 }
 
 const SLOT_TITLE: Record<SlotMode, string> = { expedition: 'Ekspedycja', endless: 'Endless' };
+/** Tytuł wyboru bohatera (pełne napisy: wzorzec „{}: …” łapał polski wzorzec „Endless: {}”). */
+const PICK_TITLE: Record<SlotMode, string> = { expedition: 'Expedition: choose a hero', endless: 'Endless: choose a hero' };
 const SLOT_NEW: Record<SlotMode, string> = { expedition: 'Nowa ekspedycja', endless: 'Nowy run' };
 const SLOT_RULES: Record<SlotMode, string> = {
   expedition: `An expedition across ${BAL.expedition.acts} acts. Pick your path through maps with modifiers (risk for more loot), dungeons, shrines, shops, anvils and camps. A boss ends every act. The most essence for Progression.`,
@@ -380,7 +385,7 @@ export class HeroSelect implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     const m = this.mode;
-    titleBar(r, `${SLOT_TITLE[m]}: wybierz bohatera`, 10);
+    titleBar(r, PICK_TITLE[m], 10);
     // Lista bohaterów.
     HEROES.forEach((h, i) => {
       const y = TOP + i * ROW_H, on = i === this.sel;
