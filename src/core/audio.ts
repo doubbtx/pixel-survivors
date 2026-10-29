@@ -6,7 +6,8 @@
 export type SfxName =
   | 'shoot' | 'hit' | 'kill' | 'pickup' | 'levelup' | 'hurt' | 'dash'
   | 'ability' | 'explode' | 'boss' | 'select' | 'chest' | 'zap'
-  | 'burn' | 'freeze' | 'shock' | 'poison' | 'react' | 'hover' | 'crit' | 'streak' | 'evolve';
+  | 'burn' | 'freeze' | 'shock' | 'poison' | 'react' | 'hover' | 'crit' | 'streak' | 'evolve'
+  | 'w_bolt' | 'w_arrow' | 'w_knife' | 'w_fire' | 'w_soul' | 'w_chain' | 'w_nova' | 'w_laser' | 'w_meteor' | 'w_boom' | 'w_mine' | 'w_cleave';
 
 interface Tone {
   wave: OscillatorType | 'noise';
@@ -68,7 +69,39 @@ const TONES: Record<SfxName, Tone[]> = {
     { wave: 'square', f0: 392, f1: 784, dur: 0.3, vol: 0.07, gap: 0 },
     { wave: 'triangle', f0: 523, f1: 1046, dur: 0.45, vol: 0.09, gap: 0 },
   ],
+  // Bronie (0.34): każdy typ ma własne brzmienie; pociski różnią się po rodzaju (strzała, nóż, ogień, dusza, gwiazda).
+  w_bolt: [{ wave: 'square', f0: 1200, f1: 700, dur: 0.05, vol: 0.035, gap: 70 }],
+  w_arrow: [
+    { wave: 'noise', f0: 3200, f1: 1200, dur: 0.05, vol: 0.045, gap: 70 },
+    { wave: 'triangle', f0: 900, f1: 600, dur: 0.03, vol: 0.02, gap: 0 },
+  ],
+  w_knife: [{ wave: 'noise', f0: 5200, f1: 2600, dur: 0.035, vol: 0.04, gap: 60 }],
+  w_fire: [
+    { wave: 'noise', f0: 1300, f1: 400, dur: 0.08, vol: 0.05, gap: 80 },
+    { wave: 'square', f0: 300, f1: 150, dur: 0.06, vol: 0.02, gap: 0 },
+  ],
+  w_soul: [{ wave: 'triangle', f0: 700, f1: 1150, dur: 0.09, vol: 0.035, gap: 90 }],
+  w_chain: [
+    { wave: 'sawtooth', f0: 1800, f1: 300, dur: 0.07, vol: 0.045, gap: 90 },
+    { wave: 'noise', f0: 5000, f1: 2000, dur: 0.03, vol: 0.03, gap: 0 },
+  ],
+  w_nova: [{ wave: 'triangle', f0: 420, f1: 950, dur: 0.18, vol: 0.05, gap: 150 }],
+  w_laser: [{ wave: 'sawtooth', f0: 900, f1: 1500, dur: 0.15, vol: 0.035, gap: 120 }],
+  w_meteor: [{ wave: 'noise', f0: 600, f1: 90, dur: 0.25, vol: 0.07, gap: 150 }],
+  w_boom: [{ wave: 'triangle', f0: 500, f1: 950, dur: 0.1, vol: 0.04, gap: 100 }],
+  w_mine: [{ wave: 'square', f0: 220, f1: 130, dur: 0.05, vol: 0.04, gap: 120 }],
+  w_cleave: [
+    { wave: 'noise', f0: 2600, f1: 600, dur: 0.07, vol: 0.06, gap: 70 },
+    { wave: 'square', f0: 220, f1: 110, dur: 0.05, vol: 0.025, gap: 0 },
+  ],
 };
+
+/** Ważne dźwięki: zawsze grają (ponad limit głosów) i przyciszają muzykę (ducking). */
+const IMPORTANT: Partial<Record<SfxName, number>> = { boss: 0.75, evolve: 0.6, levelup: 0.45, chest: 0.35, streak: 0.35, hurt: 0.25 };
+/** Interfejs bez losowej wysokości (zawsze tak samo); pozostałe dźwięki mają warianty ±6%. */
+const STEADY = new Set<SfxName>(['select', 'hover', 'levelup', 'chest', 'evolve', 'streak', 'boss']);
+/** Najwięcej jednocześnie grających tonów efektów (tłum nie zagłusza ważnych dźwięków). */
+const MAX_VOICES = 22;
 
 class Audio {
   private ctx: AudioContext | null = null;
@@ -76,6 +109,9 @@ class Audio {
   private noise: AudioBuffer | null = null;
   private last: Partial<Record<SfxName, number>> = {};
   private vol = 0.5;
+  private voices = 0;
+  /** Ducking: ustawiane przez core/music.ts — przyciszenie muzyki o `amount` na chwilę. */
+  duck: ((amount: number) => void) | null = null;
 
   /** AudioContext można utworzyć dopiero po geście użytkownika. */
   unlock(): void {
@@ -109,13 +145,24 @@ class Audio {
     if (this.master) this.master.gain.value = v;
   }
 
+  /** Licznik grających głosów (limit MAX_VOICES). */
+  private track(n: AudioScheduledSourceNode): void {
+    this.voices++;
+    n.onended = () => { this.voices--; };
+  }
+
   play(name: SfxName): void {
     const ctx = this.ctx;
     if (!ctx || !this.master || this.vol <= 0) return;
     const tones = TONES[name];
     const nowMs = performance.now();
     if (nowMs - (this.last[name] ?? 0) < tones[0].gap) return;
+    const important = IMPORTANT[name];
+    if (!important && this.voices >= MAX_VOICES) return;
     this.last[name] = nowMs;
+    if (important) this.duck?.(important);
+    // Warianty: lekko inna wysokość przy każdym odtworzeniu (powtarzające się trafienia nie brzmią identycznie).
+    const pitch = STEADY.has(name) ? 1 : 0.94 + Math.random() * 0.12;
     let t = ctx.currentTime;
     for (const tone of tones) {
       const gain = ctx.createGain();
@@ -127,19 +174,21 @@ class Audio {
         src.buffer = this.noise;
         const filt = ctx.createBiquadFilter();
         filt.type = 'bandpass';
-        filt.frequency.setValueAtTime(tone.f0, t);
-        filt.frequency.exponentialRampToValueAtTime(tone.f1, t + tone.dur);
+        filt.frequency.setValueAtTime(tone.f0 * pitch, t);
+        filt.frequency.exponentialRampToValueAtTime(tone.f1 * pitch, t + tone.dur);
         src.connect(filt).connect(gain);
         src.start(t);
         src.stop(t + tone.dur);
+        this.track(src);
       } else {
         const osc = ctx.createOscillator();
         osc.type = tone.wave;
-        osc.frequency.setValueAtTime(tone.f0, t);
-        osc.frequency.exponentialRampToValueAtTime(tone.f1, t + tone.dur);
+        osc.frequency.setValueAtTime(tone.f0 * pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(tone.f1 * pitch, t + tone.dur);
         osc.connect(gain);
         osc.start(t);
         osc.stop(t + tone.dur);
+        this.track(osc);
       }
       t += tone.dur;
     }

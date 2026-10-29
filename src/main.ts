@@ -72,7 +72,7 @@ screen = !save.settings.flashWarned && !botParams.has('bot') ? new FlashWarningS
 const bot = import.meta.env.DEV && botParams.has('bot') ? new (await import('./dev/bot')).Bot(app, botParams) : null;
 
 // Podgląd stanu w konsoli i w testach (tylko serwer deweloperski): window.__screen().
-if (import.meta.env.DEV) (window as unknown as { __screen: () => Screen }).__screen = () => screen;
+if (import.meta.env.DEV) Object.assign(window, { __screen: () => screen, __sfx: sfx });
 
 const step = (dt: number) => {
   input.pollGamepads();

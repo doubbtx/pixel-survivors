@@ -560,7 +560,13 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - Uczucie mocy: mocniejsze krytyki (dźwięk, błysk, wyróżnione liczby), chwila ewolucji (krótkie zatrzymanie, efekt, baner), wyraźniejsze zabójstwa elit, serie zabójstw i „Lucky find”.
 - Podsumowanie runu z wyróżnieniami: najlepsza broń, rekord DPS, pobite rekordy, najdłuższe kombo.
 
-### Faza 5: dźwięk i muzyka (v0.34)
+### Faza 5: dźwięk i muzyka (v0.34) — część generowana GOTOWA (0.34.0), nagrania CC0 czekają na dostęp sieci
+- 0.34.0: core/audio.ts — dźwięki broni `w_*` (`weaponSound` w systems/weapons.ts wg wzorca i pocisku), warianty wysokości
+  (bez `STEADY`), limit głosów `MAX_VOICES` (licznik `voices`, `onended`), `IMPORTANT` = ważne dźwięki ponad limit i ducking
+  (`sfx.duck` ustawiane przez music.ts). core/music.ts — motywy `THEMES` (menu = biome -1, biomy 0-4) i `bossTheme`;
+  zmiana motywu od początku taktu. `window.__sfx` w DEV (test audio: kliknięcie odblokowuje kontekst).
+- Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
+  plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
 - Osobny dźwięk dla każdej broni, warianty, żeby się nie powtarzały; motyw menu, każdego biomu i osobne motywy bossów.
 - Miks: ściszanie muzyki przy ważnych dźwiękach, limit dźwięków naraz, osobne suwaki efektów i muzyki.

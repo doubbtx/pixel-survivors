@@ -1,5 +1,5 @@
 import { rng } from '../core/rng';
-import { sfx } from '../core/audio';
+import { sfx, type SfxName } from '../core/audio';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
 import { weaponStatsAt, type WeaponKind, type WeaponStats } from '../data/weapons';
@@ -97,6 +97,22 @@ export function shardProjectile(run: Run, x: number, y: number, angle: number, d
 /** Pierścień światła: promień bazowy, czas rozchodzenia się (s) i liczba kroków. */
 const NOVA_R = 62, NOVA_T = 0.3, NOVA_STEPS = 8;
 
+/** Dźwięk wystrzału broni (0.34): wg wzorca, a dla pocisków wg rodzaju pocisku. */
+function weaponSound(w: WeaponInst): SfxName {
+  const d = w.def;
+  switch (d.kind) {
+    case 'bolt': return d.proj === 'arrow' ? 'w_arrow' : d.proj === 'knife' ? 'w_knife' : d.proj === 'ember' || d.proj === 'sun' ? 'w_fire' : d.proj === 'soul' ? 'w_soul' : 'w_bolt';
+    case 'chain': return 'w_chain';
+    case 'nova': return 'w_nova';
+    case 'laser': return 'w_laser';
+    case 'meteor': return 'w_meteor';
+    case 'boomerang': return 'w_boom';
+    case 'mines': return 'w_mine';
+    case 'cleave': return 'w_cleave';
+    default: return 'w_bolt';
+  }
+}
+
 const BEHAVIORS: Record<WeaponKind, Behavior> = {
   /** Pociski w najbliższych wrogów; nadmiar pocisków rozchodzi się wachlarzem. */
   bolt(run, w, s, dt) {
@@ -113,7 +129,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     const face = facingAngle(run);
     if (face !== null) {
       for (let i = 0; i < amount; i++) fireProjectile(run, w, s, face + (i - (amount - 1) / 2) * 0.15, crit);
-      sfx.play('shoot');
+      sfx.play(weaponSound(w));
       return;
     }
     const targets = nearestN(run, amount, 200);
@@ -125,7 +141,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       const off = extra === 0 ? 0 : (extra % 2 ? 1 : -1) * Math.ceil(extra / 2) * 0.15;
       fireProjectile(run, w, s, base + off, crit);
     }
-    sfx.play('shoot');
+    sfx.play(weaponSound(w));
   },
 
   /** Ostrza krążą stale; każdy wróg trafiany co `hitSteps`. */
@@ -189,7 +205,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       // Przeładowany łańcuch (augment): wybuch na ostatnim celu.
       if (burst && any) run.explode(fx, fy, 22 * s.area, s.damage * 0.6, w.def.name, w.def.color, 2);
     }
-    if (hit.length) sfx.play('zap');
+    if (hit.length) sfx.play(weaponSound(w));
     else w.timer = 0.2;
   },
 
@@ -220,7 +236,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
             if (f) f.r = rr;
           });
         }
-        sfx.play('zap');
+        sfx.play(weaponSound(w));
       });
     }
   },
@@ -228,6 +244,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
   /** Meteoryty spadają na losowych wrogów w pobliżu (strefa z opóźnieniem). */
   meteor(run, w, s, dt) {
     if (!ready(w, s, dt)) return;
+    sfx.play(weaponSound(w));
     const p = run.player;
     const cand = run.hash.query(p.x, p.y, 140, run.qa).filter((e) => !e.dead);
     for (let i = 0; i < s.amount; i++) {
@@ -242,6 +259,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
   /** Bumerang: lot w kierunku celu, potem powrót do gracza (logika w systems/projectiles). */
   boomerang(run, w, s, dt) {
     if (!ready(w, s, dt)) return;
+    sfx.play(weaponSound(w));
     const p = run.player;
     const t = run.nearestEnemy(p.x, p.y, 180);
     const base = facingAngle(run) ?? (t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx));
@@ -264,12 +282,13 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
         if (zz) { zz.angle = a + d; zz.len = 85; zz.tick = 6; }
       }
     }
-    sfx.play('zap');
+    sfx.play(weaponSound(w));
   },
 
   /** Miny wokół gracza: uzbrajają się, wybuchają przy wrogu albo po czasie. */
   mines(run, w, s, dt) {
     if (!ready(w, s, dt)) return;
+    sfx.play(weaponSound(w));
     const p = run.player;
     for (let i = 0; i < s.amount; i++) {
       const z = run.addZone('mine', p.x + rng.range(-18, 18), p.y + rng.range(-18, 18), 22 * s.area, s.damage, s.duration, w.slot, w.def.name);
@@ -305,7 +324,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     }
     // Krwawe cięcie (augment): leczenie za trafionych.
     if (hits && run.augOn(w, 'axe_blood')) run.heal(Math.min(5, hits * 0.5));
-    sfx.play('dash');
+    sfx.play(weaponSound(w));
   },
 };
 

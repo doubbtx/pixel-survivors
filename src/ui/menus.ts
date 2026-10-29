@@ -587,7 +587,7 @@ export class SettingsScreen implements Screen {
         [{ label: () => 'Replay tutorial', act: () => app.go(new GameScreen(app, 'kestra', 'endless', undefined, true)) }, () => 'Play the short tutorial again (2-3 minutes): movement, abilities, dodging, loot and a boss.'],
       ],
       [
-        opt('Głośność', () => `${Math.round(s.volume * 100)}%`, (d) => step('volume', d * 0.1), () => 'Strzałki w lewo/prawo zmieniają wartość.'),
+        opt('Sound effects', () => `${Math.round(s.volume * 100)}%`, (d) => step('volume', d * 0.1), () => 'Volume of weapons, hits and the interface (music has its own slider). Important sounds briefly lower the music.'),
         opt('Muzyka', () => `${Math.round(s.music * 100)}%`, (d) => step('music', d * 0.1), () => 'Muzyka tworzona na bieżąco: w każdym biomie inna skala, rośnie razem z walką (bębny w tłumie, melodia przy bossie).'),
       ],
       [

@@ -18,6 +18,13 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.34',
+    lines: [
+      "Every weapon type has its own sound (arrows, knives, fire, souls, lightning, beams, blades and more), with slight pitch variations so repeated hits don't sound the same.",
+      "Music: its own theme for the menu, every biome (scale, tempo, rhythm, instruments) and a boss theme. Important sounds (boss, evolution, level up, chest) briefly lower the music, and a voice limit keeps crowds from drowning them out.",
+    ],
+  },
+  {
     version: '0.33',
     lines: [
       "Bosses: a third attack in every phase (12 new attacks) and clearer warnings: the attack name appears above the boss, with an aiming line, a ring around the boss or a closing circle under you.",

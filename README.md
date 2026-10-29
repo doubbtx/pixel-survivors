@@ -470,6 +470,11 @@ src/
 - Kill streaks (kills at most 0.8 s apart): Rampage at 25, Massacre at 60, Carnage at 120, Annihilation at 250.
 - End screen: new first tab Highlights (best weapon, peak DPS, biggest hit, longest combo, best kill streak, with Record! badges) and the list of hero records broken this run. New hero records: peak DPS, longest combo, best kill streak.
 
+**Sound and music (0.34.0, generated part of phase 5)**:
+- Weapon sounds by type and projectile (bolt, arrow, knife, fire, soul, chain lightning, holy nova, laser, meteor, boomerang, mines, cleave), ±6% pitch variation on game sounds, a limit of 22 simultaneous voices (important sounds always play) and ducking: boss, evolution, level up, chest, kill streak and getting hit briefly lower the music.
+- Music themes: menu (major pentatonic), each biome with its own scale, progression, tempo, rhythm and instruments, and a boss theme per biome (bass ostinato, four-on-the-floor, faster tempo). Separate sliders: Sound effects and Music.
+- Not done yet: CC0 recordings (Kenney, OpenGameArt) — the cloud environment's network policy blocks those sites; the licence list and iPhone formats come with them.
+
 ### Jak przetestować
 
 1. `npm run dev` → Endless → Nowy run → bohater (albo Ekspedycja → Nowa ekspedycja).
