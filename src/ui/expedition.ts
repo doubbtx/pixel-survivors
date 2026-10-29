@@ -3,7 +3,7 @@ import type { Input, Action } from '../core/input';
 import { C } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
-import { drawSprite } from '../gfx/sprites';
+import { drawSprite, getSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { BIOMES, objectiveLabel } from '../data/levels';
 import { BIOME_WAVES } from '../data/waves';
@@ -248,11 +248,15 @@ export class ExpeditionMapView {
     // Legenda rodzajów węzłów.
     let lx = MAP_X + 8;
     const legend = LEGEND.filter((k) => ex.map.some((row) => row.some((n) => n?.kind === k)));
+    // Długa legenda (dużo rodzajów, dłuższe polskie nazwy): najpierw mniejszy tekst, potem ciaśniejsze odstępy.
+    const names = legend.reduce((s, k) => s + textWidth(NODE_INFO[k].name), 0), avail = MAP_W - 16;
+    const sc = Math.max(0.75, Math.min(smallS(), (avail - 19 * legend.length) / names));
+    const gap = Math.min(5, (avail - names * sc - 14 * legend.length) / Math.max(1, legend.length - 1));
     for (const k of legend) {
       const info = NODE_INFO[k];
       r.withAlpha(0.8, () => drawSprite(g, info.icon, lx + 5, MAP_Y + 9));
-      drawText(g, info.name, lx + 14, MAP_Y + 5, info.color, { scale: smallS(), outline: C.black });
-      lx += 19 + textWidth(info.name) * smallS();
+      drawText(g, info.name, lx + 14, MAP_Y + 5, info.color, { scale: sc, outline: C.black });
+      lx += 14 + gap + textWidth(info.name) * sc;
     }
     // Podpowiedź plakietki pod myszą (nad legendą mapy).
     if (tip) {
@@ -377,10 +381,12 @@ export class ExpeditionMapView {
         for (const id of foes) {
           const e = ENEMIES[id], boss = BIOME_MINIBOSS.includes(id);
           if (!e) continue;
-          if (fx + 18 + textWidth(e.name) > ax + aw - 4) { fx = ax + textWidth('Enemies:') + 6; my += 18; }
-          drawSprite(g, `${e.sprite}@0`, fx + 8, my + 8, { scale: boss ? 1 : 0.8 });
-          drawText(g, e.name, fx + 18, my + 4, boss ? C.salmon : C.lgray);
-          fx += 24 + textWidth(e.name);
+          // Szerokie sprite'y (dzik, skorpion) przesuwają nazwę, żeby jej nie dotykały.
+          const sc = boss ? 1 : 0.8, iw = Math.max(16, getSprite(`${e.sprite}@0`).w * sc);
+          if (fx + iw + 2 + textWidth(e.name) > ax + aw - 4) { fx = ax + textWidth('Enemies:') + 6; my += 18; }
+          drawSprite(g, `${e.sprite}@0`, fx + iw / 2, my + 8, { scale: sc });
+          drawText(g, e.name, fx + iw + 2, my + 4, boss ? C.salmon : C.lgray);
+          fx += iw + 8 + textWidth(e.name);
         }
         my += 18;
       }

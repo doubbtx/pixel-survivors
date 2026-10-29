@@ -760,6 +760,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - 0.45.1: przygotowanie do wydania — `npm run build:release` (vite `--mode release`, `__DEV_TOOLS__ = false`): bez F3/F4/F6/F7,
   bez zakładki Ustawień „Inne” (tryb debug, podgląd balansu); bot i haki `window.__*` już wcześniej tylko w DEV. `npm run layout`
   wypisuje też napisy bez tłumaczenia (`trMisses`) ze wszystkich odwiedzonych ekranów.
+  Legenda mapy Ekspedycji zmniejsza tekst (do 0.75) i odstępy, gdy rodzaje węzłów się nie mieszczą; wiersz „Wrogowie”
+  odsuwa nazwę o szerokość sprite'a (dzik nie dotyka napisu).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
