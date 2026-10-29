@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.41.1)
+## Stan (wersja 0.41.2)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -663,6 +663,9 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 
 - 0.41.1: `rollOffer` dopełnia ofertę kart do 3 kartami niższej rzadkości, gdy pula wylosowanej rzadkości jest prawie
   pusta (unikalne pryzmatyczne zebrane) — wcześniej nagroda za bossa mogła pokazać jedną kartę.
+
+- 0.41.2: awans — wolny slot broni, a wszystkie bronie bazowe wykorzystane (po kilku fuzjach): składniki fuzji wracają do
+  oferty (`candidates`, zapasowe `taken`); opcja fuzji pomija hybrydę, którą już masz.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

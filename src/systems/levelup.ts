@@ -159,7 +159,7 @@ function candidates(run: Run): Option[] {
   // Fuzje: obie bronie-rodzice gotowe.
   for (const f of FUSIONS) {
     const a = ownedBase(run, f.a), b = ownedBase(run, f.b), into = WEAPON_BY_ID[f.into];
-    if (!a || !b || !fusionReady(a) || !fusionReady(b)) continue;
+    if (!a || !b || !fusionReady(a) || !fusionReady(b) || run.weapons.some((w) => w.def.id === f.into)) continue;
     const { kept, lost } = fusionAugments(into), has = (l: typeof kept) => l.filter((x) => run.aug(x.id)).map((x) => x.name);
     const augNote = `${has(kept).length ? ` Zostają: ${has(kept).join(', ')}.` : ''}${has(lost).length ? ` Przepadną: ${has(lost).join(', ')}.` : ''}`;
     out.push({ kind: 'fusion', id: f.into, name: into.name, desc: into.desc + augNote, hint: `Łączy: ${a.def.name} + ${b.def.name}, zwalnia slot`, icon: into.icon, tag: 'Fuzja', color: into.color, tags: [], recipe: { parts: [a.def.icon, b.def.icon], result: into.icon } });
@@ -177,8 +177,16 @@ function candidates(run: Run): Option[] {
     // Druga broń kończy Wierność broni (BAL.loyal).
     const lone = run.weapons.length === 1;
     const loyalHint = lone && run.loyal > 0 ? 'Tracisz Wierność broni!' : lone ? 'Kończy szansę na Wierność broni' : '';
+    const offerable = (d: (typeof WEAPONS)[number], taken: Set<string>) => !d.evolved && !taken.has(d.id) && !run.banished.has(d.id) && (!d.hero || d.hero === run.hero.id);
+    // Wolny slot, a wszystkie bronie bazowe już wykorzystane (długi run, kilka fuzji): składniki fuzji wracają do oferty
+    // (0.41.2; wcześniej zostawały same premie statystyk). Ta sama fuzja nie powtórzy się (opcja fuzji pomija posiadaną hybrydę).
+    let taken = ownedW;
+    if (!WEAPONS.some((d) => offerable(d, ownedW))) {
+      taken = new Set(run.weapons.map((w) => w.def.id));
+      for (const d of WEAPONS) if (evolvesOf(d).some((e) => taken.has(e.into))) taken.add(d.id);
+    }
     for (const d of WEAPONS) {
-      if (d.evolved || ownedW.has(d.id) || run.banished.has(d.id) || (d.hero && d.hero !== run.hero.id)) continue;
+      if (!offerable(d, taken)) continue;
       const el = WEAPON_ELEMENT[d.id];
       const desc = el ? `${d.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : d.desc;
       out.push({ kind: 'weaponNew', id: d.id, name: d.name, desc, hint: loyalHint || fusionHint(run, d) || evolveHint(run, d), icon: d.icon, tag: 'Nowa broń', color: d.color, tags: WEAPON_TAGS[d.kind], recipe: weaponRecipe(run, d) });
