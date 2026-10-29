@@ -40,7 +40,7 @@ import { updateEffects } from '../systems/effects';
 import { updateTurrets } from '../systems/turrets';
 import { updateMinions, spawnMinion } from '../systems/minions';
 import { updateEvents, startDungeon, type MapObject, type Buff, type Dungeon } from '../systems/events';
-import { updateResource, resourceOnHit, resourceOnHurt, resourceOnKill, resourceOnHeal, resourceDamageMul, resourceCrit, resourceTakenMul } from '../systems/resource';
+import { updateResource, resourceOnHit, resourceOnHurt, resourceOnKill, resourceOnHeal, resourceDamageMul, resourceCrit, resourceTakenMul, rhythmGain } from '../systems/resource';
 import { updateTasks, taskOnHurt, taskOnKill, type Task } from '../systems/tasks';
 import { updatePower } from '../systems/powers';
 import { updateTerrain, terrainBlast, type TerrainObj, type Arena } from '../systems/terrain';
@@ -1440,9 +1440,40 @@ export class Run {
   }
 
   /** Obrażenia dla gracza: nietykalność (unik), pancerz (diminishing returns), karty, tarcza, odrodzenie, śmierć. Zwraca true, gdy trafiło. */
-  hurtPlayer(base: number): boolean {
+  /** Szansa na odbicie Mikiri (pasywka Takezo): rośnie z poziomem postaci, z limitem; karty i Rozwój dokładają (passive.parry). */
+  parryChance(): number {
+    if (this.hero.passive.kind !== 'parry') return 0;
+    const P = BAL.resource.parry;
+    return Math.min(P.max, P.base + P.perLevel * (this.level - 1)) + this.flag('passive.parry');
+  }
+
+  /**
+   * Odbicie (Mikiri): brak obrażeń, chwila nietykalności, kontra wokół i rytm. Pocisk (`bullet`) wraca w najbliższego wroga.
+   * Zwraca true, gdy trafienie zostało odbite.
+   */
+  private tryParry(bullet?: { x: number; y: number; vx: number; vy: number }): boolean {
+    const ch = this.parryChance();
+    if (ch <= 0 || !rng.chance(ch)) return false;
+    const p = this.player, P = BAL.resource.parry, dmg = this.cardDamage(this.hero.passive.value);
+    p.iframes = Math.max(p.iframes, P.iframes);
+    this.enemiesInCircle(p.x, p.y, P.riposteR * this.stats.area, (e) => this.damageEnemy(e, dmg, this.hero.passive.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 3 }));
+    const f = this.addFx('arc', p.x, p.y, C.white, 0.18);
+    if (f) { const a = bullet ? Math.atan2(bullet.y - p.y, bullet.x - p.x) : rng.range(0, Math.PI * 2); f.r = 14; f.a0 = a - 1.2; f.a1 = a + 1.2; }
+    if (bullet) {
+      const t = this.nearestEnemy(p.x, p.y, 220), ang = t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(-bullet.vy, -bullet.vx);
+      this.spawnProjectile({ x: p.x, y: p.y, angle: ang, speed: 260, damage: dmg * P.reflect, src: this.hero.passive.name, sprite: 'knife', pierce: 2, life: 1 });
+    }
+    rhythmGain(this, P.rhythm);
+    this.popText(p.x, p.y - 12, 'Parry!', C.cyan);
+    sfx.play('hit');
+    this.cardState['sec.parry'] = (this.cardState['sec.parry'] ?? 0) + 1;
+    return true;
+  }
+
+  hurtPlayer(base: number, bullet?: { x: number; y: number; vx: number; vy: number }): boolean {
     const p = this.player;
     if (this.outcome !== 'none' || p.iframes > 0) return false;
+    if (this.tryParry(bullet)) return false;
     // Tarcza bogów (super-bonus): co N sekund jedno trafienie jest blokowane.
     const aegis = this.flag('aegis');
     if (aegis > 0 && (this.cardState.aegis ?? aegis) >= aegis) {

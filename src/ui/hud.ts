@@ -266,6 +266,9 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
   if (res.kind === 'heat') r.rect(bx + (bw * BAL.resource.heat.burnFrom) / resMax(run), ry, 0.5, 6, C.yellow);
   if (fr >= 0.99) r.withAlpha(0.25, () => r.roundRect(bx, ry, bw, 6, 1, C.white));
   drawText(g, `${res.name} ${Math.floor(run.res)}`, bx + 2, ry - 1, hot ? C.yellow : C.white, SMALL);
+  // Mikiri (Takezo): bieżąca szansa na odbicie po prawej stronie paska zasobu.
+  const parry = run.parryChance();
+  if (parry > 0) drawText(g, `Parry ${Math.round(parry * 100)}%`, bx + bw - 2, ry - 1, C.cyan, { align: 'right', ...SMALL });
   // Druga linia: akt i głębia (drugorzędnie) i Pakt jako krótki dopisek.
   const ex = run.expedition;
   let lx = bx;

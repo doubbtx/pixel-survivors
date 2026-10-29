@@ -43,7 +43,7 @@ export interface AbilityDef {
  * killSummon: co N-te zabójstwo przywołuje ducha-sługę; killReset: co N-te zabójstwo (i każda elita) odnawia Q;
  * guardShield: co N s tarcza za każdego sługę (systems/minions.ts).
  */
-export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast' | 'killSummon' | 'killReset' | 'guardShield' | 'dashCut';
+export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast' | 'killSummon' | 'killReset' | 'guardShield' | 'parry';
 
 /**
  * Zasób bohatera (pasek pod HP, systems/resource.ts, liczby w BAL.resource):
@@ -322,7 +322,7 @@ export const HEROES: HeroDef[] = [
     base: { maxHp: 105, speed: 60, atkSpeed: 0.1 },
     weapon: 'katana',
     tags: ['Szybkość', 'Krytyk'],
-    passive: { name: 'Sen no Sen', desc: 'Seize the initiative: your dodge cuts every enemy it passes through and adds 5 Rhythm.', kind: 'dashCut', value: 24 },
+    passive: { name: 'Mikiri', desc: '5% chance to parry a hit or a projectile at level 1, +0.6% per level (max 40%): no damage, a counter cut around you and +3 Rhythm. Parried projectiles fly back at enemies.', kind: 'parry', value: 20 },
     resource: { kind: 'rhythm', name: 'Rhythm', color: C.cyan, desc: 'Every hit adds Rhythm: each point is attack speed. It fades out of combat, getting hit costs some. Iai (R) spends it all on a stronger cut.' },
     abilities: [
       {

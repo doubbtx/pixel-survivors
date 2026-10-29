@@ -198,7 +198,7 @@ export const HERO_TREES: Record<string, MetaNode[]> = {
     N('t_atk', 'Earth', 'Light Hands', 'ic_katana', 5, 30, stat('atkSpeed', 0.04), '+{v} attack speed', true),
     N('t_critmult', 'Earth', 'Deep Cut', 'pi_whetstone', 5, 25, stat('critMult', 0.1), '+{v} critical damage', true),
     N('t_hp', 'Earth', 'Iron Body', 'pi_heart', 5, 25, { kind: 'mul', stat: 'maxHp', per: 0.05 }, '+{v} max HP', true),
-    KEY('t_dashcut', 'Earth', 'Initiative', 'ab_t_step', 600, flag('passive.dmg', 1), 'Sen no Sen cuts twice as hard.'),
+    KEY('t_parry', 'Earth', 'Seeing Through', 'ab_t_step', 600, flag('passive.parry', 0.08), 'Mikiri: +8% parry chance.'),
     N('t_fdmg', 'Water', 'Sharp Water', 'ab_t_flurry', 5, 20, flag('t_flurry.damage', 3), '+{v} damage per Thousand Cuts slash', false),
     N('t_fcount', 'Water', 'Endless Stream', 'ab_t_flurry', 3, 40, flag('t_flurry.slashes', 1), '+{v} Thousand Cuts slash', false),
     N('t_fcd', 'Water', 'Current', 'pi_clock', 5, 25, flag('cd.e', 0.06), 'Thousand Cuts recharges {v} faster', true),

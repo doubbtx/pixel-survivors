@@ -21,7 +21,7 @@ const NOTES: { version: string; lines: string[] }[] = [
     version: '0.32',
     lines: [
       "New hero Takezo, a swordsman with two swords inspired by Miyamoto Musashi. Q Helm Splitter: an overhead strike into a spot in front of you. E Thousand Cuts: slashes in a cone, more of them with attack speed. R Iai: dash, sheathe, and everything on the path is cut.",
-      "Takezo's Rhythm: every hit stacks attack speed, it fades out of combat and Iai spends it for a stronger cut. Passive Sen no Sen: the dodge cuts enemies on its path. Unlock: win an Expedition with Borgun or Vesper.",
+      "Takezo's Rhythm: every hit stacks attack speed, it fades out of combat and Iai spends it for a stronger cut. Passive Mikiri: a chance to parry hits and projectiles that grows with your level (parried projectiles fly back). Unlock: win an Expedition with Borgun or Vesper.",
       "Polish: English names inside Polish texts are translated too.",
     ],
   },

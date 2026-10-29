@@ -7,7 +7,7 @@ import { abilityParam, abilityCooldown, type AbilityKind, type AbilitySlot } fro
 import { SLOT, type AbilityInst, type Enemy } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnMinion } from './minions';
-import { resourceOnCast, spendSouls, spendStreak, spendFaith, furyGain, rhythmAtk, rhythmGain, spendRhythm } from './resource';
+import { resourceOnCast, spendSouls, spendStreak, spendFaith, furyGain, rhythmAtk, spendRhythm } from './resource';
 
 const ORDER: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
 
@@ -85,7 +85,7 @@ function judgeWave(run: Run, a: AbilityInst, P: (k: string) => number, n: number
   });
 }
 
-/** Wrogowie w pasie szerokości `w` wzdłuż odcinka (każdy raz): cięcia Takezo (Iai, unik Sen no Sen). */
+/** Wrogowie w pasie szerokości `w` wzdłuż odcinka (każdy raz): cięcie Iai Takezo. */
 function alongPath(run: Run, x0: number, y0: number, x1: number, y1: number, w: number, fn: (e: Enemy) => void): void {
   const L = Math.hypot(x1 - x0, y1 - y0), seen = new Set<number>();
   for (let d = 0; d <= L; d += 8) {
@@ -484,16 +484,6 @@ export function castAbility(run: Run, slot: AbilitySlot, free = false): void {
   // Węzły Rozwoju (data/meta.ts, flagi): powtórzenie umiejętności, Przewrót skraca Q / zostawia Sieć, tarcza z Pierścienia.
   for (let i = 0; i < run.flag(`echo.${slot}`); i++) run.schedule(0.4 * (i + 1), () => castAbility(run, slot, true));
   if (slot === 'dash') {
-    // Sen no Sen (pasywka Takezo): unik tnie wrogów na trasie i daje rytm.
-    if (run.hero.passive.kind === 'dashCut') {
-      const p = run.player, sx = p.x, sy = p.y, dmg = run.cardDamage(run.hero.passive.value) * (1 + run.flag('passive.dmg'));
-      run.schedule(0.15, () => {
-        alongPath(run, sx, sy, p.x, p.y, 14 * run.stats.area, (e) => run.damageEnemy(e, dmg, run.hero.passive.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 2 }));
-        const f = run.addFx('line', sx, sy, C.cyan, 0.18);
-        if (f) { f.x2 = p.x; f.y2 = p.y; f.w = 2; }
-        rhythmGain(run, BAL.resource.rhythm.dashCut);
-      });
-    }
     const reset = run.flag('dashResetQ');
     if (reset > 0) run.abilities.q.cd *= 1 - Math.min(1, reset);
     if (run.flag('dashSummon') > 0) spawnMinion(run, run.player.x, run.player.y, 14 * run.stats.might, 8, false, 'Cień');

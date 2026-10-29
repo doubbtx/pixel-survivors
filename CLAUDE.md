@@ -529,7 +529,7 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   Kontakt rani tylko gdy `!hidden && z < 4`. `OWN_MOVES` wyłącza dla nich szarżę elity.
 - 0.32.0 — bohater Takezo (na wzór Musashiego): umiejętności 'overhead' (Q, cios w punkt `dist` przed sobą), 'flurry'
   (E, `slashes` × (1 + szybkość ataku + rytm) cięć w stożku), 'iai' (R, doskok `dist`, po 0.5 s cięcie wzdłuż trasy
-  `alongPath`, zużywa rytm), pasywka 'dashCut' (unik tnie trasę, `passive.dmg`), zasób 'rhythm' (BAL.resource.rhythm;
+  `alongPath`, zużywa rytm), pasywka 'parry' Mikiri (0.32.1: `Run.parryChance`/`tryParry` w hurtPlayer, BAL.resource.parry, flaga `passive.parry`; pocisk przekazany do hurtPlayer wraca), zasób 'rhythm' (BAL.resource.rhythm;
   `rhythmAtk` dodawane w `effectiveStats` broni bez przeliczania statystyk, `spendRhythm`, `rhythmGain`). Broń `katana`
   (cleave, amount 2 = przód i tył), ewolucje `katana_evo` (fury), `katana_sharp` (whetstone, ALT_EVOS). Ikony w
   gfx/hero-icons.ts (`katana`, `slashArc`), sprite `takezo` w gfx/actors.ts. Karty h_t_*, drzewko takezo (Earth/Water/

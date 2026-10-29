@@ -116,7 +116,7 @@ export function updateEnemyBullets(run: Run, dt: number): void {
     const dx = b.x - p.x, dy = b.y - p.y;
     const rr = b.radius + BAL.playerBulletR;
     if (dx * dx + dy * dy < rr * rr && p.iframes <= 0) {
-      run.hurtPlayer(b.damage);
+      run.hurtPlayer(b.damage, b);
       run.burst(b.x, b.y, C.red, 3, 30);
       run.bullets.release(b);
     } else if (b.life <= 0 || dx * dx + dy * dy > 300 * 300) {

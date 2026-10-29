@@ -460,7 +460,7 @@ src/
 - E Thousand Cuts: slashes in a cone in front; the number and speed of slashes scale with attack speed and Rhythm; evolution Two Heavens (slashes in front and behind, needs Speed synergy).
 - R Iai: dash along your aim, a moment of stillness, then every enemy on the path takes a guaranteed critical cut; spends all Rhythm (+3% damage per point); evolution Final Cut (dash back and cut again, needs Crit synergy).
 - Resource Rhythm (max 30): +1 per hit (every 0.1 s), +1.5% attack speed per point (+45% full), fades after 1.5 s without hits, getting hit costs 40%.
-- Passive Sen no Sen: the dodge cuts enemies along its path and adds 5 Rhythm.
+- Passive Mikiri (0.32.1): 5% chance to parry a hit or projectile at level 1, +0.6% per level (max 40%, cards and Progression add more). A parry negates the damage, cuts enemies around you and gives +3 Rhythm; a parried projectile flies back at the nearest enemy. The current chance is shown next to the Rhythm bar.
 - 7 hero cards, a Progression tree (Earth, Water, Fire, Void), unlock: win an Expedition with Borgun or Vesper (granted on load if you already have such a win).
 - Polish: English names inside Polish templates are translated piece by piece (`toPolish` in core/i18n.ts).
 
