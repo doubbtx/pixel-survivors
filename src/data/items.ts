@@ -681,9 +681,9 @@ const TOTAL_FMT: Partial<Record<keyof Stats, 'mul' | 'pct' | 'flat'>> = {
 /** Suma statystyki gracza do pokazania przy bonusie przedmiotu, np. "razem x1.45" albo "razem 25%". */
 export function statTotal(stat: keyof Stats, s: Stats): string {
   const v = s[stat], f = TOTAL_FMT[stat] ?? 'flat';
-  if (f === 'mul') return `razem x${v.toFixed(2)}`;
-  if (f === 'pct') return `razem ${Math.round(v * 100)}%`;
-  return `razem ${v < 10 && v % 1 !== 0 ? v.toFixed(1) : Math.round(v)}`;
+  if (f === 'mul') return `obecnie x${v.toFixed(2)}`;
+  if (f === 'pct') return `obecnie ${Math.round(v * 100)}%`;
+  return `obecnie ${v < 10 && v % 1 !== 0 ? v.toFixed(1) : Math.round(v)}`;
 }
 
 export function implicitLine(it: Item): string {

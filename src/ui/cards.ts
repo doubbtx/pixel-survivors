@@ -132,7 +132,7 @@ export class CardPickView {
       const stacks = this.run.cards.find((kk) => kk.id === c.id)?.stacks ?? 0;
       r.withAlpha(k, () => {
         drawCard(r, c, x, y, i === this.sel, this.step, stacks);
-        drawText(r.g, String(i + 1), x + 8, y + CARD_H - 16, C.slate);
+        drawText(r.g, String(i + 1), x + 8, y + CARD_H - 16, C.lavender);
         // Karta, której nie ma jeszcze w kolekcji: plakietka na górnej krawędzi (jak „Polecane” przy awansie).
         if (!this.run.knownCards.has(c.id)) cardBadge(r, x + CARD_W / 2, y, 'New!', C.lime);
       });

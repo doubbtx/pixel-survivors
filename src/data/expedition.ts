@@ -309,7 +309,9 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
   const b = BIOMES[biome];
   const boss = m.kind === 'boss';
   const short = boss ? 1 : X.fightScale;
-  const objective: Objective = m.kind === 'hunt' ? { kind: 'hunt', time: X.huntLimit }
+  const gentle = act === 1 && row === 0 && m.kind === 'fight';
+  const objective: Objective = gentle ? { kind: 'kills', count: X.gentle.kills }
+    : m.kind === 'hunt' ? { kind: 'hunt', time: X.huntLimit }
     : m.kind === 'ambush' ? { kind: 'survive', time: Math.round(X.objTime(act) * short * X.ambushScale / 10) * 10 }
     : (row + act) % 2 === 0
       // Zwykła walka „przetrwaj”: albo zabij tylu, ilu na mapie „pokonaj” (silny build kończy szybciej, 0.40).
@@ -332,7 +334,8 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
     resist: m.affinity?.kind === 'resist' ? m.affinity.el : undefined,
     eliteMods: m.eliteMods,
     // Polowanie: rzadsze zwykłe fale (pojedynek z minibossem).
-    flags: crowded(m.kind === 'hunt' ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.huntCrowd } : f, act),
+    flags: crowded(m.kind === 'hunt' ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.huntCrowd } : gentle ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.gentle.crowd, enemyDmg: (f.enemyDmg ?? 0) + X.gentle.dmg } : f, act),
+    gentle,
   };
 }
 

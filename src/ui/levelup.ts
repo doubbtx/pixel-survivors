@@ -233,7 +233,7 @@ export class LevelUpView {
       const x = this.cardX(i), y = CARD_Y + Math.round((1 - (1 - (1 - k) ** 3)) * 30) - (i === this.sel ? 3 : 0);
       r.withAlpha(k, () => {
         drawOptionCard(r, this.run, o, x, y, i === this.sel, this.banishMode && canBanish(o), !this.banishMode && i === best && this.options.length > 1);
-        drawText(r.g, String(i + 1), x + 8, y + CARD_H - 16, C.slate);
+        drawText(r.g, String(i + 1), x + 8, y + CARD_H - 16, C.lavender);
       });
       const rare = (o.quality ?? 0) >= 3 || o.kind === 'evolve' || o.kind === 'abilityEvolve' || o.kind === 'passiveEvolve';
       const flash = rare ? 0.7 - (t - i * 0.07 - 0.22) * 2.5 : 0;

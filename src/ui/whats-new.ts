@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.43.2',
+    lines: [
+      "The first map of an Expedition is gentler: fewer enemies dealing less damage, a shorter goal, and no situations, quests or events in the first 90 seconds.",
+      "After two early defeats in a row the end screen offers Easy mode with one button. The end screen says 'Your first records!' on a hero's first run.",
+      "Smaller fixes: whole numbers for HP and gold, item totals read 'now', brighter 1-3 keys on cards, the pause menu says 'Tutorial' in the tutorial, map messages no longer cover the buttons.",
+    ],
+  },
+  {
     version: '0.43',
     lines: [
       "Takezo's Rhythm builds faster and stays until you take damage; after a hit it drains to zero.",

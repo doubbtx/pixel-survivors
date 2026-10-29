@@ -670,4 +670,13 @@ export const PL: Record<string, string> = {
   "Dawn Spear [Q]": "Włócznia świtu [Q]",
   "Expedition: choose a hero": "Ekspedycja: wybierz bohatera",
   "Endless: choose a hero": "Endless: wybierz bohatera",
+  "Your first records! Beat them next time.": "Twoje pierwsze rekordy! Pobij je następnym razem.",
+  "Tutorial": "Samouczek",
+  "Tutorial: giving up ends the tutorial": "Samouczek: poddanie kończy samouczek",
+  "Too hard? Turn on Easy mode": "Za trudno? Włącz tryb łatwy",
+  "Easy mode on": "Tryb łatwy włączony",
+  "Easy mode on: weaker enemies (Settings to change)": "Tryb łatwy włączony: słabsi wrogowie (zmienisz w Ustawieniach)",
+  "The first map of an Expedition is gentler: fewer enemies dealing less damage, a shorter goal, and no situations, quests or events in the first 90 seconds.": "Pierwsza mapa Ekspedycji jest łagodniejsza: mniej wrogów zadających mniej obrażeń, krótszy cel, a przez pierwsze 90 sekund bez sytuacji, zadań i wydarzeń.",
+  "After two early defeats in a row the end screen offers Easy mode with one button. The end screen says 'Your first records!' on a hero's first run.": "Po dwóch wczesnych porażkach pod rząd ekran końca proponuje tryb łatwy jednym przyciskiem. Przy pierwszym runie bohatera ekran końca pokazuje „Twoje pierwsze rekordy!”.",
+  "Smaller fixes: whole numbers for HP and gold, item totals read 'now', brighter 1-3 keys on cards, the pause menu says 'Tutorial' in the tutorial, map messages no longer cover the buttons.": "Drobne poprawki: HP i złoto jako liczby całkowite, sumy przedmiotów jako „obecnie”, jaśniejsze klawisze 1-3 na kartach, pauza w samouczku pokazuje „Samouczek”, komunikaty mapy nie zasłaniają przycisków.",
 };

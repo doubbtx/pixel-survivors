@@ -260,7 +260,7 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
   if (a.hitFlash > 0 && !run.reduceFlash) r.withAlpha(a.hitFlash / 0.18 * 0.7, () => r.roundRect(bx, py, bw, 8, 1, C.white));
   if (run.healGlow > 0) r.withAlpha(Math.min(1, run.healGlow * 2), () => r.roundFrame(bx - 0.5, py - 0.5, bw + 1, 9, 1, C.lime, 0.75));
   if (p.shield > 0) r.rect(bx, py + 8.5, bw * Math.min(1, p.shield / st.maxHp), 1, C.cyan);
-  drawText(g, `${fmt(p.hp)} / ${fmt(st.maxHp)}`, bx + bw / 2, py + 0.3, C.white, { align: 'center', ...SMALL });
+  drawText(g, `${fmt(Math.ceil(p.hp))} / ${fmt(Math.round(st.maxHp))}`, bx + bw / 2, py + 0.3, C.white, { align: 'center', ...SMALL });
   if (a.hitT > 0) {
     const t = `-${fmt(Math.round(a.hitAmt))}`, up = (0.9 - a.hitT) * 4;
     r.withAlpha(Math.min(1, a.hitT * 3), () => drawText(g, t, x + w + 3, py - up, C.red, { outline: C.black }));

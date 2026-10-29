@@ -262,12 +262,34 @@ export class GameScreen implements Screen {
 
   /** Śmierć albo poddanie: slot trybu czyszczony. Esencja zostaje. */
   private onRunOver(): void {
+    this.suggestEasy();
     this.updateRecords();
     this.unlock({});
     this.awardEssence();
     this.endSlot();
     this.app.persist();
     this.state = 'end';
+  }
+
+  /** Wczesne porażki pod rząd (playtest): po dwóch ekran końca proponuje tryb łatwy jednym przyciskiem. */
+  private suggestEasy(): void {
+    const run = this.run, save = this.app.save, ex = run.expedition;
+    if (this.tut || save.settings.easy) return;
+    const early = run.outcome === 'dead' && (ex ? ex.act === 1 : run.depth <= 1 && run.totalTime < 240);
+    save.earlyDeaths = early ? (save.earlyDeaths ?? 0) + 1 : 0;
+    if ((save.earlyDeaths ?? 0) < 2) return;
+    this.endMenu.items.unshift({
+      label: () => (save.settings.easy ? 'Easy mode on' : 'Too hard? Turn on Easy mode'),
+      act: () => {
+        if (save.settings.easy) return;
+        save.settings.easy = true;
+        save.earlyDeaths = 0;
+        this.app.persist();
+        this.showToast('Easy mode on: weaker enemies (Settings to change)');
+        sfx.play('levelup');
+      },
+    });
+    this.endMenu.y -= this.endMenu.lineH;
   }
 
   private endSlot(): void {
@@ -759,7 +781,7 @@ export class GameScreen implements Screen {
         break;
       case 'map':
         this.map!.render(r);
-        if (this.toastT > 0) drawText(r.g, this.toast, W / 2, H - 14, C.lime, { align: 'center', outline: C.black });
+        if (this.toastT > 0) drawText(r.g, this.toast, W / 2, H - 44, C.lime, { align: 'center', outline: C.black }); // nad przyciskami mapy (playtest)
         break;
       case 'pause':
         this.renderPause();
@@ -781,12 +803,12 @@ export class GameScreen implements Screen {
     // Lewa kolumna: tytuł, miejsce w runie, menu, ostrzeżenie o poddaniu.
     panel(r, PL, 8, PLW, H - 16);
     drawText(g, 'Pauza', PL + PLW / 2, 15, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    const where = [ex ? `Akt ${ex.act}, głębia ${run.depth}` : this.mode === 'endless' ? `Endless, głębia ${run.depth}` : `Etap ${run.depth}`, fmtTime(run.totalTime)].join('   ');
+    const where = [this.tut ? 'Tutorial' : ex ? `Akt ${ex.act}, głębia ${run.depth}` : this.mode === 'endless' ? `Endless, głębia ${run.depth}` : `Etap ${run.depth}`, fmtTime(run.totalTime)].join('   ');
     drawText(g, where, PL + PLW / 2, 36, C.lgray, { align: 'center' });
     if (run.pactLevel) drawText(g, `Pakt ${run.pactLevel}`, PL + PLW / 2, 47, C.red, { align: 'center' });
     this.pauseMenu.render(r);
     {
-      const warn = `${this.mode === 'expedition' ? 'Ekspedycja' : 'Endless'}: giving up ends the run (essence stays)`;
+      const warn = this.tut ? 'Tutorial: giving up ends the tutorial' : `${this.mode === 'expedition' ? 'Ekspedycja' : 'Endless'}: giving up ends the run (essence stays)`;
       const lines = wrapText(warn, PLW - 16);
       lines.forEach((l, i) => drawText(g, l, PL + PLW / 2, H - 14 - lines.length * 11 + i * 11, C.salmon, { align: 'center' }));
     }
@@ -951,7 +973,7 @@ export class GameScreen implements Screen {
       ['Poziom postaci', String(run.level), C.white],
       [ex ? 'Akt' : this.mode === 'endless' ? 'Głębia' : 'Etap', ex ? `${ex.act}/${BAL.expedition.acts}` : String(run.depth), C.white],
       ['Średni DPS', fmt(total / Math.max(1, run.totalTime)), C.gold],
-      ['Złoto', fmt(run.gold), C.yellow],
+      ['Złoto', fmt(Math.floor(run.gold)), C.yellow],
     ];
     const tw = (W - 24 - 5 * 4) / 6;
     tiles.forEach(([k, v, col], i) => {
@@ -1023,7 +1045,9 @@ export class GameScreen implements Screen {
     if (ex && ex.cleared > before.bestExpedition && before.bestExpedition > 0) broke.push(`Expedition: ${ex.cleared} maps`);
     for (const c of cards) if (c.rec && (c.title === 'Peak DPS' ? (before.bestDps ?? 0) : c.title === 'Longest combo' ? (before.bestCombo ?? 0) : (before.bestStreak ?? 0)) > 0) broke.push(`${c.title}: ${c.value}`);
     const ly = y + ch + 5, room = Math.max(0, Math.floor((this.endY + this.endH - ly - 13) / 10)) * 2;
-    drawText(g, broke.length ? 'Records broken' : 'No records broken this time', END_X + 12, ly, broke.length ? C.gold : C.lavender);
+    // Pierwszy run bohatera: plakietki „Record!” bez wcześniejszych rekordów — zamiast sprzecznego „bez rekordów” (playtest).
+    const first = !broke.length && cards.some((c) => c.rec);
+    drawText(g, broke.length ? 'Records broken' : first ? 'Your first records! Beat them next time.' : 'No records broken this time', END_X + 12, ly, broke.length || first ? C.gold : C.lavender);
     if (broke.length > room) broke.splice(room - 1, broke.length, `+${broke.length - room + 1} more`);
     broke.forEach((t, i) => {
       const bx = END_X + 16 + (i % 2) * (END_W / 2 - 10), by = ly + 11 + Math.floor(i / 2) * 10;

@@ -589,6 +589,14 @@ export class Run {
     this.webs = [];
     this.levelEvent = null;
     this.levelEventT = BAL.levelEvents.every * 0.6;
+    // Łagodny start wyprawy: jedna rzecz naraz — przez pierwsze `quiet` s bez sytuacji, zadań i wydarzeń, elita później.
+    if (this.levelInfo.gentle) {
+      const G = BAL.expedition.gentle;
+      this.situationT = Math.max(this.situationT, G.quiet);
+      this.taskT = Math.max(this.taskT, G.quiet);
+      this.levelEventT = Math.max(this.levelEventT, G.quiet);
+      this.eliteT = Math.max(this.eliteT, G.elite);
+    }
     this.strikes = [];
     this.bossTitle = null;
     resetLevelFeats(this);

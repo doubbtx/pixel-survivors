@@ -215,7 +215,7 @@ export class ExpeditionMapView {
     // Esencja: nagrody modyfikatorów ukończonych map zwiększają esencję na koniec wyprawy (BAL.expedition.rewardEssence).
     const essence = Math.round(ex.bonus * X.rewardEssence);
     const chips: [string, number, string?][] = [
-      [`HP ${fmt(run.player.hp)}/${fmt(run.stats.maxHp)}`, C.salmon], [`złoto ${fmt(run.gold)}`, C.gold],
+      [`HP ${fmt(Math.ceil(run.player.hp))}/${fmt(run.stats.maxHp)}`, C.salmon], [`złoto ${fmt(Math.floor(run.gold))}`, C.gold],
       [`esencja +${essence}%`, C.cyan, 'Nagrody za modyfikatory ukończonych map. Na koniec wyprawy dostaniesz tyle więcej esencji do Rozwoju.'],
     ];
     if (bless) chips.push([`${bless.name} (${ex.blessing!.maps})`, C.yellow]);

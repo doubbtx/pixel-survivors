@@ -308,7 +308,7 @@ export class InventoryView {
       }
     }
     drawText(g, `Plecak ${run.bag.length}/${BAL.bagSize}`, BAG_X, 148, C.lavender);
-    drawText(g, `${fmt(run.gold)} zł   ${fmt(run.shards)} odł.`, BAG_X + BAG_COLS * (CELL + 1) - 1, 148, C.gold, { align: 'right' });
+    drawText(g, `${fmt(Math.floor(run.gold))} zł   ${fmt(run.shards)} odł.`, BAG_X + BAG_COLS * (CELL + 1) - 1, 148, C.gold, { align: 'right' });
     // Opis zaznaczonego przedmiotu (albo slotu) małym tekstem pod plecakiem.
     const it = this.itemAt(sel), aw = (BAG_COLS * (CELL + 1) - 4) / descS();
     drawText(g, it ? 'O przedmiocie' : 'Wskazówka', BAG_X, 162, C.yellow);

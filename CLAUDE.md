@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.43.0)
+## Stan (wersja 0.43.2)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -695,6 +695,12 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   `BAL.brand.shieldPer` za napiętnowanego w `guardR`; Uświęcona ziemia przedłuża Piętno; Łaska bez sług; sekret 'saint':
   20 napiętnowanych przy ≥95% HP; meta: `lanceDmg`, `cd.q`. Render: włócznia liniami (gałąź `pr.brand`), romb Piętna pod
   wrogiem. Takezo: broń 'katana' ma kind 'lash' (cięcia poziome jak bicz: `lashCut`, fx 'slash'), bot traktuje 'lash' jak walkę wręcz.
+
+- 0.43.2 (poprawki z playtestu Agenta 3): `LevelDef.gentle` — pierwszy węzeł wyprawy (akt 1, rząd 0): cel 300 zabójstw,
+  `BAL.expedition.gentle` (enemyCount −0.5, enemyDmg −0.35, sytuacje/zadania/wydarzenia od 90 s, elita od 60 s; bot fresh:
+  pierwsza mapa 4/6 bohaterów zamiast 2/6). `save.earlyDeaths` + `suggestEasy` (przycisk trybu łatwego na ekranie końca po
+  2 wczesnych porażkach). Ekran końca: „Your first records!”. Pauza w samouczku: „Tutorial”. Liczby: HP ceil, złoto floor,
+  `statTotal` „obecnie”. Toast mapy nad przyciskami. Rytm Takezo (0.43.0): `rhythmDrain` po trafieniu, `hit` 1.5, `gap` 0.04.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

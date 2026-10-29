@@ -329,7 +329,7 @@ export class AnvilView {
     drawText(g, 'Kowadło', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
     button(r, 6, 9, 54, 16, 'Wstecz [Esc]', { scale: 0.85 });
     drawSprite(g, 'coin', W - 118, 18);
-    drawText(g, fmt(run.gold), W - 110, 13, C.yellow, { outline: C.black });
+    drawText(g, fmt(Math.floor(run.gold)), W - 110, 13, C.yellow, { outline: C.black });
     drawSprite(g, 'sh_shard', W - 58, 18);
     drawText(g, fmt(run.shards), W - 50, 13, C.cyan, { outline: C.black });
     // Zapasy kuźni: materiały (lewo) i zwoje (przy tytule).

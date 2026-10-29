@@ -95,6 +95,8 @@ export interface CardCollection {
 
 export interface SaveData {
   version: number;
+  /** Porażki pod rząd na początku (akt 1 Ekspedycji, pierwsza głębia Endless < 4 min) bez trybu łatwego: od 2 ekran końca proponuje Łatwy (0.43.2). */
+  earlyDeaths?: number;
   settings: Settings;
   records: Record<string, HeroRecord>;
   /** Sloty zapisu per tryb: trwający run (między poziomami albo w trakcie poziomu). */

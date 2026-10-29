@@ -466,6 +466,8 @@ export const BAL = {
     bossHp: 3,
     /** Dodatkowy tłum wrogów na mapach Ekspedycji (flaga enemyCount) w akcie. */
     crowd: (act: number) => 0.5 + 0.25 * act,
+    /** Pierwszy węzeł wyprawy (playtest 0.43.2: gracze i boty ginęli tu w 50-100 s): cel zabójstw, mniej wrogów (enemyCount), cisza bez sytuacji, zadań i wydarzeń (s), pierwsza elita (s). */
+    gentle: { kills: 300, crowd: -0.5, dmg: -0.35, quiet: 90, elite: 60 },
     /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */
     waveOffsetPerDepth: 50,
     /** Elity w węźle elity pojawiają się co eliteEvery × ten mnożnik. */

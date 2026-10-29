@@ -66,6 +66,8 @@ export interface LevelDef {
   resist?: Element;
   /** Stałe cechy elit tej mapy (Mapa elit, Zasadzka), widoczne przed wejściem. */
   eliteMods?: string[];
+  /** Pierwsza walka wyprawy (akt 1, rząd 0; 0.43.2 z playtestu): krótszy cel, mniejszy tłum, sytuacje / zadania / elity później. */
+  gentle?: boolean;
   flags?: Record<string, number>;
 }
 

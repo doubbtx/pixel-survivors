@@ -154,7 +154,7 @@ export class ShopView {
     dim(r);
     drawText(g, 'Sklep', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
     drawSprite(g, 'coin', W - 70, 18);
-    drawText(g, fmt(run.gold), W - 62, 13, C.yellow, { outline: C.black });
+    drawText(g, fmt(Math.floor(run.gold)), W - 62, 13, C.yellow, { outline: C.black });
 
     panel(r, 6, 34, 266, 196);
     drawText(g, `Przedmioty (poz. ${shop.depth})   sklep: poziom ${run.shopLevel}`, 14, 40, C.lavender);

@@ -98,7 +98,7 @@ export class RelicPickView {
       for (const l of wrapText(rel.desc, tw)) { drawText(g, l, cx, ly, C.lime, { ...DESC, align: 'center' }); ly += lh; }
       ly += 3;
       for (const l of wrapText(rel.drawback, tw)) { drawText(g, l, cx, ly, C.salmon, { ...DESC, align: 'center' }); ly += lh; }
-      drawText(g, String(i + 1), x + 8, y + CARD_H - 14, C.slate);
+      drawText(g, String(i + 1), x + 8, y + CARD_H - 14, C.lavender);
     });
     if (this.pending) button(r, W / 2 - 60, H - 34, 120, 16, 'Keep current [Esc]');
     drawText(g, '1-3 / click: choose', W / 2, H - 14, C.lavender, { align: 'center', shadow: C.black });

@@ -2322,4 +2322,7 @@ export const EN: Record<string, string> = {
   "Następny poziom": "Next level",
   "Odblokowanie": "Unlock",
   "Synergie [Y]": "Synergies [Y]",
+  "obecnie x{}": "now x{}",
+  "obecnie {}%": "now {}%",
+  "obecnie {}": "now {}",
 };
