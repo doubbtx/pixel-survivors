@@ -253,7 +253,7 @@ export class AnvilView {
   /** Panel warsztatu: przepisy (wynik, składniki z zapasem, odłamki, złoto, szansa). */
   private renderCraft(r: Renderer): void {
     const g = r.g, run = this.run;
-    panel(r, DET_X, 32, DET_W, 196, C.orange);
+    panel(r, DET_X, 32, DET_W, 196);
     drawText(g, 'Warsztat: przetapianie', DET_X + DET_W / 2, 37, C.orange, { align: 'center' });
     CRAFTS.forEach((c, i) => {
       const y = CRAFT_Y + i * CRAFT_H, on = i === this.craftSel, out = MAT_BY_ID[c.out], block = craftBlock(run, c);

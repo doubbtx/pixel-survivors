@@ -97,9 +97,11 @@ export class Hints {
     const h = 9 + lines.length * 9, y = b.up ? b.y - h : b.y;
     const a = Math.min(1, this.t * 3, (SHOW - this.t) * 6);
     r.withAlpha(a, () => {
-      if (overlay) panel(r, b.x, y, b.w, h, C.cyan);
-      else tile(r, b.x, y, b.w, h, C.teal, 0.78);
-      lines.forEach((l, i) => drawText(r.g, l, b.x + 6, y + 4 + i * 9, C.white, { shadow: C.black, scale: HINT_SCALE }));
+      // Cicha płytka (nie kolejne okno): kamienne tło i turkusowy znacznik po lewej, który mówi „to wskazówka”.
+      if (overlay) panel(r, b.x, y, b.w, h);
+      else tile(r, b.x, y, b.w, h, undefined, 0.78);
+      r.roundRect(b.x + 2, y + 2, 1.5, h - 4, 0.75, C.cyan);
+      lines.forEach((l, i) => drawText(r.g, l, b.x + 7, y + 4 + i * 9, C.lgray, { shadow: C.black, scale: HINT_SCALE }));
     });
   }
 }

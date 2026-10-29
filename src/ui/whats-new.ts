@@ -137,7 +137,7 @@ export class WhatsNewScreen implements Screen {
     r.clear(C.black);
     const x = 40, w = W - 80;
     titleBar(r, "What's new", 12);
-    panel(r, x, 42, w, H - 76, C.gold);
+    panel(r, x, 42, w, H - 76);
     let y = 52;
     // Starsza wersja tylko wtedy, gdy zmieści się cała w ramce (nowsza zawsze).
     const height = (n: { lines: string[] }) => 20 + n.lines.reduce((h, l) => h + wrapText(l, w - 34).length * 11 + 3, 0);

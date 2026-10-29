@@ -160,7 +160,7 @@ export class CodexScreen implements Screen {
     r.clear(C.black);
     titleBar(r, 'Evolution book', 6);
     PAGES.forEach((p, i) => button(r, this.tabX(i), 30, TAB_W, 16, `${p.title} (${p.entries.length})`, { active: i === this.page, accent: C.gold }));
-    panel(r, 10, 52, W - 20, H - 80, C.gold);
+    panel(r, 10, 52, W - 20, H - 80);
     const oy = this.scroll.begin(r, ...AREA), x = 20, tx = x + 3 * S + 2 * 8 + 8, tw = (W - tx - 20) / descS(), lh = descLH();
     let y = 60 - oy;
     for (const l of wrapText(pg.intro, (W - 44) / descS())) { drawText(g, l, x, y, C.lavender, DESC); y += lh; }

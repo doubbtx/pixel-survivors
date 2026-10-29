@@ -118,7 +118,7 @@ export class BuildView {
     drawText(g, 'C / Esc: wróć', GX, H - 47, C.lavender, SMALL);
     button(r, 14, H - 26, 60, 16, 'Wstecz [Esc]');
     button(r, 80, H - 26, 90, 16, this.elems ? 'Szczegóły' : 'Żywioły [Tab]');
-    panel(r, DX, 34, W - DX - 6, H - 40, C.gold);
+    panel(r, DX, 34, W - DX - 6, H - 40);
     if (!this.elems && !this.count) return;
     this.sel = Math.min(this.sel, Math.max(0, this.count - 1));
     // Opis: przewijany panel (dłuższe opisy przy dużym tekście).

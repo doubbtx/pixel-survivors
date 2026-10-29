@@ -208,7 +208,7 @@ export class ShopView {
     } else if (e.kind === 'upgrade') {
       // Rozbudowa sklepu: co daje następny poziom.
       const U = BAL.shopUpgrade, lvl = run.shopLevel, cx = DET_X + DET_W / 2;
-      panel(r, DET_X, 34, DET_W, 196, C.orange);
+      panel(r, DET_X, 34, DET_W, 196);
       drawSprite(g, 'sh_upgrade', cx, 66, { scale: 2 });
       drawText(g, `Rozbudowa sklepu (${lvl}/${U.max})`, cx, 92, C.white, { align: 'center', shadow: C.black });
       const lines = lvl >= U.max ? ['Sklep w pełni rozbudowany.'] : [
@@ -222,7 +222,7 @@ export class ShopView {
       const svc = e.kind === 'service' ? SERVICES.find((s) => s.id === e.id)! : null;
       const el = e.kind === 'elixir' ? ELIXIR_BY_ID[e.id] : null;
       const col = el ? C.pink : C.gold;
-      panel(r, DET_X, 34, DET_W, 196, col);
+      panel(r, DET_X, 34, DET_W, 196);
       const cx = DET_X + DET_W / 2;
       r.withAlpha(0.25, () => r.circle(cx, 66, 19, col, true));
       r.withAlpha(0.7, () => r.circle(cx, 66, 15, C.black, true));
