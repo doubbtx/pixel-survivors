@@ -1440,11 +1440,14 @@ export class Run {
   }
 
   /** Obrażenia dla gracza: nietykalność (unik), pancerz (diminishing returns), karty, tarcza, odrodzenie, śmierć. Zwraca true, gdy trafiło. */
-  /** Szansa na odbicie Mikiri (pasywka Takezo): rośnie z poziomem postaci, z limitem; karty i Rozwój dokładają (passive.parry). */
+  /**
+   * Szansa na odbicie Mikiri (pasywka Takezo): rośnie z poziomem postaci; karty i Rozwój (passive.parry) przyspieszają
+   * dojście do limitu, ale twardy limit `max` obejmuje wszystko (0.32.2: bez limitu było za mocne w późnej grze).
+   */
   parryChance(): number {
     if (this.hero.passive.kind !== 'parry') return 0;
     const P = BAL.resource.parry;
-    return Math.min(P.max, P.base + P.perLevel * (this.level - 1)) + this.flag('passive.parry');
+    return Math.min(P.max, P.base + P.perLevel * (this.level - 1) + this.flag('passive.parry'));
   }
 
   /**

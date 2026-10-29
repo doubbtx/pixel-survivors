@@ -432,7 +432,7 @@ export const CARDS: CardDef[] = [
   // Takezo (szermierz, 0.32): opisy po angielsku, polski w core/i18n-pl.ts.
   { id: 'h_t_slam', name: 'Heavy Blade', rarity: 'silver', tags: ['Obszar'], hero: 'takezo', desc: 'Helm Splitter: +16 damage, +4 radius.', stackable: true, flags: { 't_slam.damage': 16, 't_slam.radius': 4 } },
   { id: 'h_t_rhythm', name: 'Steady Breath', rarity: 'silver', tags: ['Szybkość'], hero: 'takezo', desc: 'Rhythm builds 40% faster and gives 30% more attack speed.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
-  { id: 'h_t_step', name: 'Open Guard', rarity: 'silver', tags: ['Szybkość', 'Krytyk'], hero: 'takezo', desc: 'Mikiri: +5% parry chance, and Footwork recharges 10% faster.', stackable: true, flags: { 'passive.parry': 0.05, 'cd.dash': 0.1 } },
+  { id: 'h_t_step', name: 'Open Guard', rarity: 'silver', tags: ['Szybkość', 'Krytyk'], hero: 'takezo', desc: 'Mikiri: +5% parry chance, and Footwork recharges 10% faster.', flags: { 'passive.parry': 0.05, 'cd.dash': 0.1 } },
   { id: 'h_t_flurry', name: 'Flowing Water', rarity: 'gold', tags: ['Szybkość', 'Umiejętności'], hero: 'takezo', desc: 'Thousand Cuts: +2 slashes, +6 damage per slash.', stackable: true, flags: { 't_flurry.slashes': 2, 't_flurry.damage': 6 } },
   { id: 'h_t_iai', name: 'Single Stroke', rarity: 'gold', tags: ['Krytyk', 'Umiejętności'], hero: 'takezo', desc: 'Iai: +60 damage, +30 dash length.', stackable: true, flags: { 't_iai.damage': 60, 't_iai.dist': 30 } },
   { id: 'h_t_max', name: 'Deep Focus', rarity: 'gold', tags: ['Szybkość'], hero: 'takezo', desc: '+15 max Rhythm.', stackable: true, flags: { 'res.max': 15 } },

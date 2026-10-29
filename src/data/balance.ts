@@ -87,8 +87,8 @@ export const BAL = {
      */
     /** Rytm (Takezo): +1 za trafienie co `gap` s, +atk szybkości ataku za punkt; po `idle` s bez trafień opada `decay`/s; oberwanie zabiera hurtLoss; Iai +iai obrażeń za punkt. */
     rhythm: { max: 30, gap: 0.1, atk: 0.015, idle: 1.5, decay: 8, hurtLoss: 0.4, iai: 0.03 },
-    /** Mikiri (pasywka Takezo): szansa na odbicie base + perLevel × (poziom − 1), najwyżej max (+ flaga passive.parry); kontra wokół (riposteR), +rhythm rytmu, odbity pocisk: reflect × obrażenia kart. */
-    parry: { base: 0.05, perLevel: 0.006, max: 0.4, riposteR: 26, rhythm: 3, reflect: 1.5, iframes: 0.25 },
+    /** Mikiri (pasywka Takezo): szansa na odbicie base + perLevel × (poziom − 1), najwyżej max (razem z flagą passive.parry); po odbiciu iframes s nietykalności (tylko to trafienie); kontra wokół (riposteR), +rhythm rytmu, odbity pocisk: reflect × obrażenia kart. */
+    parry: { base: 0.05, perLevel: 0.006, max: 0.35, riposteR: 26, rhythm: 3, reflect: 1.5, iframes: 0.1 },
     faith: { max: 100, range: 150, heal: 0.5, graceHeal: 0.15, graceShield: 0.1, minionLife: 3, grace: 60, judgDmg: 0.01, judgExtra: 10, keep: 0.3, guardHeal: 0.004, shieldPer: 0.03, shieldCap: 0.18, sanctLife: 0.5 },
   },
   /**

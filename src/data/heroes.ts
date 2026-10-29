@@ -322,7 +322,7 @@ export const HEROES: HeroDef[] = [
     base: { maxHp: 105, speed: 60, atkSpeed: 0.1 },
     weapon: 'katana',
     tags: ['Szybkość', 'Krytyk'],
-    passive: { name: 'Mikiri', desc: '5% chance to parry a hit or a projectile at level 1, +0.6% per level (max 40%): no damage, a counter cut around you and +3 Rhythm. Parried projectiles fly back at enemies.', kind: 'parry', value: 20 },
+    passive: { name: 'Mikiri', desc: '5% chance to parry a hit or a projectile at level 1, +0.6% per level (max 35%, cards included): no damage, a counter cut around you and +3 Rhythm. Parried projectiles fly back at enemies.', kind: 'parry', value: 20 },
     resource: { kind: 'rhythm', name: 'Rhythm', color: C.cyan, desc: 'Every hit adds Rhythm: each point is attack speed. It fades out of combat, getting hit costs some. Iai (R) spends it all on a stronger cut.' },
     abilities: [
       {
