@@ -44,13 +44,24 @@ function rotPts(pts: [number, number][], cx: number, cy: number, a: number): [nu
 
 // ========================= pociski i znajdźki =========================
 
-function orb(size: number, ramp: Ramp, ring: number): Painter {
+/**
+ * Wrogi pocisk jako świecąca energia (nie lśniąca kulka): ciemna krawędź ostrzegawcza, nasycony kolor, jaśniejące
+ * pierścienie do białego rdzenia; przejścia ditherowane. `spikes` = korona kolców (pociski bossów, inna sylwetka).
+ */
+function orb(size: number, ramp: Ramp, ring: number, spikes = 0): Painter {
   const p = new Painter(size, size, HI);
-  const c = size / 2, r = size / 2 - 1;
-  p.sphere(c, c, r, r, ramp);
-  // Jasny rdzeń, odblask i cienka obwódka w kolorze rampy (pocisk czytelny w tłumie).
-  p.disc(c - r * 0.25, c - r * 0.25, r * 0.4, ramp[ramp.length - 1]).dot(c - r * 0.45, c - r * 0.5, C.white).dot(c - r * 0.2, c - r * 0.5, C.white);
-  p.ring(c, c, r + 0.1, 0.5, ramp[0]);
+  const c = size / 2, r = size / 2 - 1 - (spikes ? 1.2 : 0);
+  if (spikes) {
+    for (let k = 0; k < spikes; k++) {
+      const a = (k / spikes) * Math.PI * 2 + 0.3, s2 = 0.42;
+      p.poly([[c + Math.cos(a - s2) * r * 0.9, c + Math.sin(a - s2) * r * 0.9], [c + Math.cos(a) * (r + 1.9), c + Math.sin(a) * (r + 1.9)], [c + Math.cos(a + s2) * r * 0.9, c + Math.sin(a + s2) * r * 0.9]], ramp[1]);
+    }
+  }
+  p.disc(c, c, r, ramp[0]);
+  p.soft((x, y) => Math.hypot(x - c, y - c) / (r - 0.35), ramp[1], 0.25);
+  p.soft((x, y) => Math.hypot(x - c, y - c) / (r * 0.72), ramp[2], 0.35);
+  p.soft((x, y) => Math.hypot(x - c, y - c) / (r * 0.46), ramp[3], 0.4);
+  p.soft((x, y) => Math.hypot(x - c, y - c) / Math.max(0.6, r * 0.24), C.white, 0.3);
   return p.outline(ring);
 }
 
@@ -188,7 +199,7 @@ const BUILDERS: Record<string, () => Painter> = {
   eb_red: () => orb(9, RAMP.red, C.dred),
   eb_pink: () => orb(9, RAMP.purple, C.plum),
   eb_orange: () => orb(9, RAMP.fire, C.dred),
-  eb_big: () => orb(13, RAMP.red, C.hotpink),
+  eb_big: () => orb(13, RAMP.red, C.hotpink, 8),
   eb_blue: () => orb(7, RAMP.blue, C.navy),
   eb_cyan: () => orb(9, [C.dblue, C.blue, C.cyan, C.white], C.dblue),
   gem0: () => gem(RAMP.blue), gem1: () => gem(RAMP.green), gem2: () => gem(RAMP.red), gem3: () => gem(RAMP.purple),
@@ -296,6 +307,8 @@ export interface DrawOpts {
   flash?: boolean;
   scale?: number;
   flipX?: boolean;
+  /** Ściśnięcie / rozciągnięcie [szerokość, wysokość] względem stóp (dół sprite'a stoi w miejscu): animacje postaci. */
+  squash?: readonly [number, number];
 }
 
 /** Rysuje sprite lewym górnym rogiem w (x, y), w rozmiarze logicznym (kafelki podłoża, plamy). */
@@ -321,6 +334,11 @@ export function drawSprite(g: CanvasRenderingContext2D, name: string, x: number,
       s.flip = c;
     }
     img = s.flip;
+  }
+  if (o.squash) {
+    const [kx, ky] = o.squash, w = s.w * sc * kx, h = s.h * sc * ky;
+    g.drawImage(img, Math.round(x - w / 2), Math.round(y + (s.h * sc) / 2 - h), w, h);
+    return;
   }
   g.drawImage(img, Math.round(x - (s.w * sc) / 2), Math.round(y - (s.h * sc) / 2), s.w * sc, s.h * sc);
 }
