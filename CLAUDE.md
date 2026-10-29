@@ -700,6 +700,10 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   inną sylwetkę). Animacje bohatera tylko w rysowaniu (`heroAnim` / `heroSquash` w game/render.ts, stan w WeakMap per run,
   czas z `run.time`): przysiad i wyprost po Q/E/ultimate (skok odnowienia albo `activeT`), powidoki uniku, kurz spod stóp
   w biegu, oddech w miejscu, drgnięcie o piksel przy trafieniu. `DrawOpts.squash` = [szerokość, wysokość] względem stóp.
+- 0.41.4 (praca równoległa z drugą sesją): oprawa cech elit — sztandar Chorążego `banner@0-2` (powiewający płat ze
+  skrzyżowanymi mieczami), ikona cechy zachowania nad paskiem życia elity `trait_<kind>` (korona, flaga, duch, odłamki),
+  wzmocnienie Dowódcy `buffmark` (złota strzałka) zamiast kropki; rysunki w gfx/objects.ts. Test układu `scripts/layout.cjs`
+  (`npm run layout`, opis w Testowaniu).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
@@ -728,6 +732,9 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   `bot=tutorial turbo=2` (samouczek), `lang=pl` (braki tłumaczeń po polsku), `shots=N` (zrzuty co N s do /tmp/bot-shots).
   Raport: runy, błędy, braki tłumaczeń (`missing`), najwolniejszy krok, odwiedzone stany. Kod 1 przy błędach albo brakach.
   W trakcie testu nie zmieniaj plików src (HMR przeładuje stronę i przerwie bota).
+- Test układu (najpierw `npm run dev`): `node scripts/layout.cjs` (oba języki, `lang=pl`, `only=menu|game`) przechodzi ekrany menu
+  i gry i zgłasza napisy poza ekranem, wystające poza okno / kafelek / przycisk albo nachodzące na inne; zrzuty w
+  /tmp/layout-shots. Po każdej zmianie UI albo nowych tekstach (polskie są dłuższe). Kod 1 przy problemach.
 - Stan gry w konsoli przeglądarki (serwer deweloperski): `__screen()` (bieżący ekran, `.run`, `.state`).
 - `npm run dev`, w grze F3 = debug, F4 = przyspiesz cel poziomu, F6 = awans, F7 = łup bossa (12% szans na unikat).
 - Bez UI: moduły z serwera Vite w Playwright (`await import('/src/game/run.ts')`, `new Run(...)`, `run.update(1/60, wejście)`) —

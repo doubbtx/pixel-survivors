@@ -311,3 +311,48 @@ export function grove(): Painter {
   p.polyShade([[13, 4.5], [15, 9], [13, 12.6], [11, 9]], [C.dblue, C.blue, C.cyan, C.white]).thin(12.6, 6, 12.2, 9, C.white).dot(13 + e, 5.4, C.white);
   return p.outline();
 }
+
+// ---------------- cechy elit (0.41, systems/enemies.ts) ----------------
+
+/** Sztandar elity: drzewce ze złotym grotem i czerwony płat ze złotym obszyciem i godłem, powiewający (klatka 0-2). */
+export function banner(f: number): Painter {
+  const p = new Painter(16, 24, HI);
+  const e = 1 / HI, w = [0, 0.8, -0.6][f % 3];
+  p.rect(2.5, 3, 1.2, 20, C.dbrown).thin(2.5, 3, 2.5, 22.5, C.clay);
+  p.poly([[3.1, 0.5], [4.1, 2.8], [2.1, 2.8]], C.gold).dot(3.1, 1.2, C.yellow);
+  p.disc(3.1, 23, 1.6, C.slate);
+  // Płat: górna krawędź prosta przy drzewcu, dół i wolny brzeg falują z klatką.
+  const cloth: [number, number][] = [[3.7, 3.2], [14 + w, 3.6 + w * 0.5], [13 - w, 8.5], [14.4 + w, 13.4 - w * 0.4], [3.7, 12.6]];
+  p.polyShade(cloth, RAMP.red);
+  p.thin(3.8, 3.4, 14 + w, 3.8 + w * 0.5, C.gold).thin(3.8, 12.4, 14.4 + w, 13.2 - w * 0.4, C.gold);
+  // Godło: skrzyżowane złote miecze z jelcami.
+  p.stroke(6.4, 5.6, 10.6, 10.2, C.gold).stroke(10.6, 5.6, 6.4, 10.2, C.gold);
+  p.thin(6.6, 5.7, 8.6, 7.9, C.yellow).dot(6.2 + e, 5.4, C.yellow).dot(10.6, 5.4, C.yellow);
+  p.thin(6.2, 9.4, 7.6, 10.8, C.dbrown).thin(10.8, 9.4, 9.4, 10.8, C.dbrown);
+  return p.outline();
+}
+
+/** Ikona cechy elity 10×10 nad paskiem życia: korona (Dowódca), flaga (Chorąży), duch (Fazujący), trzy odłamki (Rozszczepiający). */
+export function traitMark(kind: string): Painter {
+  const p = new Painter(10, 10, HI);
+  if (kind === 'commander') {
+    p.poly([[1.2, 7.8], [1.6, 3], [3.6, 5.2], [5, 2], [6.4, 5.2], [8.4, 3], [8.8, 7.8]], C.gold);
+    p.rect(1.2, 7, 7.6, 1.4, C.orange).dot(5, 7.4, C.red).dot(3, 7.4, C.cyan).dot(7, 7.4, C.cyan).dot(5, 2.4, C.yellow);
+  } else if (kind === 'banner') {
+    p.rect(2, 1, 0.9, 8, C.brown).poly([[2.9, 1.4], [8.4, 2.4], [7, 4], [8.4, 5.6], [2.9, 5.6]], C.red).thin(2.9, 1.5, 8, 2.4, C.salmon);
+  } else if (kind === 'phase') {
+    p.sphere(5, 4.6, 3.4, 3.4, [C.plum, C.lavender, C.lgray, C.white]).poly([[1.6, 4.6], [8.4, 4.6], [8.4, 8.8], [6.7, 7.6], [5, 8.8], [3.3, 7.6], [1.6, 8.8]], C.lavender);
+    p.dot(3.8, 4.2, C.black).dot(6, 4.2, C.black);
+  } else {
+    for (const [x, y] of [[5, 2.6], [2.6, 7], [7.4, 7]]) p.polyShade([[x, y - 1.8], [x + 1.6, y], [x, y + 1.8], [x - 1.6, y]], RAMP.purple);
+    p.thin(5, 4.4, 3.4, 5.6, C.pink).thin(5, 4.4, 6.6, 5.6, C.pink);
+  }
+  return p.outline();
+}
+
+/** Wzmocnienie od Dowódcy: podwójna złota strzałka w górę nad wrogiem (7×7). */
+export function buffMark(): Painter {
+  const p = new Painter(7, 7, HI);
+  for (const y of [1, 3.6]) p.poly([[1, y + 2.4], [3.5, y], [6, y + 2.4], [4.8, y + 2.4], [3.5, y + 1.2], [2.2, y + 2.4]], y < 2 ? C.yellow : C.gold);
+  return p.outline();
+}
