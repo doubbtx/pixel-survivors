@@ -24,7 +24,7 @@ export const HINTS = {
   synergy: 'Synergia aktywna! Lista pod portretem pokazuje tagi i progi. Pauza (Esc) pokazuje szczegóły.',
   augment: 'Augment (turkusowa karta) zmienia działanie broni, nie tylko liczby.',
   reaction: 'Reakcja żywiołów! Dwa różne żywioły na jednym wrogu dają dodatkowy efekt. Szczegóły w Pomocy.',
-  map: 'Expedition map: click or use the arrows to select the next node, then Travel (Enter) to go. Keys 1-4 set the difficulty for the whole expedition: more modifiers (red dots) mean bigger rewards.',
+  map: 'Expedition map: click or use the arrows to select the next node, then Travel (Enter) to go. Point at any later node to preview it and the paths to it. Keys 1-4 set the difficulty before the first node of each act: more modifiers (red dots) mean bigger rewards.',
   shop: 'Sklep: kup przedmioty i usługi. I otwiera ekwipunek (rozłóż zbędne przedmioty na złoto), K kowadło.',
   anvil: 'Kowadło: Kuźnia ulepsza przedmioty do +15 za złoto i materiały, ale może się nie udać. Przekuwanie kosztuje odłamki.',
   unique: 'Unikat! Ma stały efekt, który łamie zasady gry, zwykle za jakąś cenę. Nie da się go przekuć. Trafia do kolekcji.',

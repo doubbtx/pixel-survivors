@@ -1,7 +1,7 @@
 import { ENEMIES } from '../data/enemies';
 import type { App, Screen } from '../ui/app';
 import type { Action } from '../core/input';
-import type { Mode } from '../game/run';
+import type { Mode, TelemetrySample } from '../game/run';
 import { GameScreen } from '../ui/game-screen';
 import { HEROES } from '../data/heroes';
 import { trMisses } from '../core/i18n';
@@ -19,7 +19,7 @@ import { spawnEnemy } from '../systems/spawner';
  * i skrzynie, używa umiejętności, losowo wybiera awanse, karty i węzły mapy. Raport w `window.__bot` (dla Playwright):
  * przebieg runów, błędy, najwolniejsze kroki, odwiedzone stany i brakujące tłumaczenia.
  */
-export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; parries?: number }
+export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; parries?: number; tl?: TelemetrySample[] }
 export interface BotReport {
   done: boolean;
   runs: BotRun[];
@@ -220,7 +220,7 @@ export class Bot {
   private finish(run: any, result: string): void { // eslint-disable-line @typescript-eslint/no-explicit-any
     this.report.runs.push({
       hero: run.hero.id, mode: this.mode, result, time: Math.round(run.totalTime), level: run.level, kills: run.kills,
-      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
+      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     this.steps = [];
     this.app.save.slots[this.mode] = null;

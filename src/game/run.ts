@@ -53,6 +53,9 @@ import { PACIFIST_KEY } from '../data/secrets';
 import { secretsOnKill } from '../systems/mapsecrets';
 import { updateLevelEvents, eventFlags, comboOnKill, comboOnHurt, type LevelEventId } from '../systems/levelevents';
 
+/** Próbka telemetrii runu (Run.telemetry): czasy (całkowity, poziomu, fal), poziom, mnożnik siły, DPS, HP i obrażenia przyjęte (ułamki maks. HP), zabójstwa od ostatniej próbki, wrogowie na mapie. */
+export interface TelemetrySample { t: number; lt: number; wt: number; lvl: number; depth: number; pm: number; dps: number; hp: number; taken: number; kills: number; alive: number }
+
 export const DEFAULT_STATS: Stats = {
   maxHp: 100, regen: 0, armor: 0, speed: 58, speedBonus: 0, might: 1, area: 1, cdr: 0, amount: 0,
   duration: 1, projSpeed: 1, magnet: 1, crit: 0.05, critMult: 2, lifesteal: 0, luck: 0, choices: 0, growth: 1, greed: 1, atkSpeed: 0, elemPower: 0,
@@ -434,6 +437,14 @@ export class Run {
   dpsEma = 0;
   powerMul = 1;
   private dmgStep = 0;
+  /**
+   * Telemetria (0.34.5): próbka co `BAL.telemetryEvery` s czasu runu — do strojenia trudności na pomiarach (bot, DEV
+   * `window.__telemetry`). Obrażenia przyjęte to całe trafienia przed tarczą, od ostatniej próbki.
+   */
+  readonly telemetry: TelemetrySample[] = [];
+  private takenMark = 0;
+  private takenTotal = 0;
+  private killsMark = 0;
   /** Źródło ostatniego trafienia (np. Żniwo: czy wroga zabiła dusza). */
   private lastHitSrc = '';
   /** > 0 w trakcie hooków trafienia procentowego (PCT_SOURCES). */
@@ -541,8 +552,8 @@ export class Run {
     // Błogosławieństwo kapliczki Ekspedycji na kolejne mapy (trwa cały poziom).
     const bless = this.expedition?.blessing ? EX_BLESSINGS.find((b) => b.id === this.expedition!.blessing!.id) : null;
     if (bless) this.buffs.push({ name: bless.name, stats: bless.stats, t: Infinity });
-    // Bonus z obozu: tylko ta jedna mapa (zdejmowany w GameScreen.onLevelCleared).
-    const camp = this.expedition?.camp ? CAMP_BUFFS.find((b) => b.id === this.expedition!.camp) : null;
+    // Bonus z obozu: tylko ta jedna mapa (zdejmowany w GameScreen.onLevelCleared); loch go nie zużywa.
+    const camp = this.expedition?.camp && !this.levelInfo.dungeon ? CAMP_BUFFS.find((b) => b.id === this.expedition!.camp) : null;
     if (camp) this.buffs.push({ name: camp.name, stats: camp.stats, t: Infinity });
     this.indexEffects();
     this.recomputeStats();
@@ -584,6 +595,17 @@ export class Run {
     this.powerMul = Math.min(P.max, Math.max(1, Math.pow((this.dpsEma * P.ttk(t)) / base, P.exp)));
   }
 
+  private sample(): void {
+    const st = this.stats;
+    this.telemetry.push({
+      t: Math.round(this.totalTime), lt: Math.round(this.time), wt: Math.round(this.waveTime()), lvl: this.level, depth: this.depth,
+      pm: Math.round(this.powerMul * 10) / 10, dps: Math.round(this.dpsEma), hp: Math.round((this.player.hp / st.maxHp) * 100) / 100,
+      taken: Math.round(((this.takenTotal - this.takenMark) / st.maxHp) * 100) / 100, kills: this.kills - this.killsMark, alive: this.enemies.count,
+    });
+    this.takenMark = this.takenTotal;
+    this.killsMark = this.kills;
+  }
+
   /** Debug (F4): przyspiesza cel poziomu i czas fal. */
   debugAdvance(): void {
     this.time += 30;
@@ -605,6 +627,7 @@ export class Run {
     this.xpPulse = Math.max(0, this.xpPulse - dt);
     this.confusedT = Math.max(0, this.confusedT - dt);
     this.updatePower(dt);
+    if (this.step % Math.round(BAL.telemetryEvery * 60) === 0) this.sample();
     this.explosionsThisStep = 0;
     this.boomSpots.length = 0;
     this.particlesThisStep = 0;
@@ -1528,6 +1551,7 @@ export class Run {
     }
     let dmg = base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this);
     const total = dmg;
+    this.takenTotal += total;
     const absorbed = Math.min(p.shield, dmg);
     p.shield -= absorbed;
     dmg -= absorbed;

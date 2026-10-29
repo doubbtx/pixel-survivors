@@ -1,5 +1,5 @@
 import { W, H, type Renderer } from '../core/renderer';
-import type { Input } from '../core/input';
+import type { Input, Action } from '../core/input';
 import { C } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
@@ -7,7 +7,7 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { BIOMES, objectiveLabel } from '../data/levels';
 import {
-  NODE_INFO, actBiome, chooseTier, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, CAMP_BUFFS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
+  NODE_INFO, actBiome, chooseTier, tierOpen, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, CAMP_BUFFS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
   type MapNode, type NodeKind,
 } from '../data/expedition';
 import type { Run } from '../game/run';
@@ -31,6 +31,9 @@ function btnX(i: number): number {
 }
 /** Legenda rodzajów węzłów (górny wiersz mapy). */
 const LEGEND: NodeKind[] = ['fight', 'elite', 'dungeon', 'treasure', 'shop', 'anvil', 'rest', 'shrine', 'boss'];
+/** Karty wyboru obozu / kapliczki (lewy górny róg, rozmiar). */
+const OFFER_W = 150, OFFER_H = 40;
+const offerPos = (i: number): [number, number] => [MAP_X + 60 + i * (OFFER_W + 8), DET_Y + 18];
 
 /** Przyciski poziomu trudności w prawym górnym rogu panelu szczegółów (lewy górny róg przycisku). */
 const TIER_W = 50, TIER_H = 14;
@@ -56,6 +59,8 @@ const nodeColor = (m: MapNode) => (isCombat(m.kind) && m.kind !== 'boss' && m.ra
  * Mapa aktu Ekspedycji: rzędy węzłów od lewej do prawej, ścieżki między sąsiednimi kolumnami, przebyta droga na złoto.
  * Mapy z walką mają rzadkość (kolor ramki), modyfikatory ryzyka z nagrodą i bonus — szczegóły na dole.
  * Strzałki / mysz: wybór dostępnego węzła, Enter / klik: idź, I: ekwipunek, Esc: menu.
+ * Podgląd trasy (0.35): mysz nad dowolnym dalszym węzłem pokazuje jego szczegóły i podświetla drogi do niego.
+ * Obóz i kapliczka (0.35): przed dalszą drogą wybór jednej z dwóch opcji (strzałki / 1-2 / klik, Enter).
  */
 export class ExpeditionMapView {
   private sel = 0;
@@ -63,9 +68,46 @@ export class ExpeditionMapView {
   /** Przewijanie listy modyfikatorów zaznaczonej mapy (zerowane przy zmianie zaznaczenia). */
   private modScroll = new Scroll();
   private modKey = '';
+  /** Węzeł pod myszą poza najbliższym rzędem (podgląd trasy): rząd, kolumna. */
+  private peek: [number, number] | null = null;
+  private offerSel = 0;
 
-  /** `onTier`: gracz zmienił poziom trudności (zapamiętanie na następne wyprawy). */
-  constructor(private readonly run: Run, private readonly onTier: (tier: number) => void) {}
+  /**
+   * `onTier`: gracz zmienił poziom trudności (zapamiętanie na następne wyprawy).
+   * `onChosen`: wybrano bonus obozu albo kapliczki (komunikat, zapis).
+   */
+  constructor(private readonly run: Run, private readonly onTier: (tier: number) => void, private readonly onChosen: (text: string) => void) {}
+
+  /** Wybór obozu / kapliczki: zwraca true, gdy nakładka wyboru przejęła wejście. */
+  private updateOffer(input: Input): boolean {
+    const ex = this.run.expedition!, offer = ex.offer;
+    if (!offer) return false;
+    const m = input.mouse;
+    if (input.pressed('left') || input.pressed('up') || input.pressed('right') || input.pressed('down')) { this.offerSel = 1 - this.offerSel; sfx.play('select'); }
+    let pick = input.pressed('confirm') ? this.offerSel : input.pressed('n1') ? 0 : input.pressed('n2') ? 1 : -1;
+    offer.ids.forEach((_, i) => {
+      const [x, y] = offerPos(i);
+      if (!inside(m.x, m.y, x, y, OFFER_W, OFFER_H)) return;
+      if (m.lastMove !== this.lastMouse) this.offerSel = i;
+      if (input.pressed('click')) pick = i;
+    });
+    this.lastMouse = m.lastMove;
+    if (pick < 0) return true;
+    const X = BAL.expedition;
+    if (offer.kind === 'rest') {
+      const c = CAMP_BUFFS.find((b) => b.id === offer.ids[pick])!;
+      ex.camp = c.id;
+      this.onChosen(`Next map: ${c.name} (${c.desc})`);
+    } else {
+      const b = EX_BLESSINGS.find((x) => x.id === offer.ids[pick])!;
+      ex.blessing = { id: b.id, maps: X.blessingMaps };
+      this.onChosen(`Kapliczka: ${b.name} (${b.desc}) na ${X.blessingMaps} mapy`);
+    }
+    ex.offer = null;
+    this.offerSel = 0;
+    sfx.play('levelup');
+    return true;
+  }
 
   private get lanes(): number[] {
     return nextLanes(this.run.expedition!);
@@ -77,12 +119,26 @@ export class ExpeditionMapView {
     const n = lanes.length;
     if (input.pressed('back') || input.pressed('pause')) return 'menu';
     if (input.pressed('inventory')) return 'inventory';
+    if (this.updateOffer(input)) { this.peek = null; return null; }
     if (n === 0) return null;
     this.sel = Math.min(this.sel, n - 1);
     if (input.pressed('up') || input.pressed('left')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
     if (input.pressed('down') || input.pressed('right')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
     const m = input.mouse;
     const row = exRow(this.run.expedition!) + 1;
+    // Podgląd (bez wejścia): węzeł pod myszą, tylko gdy mysz się ruszyła; klawiatura i pad zdejmują podgląd,
+    // żeby panel zawsze pokazywał to, w co wejdzie Enter. Po zablokowaniu trudności R/X (LB/RB) przełączają podgląd.
+    const later = this.previewable(row, lanes);
+    if (m.lastMove !== this.lastMouse) {
+      this.peek = later.find(([r, l]) => { const [x, y] = nodePos(r, l); return inside(m.x, m.y, x - NODE / 2, y - NODE / 2, NODE, NODE); }) ?? null;
+    }
+    if ((['up', 'down', 'left', 'right', 'confirm', 'n1', 'n2', 'n3', 'n4'] as Action[]).some((a) => input.pressed(a))) this.peek = null;
+    const pstep = !tierOpen(this.run.expedition!) ? (input.pressed('skip') ? 1 : input.pressed('reroll') ? -1 : 0) : 0;
+    if (pstep && later.length) {
+      const i = this.peek ? later.findIndex(([r, l]) => r === this.peek![0] && l === this.peek![1]) : pstep > 0 ? -1 : 0;
+      this.peek = later[(i + pstep + later.length) % later.length];
+      sfx.play('select');
+    }
     for (let i = 0; i < n; i++) {
       const [x, y] = nodePos(row, lanes[i]);
       if (!inside(m.x, m.y, x - NODE / 2, y - NODE / 2, NODE, NODE)) continue;
@@ -171,7 +227,8 @@ export class ExpeditionMapView {
     g.restore();
     // Legenda rodzajów węzłów.
     let lx = MAP_X + 8;
-    for (const k of LEGEND) {
+    const legend = ex.map.some((row) => row.some((n) => n?.kind === 'secret')) ? [...LEGEND, 'secret' as const] : LEGEND;
+    for (const k of legend) {
       const info = NODE_INFO[k];
       r.withAlpha(0.8, () => drawSprite(g, info.icon, lx + 5, MAP_Y + 9));
       drawText(g, info.name, lx + 14, MAP_Y + 5, info.color, { scale: 0.75, outline: C.black });
@@ -188,7 +245,8 @@ export class ExpeditionMapView {
     const lanes = this.lanes;
     const target = lanes[this.sel];
     const last = ex.map.length - 1;
-    // Ścieżki: złote na przebytej drodze, jaśniejsze do dostępnych węzłów.
+    const route = this.peek ? this.routeTo(...this.peek) : null;
+    // Ścieżki: złote na przebytej drodze, jaśniejsze do dostępnych węzłów, turkusowe na drogach do podglądanego węzła.
     for (let row = 0; row < last; row++) {
       ex.map[row].forEach((k, a) => {
         if (!k) return;
@@ -197,8 +255,9 @@ export class ExpeditionMapView {
           const [x0, y0] = nodePos(row, a), [x1, y1] = nodePos(row + 1, b);
           const walked = ex.path[row] === a && ex.path[row + 1] === b;
           const open = row === cur && ex.path[row] === a && lanes.includes(b);
-          const col = walked ? C.gold : open ? (b === target ? C.yellow : C.lavender) : C.dgray;
-          r.withAlpha(walked || open ? 1 : 0.6, () => { r.line(x0, y0 + 1, x1, y1 + 1, C.black, 2); r.line(x0, y0, x1, y1, col, walked || b === target && open ? 2 : 1); });
+          const onRoute = !!route && route.has(`${row}:${a}`) && route.has(`${row + 1}:${b}`);
+          const col = walked ? C.gold : onRoute ? C.cyan : open ? (b === target ? C.yellow : C.lavender) : C.dgray;
+          r.withAlpha(walked || open || onRoute ? 1 : 0.6, () => { r.line(x0, y0 + 1, x1, y1 + 1, C.black, 2); r.line(x0, y0, x1, y1, col, walked || onRoute || b === target && open ? 2 : 1); });
         });
       });
     }
@@ -209,7 +268,8 @@ export class ExpeditionMapView {
       const [x, y] = nodePos(row, lane);
       const reachable = row === cur + 1 && lanes.includes(lane);
       if (reachable) hovered(x - NODE / 2, y - NODE / 2, NODE, NODE);
-      const picked = lane === target && reachable;
+      const peeked = !!this.peek && this.peek[0] === row && this.peek[1] === lane;
+      const picked = (lane === target && reachable && !this.peek) || peeked;
       const visited = ex.path[row] === lane;
       const bob = picked ? Math.round(Math.sin(t * 6)) : 0;
       const draw = () => {
@@ -222,29 +282,36 @@ export class ExpeditionMapView {
           tile(r, x - w / 2, y + NODE / 2 + 3, w, 8, C.white, 0.85);
           drawText(g, nm, x, y + NODE / 2 + 3, C.white, { align: 'center', scale: 0.75 });
         }
-        // Liczba modyfikatorów mapy: kropki pod węzłem.
+        // Liczba modyfikatorów mapy: kropki pod węzłem; bonus mapy: zielony znak w rogu.
         if (!picked) for (let k = 0; k < (m.mods?.length ?? 0); k++) r.rect(x - 8 + k * 3, y + NODE / 2 + 1 + bob, 2, 2, C.salmon);
+        if (m.bonus && row > cur) { r.roundRect(x + NODE / 2 - 5, y - NODE / 2 - 2 + bob, 7, 7, 1, C.black); drawText(g, '+', x + NODE / 2 - 1.5, y - NODE / 2 - 1.5 + bob, C.lime, { align: 'center', scale: 0.75 }); }
       };
-      if ((row <= cur && !visited) || row > cur + 1 || (row === cur + 1 && !reachable)) r.withAlpha(0.45, draw);
+      const onRoute = !!route?.has(`${row}:${lane}`);
+      if (!onRoute && ((row <= cur && !visited) || row > cur + 1 || (row === cur + 1 && !reachable))) r.withAlpha(0.45, draw);
       else draw();
-      if (row === cur && visited) drawSprite(g, `${run.heroSprite}@0`, x, y - 18);
+      // Bohater nad bieżącym węzłem (w górnej kolumnie obok węzła, żeby nie zasłaniał legendy).
+      if (row === cur && visited) drawSprite(g, `${run.heroSprite}@0`, lane === 0 ? x - 17 : x, lane === 0 ? y : y - 18);
     }));
 
     // Szczegóły zaznaczonego węzła i przyciski.
     panel(r, MAP_X, DET_Y, MAP_W, H - DET_Y - 4);
-    BTNS.forEach((b, i) => button(r, btnX(i), BTN_Y, b.w, BTN_H, b.label, b.act === 'go' ? { accent: C.gold, col: C.yellow, pulse: target !== undefined, scale: 0.75 } : { scale: 0.75 }));
-    if (target === undefined) return;
-    const m = ex.map[cur + 1][target]!;
+    BTNS.forEach((b, i) => button(r, btnX(i), BTN_Y, b.w, BTN_H, b.label, b.act === 'go' ? { accent: C.gold, col: C.yellow, pulse: target !== undefined && !ex.offer, scale: 0.75 } : { scale: 0.75 }));
+    if (ex.offer) { this.renderOffer(r); return; }
+    const [drow, dlane] = this.peek ?? [cur + 1, target];
+    if (dlane === undefined) return;
+    const m = ex.map[drow][dlane]!;
     const kind = NODE_INFO[m.kind];
-    const key = `${ex.act}:${cur}:${target}:${m.rarity ?? 0}`;
+    const key = `${ex.act}:${drow}:${dlane}:${m.rarity ?? 0}`;
     if (key !== this.modKey) { this.modKey = key; this.modScroll.reset(); }
     const x0 = MAP_X + 8, y0 = DET_Y + 6;
     drawSprite(g, kind.icon, x0 + 10, y0 + 10, { scale: 2 });
     if (isCombat(m.kind)) {
-      const lv = levelAt(ex.act, cur + 1, m);
+      const lv = levelAt(ex.act, drow, m);
       const rar = MAP_RARITY[m.rarity ?? 0];
       drawText(g, m.name ?? kind.name, x0 + 26, y0, m.kind === 'boss' ? kind.color : rar.color, { shadow: C.black });
-      drawText(g, m.kind === 'boss' ? `${kind.name}: ${lv.bossName}` : `${kind.name}, ${rar.name.toLowerCase()}`, x0 + 26, y0 + 11, C.lavender);
+      const sub = m.kind === 'boss' ? `${kind.name}: ${lv.bossName}` : `${kind.name}, ${rar.name.toLowerCase()}`;
+      drawText(g, sub, x0 + 26, y0 + 11, C.lavender);
+      if (this.peek) drawText(g, 'preview', x0 + 32 + textWidth(sub), y0 + 11, C.cyan);
       const goal = lv.dungeon ? `Fale lochu: ${BAL.events.dungeonWaves}` : `Cel: ${objectiveLabel(lv.objective)}`;
       drawText(g, `${goal}   głębokość ${lv.depth}`, x0 + 26, y0 + 22, C.lgray);
       // Modyfikatory (ryzyko) po lewej: „nazwa: opis” zawijane, przewijane przy wielu modyfikatorach albo dużym tekście.
@@ -263,8 +330,9 @@ export class ExpeditionMapView {
       this.modScroll.end(r, my + oy - ay, ax, ay, aw, ah);
       // Poziom trudności wyprawy (przyciski 1-4) w prawym górnym rogu.
       const rx = MAP_X + MAP_W - 8;
+      const open = tierOpen(ex);
       if (m.tiers) {
-        drawText(g, 'Difficulty [1-4, R/X]', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
+        drawText(g, open ? 'Difficulty [1-4, R/X]' : 'Difficulty (set for this act)', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
         m.tiers.forEach((t, i) => {
           const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i];
           // Poziom jeszcze niezdobyty (data/unlocks.ts): przygaszony, z opisem, jak go odblokować.
@@ -274,7 +342,13 @@ export class ExpeditionMapView {
             drawText(g, 'locked', bx + TIER_W / 2, by + TIER_H + 2, C.lavender, { align: 'center', ...SMALL });
             return;
           }
-          const hot = hovered(bx, by, TIER_W, TIER_H);
+          // Akt w toku: poziom zablokowany (wybór tylko przed pierwszym węzłem aktu), inne poziomy przygaszone.
+          if (!open && !on) {
+            r.withAlpha(0.35, () => { r.roundRect(bx, by, TIER_W, TIER_H, UI.radius, C.black); r.roundFrame(bx, by, TIER_W, TIER_H, UI.radius, C.slate, 0.5); });
+            drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 3.5, C.dgray, { align: 'center', ...SMALL });
+            return;
+          }
+          const hot = open && hovered(bx, by, TIER_W, TIER_H);
           r.roundRect(bx, by, TIER_W, TIER_H, UI.radius, on ? C.navy : hot ? C.slate : C.black);
           r.roundFrame(bx, by, TIER_W, TIER_H, UI.radius, on || hot ? rr.color : C.slate, on ? 1 : 0.5);
           drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 3.5, on || hot ? rr.color : C.lavender, { align: 'center', ...SMALL });
@@ -291,8 +365,60 @@ export class ExpeditionMapView {
       if (rew > 0) drawText(g, `Nagroda: +${rew}% łupu i jakości, +${Math.round(rew * X.rewardEssence)}% esencji`, rx, y0 + 58, C.gold, { align: 'right', ...SMALL });
     } else {
       drawText(g, kind.name, x0 + 26, y0, kind.color, { shadow: C.black });
+      if (this.peek) drawText(g, 'preview', x0 + 32 + textWidth(kind.name), y0, C.cyan);
       wrapText(kind.desc, 300).forEach((l, i) => drawText(g, l, x0 + 26, y0 + 12 + i * 11, C.lgray));
-      drawText(g, `Głębokość ${depthAt(ex.act, cur + 1)}`, MAP_X + MAP_W - 8, y0, C.lavender, { align: 'right' });
+      drawText(g, `Głębokość ${depthAt(ex.act, drow)}`, MAP_X + MAP_W - 8, y0, C.lavender, { align: 'right' });
     }
+  }
+
+  /** Węzły leżące na jakiejkolwiek drodze z bieżącego węzła do (row, lane): klucze `rząd:kolumna`. */
+  private routeTo(row: number, lane: number): Set<string> {
+    const ex = this.run.expedition!, cur = exRow(ex), last = ex.map.length - 1;
+    // Wprzód: osiągalne z bieżącego węzła; wstecz: z których da się dojść do celu.
+    let fwd = new Set<number>(cur < 0 ? ex.map[0].map((n, l) => (n ? l : -1)).filter((l) => l >= 0) : [ex.path[cur]]);
+    const reach: Set<number>[] = [];
+    reach[Math.max(0, cur)] = fwd;
+    for (let r = Math.max(0, cur) + 1; r <= row; r++) {
+      const next = new Set<number>();
+      ex.map[r].forEach((n, l) => { if (n && [...fwd].some((a) => linked(a, l, r === last))) next.add(l); });
+      reach[r] = fwd = next;
+    }
+    const out = new Set<string>();
+    if (!reach[row]?.has(lane)) return out;
+    let back = new Set([lane]);
+    out.add(`${row}:${lane}`);
+    for (let r = row - 1; r >= Math.max(0, cur); r--) {
+      const prev = new Set<number>();
+      for (const l of reach[r]) if ([...back].some((b) => linked(l, b, r + 1 === last))) { prev.add(l); out.add(`${r}:${l}`); }
+      back = prev;
+    }
+    return out;
+  }
+
+  /** Wybór obozu / kapliczki w panelu szczegółów: dwie karty z nazwą i opisem. */
+  private renderOffer(r: Renderer): void {
+    const g = r.g, offer = this.run.expedition!.offer!, rest = offer.kind === 'rest';
+    const info = NODE_INFO[offer.kind], x0 = MAP_X + 8, y0 = DET_Y + 6;
+    drawSprite(g, info.icon, x0 + 10, y0 + 10, { scale: 2 });
+    drawText(g, rest ? 'Camp: pick a bonus for the next map' : 'Shrine: pick a blessing', x0 + 26, y0, info.color, { shadow: C.black });
+    offer.ids.forEach((id, i) => {
+      const b = (rest ? CAMP_BUFFS : EX_BLESSINGS).find((x) => x.id === id)!, [x, y] = offerPos(i), on = i === this.offerSel;
+      r.roundRect(x, y, OFFER_W, OFFER_H, UI.radius, on ? C.navy : C.black);
+      r.roundFrame(x, y, OFFER_W, OFFER_H, UI.radius, on ? info.color : C.slate, on ? 1 : 0.6);
+      drawText(g, `${i + 1}. ${b.name}`, x + 6, y + 4, on ? info.color : C.lgray, { shadow: C.black });
+      wrapText(b.desc, (OFFER_W - 12) / descS()).slice(0, 2).forEach((l, k) => drawText(g, l, x + 6, y + 16 + k * descLH(), C.lgray, DESC));
+    });
+    const note = rest ? 'Lasts one map with combat (dungeons do not use it up).' : `Lasts ${BAL.expedition.blessingMaps} maps with combat.`;
+    drawText(g, note, x0 + 26, DET_Y + 18 + OFFER_H + 4, C.lavender, SMALL);
+  }
+
+  /** Węzły do podglądu: dalsze rzędy oraz niedostępne węzły najbliższego rzędu (kolejno rzędami). */
+  private previewable(next: number, lanes: number[]): [number, number][] {
+    const out: [number, number][] = [];
+    this.run.expedition!.map.forEach((cells, r) => {
+      if (r < next) return;
+      cells.forEach((k, l) => { if (k && (r > next || !lanes.includes(l))) out.push([r, l]); });
+    });
+    return out;
   }
 }

@@ -583,6 +583,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   Liang-Barsky (`clipSegment`) do widoku, guard NaN; `Renderer.fan` (stożek Salamandry). Pomiar (Ignara, t=900, ~1000 wrogów):
   render p95 17.9→12.9 ms, fillRect 34%→1.5%. Następne z audytu: obrażenia wrogów niezależne od DPS gracza (`power.dmgExp`),
   telemetria runów, przebudowa `powerMul` (gonienie DPS gracza), auto worldRes=2 (endWorld ~29%).
+- 0.35.0 (Ekspedycja, audyt Agenta 2): obóz i kapliczka ustawiają `ex.offer` (`rollOffer`: dwie różne opcje z CAMP_BUFFS /
+  EX_BLESSINGS), mapa (`ExpeditionMapView.updateOffer/renderOffer`) blokuje wybór węzła do decyzji (1/2, strzałki, klik, Enter).
+  Podgląd trasy: `peek` (mysz po ruchu albo R/X po zablokowaniu trudności; strzałki/Enter go zdejmują, żeby panel pokazywał
+  to, w co wejdzie Enter), `routeTo` (osiągalność w przód i wstecz) podświetla drogi, zielony „+” = bonus mapy. Trudność:
+  `tierOpen` (tylko przed pierwszym węzłem aktu; koniec przełączania przed lochem). Przed bossem obóz/sklep w każdej połowie
+  kolumn. Bonus obozu nie działa i nie zużywa się w lochu. Telemetria runu: `Run.telemetry` (próbka co
+  `BAL.telemetryEvery` s: czasy, pm, dps, hp, taken, kills, alive), w bocie `BotRun.tl`, w DEV `window.__telemetry()`.
+  Testy balansu botem uruchamiać na zamrożonej kopii (osobny vite na innym porcie), bo HMR przeładowuje stronę przy edycji.
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

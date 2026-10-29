@@ -71,8 +71,10 @@ screen = !save.settings.flashWarned && !botParams.has('bot') ? new FlashWarningS
 
 const bot = import.meta.env.DEV && botParams.has('bot') ? new (await import('./dev/bot')).Bot(app, botParams) : null;
 
-// Podgląd stanu w konsoli i w testach (tylko serwer deweloperski): window.__screen().
-if (import.meta.env.DEV) Object.assign(window, { __screen: () => screen, __sfx: sfx });
+// Podgląd stanu w konsoli i w testach (tylko serwer deweloperski): window.__screen(), telemetria bieżącego runu
+// window.__telemetry() (JSON do skopiowania z prawdziwej gry).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+if (import.meta.env.DEV) Object.assign(window, { __screen: () => screen, __sfx: sfx, __telemetry: () => JSON.stringify((screen as any).run?.telemetry ?? []) });
 
 const step = (dt: number) => {
   input.pollGamepads();

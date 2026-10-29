@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.35',
+    lines: [
+      "Expedition map: point at any later node (or press R/X once the act has started) to preview it and highlight every path to it. Maps with a bonus show a green +.",
+      "Camps and shrines now offer two bonuses to choose from instead of a random one. A camp bonus is not used up by a dungeon.",
+      "Difficulty is set before the first node of each act and stays for the whole act. Every lane can now reach a camp or shop before the boss.",
+    ],
+  },
+  {
     version: '0.34',
     lines: [
       "Every weapon type has its own sound (arrows, knives, fire, souls, lightning, beams, blades and more), with slight pitch variations so repeated hits don't sound the same.",

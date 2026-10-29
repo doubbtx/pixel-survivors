@@ -26,13 +26,13 @@ export interface NodeInfo {
 
 export const NODE_INFO: Record<NodeKind, NodeInfo> = {
   fight: { name: 'Mapa', icon: 'ex_fight', color: C.lgray, desc: 'Krótka walka bez bossa. Nagroda: złoto i karta.' },
-  elite: { name: 'Mapa elit', icon: 'ex_elite', color: C.orange, desc: 'Walka z częstymi elitami. Nagroda: przedmiot jak od bossa i karta jak za elitę.' },
+  elite: { name: 'Mapa elit', icon: 'ex_elite', color: C.orange, desc: 'Walka z częstymi elitami i minibossem. Nagroda: skrzynia elity i karta jak za elitę.' },
   dungeon: { name: 'Loch', icon: 'ex_dungeon', color: C.pink, desc: 'Arena z falami wrogów i strażnikiem. Nagroda: dwie skrzynie i złoto.' },
   treasure: { name: 'Skarb', icon: 'ex_chest', color: C.yellow, desc: 'Skrzynia z przedmiotem wysokiej jakości, bez walki.' },
   shop: { name: 'Sklep', icon: 'ex_shop', color: C.gold, desc: 'Sklep z przedmiotami, usługami i eliksirami.' },
   anvil: { name: 'Kowadło', icon: 'ex_anvil', color: C.cyan, desc: 'Ulepszanie i przekuwanie przedmiotów, plus darmowe odłamki.' },
-  rest: { name: 'Obóz', icon: 'ex_rest', color: C.lime, desc: 'Rest: heals, raises max HP for good and gives a bonus for the next fight.' },
-  shrine: { name: 'Kapliczka', icon: 'ex_shrine', color: C.yellow, desc: 'Błogosławieństwo na kilka kolejnych map.' },
+  rest: { name: 'Obóz', icon: 'ex_rest', color: C.lime, desc: 'Rest: heals, raises max HP for good and lets you pick one of two bonuses for the next map (not a dungeon).' },
+  shrine: { name: 'Kapliczka', icon: 'ex_shrine', color: C.yellow, desc: 'Pick one of two blessings for the next few maps.' },
   boss: { name: 'Boss', icon: 'ex_boss', color: C.salmon, desc: 'Pełny poziom z bossem na końcu aktu.' },
   secret: { name: '???', icon: 'ex_secret', color: C.hotpink, desc: 'Coś tu nie pasuje. Ścieżka, której nie było na mapie...' },
 };
@@ -110,7 +110,7 @@ export const EX_BLESSINGS: { id: string; name: string; desc: string; stats: Part
   { id: 'luck', name: 'Fortuna', desc: '+30% złota i +1 karta przy awansie', stats: { greed: 0.3, choices: 1 } },
 ];
 
-/** Bonus z obozu (węzeł Odpoczynek, 0.30.1): losowy, mocniejszy niż kapliczka, ale tylko na następną mapę z walką. */
+/** Bonus z obozu (węzeł Odpoczynek, 0.30.1): mocniejszy niż kapliczka, ale tylko na następną mapę z walką (loch go nie zużywa). */
 export const CAMP_BUFFS: { id: string; name: string; desc: string; stats: Partial<Stats> }[] = [
   { id: 'whetstone', name: 'Sharpened blades', desc: '+35% damage', stats: { might: 0.35 } },
   { id: 'drill', name: 'Morning drill', desc: '+35% attack speed', stats: { atkSpeed: 0.35 } },
@@ -143,11 +143,13 @@ export interface ExpeditionState {
   bonus: number;
   /** Błogosławieństwo kapliczki i liczba map, na które jeszcze działa. */
   blessing: { id: string; maps: number } | null;
-  /** Bonus z obozu (CAMP_BUFFS) na następną mapę z walką. */
+  /** Bonus z obozu (CAMP_BUFFS) na następną mapę z walką (poza lochem). */
   camp?: string | null;
+  /** Wybór czekający na mapie (0.35): obóz albo kapliczka proponuje dwie opcje (id z CAMP_BUFFS / EX_BLESSINGS). */
+  offer?: { kind: 'rest' | 'shrine'; ids: string[] } | null;
   /** Klucz Pustki (wygrane Rozdarcie): po ostatnim akcie otwiera sekretny akt 4. */
   voidKey?: boolean;
-  /** Poziom trudności map (MAP_RARITY) wybrany przez gracza; obowiązuje dla kolejnych map do zmiany. */
+  /** Poziom trudności map (MAP_RARITY) wybrany przez gracza na początku aktu (0.35: potem zablokowany do końca aktu). */
   tier?: number;
   /** Odblokowania (data/unlocks.ts) przeniesione do wyprawy: najwyższy dostępny poziom trudności i brak kowadła/kuźni. */
   maxTier?: number;
@@ -170,9 +172,12 @@ function rollMapNode(kind: NodeKind, act: number, tier: number, used: Set<string
   return { kind, name, rarity: tier, mods: tiers[tier], tiers, bonus };
 }
 
+/** Poziom trudności można zmienić tylko przed pierwszym węzłem aktu (0.35: bez przełączania przed każdą mapą). */
+export const tierOpen = (ex: ExpeditionState): boolean => ex.path.length === 0;
+
 /** Wybór poziomu trudności wyprawy: obowiązuje dla wszystkich jeszcze nieodwiedzonych map (także w kolejnych aktach). */
 export function chooseTier(ex: ExpeditionState, tier: number): boolean {
-  if (tier < 0 || tier >= MAP_RARITY.length || tier > (ex.maxTier ?? MAP_RARITY.length - 1) || (ex.tier ?? 0) === tier) return false;
+  if (!tierOpen(ex) || tier < 0 || tier >= MAP_RARITY.length || tier > (ex.maxTier ?? MAP_RARITY.length - 1) || (ex.tier ?? 0) === tier) return false;
   ex.tier = tier;
   for (const row of ex.map.slice(exRow(ex) + 1)) {
     for (const m of row) {
@@ -184,7 +189,7 @@ export function chooseTier(ex: ExpeditionState, tier: number): boolean {
   return true;
 }
 
-/** Losuje mapę aktu: pierwszy rząd to walki, w środku mieszanka, ostatni rząd przed bossem gwarantuje obóz lub sklep. */
+/** Losuje mapę aktu: pierwszy rząd to walki, w środku mieszanka, ostatni rząd przed bossem gwarantuje obóz lub sklep w zasięgu. */
 export function rollActMap(act: number, tier: number, noForge = false): (MapNode | null)[][] {
   const X = BAL.expedition;
   const used = new Set<string>();
@@ -199,7 +204,13 @@ export function rollActMap(act: number, tier: number, noForge = false): (MapNode
       // Kowadło jeszcze niezdobyte (pierwszy boss): zamiast niego obóz.
       kinds.push(noForge && k === 'anvil' ? 'rest' : k);
     }
-    if (row === X.rows - 2 && !kinds.some((k) => k === 'rest' || k === 'shop')) kinds[mid] = rng.chance(0.5) ? 'rest' : 'shop';
+    // Przed bossem obóz albo sklep osiągalny z każdej kolumny (sąsiednie kolumny): po jednym w każdej połowie mapy.
+    if (row === X.rows - 2) {
+      const calm = (k: NodeKind | null) => k === 'rest' || k === 'shop';
+      for (const [a, b] of [[0, mid], [mid + 1, X.lanes - 1]]) {
+        if (!kinds.slice(a, b + 1).some(calm)) kinds[a === 0 ? mid : mid + 1] = rng.chance(0.5) ? 'rest' : 'shop';
+      }
+    }
     map.push(kinds.map((k) => (!k ? null : isCombat(k) ? rollMapNode(k, act, tier, used) : { kind: k })));
   }
   // Ukryty węzeł „?” w aktach 2-3 (zamiast losowego węzła środkowego rzędu).
@@ -302,3 +313,10 @@ export function levelAt(act: number, row: number, m: MapNode): LevelDef {
 }
 
 export const nodeLevel = (ex: ExpeditionState): LevelDef => levelAt(ex.act, exRow(ex), currentMap(ex) ?? { kind: 'fight' });
+
+/** Dwie różne opcje do wyboru (obóz, kapliczka). */
+export function rollOffer(kind: 'rest' | 'shrine'): { kind: 'rest' | 'shrine'; ids: string[] } {
+  const pool = (kind === 'rest' ? CAMP_BUFFS : EX_BLESSINGS).map((b) => b.id);
+  const a = rng.pick(pool);
+  return { kind, ids: [a, rng.pick(pool.filter((id) => id !== a))] };
+}

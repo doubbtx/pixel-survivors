@@ -136,6 +136,8 @@ export const BAL = {
     levelHp: 0.01,
     levelDmg: 0.012,
   },
+  /** Odstęp próbek telemetrii runu (s). */
+  telemetryEvery: 15,
   /** Maks. spawnów na sekundę (żeby fala nie pojawiała się w jednej klatce). */
   spawnRateCap: (t: number) => 4 + t * 0.15,
   eliteHpMul: 20,

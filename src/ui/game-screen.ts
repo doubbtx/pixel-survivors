@@ -28,8 +28,7 @@ import { AnvilView } from './anvil';
 import { rollShop } from '../data/shop';
 import { metaBonus, runEssence, heroMeta, heroTree } from '../data/meta';
 import { rollItem } from '../data/items';
-import { EX_BLESSINGS, CAMP_BUFFS, advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth } from '../data/expedition';
-import { rng } from '../core/rng';
+import { advanceAct, currentMap, currentNode, isCombat, mapReward, newExpedition, nodeDepth, rollOffer } from '../data/expedition';
 import { music } from '../core/music';
 import { ExpeditionMapView } from './expedition';
 import { Hints, type HintBox } from './hints';
@@ -277,7 +276,7 @@ export class GameScreen implements Screen {
       ex.bonus += mapReward(m);
       if (m.kind === 'secret' && !ex.voidKey) { ex.voidKey = true; this.showToast('Klucz Pustki! Po ostatnim akcie otworzy się akt 4'); }
       if (ex.blessing && --ex.blessing.maps <= 0) ex.blessing = null;
-      ex.camp = null;
+      if (m.kind !== 'dungeon') ex.camp = null;
       this.updateRecords();
       if (m.kind === 'boss') {
         featsOnWin(run);
@@ -368,7 +367,7 @@ export class GameScreen implements Screen {
   /** Mapa Ekspedycji między węzłami (zapis pozycji). */
   private openMap(): void {
     this.hints.show('map');
-    this.map ??= new ExpeditionMapView(this.run, (t) => { this.app.save.exTier = t; this.app.persist(); });
+    this.map ??= new ExpeditionMapView(this.run, (t) => { this.app.save.exTier = t; this.app.persist(); }, (text) => { this.showToast(text); this.saveSlot(false); });
     this.overlayReturn = 'map';
     this.state = 'map';
     this.delay = 0.1;
@@ -412,20 +411,14 @@ export class GameScreen implements Screen {
       case 'rest':
         run.heal(run.stats.maxHp * X.restHeal);
         run.addBonus('maxHp', X.restMaxHp);
-        {
-          const c = rng.pick(CAMP_BUFFS);
-          ex.camp = c.id;
-          this.showToast(`Camp: +${Math.round(X.restHeal * 100)}% HP, +${X.restMaxHp} max HP. Next fight: ${c.name} (${c.desc})`);
-        }
+        ex.offer = rollOffer('rest');
+        this.showToast(`Camp: +${Math.round(X.restHeal * 100)}% HP, +${X.restMaxHp} max HP. Pick a bonus for the next map.`);
         this.saveSlot(false);
         break;
-      case 'shrine': {
-        const b = rng.pick(EX_BLESSINGS);
-        ex.blessing = { id: b.id, maps: X.blessingMaps };
-        this.showToast(`Kapliczka: ${b.name} (${b.desc}) na ${X.blessingMaps} mapy`);
+      case 'shrine':
+        ex.offer = rollOffer('shrine');
         this.saveSlot(false);
         break;
-      }
     }
   }
 
