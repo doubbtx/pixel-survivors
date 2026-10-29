@@ -708,6 +708,13 @@ function drawWorld(run: Run, r: Renderer): void {
           r.withAlpha(k * 0.8, () => drawSprite(g, f.sprite, X(f.x), Y(f.y) - up, { flash: k > 0.7 && !run.reduceFlash, scale: Math.max(1, Math.round(f.r)), flipX: f.a0 === 1 }));
           break;
         }
+        case 'disc': {
+          // Wypełniony krąg (R4: fala Trzęsienia, Rozbłysk słońca, cięcie Znaku śmierci): rośnie i blednie; a0 = maks. alfa.
+          const rr = f.r * ZOOM * (1.05 - 0.35 * k);
+          r.withAlpha(Math.max(0, f.a0 * k), () => r.circle(X(f.x), Y(f.y), rr, f.col, true));
+          r.withAlpha(Math.min(1, 0.4 + k), () => r.circle(X(f.x), Y(f.y), rr, C.white));
+          break;
+        }
         case 'slash': {
           // Cięcie bicza (Takezo): klinowate ostrze od bohatera, zwęża się ku końcowi i blednie; biały rdzeń.
           const x0 = X(f.x), x1 = X(f.x2), yy = Y(f.y), hh = f.w * ZOOM * (0.5 + 0.5 * k), dir = Math.sign(x1 - x0) || 1;

@@ -1088,8 +1088,9 @@ export class Run {
         e.markT = 0;
         this.damageEnemy(e, this.markDmg, this.markSrc, { forceCrit: true });
         if (!e.dead && !e.boss && e.hp < e.maxHp * this.markExec) this.damageEnemy(e, e.hp + 1, 'Death Mark: execute');
-        const f = this.addFx('line', e.x - 8, e.y - 8, C.red, 0.15);
-        if (f) { f.x2 = e.x + 8; f.y2 = e.y + 8; f.w = 2; }
+        const f = this.addFx('line', e.x - 10, e.y - 10, C.red, 0.25);
+        if (f) { f.x2 = e.x + 10; f.y2 = e.y + 10; f.w = 3; }
+        if (this.fx.count < BAL.fx.poofCap) { const d = this.addFx('disc', e.x, e.y, C.red, 0.3); if (d) { d.r = 10; d.a0 = 0.5; } }
       }
       if (!any) this.markDmg = 0;
     }
@@ -1450,7 +1451,8 @@ export class Run {
     // obrażenia; kradzież życia całe trafienie.
     const dealt = Math.min(dmg, Math.max(0, e.hp));
     e.hp -= dmg;
-    if (!this.reduceFlash) e.flash = 3;
+    // Biały błysk trafienia: bez niego przy bardzo dużym tłumie (playtest 3: sylwetki zakrywały ekran od 10. minuty).
+    if (!this.reduceFlash && this.enemies.count < BAL.readability.flashCrowd) e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;

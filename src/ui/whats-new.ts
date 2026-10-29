@@ -21,6 +21,7 @@ const NOTES: { version: string; lines: string[] }[] = [
     version: '0.46',
     lines: [
       "Torment: levels above Nightmare for experienced players. Win an Expedition on Nightmare to open Torment 1, then each win opens the next (up to 10). Press T on the map before the first fight; every level adds one rule and more essence.",
+      "Clearer late game: Earthquake, Solar Flare and Death Mark show a visible area, crowds over 500 enemies skip the white hit flash and enemy bullets are capped (except bosses). After the tutorial you land in the main menu.",
     ],
   },
   {

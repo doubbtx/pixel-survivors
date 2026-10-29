@@ -399,11 +399,12 @@ export class GameScreen implements Screen {
     else drawText(g, 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: smallS() });
   }
 
-  /** Koniec albo pominięcie samouczka: zapis i wybór bohatera do pierwszej Ekspedycji. */
+  /** Koniec albo pominięcie samouczka: zapis i menu główne (Ekspedycja polecana, komunikat o Rozwoju i Kolekcji). */
   private endTutorial(): void {
     this.app.save.tutorialDone = true;
+    this.app.save.notice ||= 'Tutorial done! Start an Expedition. Essence from every run goes to Progress, new cards to Collection.';
     this.app.persist();
-    this.app.go(new HeroSelect(this.app, 'expedition'));
+    this.app.go(new MainMenu(this.app));
   }
 
   /** Kolejny baner odblokowania, gdy poprzedni komunikat zniknął. */
@@ -1181,9 +1182,10 @@ export class GameScreen implements Screen {
  * legendy ani przycisków (podpis z klawiszami pod spodem może przykryć, podpowiedź mówi to samo).
  */
 const HINT_BOX: Partial<Record<string, HintBox>> = {
-  levelup: { x: 10, y: 232, w: W - 20 },
-  cards: { x: 10, y: 232, w: W - 20 },
-  power: { x: 10, y: 222, w: W - 20 },
+  // Prawa część dołu: lewy dolny róg zajmują przyciski podglądu C/I/Y (playtest 3).
+  levelup: { x: 232, y: 232, w: W - 240 },
+  cards: { x: 232, y: 232, w: W - 240 },
+  power: { x: 232, y: 222, w: W - 240 },
   loot: { x: 8, y: 207, w: 128 },
   map: { x: 14, y: H - 8, w: 240, up: true },
   shop: { x: 6, y: 232, w: 266, up: true },

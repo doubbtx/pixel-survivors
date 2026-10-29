@@ -447,6 +447,8 @@ export class HeroSelect implements Screen {
     const rec = heroRecord(this.app.save, h.id);
     const best = m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}` : `Rekord: ${fmtTime(rec.bestEndless)}`;
     drawText(g, best, x + 12, y + DET_H - 14, C.lavender);
+    // R4: drugi ultimate do wyboru (w dolnym wierszu, nie nachodzi na opis przy długich pasywkach — playtest 3).
+    if (h.altUlt) drawText(g, 'R: swap ultimate (2 to choose from)', x + DET_W - 12, y + DET_H - 14, C.yellow, { align: 'right', scale: smallS() });
     {
       const hm = heroMeta(this.app.save.meta, h.id);
       drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
@@ -483,8 +485,6 @@ export class HeroSelect implements Screen {
     this.skillsAt = ly;
     if (hovered(x + 8, ly, DET_W - 16, 40)) r.withAlpha(0.15, () => r.roundRect(x + 8, ly - 2, DET_W - 16, 42, 2, C.white));
     drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 41, C.lavender, { align: 'right', scale: smallS() });
-    // R4: drugi ultimate do wyboru.
-    if (h.altUlt) drawText(g, 'R: swap ultimate (2 to choose from)', x + 12, ly + 41, C.yellow, { scale: smallS() });
     this.kit(h).forEach((a, i) => {
       const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
       const ax = x + 12 + (i % 2) * 140, ay = ly + Math.floor(i / 2) * 20;

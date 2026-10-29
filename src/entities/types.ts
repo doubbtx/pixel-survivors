@@ -268,7 +268,7 @@ export interface Zone extends Poolable {
   knock: number;
 }
 
-export type FxKind = 'line' | 'ring' | 'arc' | 'spark' | 'poof' | 'boom' | 'fade' | 'slash';
+export type FxKind = 'line' | 'ring' | 'arc' | 'spark' | 'poof' | 'boom' | 'fade' | 'slash' | 'disc';
 
 /** Krótkotrwałe efekty wizualne bez logiki (błyskawice, fale, cięcia, iskry, obłoki, eksplozje). Dla klatek animacji `r` = skala. */
 export interface Fx extends Poolable {

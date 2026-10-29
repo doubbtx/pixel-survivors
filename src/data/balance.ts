@@ -153,7 +153,7 @@ export const BAL = {
    */
   situations: { first: 30, every: [75, 100] as [number, number], everyLate: [60, 80] as [number, number], lateAfter: 600, warn: 2, eventGap: 20, expire: 60, coins: 8, ritualWindow: 20 },
   /** Czytelność (0.40): tryb 'auto' ataków gracza — przygaszenie przy ≥ `on` pociskach wrogów w promieniu, koniec przy ≤ `off`. */
-  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55 },
+  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500 },
   /**
    * Boss słabnie (0.40): po `after` s walki otrzymuje coraz więcej obrażeń, do ×(1 + `max`) po kolejnych `ramp` s
    * (długie walki słabych buildów; bossowie aktów i Endless, bez Króla z kurhanu, strażników i minibossów).
@@ -557,6 +557,8 @@ export const BAL = {
   /** Powyżej tej liczby pocisków zwykli wrogowie wstrzymują ogień (boss strzela zawsze) — czytelność. */
   /** 0.44: 500 → 320 (playtest 2: 400-580 pocisków w 3-6 min); strzelają tylko widoczni (margines shootMargin), a pocisk mocniejszy (bulletDmg). */
   enemyBulletSoftCap: 320,
+  /** Twardy limit (salwy w toku obcinane; walka z bossem bez limitu). */
+  enemyBulletHardCap: 400,
   /** R4 (0.45): drugie ultimate — liczby (parametry z poziomu ulta: damage, radius, duration, count, blast, dist). */
   altUlt: {
     falconLen: 300, falconW: 10, falconFocus: 0.02,
