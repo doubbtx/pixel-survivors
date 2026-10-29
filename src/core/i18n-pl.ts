@@ -145,7 +145,6 @@ export const PL: Record<string, string> = {
   "Reduce flashing option and a photosensitivity warning on first launch.": "Opcja ograniczenia błysków i ostrzeżenie o błyskach przy pierwszym uruchomieniu.",
   "Change your keys in Settings, General, Controls. Ability keys in the HUD and tutorial follow your choice.": "Zmiana klawiszy w Ustawieniach, Ogólne, Sterowanie. Klawisze umiejętności w HUD i samouczku pokazują twój wybór.",
   "Gamepad: map difficulty on LB / RB, forge options with up / down and RB, RT opens weapons and passives.": "Pad: trudność mapy na LB / RB, opcje Kuźni góra / dół i RB, RT otwiera bronie i pasywki.",
-  "Expedition map: click or use the arrows to select the next node, then Travel (Enter) to go. Point at any later node to preview it and the paths to it. Keys 1-4 set the difficulty before the first node of each act: more modifiers (red dots) mean bigger rewards.": "Mapa wyprawy: kliknięciem albo strzałkami zaznacz kolejny węzeł, potem Wyrusz (Enter). Wskaż myszą dowolny dalszy węzeł, by zobaczyć jego podgląd i drogi do niego. Klawisze 1-4 ustawiają trudność przed pierwszym węzłem każdego aktu: więcej modyfikatorów (czerwone kropki) to większe nagrody.",
   "Expedition map: clicking a node only selects it. Start with Travel or Enter.": "Mapa Ekspedycji: kliknięcie w węzeł tylko go zaznacza. Wyruszasz przyciskiem Wyrusz albo Enterem.",
   "Boar": "Dzik",
   "Thornling": "Cierniak",
@@ -376,7 +375,7 @@ export const PL: Record<string, string> = {
   "Sen no Sen cuts twice as hard.": "Sen no Sen tnie dwa razy mocniej.",
   "Sharp Water": "Ostra woda",
   "+{} damage per Thousand Cuts slash": "+{} obrażeń na cięcie Tysiąca cięć",
-  "Endless Stream": "Niekończący się nurt",
+  "Endless Stream": "Wieczny nurt",
   "+{} Thousand Cuts slash": "+{} cięcie Tysiąca cięć",
   "Current": "Prąd",
   "Thousand Cuts recharges {} faster": "Tysiąc cięć odnawia się {} szybciej",
@@ -516,4 +515,5 @@ export const PL: Record<string, string> = {
   "Progress": "Postęp",
   "Other": "Inne",
   "Recommended for a first run": "Polecane na początek",
+  "Pick the next node (click or arrows), then Travel (Enter). Point at later nodes to preview routes. Keys 1-4: difficulty for the act, more modifiers (red dots) = bigger rewards.": "Wybierz następny węzeł (klik albo strzałki), potem Wyrusz (Enter). Wskaż dalsze węzły, żeby zobaczyć drogi. Klawisze 1-4: trudność aktu, więcej modyfikatorów (czerwone kropki) = większe nagrody.",
 };

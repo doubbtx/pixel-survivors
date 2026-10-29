@@ -1,7 +1,7 @@
 import { W, H, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText, DESC, descS, descLH } from '../core/font';
+import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { WEAPON_BY_ID, FUSIONS, maxLevel, describeLevel, evolvesOf } from '../data/weapons';
@@ -193,28 +193,32 @@ export class BuildView {
   /** Żywioły i reakcje: stany, pary z opisem skutku; jasne są te, które twój build potrafi wywołać. */
   private renderElements(r: Renderer, y: number): number {
     const g = r.g, x = DX + 10, tw = (W - DX - 28) / descS(), lh = descLH(), own = new Set(buildElements(this.run));
+    // Szerokości kolumn z najdłuższych nazw (po tłumaczeniu), nie stałe: polskie nazwy są dłuższe.
+    const sc = descS(), elW = Math.max(...STATES.map(([el]) => textWidth(ELEMENTS[el].name, sc))) + 6;
     drawText(g, 'Żywioły', x, y, C.yellow);
     y += 11;
     for (const [el, desc] of STATES) {
       const d = ELEMENTS[el], a = own.has(el) ? 1 : 0.5;
       r.withAlpha(a, () => {
         drawText(g, d.name, x, y, d.color, DESC);
-        for (const l of wrapText(desc, tw - 46 / descS())) { drawText(g, l, x + 46, y, C.lgray, DESC); y += lh; }
+        for (const l of wrapText(desc, tw - elW / sc)) { drawText(g, l, x + elW, y, C.lgray, DESC); y += lh; }
       });
     }
     y += 4;
     drawText(g, 'Reakcje (drugi żywioł na wrogu)', x, y, C.yellow);
     y += 11;
+    const reW = Math.max(...reactions().map((re) => textWidth(re.name, sc))) + 6, plusW = textWidth('+', sc) + 6;
     for (const re of reactions()) {
       const ok = own.has(re.a) && own.has(re.b);
       r.withAlpha(ok ? 1 : 0.5, () => {
         const A = ELEMENTS[re.a], B = ELEMENTS[re.b];
         let lx = x;
         drawText(g, re.name, lx, y, re.col, DESC);
-        lx += 62;
+        lx += reW;
         drawText(g, A.name, lx, y, A.color, DESC);
-        drawText(g, '+', lx + 42, y, C.lgray, DESC);
-        drawText(g, B.name, lx + 49, y, B.color, DESC);
+        lx += elW;
+        drawText(g, '+', lx, y, C.lgray, DESC);
+        drawText(g, B.name, lx + plusW, y, B.color, DESC);
         y += lh;
         for (const l of wrapText(re.desc, tw - 8)) { drawText(g, l, x + 6, y, C.lgray, DESC); y += lh; }
       });

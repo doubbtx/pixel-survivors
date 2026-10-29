@@ -1032,8 +1032,8 @@ const HINT_BOX: Partial<Record<string, HintBox>> = {
   power: { x: 10, y: 222, w: W - 20 },
   loot: { x: 8, y: 212, w: 128 },
   map: { x: 14, y: H - 8, w: 240, up: true },
-  shop: { x: 6, y: H - 4, w: 196, up: true },
-  anvil: { x: 230, y: H - 4, w: 244, up: true },
+  shop: { x: 6, y: 232, w: 266, up: true },
+  anvil: { x: 10, y: 181, w: 208, up: true },
 };
 
 /** Zakładki ekranu końca runu i panel pod nimi. */

@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.36.1)
+## Stan (wersja 0.36.2)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -609,6 +609,13 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   kartą (`cardFrame`) i bohaterem na liście. Podpowiedzi jako cicha płytka z turkusowym znacznikiem po lewej. Nagłówki grup menu
   zwykłą pisownią (Play / Progress / Other), bez wielkich liter. Przy nowych ekranach: `panel(r, x, y, w, h)` bez akcentu,
   akcent tylko gdy coś znaczy.
+- 0.36.2 (sprawdzenie układu): test wystawania napisów (przechwycenie `fillText` i `roundRect` w Playwright, z uwzględnieniem
+  przycinania przewijanych list) na wszystkich ekranach po angielsku i po polsku. Poprawki: opis w Ustawieniach pod oknem listy
+  (dłuższe zakładki), przyciski sklepu `BTNS` (wspólne dla rysowania i kliknięć, „Back to the map” się mieści), podpowiedzi
+  sklepu i kowadła w nowych miejscach, krótsza podpowiedź mapy, kolumny tabeli żywiołów liczone z najdłuższej nazwy
+  (`renderElements`), nazwy i koszty węzłów Rozwoju dopasowane do kafelka (`fit`), „Endless Stream” po polsku „Wieczny nurt”,
+  podświetlenie wiersza `Menu` co najmniej `LINE_H + 2` (ogonki ę, g, j), tekst przycisku wyśrodkowany na wysokości 12·skala,
+  zakładki wyboru bohatera 14 px. Nowe ekrany: szerokości kolumn i przycisków z `textWidth`, nie stałe (polski jest dłuższy).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
