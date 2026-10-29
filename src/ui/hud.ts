@@ -34,7 +34,7 @@ import { UI, SMALL, OUT, tile, meter, iconSlot, cornerTag, label, approach } fro
 const ABILITIES: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
 
 /** Kolory pasków zasobów bohaterów (płaskie). */
-const RES_COL = { focus: C.green, fury: C.red, heat: C.orange, souls: C.pink, streak: C.lavender, faith: C.gold } as const;
+const RES_COL = { focus: C.green, fury: C.red, heat: C.orange, souls: C.pink, streak: C.lavender, faith: C.gold, rhythm: C.cyan } as const;
 /** Czas rozbłysku gotowości umiejętności (s). */
 const READY_FLASH = 0.45;
 

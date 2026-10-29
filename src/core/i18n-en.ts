@@ -2334,4 +2334,8 @@ export const EN: Record<string, string> = {
   "Szczęście": "Luck",
   "Karty przy awansie": "Level-up choices",
   "Szczęście (pasywka Podkowa, afiks Fortuna, karty): lepsze przedmioty, częstsze skrzynie i unikaty, rzadsze karty, lepsza jakość ulepszeń broni.": "Luck (Horseshoe passive, Fortune affix, cards): better items, more chests and uniques, rarer cards, better weapon upgrade quality.",
+  "Aktywny": "Active",
+  "Teraz": "Now",
+  "Następny poziom": "Next level",
+  "Odblokowanie": "Unlock",
 };

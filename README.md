@@ -454,6 +454,16 @@ src/
 - Level up cards say what a passive evolves; the build view and the Arsenal list every evolution path and the passive evolution.
 - Evolution book (main menu): weapon, passive and ability evolutions, fusions, upgrade qualities and augments, each as an icon recipe with how to get it.
 
+**New hero: Takezo (0.32.0)**:
+- A swordsman with two swords, inspired by Miyamoto Musashi (Niten Ichi-ryū). Weapon Two Swords: cuts in front of and behind him; evolves with Fury into Two Heavens as One, or with Whetstone into Book of the Void.
+- Q Helm Splitter: overhead strike into a spot in front of you (damage, short stun); evolution Heaven Splitter (second, bigger blast further ahead, needs Area synergy).
+- E Thousand Cuts: slashes in a cone in front; the number and speed of slashes scale with attack speed and Rhythm; evolution Two Heavens (slashes in front and behind, needs Speed synergy).
+- R Iai: dash along your aim, a moment of stillness, then every enemy on the path takes a guaranteed critical cut; spends all Rhythm (+3% damage per point); evolution Final Cut (dash back and cut again, needs Crit synergy).
+- Resource Rhythm (max 30): +1 per hit (every 0.1 s), +1.5% attack speed per point (+45% full), fades after 1.5 s without hits, getting hit costs 40%.
+- Passive Sen no Sen: the dodge cuts enemies along its path and adds 5 Rhythm.
+- 7 hero cards, a Progression tree (Earth, Water, Fire, Void), unlock: win an Expedition with Borgun or Vesper (granted on load if you already have such a win).
+- Polish: English names inside Polish templates are translated piece by piece (`toPolish` in core/i18n.ts).
+
 ### Jak przetestować
 
 1. `npm run dev` → Endless → Nowy run → bohater (albo Ekspedycja → Nowa ekspedycja).

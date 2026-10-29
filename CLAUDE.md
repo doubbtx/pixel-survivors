@@ -509,7 +509,7 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   - pełne sterowanie padem we wszystkich menu (Steam Deck);
   - zostają: kształty żywiołów, wyłączanie wstrząsów ekranu, autocelowanie.
 
-### Faza 4: różnorodność i uczucie mocy (v0.30–0.32) — v0.30 GOTOWE (wrogowie i minibossowie), v0.31 GOTOWE (ewolucje), v0.32 w planie (ataki bossów, uczucie mocy, podsumowanie)
+### Faza 4: różnorodność i uczucie mocy (v0.30–0.33) — v0.30 GOTOWE (wrogowie i minibossowie), v0.31 GOTOWE (ewolucje), v0.32 GOTOWE (bohater Takezo), v0.33 w planie (ataki bossów, uczucie mocy, podsumowanie)
 - 0.31.0 — ewolucje (prośba gracza): `WeaponDef.evolves` (lista ścieżek; pierwsza = podstawowa), `ALT_EVOS` w data/weapons.ts
   (wariant = kopia ewolucji podstawowej z innymi statystykami / `hybrid`, ikona `ic_<id>` = ikona ewolucji podstawowej
   przemalowana `ramp`, żywioł jak broń bazowa). Każda pasywka ewoluuje ≥ 2 bronie (`passiveEvolves(id, hero?)` w
@@ -527,6 +527,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   `splitter` (po śmierci 2× `splitling`, run.ts killEnemy), `mirror` orbiter (krąży, cięcie wzdłuż linii przez gracza).
   Pola wroga: `z`, `hidden`, `tx`, `ty`. Zapowiedzi w `drawTell` (game/render.ts), sprite'y w gfx/actors.ts (domyślnie w prawo).
   Kontakt rani tylko gdy `!hidden && z < 4`. `OWN_MOVES` wyłącza dla nich szarżę elity.
+- 0.32.0 — bohater Takezo (na wzór Musashiego): umiejętności 'overhead' (Q, cios w punkt `dist` przed sobą), 'flurry'
+  (E, `slashes` × (1 + szybkość ataku + rytm) cięć w stożku), 'iai' (R, doskok `dist`, po 0.5 s cięcie wzdłuż trasy
+  `alongPath`, zużywa rytm), pasywka 'dashCut' (unik tnie trasę, `passive.dmg`), zasób 'rhythm' (BAL.resource.rhythm;
+  `rhythmAtk` dodawane w `effectiveStats` broni bez przeliczania statystyk, `spendRhythm`, `rhythmGain`). Broń `katana`
+  (cleave, amount 2 = przód i tył), ewolucje `katana_evo` (fury), `katana_sharp` (whetstone, ALT_EVOS). Ikony w
+  gfx/hero-icons.ts (`katana`, `slashArc`), sprite `takezo` w gfx/actors.ts. Karty h_t_*, drzewko takezo (Earth/Water/
+  Fire/Void), odblokowanie 'hero:takezo' (rekordy; `grantUnlocks` także przy wczytaniu w main.ts). Lista bohaterów:
+  ROW_H 27. Tłumaczenie: `toPolish` dzieli polskie szablony z angielskimi wstawkami; ui/meta.ts tłumaczy kawałki osobno.
 - Minibossowie biomów: `boarking`, `toadqueen`, `sandtyrant`, `shatterknight`, `voidprism` (`BIOME_MINIBOSS` wg biomu),
   zachowanie 'warden' z własną listą `MINIBOSS_ATTACKS[id]` (4 ataki; w szale drugi atak `(pick + 2) % n`). Skok Matrony
   w `updateWarden` (łuk `miniLeapH`, pierścień przy lądowaniu), zapowiedź szarży/skoku w `drawTell` case 'warden' (także
@@ -546,13 +554,13 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - Uczucie mocy: mocniejsze krytyki (dźwięk, błysk, wyróżnione liczby), chwila ewolucji (krótkie zatrzymanie, efekt, baner), wyraźniejsze zabójstwa elit, serie zabójstw i „Lucky find”.
 - Podsumowanie runu z wyróżnieniami: najlepsza broń, rekord DPS, pobite rekordy, najdłuższe kombo.
 
-### Faza 5: dźwięk i muzyka (v0.32)
+### Faza 5: dźwięk i muzyka (v0.34)
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).
 - Osobny dźwięk dla każdej broni, warianty, żeby się nie powtarzały; motyw menu, każdego biomu i osobne motywy bossów.
 - Miks: ściszanie muzyki przy ważnych dźwiękach, limit dźwięków naraz, osobne suwaki efektów i muzyki.
 - Licencje: plik z listą źródeł i licencji, wpis w napisach końcowych, formaty działające na iPhonie (mp3 lub m4a obok ogg).
 
-### Faza 6: przygotowanie do wydania (v0.33, potem 1.0)
+### Faza 6: przygotowanie do wydania (v0.35, potem 1.0)
 - Wersja wydawana bez narzędzi deweloperskich (zostają w wersji deweloperskiej).
 - Automatyczny test brakujących tłumaczeń w obie strony (bot przechodzi grę i zgłasza napisy bez wpisu).
 - Pełny test: Ekspedycja, akt 4, długi Endless (30+ min), samouczek.

@@ -429,6 +429,14 @@ export const CARDS: CardDef[] = [
   { id: 'h_a_judge', name: 'Wyrok', rarity: 'gold', tags: ['Umiejętności'], hero: 'aurel', desc: 'Sąd: +4 cele, +30 obrażeń słupów.', stackable: true, flags: { 'a_judge.count': 4, 'a_judge.damage': 30 } },
   { id: 'h_a_shield', name: 'Tarcza wiary', rarity: 'gold', tags: ['Tarcze', 'Przywołania'], hero: 'aurel', desc: 'Opiekun działa co 4 s zamiast co 6 s, a tarcza może urosnąć o 10% HP więcej.', flags: { 'passive.n': 2, 'passive.shieldCap': 0.1 } },
   { id: 'h_a_saint', name: 'Święty patron', rarity: 'prism', tags: ['Przywołania', 'Życie'], hero: 'aurel', desc: 'Sługi zadają +50% obrażeń, a trafienia strażników leczą 2x mocniej.', flags: { minionDmg: 0.5, guardHeal: 1 } },
+  // Takezo (szermierz, 0.32): opisy po angielsku, polski w core/i18n-pl.ts.
+  { id: 'h_t_slam', name: 'Heavy Blade', rarity: 'silver', tags: ['Obszar'], hero: 'takezo', desc: 'Helm Splitter: +16 damage, +4 radius.', stackable: true, flags: { 't_slam.damage': 16, 't_slam.radius': 4 } },
+  { id: 'h_t_rhythm', name: 'Steady Breath', rarity: 'silver', tags: ['Szybkość'], hero: 'takezo', desc: 'Rhythm builds 40% faster and gives 30% more attack speed.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
+  { id: 'h_t_step', name: 'Cutting Step', rarity: 'silver', tags: ['Szybkość', 'Krytyk'], hero: 'takezo', desc: 'Sen no Sen cuts 50% harder and Footwork recharges 10% faster.', stackable: true, flags: { 'passive.dmg': 0.5, 'cd.dash': 0.1 } },
+  { id: 'h_t_flurry', name: 'Flowing Water', rarity: 'gold', tags: ['Szybkość', 'Umiejętności'], hero: 'takezo', desc: 'Thousand Cuts: +2 slashes, +6 damage per slash.', stackable: true, flags: { 't_flurry.slashes': 2, 't_flurry.damage': 6 } },
+  { id: 'h_t_iai', name: 'Single Stroke', rarity: 'gold', tags: ['Krytyk', 'Umiejętności'], hero: 'takezo', desc: 'Iai: +60 damage, +30 dash length.', stackable: true, flags: { 't_iai.damage': 60, 't_iai.dist': 30 } },
+  { id: 'h_t_max', name: 'Deep Focus', rarity: 'gold', tags: ['Szybkość'], hero: 'takezo', desc: '+15 max Rhythm.', stackable: true, flags: { 'res.max': 15 } },
+  { id: 'h_t_niten', name: 'Niten Ichi', rarity: 'prism', tags: ['Krytyk', 'Szybkość'], hero: 'takezo', desc: 'Helm Splitter strikes a second time a moment later, and Sen no Sen cuts twice as hard.', flags: { 'echo.q': 1, 'passive.dmg': 1 } },
   // Karty z osiągnięć (data/achievements.ts): w ofertach dopiero po zdobyciu osiągnięcia.
   { id: 'u_trophy', name: 'Trofeum', rarity: 'silver', tags: ['Krytyk'], unlock: 'first_boss', desc: '+10% obrażeń przeciw elitom i bossom.', stackable: true, flags: { bossDmg: 0.1 } },
   { id: 'u_butcher', name: 'Rzeźnia', rarity: 'gold', tags: ['Krytyk', 'Szybkość'], unlock: 'butcher', desc: '+20% obrażeń i +10% szybkości ataku.', stats: { might: 0.2, atkSpeed: 0.1 } },
@@ -482,6 +490,7 @@ const CARD_ICONS: Record<string, string> = {
   h_m_call: 'ab_m_raise', h_m_army: 'ab_m_raise_evo', h_m_swamp: 'ab_m_curse', h_m_lich: 'ab_m_legion_evo',
   p_catalyst: 'cd_nova', p_overdrive: 'pi_fury', c_ritual: 'cd_blood', h_k_inspire: 'ab_k_rain_evo',
   h_k_focus: 'pi_crit', h_b_fury: 'pi_fury', h_i_heat: 'ab_i_ring_evo', h_m_souls: 'ab_m_legion',
+  h_t_slam: 'ab_t_slam', h_t_rhythm: 'ab_t_flurry', h_t_step: 'ab_t_step', h_t_flurry: 'ab_t_flurry_evo', h_t_iai: 'ab_t_iai', h_t_max: 'ic_katana', h_t_niten: 'ic_katana_evo',
   h_v_step: 'ab_v_step', h_v_streak: 'ab_v_dance', h_v_smoke: 'ab_v_vanish', h_v_exec: 'ab_v_exec', h_v_dance: 'ab_v_dance_evo',
   h_v_blood: 'ab_v_exec_evo', h_v_shadow: 'ab_v_step_evo', h_a_guard: 'ab_a_guard', h_a_faith: 'ab_a_sanct', h_a_step: 'ab_a_step',
   h_a_sanct: 'ab_a_sanct_evo', h_a_judge: 'ab_a_judge', h_a_shield: 'tag:Tarcze', h_a_saint: 'ab_a_guard_evo',

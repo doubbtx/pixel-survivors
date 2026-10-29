@@ -4,6 +4,7 @@ import { Input, setBindings } from './core/input';
 import { startLoop } from './core/loop';
 import { sfx } from './core/audio';
 import { loadSave, writeSave } from './core/save';
+import { grantUnlocks } from './data/unlocks';
 import type { App, Screen } from './ui/app';
 import { MainMenu, toggleFullscreen } from './ui/menus';
 import { WhatsNewScreen, pendingNews } from './ui/whats-new';
@@ -23,6 +24,8 @@ const canvas = document.getElementById('game') as HTMLCanvasElement;
 const renderer = new Renderer(canvas);
 const input = new Input(renderer, canvas);
 const save = loadSave();
+// Odblokowania zależne tylko od zapisu (np. nowy bohater za wcześniejsze wygrane) przyznawane od razu po wczytaniu.
+if (grantUnlocks(save, { boss: false, acts: 0, won: false, tier: 0 }).length) writeSave(save);
 sfx.setVolume(save.settings.volume);
 music.setVolume(save.settings.music);
 renderer.setFill(save.settings.scaleFill);

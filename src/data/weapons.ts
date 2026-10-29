@@ -212,6 +212,18 @@ export const WEAPONS: WeaponDef[] = [
     levels: [], evolved: true,
   },
 
+  {
+    // Takezo: dwa miecze tną przed nim i za nim (Niten Ichi-ryū).
+    id: 'katana', name: 'Two Swords', desc: 'Two blades cut in front of you and behind you.', icon: 'ic_katana', kind: 'cleave', color: C.lgray, hero: 'takezo',
+    base: S({ damage: 16, cooldown: 0.68, amount: 2, area: 1.05, knock: 2 }),
+    levels: [{ damage: 4 }, { cooldown: -0.08 }, { area: 0.15 }, { damage: 6 }, { cooldown: -0.08 }, { amount: 1 }, { damage: 8, area: 0.15 }],
+    evolves: [{ passive: 'fury', into: 'katana_evo' }],
+  },
+  {
+    id: 'katana_evo', name: 'Two Heavens as One', desc: 'A storm of cuts in every direction, faster than the eye.', icon: 'ic_katana_evo', kind: 'cleave', color: C.cyan, hero: 'takezo',
+    base: S({ damage: 30, cooldown: 0.4, amount: 4, area: 1.5, knock: 3 }),
+    levels: [], evolved: true,
+  },
   // ---- hybrydy z fuzji (FUSIONS); ikony ic_f_* w gfx/icons.ts ----
   {
     id: 'f_firearrow', name: 'Płonące strzały', desc: 'Strzały wybuchające ogniem przy trafieniu.', icon: 'ic_f_firearrow', kind: 'bolt', color: C.orange, proj: 'arrow', hero: 'kestra',
@@ -320,6 +332,7 @@ export const ALT_EVOS: AltEvo[] = [
   { base: 'souls', passive: 'fang', id: 'souls_fang', name: 'Blood Souls', desc: 'Red souls that hunt enemies down.', color: C.red, ramp: R_BLOOD, stats: { damage: 30, amount: 5, pierce: 2 }, hybrid: { seek: true } },
   { base: 'knives', passive: 'dup', id: 'knives_dup', name: 'Knife Storm', desc: 'A storm of eight knives at once.', color: C.pink, ramp: R_VOID, stats: { damage: 16, cooldown: 0.3, amount: 8 } },
   { base: 'light', passive: 'heart', id: 'light_heart', name: 'Sun Heart', desc: 'Two wide, strong rings of light.', color: C.salmon, ramp: R_BLOOD, stats: { damage: 40, amount: 2, area: 2.2 } },
+  { base: 'katana', passive: 'whetstone', id: 'katana_sharp', name: 'Book of the Void', desc: 'Few, wide cuts that hit very hard.', color: C.lavender, ramp: R_VOID, stats: { damage: 62, cooldown: 0.65, amount: 2, area: 1.8 } },
   { base: 'light', passive: 'clover', id: 'light_luck', name: 'Blessed Light', desc: 'Five rings of light, one after another.', color: C.lime, ramp: R_LEAF, stats: { damage: 28, cooldown: 0.8, amount: 5 } },
 ];
 

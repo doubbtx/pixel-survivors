@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.32',
+    lines: [
+      "New hero Takezo, a swordsman with two swords inspired by Miyamoto Musashi. Q Helm Splitter: an overhead strike into a spot in front of you. E Thousand Cuts: slashes in a cone, more of them with attack speed. R Iai: dash, sheathe, and everything on the path is cut.",
+      "Takezo's Rhythm: every hit stacks attack speed, it fades out of combat and Iai spends it for a stronger cut. Passive Sen no Sen: the dodge cuts enemies on its path. Unlock: win an Expedition with Borgun or Vesper.",
+      "Polish: English names inside Polish texts are translated too.",
+    ],
+  },
+  {
     version: '0.31',
     lines: [
       "Every passive now evolves at least two weapons: 20 new weapon evolutions, each a variant of the weapon's evolution with its own profile (homing, splitting, bursting, more or heavier attacks). With several passives you choose the evolution.",

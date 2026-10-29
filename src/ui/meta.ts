@@ -1,3 +1,4 @@
+import { tr } from '../core/i18n';
 import { W, H } from '../core/renderer';
 import { C } from '../core/palette';
 import { drawText } from '../core/font';
@@ -179,10 +180,11 @@ export class MetaScreen implements Screen {
     });
     // Opis zaznaczonego węzła.
     const n = this.columns()[this.col][this.row], lvl = h.nodes[n.id] ?? 0, prev = prevNode(tree, n);
-    const lock = !nodeUnlocked(h, tree, n) && prev ? `Odblokowanie: ${prev.name} ${h.nodes[prev.id] ?? 0}/${unlockLevel(prev)}   ` : '';
-    const now = lock + (n.key ? (lvl ? 'Aktywny: ' : 'Klucz: ') + n.desc : lvl > 0 ? `Teraz: ${nodeLine(n, lvl)}` : 'Nie kupiony');
-    const next = !n.key && lvl < n.max ? `   Następny poziom: ${nodeLine(n, lvl + 1)}` : '';
-    drawText(g, `${n.name}. ${now}${next}`, W / 2, 222, C.lgray, { align: 'center' });
+    // Kawałki tłumaczone osobno (nazwy i opisy węzłów bywają po polsku albo po angielsku — 0.32 Takezo).
+    const lock = !nodeUnlocked(h, tree, n) && prev ? `${tr('Odblokowanie')}: ${tr(prev.name)} ${h.nodes[prev.id] ?? 0}/${unlockLevel(prev)}   ` : '';
+    const now = lock + (n.key ? `${tr(lvl ? 'Aktywny' : 'Klucz')}: ${tr(n.desc)}` : lvl > 0 ? `${tr('Teraz')}: ${tr(nodeLine(n, lvl))}` : tr('Nie kupiony'));
+    const next = !n.key && lvl < n.max ? `   ${tr('Następny poziom')}: ${tr(nodeLine(n, lvl + 1))}` : '';
+    drawText(g, `${tr(n.name)}. ${now}${next}`, W / 2, 222, C.lgray, { align: 'center' });
     // Przyciski.
     button(r, 8, BTN_Y, 70, 16, 'Wróć');
     if (meta.unassigned > 0) {

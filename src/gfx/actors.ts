@@ -15,6 +15,7 @@ export const ANIM: Record<string, { seq: number[]; speed: number }> = {
   ignara: { seq: [0, 1, 2, 3], speed: 7 },
   morwen: { seq: [0, 1, 2, 3], speed: 8 },
   vesper: { seq: [0, 1, 2, 3], speed: 6 },
+  takezo: { seq: [0, 1, 2, 3], speed: 7 },
   aurel: { seq: [0, 1, 2, 3], speed: 8 },
   angel: { seq: [0, 1, 2, 3], speed: 6 },
   angelbig: { seq: [0, 1, 2, 3], speed: 7 },
@@ -801,8 +802,46 @@ function mirror(f: number): Painter {
   return p.outline();
 }
 
+/**
+ * Takezo: ronin na wzór Musashiego — granatowa hakama, szare kimono z brązowym pasem, związane włosy i czerwona opaska,
+ * długi miecz w prawej dłoni (w górę), krótki w lewej (w dół). 4 klatki chodu, pole opaski powiewa.
+ */
+function takezo(f: number): Painter {
+  const p = new Painter(22, 21, HI);
+  const o = f % 2 === 1 ? -1 : 0;
+  const flow = [0, 1, 0, -1][f];
+  legs(p, f, 8, 11, 16, 2, C.black, C.dbrown);
+  // Hakama: szerokie spodnie z fałdami.
+  p.polyShade([[6.5, 12.5 + o], [14.5, 12.5 + o], [16, 18], [12, 18], [10.5, 15.5], [9, 18], [5, 18]], [C.black, C.navy, C.dblue, C.blue]);
+  p.thin(8.2, 13.5 + o, 7, 17.8, C.navy).thin(12.8, 13.5 + o, 14, 17.8, C.navy).thin(10.5, 13 + o, 10.5, 15.4, C.navy);
+  // Kimono z zakładką i pas obi.
+  p.sphere(10.5, 10.5 + o, 4.4, 3.4, [C.slate, C.dgray, C.lavender, C.lgray]);
+  p.thin(8.6, 8 + o, 11, 12 + o, C.lgray).thin(12.4, 8 + o, 11, 12 + o, C.slate);
+  p.rect(6.5, 12 + o, 8, 1.2, C.dbrown).thin(6.5, 12 + o, 14.5, 12 + o, C.brown);
+  // Głowa: dzika fryzura z kokiem, czerwona opaska z powiewającymi końcami.
+  p.sphere(10.5, 6.3 + o, 3.3, 3.2, RAMP.skin);
+  p.polyShade([[7, 5.8 + o], [7.5, 2.8 + o], [9.5, 2 + o], [12, 2.2 + o], [14, 3.5 + o], [14, 6 + o], [12.5, 4.4 + o], [8.5, 4.4 + o]], [C.black, C.black, C.navy, C.slate]);
+  p.sphere(11, 1.2 + o, 1.2, 1, [C.black, C.black, C.navy, C.slate]);
+  p.rect(7.3, 4.2 + o, 6.6, 0.9, C.red).thin(7.3, 4.2 + o, 13.9, 4.2 + o, C.salmon);
+  p.thin(7.4, 4.6 + o, 5.5, 5.5 + o + flow * 0.4, C.red).thin(7.4, 4.9 + o, 5.8, 6.4 + o + flow * 0.5, C.dred);
+  eyeAt(p, 9.6, 6.3 + o, C.black);
+  eyeAt(p, 11.8, 6.3 + o, C.black);
+  p.thin(9, 5.6 + o, 10.2, 5.8 + o, C.black).thin(11.4, 5.8 + o, 12.6, 5.6 + o, C.black);
+  p.dot(10.7, 8 + o, C.dbrown).thin(9.5, 9 + o, 11.8, 9 + o, C.dbrown);
+  // Długi miecz w prawej dłoni (w górę, w przód) i krótki w lewej (w dół).
+  p.polyShade([[15.4, 9.6 + o], [21.2, 0.6 + o], [21.8, 1 + o], [16.2, 10.2 + o]], [C.slate, C.lavender, C.lgray, C.white]);
+  p.thin(15.8, 9.4 + o, 21.3, 1 + o, C.white);
+  p.stroke(14.4, 9 + o, 16.4, 10.8 + o, C.gold);
+  p.thin(15.4, 10.6 + o, 14.2, 12.4 + o, C.dblue).thin(15.7, 10.8 + o, 14.5, 12.6 + o, C.navy);
+  p.polyShade([[5.4, 13.6 + o], [2, 18 + o], [2.6, 18.4 + o], [6, 14.1 + o]], [C.slate, C.lavender, C.lgray, C.white]);
+  p.stroke(4.6, 13 + o, 6.8, 14.2 + o, C.gold);
+  p.thin(6.2, 12.6 + o, 7, 11.6 + o, C.dblue);
+  p.sphere(14.6, 10.6 + o, 1, 0.9, RAMP.skin).sphere(6.4, 13 + o, 0.9, 0.8, RAMP.skin);
+  return p.outline();
+}
+
 export const ACTORS: Record<string, (f: number) => Painter> = {
-  kestra, borgun, ignara, morwen, vesper, aurel, wraith, wraithbig, angel, angelbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel, mimic, stag,
+  kestra, borgun, ignara, morwen, vesper, aurel, takezo, wraith, wraithbig, angel, angelbig, slime, goldslime, bat, golem, eye, wisp, spinner, cultist, sentinel, mimic, stag,
   shieldbearer, summoner, kamikaze, blinker, weaver, boar, thornling, toad, lurker, salamander, scorpion, splitter, mirror,
 };
 

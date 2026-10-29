@@ -37,6 +37,7 @@ export const UNLOCKS: UnlockDef[] = [
   { id: 'tier2', name: 'Rare difficulty', how: 'Win an Expedition.', hint: 'Pick it on the Expedition map (key 3).', check: (_s, c) => c.won },
   { id: 'hero:vesper', name: 'Vesper', how: 'Earn 4 achievements.', hint: 'A new hero is waiting in hero select.', check: (s) => s.achievements.length >= 4 },
   { id: 'hero:aurel', name: 'Aurel', how: 'Win 2 Expeditions.', hint: 'A new hero is waiting in hero select.', check: (s) => wins(s) >= 2 },
+  { id: 'hero:takezo', name: 'Takezo', how: 'Win an Expedition with Borgun or Vesper.', hint: 'A new hero is waiting in hero select.', check: (s) => (s.records.borgun?.expeditionWins ?? 0) + (s.records.vesper?.expeditionWins ?? 0) >= 1 },
   { id: 'tier3', name: 'Nightmare difficulty', how: 'Win an Expedition on Rare difficulty.', hint: 'Pick it on the Expedition map (key 4).', check: (_s, c) => c.won && c.tier >= 2 },
 ];
 export const UNLOCK_BY_ID: Record<string, UnlockDef> = Object.fromEntries(UNLOCKS.map((u) => [u.id, u]));

@@ -5,6 +5,7 @@ import { BAL } from '../data/balance';
 import { weaponStatsAt, type WeaponKind, type WeaponStats } from '../data/weapons';
 import type { Enemy, WeaponInst } from '../entities/types';
 import type { Run } from '../game/run';
+import { rhythmAtk } from './resource';
 
 /** Statystyki broni po uwzględnieniu statystyk gracza (moc, obszar, szybkość ataku, ilość…). */
 export interface EffWeapon extends WeaponStats {
@@ -16,7 +17,8 @@ export function effectiveStats(run: Run, w: WeaponInst): EffWeapon {
   const s = weaponStatsAt(w.def, w.level);
   const st = run.stats;
   const b = w.bonus;
-  const cooldown = s.cooldown * BAL.attackSpeedMul(st.atkSpeed + (b.atk ?? 0));
+  // Rytm (zasób Takezo) dokłada szybkość ataku na bieżąco, bez przeliczania statystyk.
+  const cooldown = s.cooldown * BAL.attackSpeedMul(st.atkSpeed + rhythmAtk(run) + (b.atk ?? 0));
   // Żarłoczne ostrza (augment): orbita rośnie z zabójstwami na tym poziomie.
   const grow = w.def.kind === 'orbit' ? 1 + (run.cardState['aug.orbit'] ?? 0) : 1;
   // Klapki Berserkera (unikat): bronie kierunkowe strzelają w kierunku ruchu za wielokrotność obrażeń.

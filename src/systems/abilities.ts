@@ -7,7 +7,7 @@ import { abilityParam, abilityCooldown, type AbilityKind, type AbilitySlot } fro
 import { SLOT, type AbilityInst, type Enemy } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnMinion } from './minions';
-import { resourceOnCast, spendSouls, spendStreak, spendFaith, furyGain } from './resource';
+import { resourceOnCast, spendSouls, spendStreak, spendFaith, furyGain, rhythmAtk, rhythmGain, spendRhythm } from './resource';
 
 const ORDER: AbilitySlot[] = ['q', 'e', 'dash', 'ult'];
 
@@ -85,6 +85,72 @@ function judgeWave(run: Run, a: AbilityInst, P: (k: string) => number, n: number
   });
 }
 
+/** Wrogowie w pasie szerokości `w` wzdłuż odcinka (każdy raz): cięcia Takezo (Iai, unik Sen no Sen). */
+function alongPath(run: Run, x0: number, y0: number, x1: number, y1: number, w: number, fn: (e: Enemy) => void): void {
+  const L = Math.hypot(x1 - x0, y1 - y0), seen = new Set<number>();
+  for (let d = 0; d <= L; d += 8) {
+    const k = L ? d / L : 0;
+    run.enemiesInCircle(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k, w, (e) => {
+      if (seen.has(e.uid)) return;
+      seen.add(e.uid);
+      fn(e);
+    });
+  }
+}
+
+/** Uderzenie z góry Takezo: obszar w punkcie (x, y) — obrażenia, ogłuszenie, pionowy błysk ostrza i krąg. */
+function overheadHit(run: Run, a: AbilityInst, x: number, y: number, r: number, dmg: number, stun: number): void {
+  run.enemiesInCircle(x, y, r, (e) => run.damageEnemy(e, dmg, a.def.name, { kx: e.x - x, ky: e.y - y, knock: 4, stun }));
+  const f = run.addFx('line', x, y - 34, C.white, 0.14);
+  if (f) { f.x2 = x; f.y2 = y; f.w = 3; }
+  const ring = run.addFx('ring', x, y, C.lgray, 0.3);
+  if (ring) ring.r = r;
+  run.burst(x, y, C.lgray, 14, 70);
+  run.burst(x, y, C.dbrown, 8, 40);
+  run.addShake(3);
+  sfx.play('explode');
+}
+
+/** Jedno cięcie Tysiąca cięć: stożek przed Takezo (Dwa niebiosa: także za nim). */
+function flurrySlash(run: Run, a: AbilityInst, P: (k: string) => number, k: number): void {
+  const p = run.player, [dx, dy] = aimDir(run), r = P('radius') * run.stats.area, arc = 0.62;
+  const dirs = [Math.atan2(dy, dx) + (k % 2 ? 0.18 : -0.18)];
+  if (a.def.evolved) dirs.push(dirs[0] + Math.PI);
+  for (const base of dirs) {
+    run.enemiesInCircle(p.x, p.y, r, (e) => {
+      let d = Math.atan2(e.y - p.y, e.x - p.x) - base;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      if (Math.abs(d) <= arc) run.damageEnemy(e, P('damage') * run.stats.might, a.def.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 1 });
+    });
+    const f = run.addFx('arc', p.x, p.y, k % 2 ? C.cyan : C.white, 0.16);
+    if (f) { f.r = r; f.a0 = base - arc; f.a1 = base + arc; }
+  }
+  if (k % 3 === 0) sfx.play('hit');
+}
+
+/** Iai: doskok wzdłuż kierunku, chwila ciszy (chowanie miecza), potem cięcie wszystkiego na trasie. */
+function iaiCut(run: Run, a: AbilityInst, P: (k: string) => number, dx: number, dy: number, mul: number, then?: () => void): void {
+  const p = run.player, dist = P('dist'), dur = 0.15, sx = p.x, sy = p.y, ex = p.x + dx * dist, ey = p.y + dy * dist;
+  p.dashT = dur;
+  p.dvx = (dx * dist) / dur;
+  p.dvy = (dy * dist) / dur;
+  p.iframes = Math.max(p.iframes, 0.6);
+  const f = run.addFx('line', sx, sy, C.lgray, 0.5);
+  if (f) { f.x2 = ex; f.y2 = ey; f.w = 1; }
+  sfx.play('dash');
+  run.schedule(0.5, () => {
+    const w = P('width') * run.stats.area;
+    alongPath(run, sx, sy, ex, ey, w, (e) => run.damageEnemy(e, P('damage') * mul * run.stats.might, a.def.name, { forceCrit: true, kx: -dy, ky: dx, knock: 3 }));
+    const cut = run.addFx('line', sx, sy, C.white, 0.25);
+    if (cut) { cut.x2 = ex; cut.y2 = ey; cut.w = 4; }
+    run.burst((sx + ex) / 2, (sy + ey) / 2, C.white, 18, 90);
+    run.addShake(5);
+    run.freeze(0.08);
+    sfx.play('boss');
+    then?.();
+  });
+}
+
 /** Dodatkowe efekty umiejętności po ewolucji (po zwykłym użyciu), wg id umiejętności. */
 const EVO_EXTRA: Record<string, Cast> = {
   // Burza strzał: druga salwa po chwili.
@@ -126,6 +192,11 @@ const EVO_EXTRA: Record<string, Cast> = {
       const t = run.nearestEnemy(run.player.x, run.player.y, 100);
       if (t) stepStrike(run, a, P, t, t.x, t.y);
     });
+  },
+  // Rozłupanie niebios: druga, większa eksplozja dalej przed Takezo.
+  t_slam: (run, a, P) => {
+    const p = run.player, [dx, dy] = aimDir(run), d = P('dist') * 2.2, x = p.x + dx * d, y = p.y + dy * d;
+    run.schedule(0.35, () => overheadHit(run, a, x, y, P('radius') * 1.4 * run.stats.area, P('damage') * 0.8 * run.stats.might, P('stun')));
   },
   // Sanktuarium: tarcza na start.
   a_sanct: (run) => { run.addShield(run.stats.maxHp * 0.12, 0.3); },
@@ -339,6 +410,27 @@ const CASTS: Record<AbilityKind, Cast> = {
     run.addShake(5);
   },
 
+  overhead(run, a, P) {
+    // Cios z góry w punkt przed Takezo (po krótkim zamachu).
+    const p = run.player, [dx, dy] = aimDir(run), x = p.x + dx * P('dist'), y = p.y + dy * P('dist');
+    const f = run.addFx('arc', p.x, p.y, C.lgray, 0.14);
+    if (f) { const b = Math.atan2(dy, dx); f.r = 16; f.a0 = b - 1.4; f.a1 = b + 0.2; }
+    run.schedule(0.12, () => overheadHit(run, a, x, y, P('radius') * run.stats.area, P('damage') * run.stats.might, P('stun')));
+  },
+
+  flurry(run, a, P) {
+    // Liczba i tempo cięć rosną z szybkością ataku (statystyka i Rytm).
+    const atk = 1 + Math.max(0, run.stats.atkSpeed) + rhythmAtk(run), n = Math.round(P('slashes') * atk), gap = 0.09 / atk;
+    for (let k = 0; k < n; k++) run.schedule(k * gap, () => flurrySlash(run, a, P, k));
+  },
+
+  iai(run, a, P) {
+    const [dx, dy] = aimDir(run), mul = spendRhythm(run);
+    run.showBanner(a.def.name + '!');
+    // Ostatnie cięcie (ewolucja): powrót tą samą drogą i drugie cięcie.
+    iaiCut(run, a, P, dx, dy, mul, a.def.evolved ? () => run.schedule(0.1, () => iaiCut(run, a, P, -dx, -dy, mul)) : undefined);
+  },
+
   inferno(run, a, P) {
     a.activeT = P('duration') * run.stats.duration;
     run.showBanner(a.def.name + '!');
@@ -392,6 +484,16 @@ export function castAbility(run: Run, slot: AbilitySlot, free = false): void {
   // Węzły Rozwoju (data/meta.ts, flagi): powtórzenie umiejętności, Przewrót skraca Q / zostawia Sieć, tarcza z Pierścienia.
   for (let i = 0; i < run.flag(`echo.${slot}`); i++) run.schedule(0.4 * (i + 1), () => castAbility(run, slot, true));
   if (slot === 'dash') {
+    // Sen no Sen (pasywka Takezo): unik tnie wrogów na trasie i daje rytm.
+    if (run.hero.passive.kind === 'dashCut') {
+      const p = run.player, sx = p.x, sy = p.y, dmg = run.cardDamage(run.hero.passive.value) * (1 + run.flag('passive.dmg'));
+      run.schedule(0.15, () => {
+        alongPath(run, sx, sy, p.x, p.y, 14 * run.stats.area, (e) => run.damageEnemy(e, dmg, run.hero.passive.name, { kx: e.x - p.x, ky: e.y - p.y, knock: 2 }));
+        const f = run.addFx('line', sx, sy, C.cyan, 0.18);
+        if (f) { f.x2 = p.x; f.y2 = p.y; f.w = 2; }
+        rhythmGain(run, BAL.resource.rhythm.dashCut);
+      });
+    }
     const reset = run.flag('dashResetQ');
     if (reset > 0) run.abilities.q.cd *= 1 - Math.min(1, reset);
     if (run.flag('dashSummon') > 0) spawnMinion(run, run.player.x, run.player.y, 14 * run.stats.might, 8, false, 'Cień');

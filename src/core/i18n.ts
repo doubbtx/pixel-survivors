@@ -158,6 +158,22 @@ function translate(s: string, depth: number): string {
   return s;
 }
 
+/**
+ * Polski: polskie napisy zostają, ale angielskie kawałki wstawione w polski szablon („Broń: Two Swords”, „Zasób: Rhythm”)
+ * tłumaczą się osobno — podział na tych samych separatorach co w kierunku PL → EN.
+ */
+const PL_SEPS = [/(\s{2,})/, /(: )/, /(?<=[.!?])( )(?=[A-Z])/, /(; | \/ )/, /(, )/, /( \(|\))/];
+function toPolish(s: string, depth: number): string {
+  if (depth > 6 || !LETTER.test(s)) return s;
+  for (const sep of PL_SEPS) {
+    const parts = s.split(sep);
+    if (parts.length < 2) continue;
+    const done = parts.map((x, i) => (i % 2 ? x : english(x.trim()) !== undefined ? x.replace(x.trim(), english(x.trim())!) : toPolish(x, depth + 1)));
+    if (done.some((x, i) => x !== parts[i])) return done.join('');
+  }
+  return s;
+}
+
 /** Diagnostyka (bot testowy, tylko wersja deweloperska): napisy bez tłumaczenia w bieżącym języku. */
 export const trMisses = new Set<string>();
 const EN_WORDS = /\b(the|and|your|with|you|of|for|is|are|when|each|every)\b/i;
@@ -175,7 +191,7 @@ export function tr(s: string): string {
   let t = cache.get(s);
   if (t === undefined) {
     if (cache.size > CACHE_MAX) cache.clear();
-    t = english(s) ?? (lang === 'pl' ? s : translate(s, 0));
+    t = english(s) ?? (lang === 'pl' ? toPolish(s, 0) : translate(s, 0));
     if (import.meta.env.DEV) checkMiss(s, t);
     cache.set(s, t);
   }

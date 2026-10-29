@@ -59,7 +59,13 @@ export function resourceTakenMul(run: Run): number {
 /** Trafienie wroga (bez obrażeń od stanów i procentowych): celność z dystansu, furia z bliska, kombo z każdego. */
 export function resourceOnHit(run: Run, e: Enemy): void {
   const k = run.hero.resource.kind;
-  if ((k !== 'focus' && k !== 'fury' && k !== 'streak') || run.resGap > 0) return;
+  if ((k !== 'focus' && k !== 'fury' && k !== 'streak' && k !== 'rhythm') || run.resGap > 0) return;
+  if (k === 'rhythm') {
+    run.resGap = R.rhythm.gap;
+    run.resIdle = 0;
+    rhythmGain(run, 1);
+    return;
+  }
   if (k === 'streak') {
     run.resGap = R.streak.gap;
     const was = run.res;
@@ -112,6 +118,29 @@ export function resourceOnHurt(run: Run, dmg: number): void {
   }
   else if (k === 'fury') furyGain(run, (R.fury.hurt * 100 * dmg) / run.stats.maxHp);
   else if (k === 'streak') run.res = 0;
+  else if (k === 'rhythm') run.res *= 1 - R.rhythm.hurtLoss;
+}
+
+/** Przyrost rytmu (Takezo); przy pierwszym zapełnieniu napis. */
+export function rhythmGain(run: Run, v: number): void {
+  if (run.hero.resource.kind !== 'rhythm') return;
+  const was = run.res;
+  gain(run, v);
+  if (was < resMax(run) && run.res >= resMax(run)) run.popText(run.player.x, run.player.y - 14, 'Flow!', C.cyan);
+}
+
+/** Szybkość ataku z rytmu (dodawana do statystyki broni w systems/weapons.ts i do liczby cięć Tysiąca cięć). */
+export function rhythmAtk(run: Run): number {
+  return run.hero.resource.kind === 'rhythm' ? run.res * R.rhythm.atk * power(run) : 0;
+}
+
+/** Iai zużywa cały rytm: mnożnik obrażeń cięcia. */
+export function spendRhythm(run: Run): number {
+  if (run.hero.resource.kind !== 'rhythm' || run.res < 1) return 1;
+  const n = run.res;
+  run.res = 0;
+  if (n >= 5) run.popText(run.player.x, run.player.y - 16, `Rhythm x${Math.floor(n)}`, C.cyan);
+  return 1 + R.rhythm.iai * n * power(run);
 }
 
 /** Egzekucja zużywa całe kombo: mnożnik obrażeń. */
@@ -214,6 +243,7 @@ export function updateResource(run: Run, dt: number): void {
       if (run.rageT <= 0) run.recomputeStats();
     } else if (run.resIdle > R.fury.idle && run.flag('furyHold') <= 0) run.res = Math.max(0, run.res - R.fury.decay * dt);
   }
+  if (k === 'rhythm' && run.resIdle > R.rhythm.idle) run.res = Math.max(0, run.res - R.rhythm.decay * dt);
   if (k !== 'heat') return;
   const H = R.heat, p = run.player;
   run.res = Math.max(0, run.res - H.decay * dt);

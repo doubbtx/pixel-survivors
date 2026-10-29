@@ -81,7 +81,8 @@ function menuBackdrop(app: App, t: number): void {
   walk('morwen', lead - 74, false, 3);
   walk('vesper', lead - 98, false, 4);
   walk('aurel', lead - 122, false, 5);
-  PARADE.forEach((name, i) => walk(name, lead - 166 - i * 28, false, i + 6));
+  walk('takezo', lead - 146, false, 6);
+  PARADE.forEach((name, i) => walk(name, lead - 190 - i * 28, false, i + 7));
 }
 
 export class MainMenu implements Screen {
@@ -283,7 +284,7 @@ function renderHeroBests(app: App, mode: SlotMode, x: number, y: number, w: numb
   });
 }
 
-const LIST_X = 12, LIST_W = 140, ROW_H = 32, TOP = 38;
+const LIST_X = 12, LIST_W = 140, ROW_H = 27, TOP = 36;
 const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212, TAB_W = 62, MORE_W = 64;
 const TABS = ['Ogólne', 'Umiejętności', 'Zasób'];
 const TAB_Y = TOP + 43;
@@ -381,10 +382,10 @@ export class HeroSelect implements Screen {
       panel(r, LIST_X, y, LIST_W, ROW_H - 4, on ? C.gold : hovered(LIST_X, y, LIST_W, ROW_H - 4) ? C.lavender : C.slate);
       const spr = this.spriteOf(h.id), open = heroUnlocked(this.app.save, h.id);
       // Zablokowany bohater: przygaszony, zamiast roli warunek odblokowania.
-      r.withAlpha(open ? 1 : 0.3, () => drawSprite(g, `${spr}@${on && open ? animFrame(spr, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 14));
-      drawText(g, h.name, LIST_X + 34, y + 3, open ? h.color : C.dgray, { shadow: C.black });
-      if (open) drawText(g, h.role, LIST_X + 34, y + 15, C.lavender);
-      else drawText(g, UNLOCK_BY_ID[`hero:${h.id}`]?.how ?? '', LIST_X + 34, y + 16, C.dgray, { scale: 0.75 });
+      r.withAlpha(open ? 1 : 0.3, () => drawSprite(g, `${spr}@${on && open ? animFrame(spr, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 11.5));
+      drawText(g, h.name, LIST_X + 34, y + 2, open ? h.color : C.dgray, { shadow: C.black });
+      if (open) drawText(g, h.role, LIST_X + 34, y + 12, C.lavender);
+      else drawText(g, UNLOCK_BY_ID[`hero:${h.id}`]?.how ?? "", LIST_X + 34, y + 14, C.dgray, { scale: 0.75 });
       // Odznaka Paktu: najwyższy poziom Paktu z pokonanym bossem.
       const best = this.app.save.pacts.best[h.id] ?? 0, badge = pactBadge(best);
       if (badge) drawText(g, `${badge.name} ${best}`, LIST_X + LIST_W - 6, y + 3, badge.color, { align: 'right' });

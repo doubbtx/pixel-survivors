@@ -192,6 +192,30 @@ export const HERO_TREES: Record<string, MetaNode[]> = {
     KEY('au_guardheal', 'Sąd', 'Kojące ostrza', 'ab_a_guard', 600, flag('guardHeal', 1), 'Trafienia strażników leczą 2x mocniej.'),
     ...EXPEDITION,
   ],
+  // Takezo: gałęzie jak księgi Musashiego (Ziemia — miecze, Woda — cięcia, Ogień — cios z góry, Pustka — rytm i iai).
+  takezo: [
+    N('t_crit', 'Earth', 'Clear Eye', 'pi_crit', 5, 20, stat('crit', 0.02), '+{v} critical chance', true),
+    N('t_atk', 'Earth', 'Light Hands', 'ic_katana', 5, 30, stat('atkSpeed', 0.04), '+{v} attack speed', true),
+    N('t_critmult', 'Earth', 'Deep Cut', 'pi_whetstone', 5, 25, stat('critMult', 0.1), '+{v} critical damage', true),
+    N('t_hp', 'Earth', 'Iron Body', 'pi_heart', 5, 25, { kind: 'mul', stat: 'maxHp', per: 0.05 }, '+{v} max HP', true),
+    KEY('t_dashcut', 'Earth', 'Initiative', 'ab_t_step', 600, flag('passive.dmg', 1), 'Sen no Sen cuts twice as hard.'),
+    N('t_fdmg', 'Water', 'Sharp Water', 'ab_t_flurry', 5, 20, flag('t_flurry.damage', 3), '+{v} damage per Thousand Cuts slash', false),
+    N('t_fcount', 'Water', 'Endless Stream', 'ab_t_flurry', 3, 40, flag('t_flurry.slashes', 1), '+{v} Thousand Cuts slash', false),
+    N('t_fcd', 'Water', 'Current', 'pi_clock', 5, 25, flag('cd.e', 0.06), 'Thousand Cuts recharges {v} faster', true),
+    N('t_move', 'Water', 'Footwork', 'pi_wings', 5, 30, stat('speedBonus', 0.04), '+{v} movement speed', true),
+    KEY('t_fecho', 'Water', 'Second Wave', 'ab_t_flurry_evo', 600, flag('echo.e', 1), 'Thousand Cuts repeats a moment later.'),
+    N('t_sdmg', 'Fire', 'Falling Mountain', 'ab_t_slam', 5, 20, flag('t_slam.damage', 8), '+{v} Helm Splitter damage', false),
+    N('t_srad', 'Fire', 'Wide Strike', 'ab_t_slam', 5, 25, flag('t_slam.radius', 3), '+{v} Helm Splitter radius', false),
+    N('t_scd', 'Fire', 'Quick Draw', 'pi_clock', 5, 30, flag('cd.q', 0.06), 'Helm Splitter recharges {v} faster', true),
+    N('t_area', 'Fire', 'Wide Arc', 'pi_lens', 5, 30, stat('area', 0.03), '+{v} area', true),
+    KEY('t_secho', 'Fire', 'Twin Strike', 'ab_t_slam_evo', 600, flag('echo.q', 1), 'Helm Splitter strikes a second time a moment later.'),
+    N('t_gain', 'Void', 'Breath', 'ab_t_iai', 5, 20, flag('res.gain', 0.08), 'Rhythm builds {v} faster', true),
+    N('t_power', 'Void', 'Tempo', 'ab_t_flurry', 5, 30, flag('res.power', 0.06), 'Rhythm gives {v} more attack speed', true),
+    N('t_idmg', 'Void', 'One Cut', 'ab_t_iai', 5, 25, flag('t_iai.damage', 20), '+{v} Iai damage', false),
+    N('t_ult', 'Void', 'Stillness', 'ab_t_iai_evo', 5, 35, flag('ultGain', 0.06), 'Ultimate charges {v} faster', true),
+    KEY('t_max', 'Void', 'No Mind', 'ab_t_iai_evo', 600, flag('res.max', 15), '+15 max Rhythm.'),
+    ...EXPEDITION,
+  ],
 };
 
 export const heroTree = (heroId: string): MetaNode[] => HERO_TREES[heroId] ?? EXPEDITION;

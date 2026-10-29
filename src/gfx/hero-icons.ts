@@ -17,6 +17,35 @@ function dagger(p: Painter, x0: number, y0: number, x1: number, y1: number, blad
 }
 
 /** Słup światła (Sąd) o środku x i wysokości od y0 do y1. */
+/**
+ * Katana (Takezo): lekko zakrzywione ostrze z jasną krawędzią tnącą, tsuba (okrągły jelec) i owinięta rękojeść.
+ * Od (x0, y0) — koniec rękojeści — do (x1, y1) — sztych. `steel`: rampa ostrza.
+ */
+function katana(p: Painter, x0: number, y0: number, x1: number, y1: number, steel: readonly number[] = [C.slate, C.lavender, C.lgray, C.white]): void {
+  const L = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / L, uy = (y1 - y0) / L, nx = -uy, ny = ux;
+  const at = (k: number, s: number): [number, number] => [x0 + ux * k + nx * s, y0 + uy * k + ny * s];
+  const h = L * 0.3, curve = (k: number) => 0.5 * Math.sin(((k - h) / (L - h)) * Math.PI);
+  // Ostrze: wielokąt od jelca do sztychu z lekkim łukiem.
+  const top: [number, number][] = [], bot: [number, number][] = [];
+  for (let k = h; k <= L - 1; k += 1) { top.push(at(k, 0.75 + curve(k))); bot.push(at(k, -0.55 + curve(k))); }
+  p.polyShade([...top, at(L, curve(L) * 0.5), ...bot.reverse()], steel);
+  for (let k = h + 0.5; k < L - 1.5; k += 0.5) p.dot(...at(k, 0.45 + curve(k)), steel[3]);
+  // Rękojeść z owinięciem i tsuba.
+  p.polyShade([at(0, 0.7), at(h - 0.6, 0.7), at(h - 0.6, -0.7), at(0, -0.7)], [C.black, C.navy, C.dblue, C.blue]);
+  for (let k = 0.8; k < h - 0.8; k += 1.3) p.dot(...at(k, 0), C.lgray);
+  // Tsuba: płaski jelec w poprzek ostrza.
+  p.stroke(...at(h - 0.4, -1.5), ...at(h - 0.4, 1.5), C.gold).dot(...at(h - 0.4, -1.2), C.yellow);
+}
+
+/** Łuk cięcia (półksiężyc) wokół (cx, cy) od kąta a0 do a1. */
+function slashArc(p: Painter, cx: number, cy: number, R: number, a0: number, a1: number, c: number, edge: number = C.white): void {
+  for (let a = a0; a <= a1; a += 0.05) {
+    const t = (a - a0) / (a1 - a0), w = Math.sin(t * Math.PI) * 1.1;
+    p.thin(cx + Math.cos(a) * (R - w), cy + Math.sin(a) * (R - w), cx + Math.cos(a) * (R + w), cy + Math.sin(a) * (R + w), c);
+    p.dot(cx + Math.cos(a) * R, cy + Math.sin(a) * R, edge);
+  }
+}
+
 function pillar(p: Painter, x: number, y0: number, y1: number): void {
   p.rect(x - 1, y0, 3, y1 - y0, C.yellow).line(x, y0, x, y1, C.white);
   p.rect(x - 2, y1, 5, 1, C.gold);
@@ -131,5 +160,62 @@ export const HERO_ICONS: Record<string, (p: Painter) => void> = {
     // Trzy filary symetrycznie (środek wyższy), złota belka nad nimi; wyrównanie do środka: centerMirror.
     pillar(p, 3, 3, 12); pillar(p, 8, 2, 14); pillar(p, 13, 3, 12);
     p.rect(1, 1, 15, 1, C.gold).rect(1, 1, 15, 0.34, C.yellow);
+  },
+
+  // ---------------- Takezo ----------------
+  ic_katana: (p) => { katana(p, 2.5, 14, 14, 2.5); katana(p, 13.5, 14, 2, 2.5); },
+  ic_katana_evo: (p) => {
+    slashArc(p, 8, 8, 6.8, -2.6, -0.5, C.cyan);
+    katana(p, 2.5, 14, 14, 2.5, [C.dblue, C.blue, C.cyan, C.white]); katana(p, 13.5, 14, 2, 2.5, [C.dblue, C.blue, C.cyan, C.white]);
+  },
+  ab_t_slam: (p) => {
+    // Cios z góry: miecz pionowo w ziemię, pęknięcia i fala uderzenia.
+    p.poly([[1, 13.5], [15, 13.5], [14, 15.2], [2, 15.2]], C.dbrown);
+    for (const [x0, x1] of [[8, 3], [8, 13], [8, 5.5], [8, 11]] as const) p.thin(x0, 13.6, x1, 15, C.black);
+    slashArc(p, 8, 13.5, 6, Math.PI + 0.3, 2 * Math.PI - 0.3, C.lgray);
+    katana(p, 8, 0.5, 8, 13.4);
+  },
+  ab_t_slam_evo: (p) => {
+    p.poly([[0.5, 13.5], [15.5, 13.5], [14.5, 15.5], [1.5, 15.5]], C.dbrown);
+    for (const x1 of [1, 4, 12, 15]) p.thin(8, 13.6, x1, 15.4, C.gold);
+    slashArc(p, 8, 13.5, 7.2, Math.PI + 0.2, 2 * Math.PI - 0.2, C.gold, C.yellow);
+    slashArc(p, 8, 13.5, 4.5, Math.PI + 0.4, 2 * Math.PI - 0.4, C.orange, C.yellow);
+    katana(p, 8, 0.5, 8, 13.4, [C.dbrown, C.orange, C.gold, C.yellow]);
+  },
+  ab_t_flurry: (p) => {
+    // Tysiąc cięć: trzy półksiężyce cięć w stożku i miecz w środku.
+    slashArc(p, 3, 8, 11, -0.75, 0.75, C.cyan);
+    slashArc(p, 3, 8, 8, -0.7, 0.7, C.lgray);
+    slashArc(p, 3, 8, 5, -0.6, 0.6, C.cyan);
+    katana(p, 1, 10, 12, 4.5);
+  },
+  ab_t_flurry_evo: (p) => {
+    slashArc(p, 8, 8, 7, -0.8, 0.8, C.cyan);
+    slashArc(p, 8, 8, 7, Math.PI - 0.8, Math.PI + 0.8, C.cyan);
+    slashArc(p, 8, 8, 4.5, -0.7, 0.7, C.white, C.cyan);
+    slashArc(p, 8, 8, 4.5, Math.PI - 0.7, Math.PI + 0.7, C.white, C.cyan);
+    katana(p, 3, 13, 13, 3, [C.dblue, C.blue, C.cyan, C.white]);
+  },
+  ab_t_step: (p) => {
+    // Praca nóg: geta (drewniany sandał) w ruchu z liniami pędu.
+    for (const y of [7, 9.5, 12]) p.thin(0.5, y, y === 9.5 ? 3.5 : 4.5, y, C.lgray);
+    p.polyShade([[5.5, 9], [15, 8], [15.3, 10], [5.8, 11]], RAMP.wood);
+    p.rect(7, 11, 1.6, 2.6, C.dbrown).rect(12.3, 10.6, 1.6, 2.6, C.dbrown);
+    // Rzemień w kształcie V z węzłem na przedzie.
+    p.stroke(7.5, 9, 10.5, 5.5, C.red).stroke(13.5, 8.5, 10.5, 5.5, C.red).spot(10.2, 5.2, C.salmon);
+  },
+  ab_t_iai: (p) => {
+    // Iai: miecz w pochwie poziomo i jedna cienka linia cięcia przez całą ikonę.
+    p.polyShade([[4, 9.6], [15, 8.6], [15.3, 10], [4.2, 11.2]], [C.black, C.dred, C.red, C.salmon]);
+    p.polyShade([[0.8, 10.1], [4.3, 9.7], [4.4, 11.1], [1, 11.5]], [C.black, C.navy, C.dblue, C.blue]);
+    p.stroke(4.3, 8.6, 4.5, 12, C.gold).dot(4.2, 9, C.yellow);
+    p.thin(0.5, 4, 15.5, 2.5, C.white).thin(0.5, 4.4, 15.5, 2.9, C.cyan);
+    p.spot(12, 5.5, C.white).dot(3, 6, C.lgray);
+  },
+  ab_t_iai_evo: (p) => {
+    p.polyShade([[4, 9.6], [15, 8.6], [15.3, 10], [4.2, 11.2]], [C.black, C.navy, C.dblue, C.cyan]);
+    p.polyShade([[0.8, 10.1], [4.3, 9.7], [4.4, 11.1], [1, 11.5]], [C.black, C.navy, C.dblue, C.blue]);
+    p.stroke(4.3, 8.6, 4.5, 12, C.gold).dot(4.2, 9, C.yellow);
+    p.thin(0.5, 1.5, 15.5, 7, C.white).thin(0.5, 7, 15.5, 1.5, C.white).thin(0.5, 1.9, 15.5, 7.4, C.red).thin(0.5, 7.4, 15.5, 1.9, C.red);
   },
 };

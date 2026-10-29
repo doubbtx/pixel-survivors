@@ -10,7 +10,7 @@ import type { Tag } from './cards';
  */
 export type AbilitySlot = 'q' | 'e' | 'dash' | 'ult';
 export type AbilityKind = 'volley' | 'net' | 'dash' | 'rain' | 'charge' | 'slam' | 'titan' | 'fireball' | 'firering' | 'inferno' | 'summon' | 'curse' | 'legion'
-  | 'shadowstep' | 'execute' | 'bladedance' | 'guardian' | 'sanctum' | 'judgment';
+  | 'shadowstep' | 'execute' | 'bladedance' | 'guardian' | 'sanctum' | 'judgment' | 'overhead' | 'flurry' | 'iai';
 
 export interface AbilityDef {
   id: string;
@@ -43,7 +43,7 @@ export interface AbilityDef {
  * killSummon: co N-te zabójstwo przywołuje ducha-sługę; killReset: co N-te zabójstwo (i każda elita) odnawia Q;
  * guardShield: co N s tarcza za każdego sługę (systems/minions.ts).
  */
-export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast' | 'killSummon' | 'killReset' | 'guardShield';
+export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast' | 'killSummon' | 'killReset' | 'guardShield' | 'dashCut';
 
 /**
  * Zasób bohatera (pasek pod HP, systems/resource.ts, liczby w BAL.resource):
@@ -51,9 +51,10 @@ export type HeroPassiveKind = 'nthVolley' | 'killShield' | 'echoCast' | 'killSum
  * (obrażenia i redukcja, opada poza walką), heat — żar z czarów (mocniejsze czary, przegrzanie rani, unik zrzuca żar),
  * souls — dusze z zabitych w pobliżu (przy pełnych sługa, R zużywa wszystkie),
  * streak — kombo z każdego trafienia (więcej obrażeń, E zużywa całe na egzekucję, oberwanie zeruje),
- * faith — wiara z zabójstw w pobliżu i leczenia (przy pełnej Łaska: leczenie, tarcza, dłuższe sługi; R zużywa całą).
+ * faith — wiara z zabójstw w pobliżu i leczenia (przy pełnej Łaska: leczenie, tarcza, dłuższe sługi; R zużywa całą),
+ * rhythm — rytm z trafień: każdy punkt to szybkość ataku, opada bez walki, oberwanie zabiera część, Iai (R) zużywa cały.
  */
-export type ResourceKind = 'focus' | 'fury' | 'heat' | 'souls' | 'streak' | 'faith';
+export type ResourceKind = 'focus' | 'fury' | 'heat' | 'souls' | 'streak' | 'faith' | 'rhythm';
 
 export interface ResourceDef {
   kind: ResourceKind;
@@ -106,6 +107,7 @@ const ABILITY_DELTA: Record<string, (v: number, def: AbilityDef) => string> = {
   blast: (v) => `+${v} promienia wybuchów`,
   exec: (v) => `próg egzekucji +${Math.round(v * 100)}% HP`,
   impact: (v) => `+${v} promienia uderzenia`,
+  slashes: (v) => `+${v} slash`,
 };
 
 /** Co daje następny poziom umiejętności (dla ekranu awansu). */
@@ -314,6 +316,40 @@ export const HEROES: HeroDef[] = [
       },
     ],
   },
+  {
+    // Takezo (0.32): szermierz na wzór Miyamoto Musashiego — dwa miecze (Niten Ichi-ryū), rytm walki (hyōshi), cięcie iai.
+    id: 'takezo', name: 'Takezo', role: 'Swordsman', sprite: 'takezo', color: C.blue,
+    base: { maxHp: 105, speed: 60, atkSpeed: 0.1 },
+    weapon: 'katana',
+    tags: ['Szybkość', 'Krytyk'],
+    passive: { name: 'Sen no Sen', desc: 'Seize the initiative: your dodge cuts every enemy it passes through and adds 5 Rhythm.', kind: 'dashCut', value: 24 },
+    resource: { kind: 'rhythm', name: 'Rhythm', color: C.cyan, desc: 'Every hit adds Rhythm: each point is attack speed. It fades out of combat, getting hit costs some. Iai (R) spends it all on a stronger cut.' },
+    abilities: [
+      {
+        id: 't_slam', name: 'Helm Splitter', icon: 'ab_t_slam', desc: 'An overhead strike into the ground in front of you: damage and a short stun in a circle.', slot: 'q', kind: 'overhead', color: C.lgray,
+        cooldown: 5, cdPerLevel: -0.3, maxLevel: 5,
+        p: { damage: 55, radius: 30, dist: 34, stun: 0.5 }, pl: { damage: 18, radius: 3 },
+        evo: { tag: 'Obszar', name: 'Heaven Splitter', desc: 'The strike cracks the ground: a second, bigger blast further ahead.', icon: 'ab_t_slam_evo', bonus: { damage: 30, radius: 6 } },
+      },
+      {
+        id: 't_flurry', name: 'Thousand Cuts', icon: 'ab_t_flurry', desc: 'A flurry of slashes in a cone in front of you. Attack speed and Rhythm add slashes.', slot: 'e', kind: 'flurry', color: C.cyan,
+        cooldown: 7, cdPerLevel: -0.3, maxLevel: 5,
+        p: { damage: 15, radius: 48, slashes: 4 }, pl: { damage: 5, slashes: 1 },
+        evo: { tag: 'Szybkość', name: 'Two Heavens', desc: 'Both blades: every slash cuts in front of and behind you.', icon: 'ab_t_flurry_evo', bonus: { damage: 6, slashes: 2 } },
+      },
+      {
+        id: 't_step', name: 'Footwork', icon: 'ab_t_step', desc: 'A quick step with a moment of invulnerability.', slot: 'dash', kind: 'dash', color: C.blue,
+        cooldown: 2.6, cdPerLevel: 0, maxLevel: 1,
+        p: { dist: 66, iframes: 0.38 }, pl: {},
+      },
+      {
+        id: 't_iai', name: 'Iai', icon: 'ab_t_iai', desc: 'You dash through the enemies and sheathe your sword: a moment later everything on the path is cut. Spends all Rhythm.', slot: 'ult', kind: 'iai', color: C.white,
+        cooldown: 0, cdPerLevel: 0, charge: 120, maxLevel: 5,
+        p: { damage: 120, dist: 150, width: 18 }, pl: { damage: 45, dist: 10 },
+        evo: { tag: 'Krytyk', name: 'Final Cut', desc: 'After the cut you dash back along the path and cut it again.', icon: 'ab_t_iai_evo', bonus: { damage: 60, width: 6 } },
+      },
+    ],
+  },
 ];
 
 /** Procent z ułamka (do opisów). */
@@ -357,6 +393,12 @@ export function resourceDetails(kind: ResourceKind): string[] {
       `Maks. ${R.faith.max}. Zabójstwo w pobliżu +1 (elita 3, boss 10), leczenie +${R.faith.heal} za 1% HP.`,
       `Pełna: Łaska (koszt ${R.faith.grace}): leczenie ${pc(R.faith.graceHeal)} HP, tarcza ${pc(R.faith.graceShield)} HP, sługi +${R.faith.minionLife} s.`,
       `Sąd (R) zużywa całą: +${pc(R.faith.judgDmg)} obrażeń za punkt, +1 cel za każde ${R.faith.judgExtra}.`,
+    ];
+    case 'rhythm': return [
+      `Max ${R.rhythm.max}. Every hit: +1 (at most every ${R.rhythm.gap} s).`,
+      `Each point: +${pc(R.rhythm.atk)} attack speed (full: +${pc(R.rhythm.atk * R.rhythm.max)}).`,
+      `Fades after ${R.rhythm.idle} s without hits. Getting hit costs ${pc(R.rhythm.hurtLoss)}.`,
+      `Iai (R) spends it all: +${pc(R.rhythm.iai)} damage per point.`,
     ];
   }
 }

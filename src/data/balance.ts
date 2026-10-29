@@ -85,6 +85,8 @@ export const BAL = {
      * jako ułamek HP, sługi +minionLife s) i zużycie `grace`. Sąd: +judgDmg obrażeń za punkt, +1 cel za judgExtra punktów, Sąd ostateczny zostawia `keep`.
      * Strażnicy leczą `guardHeal` maks. HP trafieniem; Opiekun: tarcza shieldPer za sługę (do shieldCap); Uświęcona ziemia przedłuża sługi o sanctLife s na sekundę.
      */
+    /** Rytm (Takezo): +1 za trafienie co `gap` s, +atk szybkości ataku za punkt; po `idle` s bez trafień opada `decay`/s; oberwanie zabiera hurtLoss; Iai +iai obrażeń za punkt. */
+    rhythm: { max: 30, gap: 0.1, atk: 0.015, idle: 1.5, decay: 8, hurtLoss: 0.4, iai: 0.03, dashCut: 5 },
     faith: { max: 100, range: 150, heal: 0.5, graceHeal: 0.15, graceShield: 0.1, minionLife: 3, grace: 60, judgDmg: 0.01, judgExtra: 10, keep: 0.3, guardHeal: 0.004, shieldPer: 0.03, shieldCap: 0.18, sanctLife: 0.5 },
   },
   /**
