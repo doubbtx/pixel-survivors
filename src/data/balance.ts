@@ -176,9 +176,9 @@ export const BAL = {
     margin: 0.08, perUpg: 0.5,
     melee: { kinds: ['aura', 'orbit', 'cleave', 'lash', 'nova'] as string[], w: { area: 1.4, duration: 0.9 } as Partial<Record<keyof Stats, number>> },
   },
-  /** Limit pojedynczego trafienia gracza jako ułamek maks. HP (0.59): `base`, +`perTorment` na poziom Udręki, do `max`. */
   /** Odrodzenie (Feniks i inne): nietykalność (s) i promień, w którym zwykli wrogowie giną, a pociski znikają. */
   revive: { iframes: 3, r: 130 },
+  /** Limit pojedynczego trafienia gracza jako ułamek maks. HP (0.59): `base`, +`perTorment` na poziom Udręki, do `max`. */
   hitCap: { base: 0.4, perTorment: 0.04, max: 0.8 },
   trance: { min: 3, taken: 0.15, killHeal: 0.002 },
   /** Zasięg wyboru celu broni naprowadzanych (było 200 / 170): strzelają do wrogów bliżej, nie z drugiego końca ekranu. */

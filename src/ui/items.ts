@@ -145,7 +145,7 @@ function takeAll(run: Run, first: Item): string {
   for (const it of items) {
     if (run.bag.length < BAL.bagSize) { run.stash(it); stashed++; } else gold += run.salvage(it);
   }
-  return gold > 0 ? `${tr('To backpack')}: ${stashed}, ${tr('salvaged')}: +${fmt(gold)} zł` : `${tr('To backpack')}: ${stashed}`;
+  return gold > 0 ? `${tr('To backpack')}: ${stashed}, ${tr(`salvaged: +${fmt(gold)} gold`)}` : `${tr('To backpack')}: ${stashed}`;
 }
 
 export class LootView {

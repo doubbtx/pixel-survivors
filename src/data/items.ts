@@ -209,7 +209,7 @@ export const SUPERS: SuperDef[] = [
   {
     id: 'echo', name: 'Echo ciosu', min: 0.02, max: 0.04, pct: true,
     desc: '{v} szansy, że trafienie powtórzy się z pełną siłą',
-    hooks: { onHit: (run, e, dmg, _c, v) => { if (rng.chance(chance(v))) run.damageEnemy(e, dmg, 'Echo ciosu'); } },
+    hooks: { onHit: (run, e, dmg, _c, v) => { if (rng.chance(chance(v))) run.damageEnemy(e, dmg, 'Echo ciosu', { proc: true }); } },
   },
   {
     id: 'storm', name: 'Gniew burzy', min: 0.02, max: 0.04, pct: true,
@@ -225,7 +225,7 @@ export const SUPERS: SuperDef[] = [
           hit.push(t.uid);
           const f = run.addFx('line', from.x, from.y, C.cyan, 0.15);
           if (f) { f.x2 = t.x; f.y2 = t.y; }
-          run.damageEnemy(t, dmg, 'Gniew burzy');
+          run.damageEnemy(t, dmg, 'Gniew burzy', { proc: true });
           from = t;
         }
       },
@@ -244,7 +244,7 @@ export const SUPERS: SuperDef[] = [
   {
     id: 'pyre', name: 'Ognista dusza', min: 0.05, max: 0.1, pct: true,
     desc: '{v} szansy, że zabity wróg wybuchnie (50% jego maks. HP)',
-    hooks: { onKill: (run, e, v) => { if (!e.boss && rng.chance(chance(v))) run.queueExplosion(e.x, e.y, 20, e.maxHp * 0.5, 'Ognista dusza', C.orange); } },
+    hooks: { onKill: (run, e, v) => { if (!e.boss && !run.chainKill() && rng.chance(chance(v))) run.queueExplosion(e.x, e.y, 20, e.maxHp * 0.5, 'Ognista dusza', C.orange); } },
   },
   {
     id: 'midas', name: 'Dotyk Midasa', min: 0.01, max: 0.02, pct: true,

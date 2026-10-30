@@ -664,7 +664,7 @@ export class GameScreen implements Screen {
     }
     const parts: string[] = [];
     if (fresh.length) parts.push(tr(fresh.length === 1 ? '+1 item to backpack' : `+${fresh.length} items to backpack`));
-    if (gold > 0) parts.push(`${tr('salvaged')}: +${fmt(gold)} zł`);
+    if (gold > 0) parts.push(tr(`salvaged: +${fmt(gold)} gold`));
     const swap = fresh.length ? this.autoEquipNote(fresh) : '';
     if (swap) parts.push(swap);
     sfx.play('chest');
@@ -1186,8 +1186,11 @@ export class GameScreen implements Screen {
     const ly = y + ch + 5, room = Math.max(0, Math.floor((this.endY + this.endH - ly - 13) / 10)) * 2;
     // Pierwszy run bohatera: plakietki „Record!” bez wcześniejszych rekordów — zamiast sprzecznego „bez rekordów” (playtest).
     const first = !broke.length && cards.some((c) => c.rec);
-    drawText(g, broke.length ? 'Records broken' : first ? 'Your first records! Beat them next time.' : 'No records broken this time', END_X + 12, ly, broke.length || first ? C.gold : C.lavender);
-    if (broke.length > room) broke.splice(room - 1, broke.length, `+${broke.length - room + 1} more`);
+    // Niski panel (dużo linii informacji nad zakładkami): bez miejsca na listę sama liczba w tytule — wcześniej
+    // splice(-1, …) zostawiał wszystkie wpisy poza ostatnim i lista wchodziła na menu.
+    const title = broke.length ? (room ? 'Records broken' : `${tr('Records broken')}: ${broke.length}`) : first ? 'Your first records! Beat them next time.' : 'No records broken this time';
+    drawText(g, title, END_X + 12, ly, broke.length || first ? C.gold : C.lavender);
+    if (broke.length > room) broke.splice(Math.max(0, room - 1), broke.length, ...(room ? [`+${broke.length - room + 1} more`] : []));
     broke.forEach((t, i) => {
       const bx = END_X + 16 + (i % 2) * (END_W / 2 - 10), by = ly + 11 + Math.floor(i / 2) * 10;
       drawText(g, '-', bx, by, C.gold);

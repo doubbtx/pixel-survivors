@@ -78,7 +78,7 @@ const ROMAN_TIER = ['', 'I', 'II', 'III', 'IV'];
 
 /**
  * Źródła zadające procent HP wroga — pomijane w pomiarze siły buildu (inaczej mocniejsi wrogowie podbijaliby DPS),
- * razem z obrażeniami wywołanymi przez ich trafienia (hooki onHit); takie trafienia nie nakładają żywiołów.
+ * nie nakładają żywiołów, nie krytykują i nie wywołują hooków onHit; zabici przez nie nie wybuchają ponownie (`chainKill`).
  */
 const PCT_SOURCES = new Set(['Egzekucja', 'Ognista dusza', 'Wybuchowe zgony', 'Synergia: Ogień', 'Supernowa', 'Death Mark: execute']);
 
@@ -93,6 +93,11 @@ export interface DamageOpts {
   dot?: boolean;
   /** Bez hooków onHit (płomienie z hooków trafienia, data/cards.ts PROC_FIRES) — żywioły i zasób działają. */
   noHooks?: boolean;
+  /**
+   * Trafienie wtórne (Krytyczna masa, Echo ciosu, Gniew burzy): bez krytyka i bez hooków onHit. Dostaje już końcowe
+   * obrażenia trafienia, które je wywołało — ponowny krytyk i kolejne hooki dawały kaskadę x2-x5 na przeskok (0.60).
+   */
+  proc?: boolean;
 }
 
 const ELEMENT_LIST: Element[] = ['fire', 'ice', 'lightning', 'poison'];
@@ -535,8 +540,6 @@ export class Run {
   private eliteLifeN = 0;
   /** Źródło ostatniego trafienia (np. Żniwo: czy wroga zabiła dusza). */
   private lastHitSrc = '';
-  /** > 0 w trakcie hooków trafienia procentowego (PCT_SOURCES). */
-  private pctDepth = 0;
   nextEvent = 0;
   spawnAcc = 0;
   private uid = 1;
@@ -1293,6 +1296,11 @@ export class Run {
     if (f) f.r = Math.max(1, Math.min(4, Math.round((r * 1.5 * 2) / 30)));
   }
 
+  /** Ostatnie zabójstwo zadane źródłem procentowym (wybuch z zabójstwa, Egzekucja): wybuchy z zabójstw go pomijają (łańcuch głębokości 1). */
+  chainKill(): boolean {
+    return PCT_SOURCES.has(this.lastHitSrc);
+  }
+
   /** Wybuch w następnym kroku, z limitem na krok — dla efektów wyzwalanych zabójstwami. */
   queueExplosion(x: number, y: number, r: number, dmg: number, src: string, col: number): void {
     if (this.explosionsThisStep >= BAL.explosionBudget) return;
@@ -1483,8 +1491,12 @@ export class Run {
   damageEnemy(e: Enemy, base: number, src: string, o: DamageOpts = {}): void {
     if (e.dead || (e.boss && e.invuln > 0)) return;
     const st = this.stats;
+    // Źródła procentowe (wybuchy z zabójstw, Egzekucja), reakcje żywiołów i trafienia wtórne: bez krytyka i bez hooków
+    // onHit (0.60) — inaczej 30% maks. HP × krytyk zabijało sąsiada, który znów wybuchał (łańcuch niezależny od HP
+    // wrogów i pogoni), a reakcja liczona z już skrytykowanego trafienia krytykowała drugi raz.
+    const secondary = !!o.proc || PCT_SOURCES.has(src) || REACTION_COL[src] !== undefined;
     let mult = 1;
-    if (!o.dot && (o.forceCrit || rng.chance(Math.min(1, st.crit + (this.srcCrit.get(src) ?? 0) + resourceCrit(this))))) {
+    if (!o.dot && !secondary && (o.forceCrit || rng.chance(Math.min(1, st.crit + (this.srcCrit.get(src) ?? 0) + resourceCrit(this))))) {
       mult = st.critMult;
       if (this.flag('overcrit') > 0 && st.crit > 1 && rng.chance(Math.min(1, st.crit - 1))) mult *= st.critMult;
     }
@@ -1531,7 +1543,7 @@ export class Run {
     if (!this.reduceFlash && this.enemies.count < BAL.readability.flashCrowd) e.flash = 3;
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
-    const pct = PCT_SOURCES.has(src) || this.pctDepth > 0;
+    const pct = PCT_SOURCES.has(src);
     // Siła buildu bez powinowactwa mapy: mapa podatna / odporna działa w pełni, pogoń HP jej nie wyrównuje.
     if (!pct) this.dmgStep += dealt / (resist * weak * soft);
     this.elemDmg[el ?? 'none'] = (this.elemDmg[el ?? 'none'] ?? 0) + dealt / (resist * weak);
@@ -1588,9 +1600,7 @@ export class Run {
     const cull = this.flag('cull');
     if (cull > 0 && !e.boss && e.hp > 0 && e.hp < e.maxHp * cull) e.hp = 0;
     sfx.play('hit');
-    if (pct) this.pctDepth++;
-    if (!o.noHooks) this.emit('onHit', e, dmg, crit);
-    if (pct) this.pctDepth--;
+    if (!o.noHooks && !secondary) this.emit('onHit', e, dmg, crit);
     if (e.hp <= 0 && !e.dead) this.killEnemy(e);
   }
 
@@ -1997,10 +2007,11 @@ export class Run {
       if (this.revivesLeft > 0) {
         this.revivesUsed++;
         p.hp = this.stats.maxHp * 0.5;
-        // Odrodzenie (0.59, prośba gracza): dłuższa nietykalność, zwykli wrogowie wokół giną (boss nie), wrogie pociski znikają.
+        // Odrodzenie (0.59, prośba gracza): dłuższa nietykalność, zwykli wrogowie wokół giną, wrogie pociski znikają.
+        // Bez bossów, elit i minibossów (zachowanie 'warden'): inaczej Feniks kończył Polowanie, loch i skarbiec i dawał łup elit.
         const R = BAL.revive;
         p.iframes = R.iframes;
-        this.enemiesInCircle(p.x, p.y, R.r, (e) => { if (!e.boss && !e.dead) this.killEnemy(e); });
+        this.enemiesInCircle(p.x, p.y, R.r, (e) => { if (!e.boss && !e.elite && e.def.behavior !== 'warden' && !e.dead) this.killEnemy(e); });
         for (const b of [...this.bullets.items]) if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < R.r * R.r) this.bullets.release(b);
         this.explode(p.x, p.y, 60, this.cardDamage(40), 'Feniks', C.orange, 6);
         const ring = this.addFx('ring', p.x, p.y, C.orange, 0.6);

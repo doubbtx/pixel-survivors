@@ -212,7 +212,7 @@ export const CARDS: CardDef[] = [
   { id: 'g_overheal', name: 'Nadmiar życia', rarity: 'gold', tags: ['Tarcze', 'Życie'], desc: 'Nadmiarowe leczenie zamienia się w tarczę (maks. 50% HP).', flags: { overhealShield: 0.5 }, stats: { regen: 0.3 } },
   {
     id: 'g_explode', name: 'Wybuchowe zgony', rarity: 'gold', tags: ['Ogień', 'Obszar'], desc: 'Zabici wrogowie wybuchają (30% ich maks. HP).',
-    hooks: { onKill: (run, e) => { if (!e.boss) run.queueExplosion(e.x, e.y, 18 * run.stats.area, e.maxHp * 0.3, 'Wybuchowe zgony', C.orange); } },
+    hooks: { onKill: (run, e) => { if (!e.boss && !run.chainKill()) run.queueExplosion(e.x, e.y, 18 * run.stats.area, e.maxHp * 0.3, 'Wybuchowe zgony', C.orange); } },
   },
   {
     id: 'g_critchain', name: 'Krytyczna masa', rarity: 'gold', tags: ['Krytyk'], desc: 'Trafienie krytyczne: 25% szans na piorun do 2 pobliskich wrogów.',
@@ -227,7 +227,7 @@ export const CARDS: CardDef[] = [
           hit.push(t.uid);
           const f = run.addFx('line', from.x, from.y, C.yellow, 0.12);
           if (f) { f.x2 = t.x; f.y2 = t.y; }
-          run.damageEnemy(t, dmg * 0.5, 'Krytyczna masa');
+          run.damageEnemy(t, dmg * 0.5, 'Krytyczna masa', { proc: true });
           from = t;
         }
       },
