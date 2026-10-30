@@ -18,6 +18,13 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.60',
+    lines: [
+      "Balance: standing still is no longer safe. Kill explosions, reactions and chain effects no longer crit a second time or set off more explosions, so enemies stop dying off-screen. Lifesteal heals at most 4% of your max HP per second, ranged enemies fire as soon as they are in range, and late acts keep getting harder.",
+      "The end screen shows every card, damage source and record (scroll, point or tap an icon for details), and the DPS chart uses a log scale. Phoenix no longer kills elites and minibosses.",
+    ],
+  },
+  {
     version: '0.59',
     lines: [
       "A single hit can take at most 40% of your max HP (more on Torment): glass-cannon builds still hurt, but a boss no longer kills you in one frame. Phoenix and other revives now give 3 s of invulnerability, wipe the enemies around you and clear nearby bullets; the end screen shows revives used on the map.",
