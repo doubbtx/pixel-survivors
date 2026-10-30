@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.61.0)
+## Stan (wersja 0.61.1)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -811,6 +811,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   minuty Endless; co `every` punktów najbliższa zablokowana zawartość z kolejki). `Run.content` (= `save.unlocks`) filtruje
   pulę awansu (systems/levelup.ts `openFusions`, `openEvolves`), `cardPool`. UI: Księga ewolucji, Arsenał i Kolekcja kart
   pokazują warunek, ekran końca „Next discovery x/3”. Zapis v12 (migracja 11 → 12: kto grał, dostaje wszystko).
+- 0.61.1: menu główne — wariant kafelka łąki liczony z kolumny przesuniętego świata (`menuBackdrop`, `col`); wcześniej co TILE
+  pikseli wszystkie kafelki wracały do poprzedniego wzoru i trawa przeskakiwała.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`
