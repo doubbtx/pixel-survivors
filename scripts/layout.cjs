@@ -7,7 +7,8 @@
  *   npm run dev                      (w drugim terminalu)
  *   node scripts/layout.cjs                  (oba języki)
  *   node scripts/layout.cjs lang=pl only=menu   (only: menu | game)
- *   warianty: hints=1 (podpowiedzi włączone), small=1 (Text size Normal), wide=1 (ekran 20:9), touch=1 (sterowanie dotykiem), pad=1 (przyciski pada w napisach)
+ *   warianty: hints=1 (podpowiedzi włączone), small=1 (Text size Normal), wide=1 (ekran 20:9), touch=1 (sterowanie dotykiem), pad=1 (przyciski pada w napisach),
+ *             hud=1.5 (rozmiar HUD-u; domyślnie 1; progi wystawania i rozmiaru ramek liczone w jednostkach skalowanego bloku)
  *
  * Zrzuty sprawdzanych ekranów: /tmp/layout-shots/<język>/. Podpowiedzi wyłączone (mają własne miejsca, HINT_BOX).
  * Celowe nakładanie nie jest zgłaszane: napis przemalowany na początku innego (np. czerwona nazwa modyfikatora mapy)
@@ -74,8 +75,10 @@ const PATCH = () => {
   const K = () => document.querySelector('canvas').height / 270;
   const OX = () => (document.querySelector('canvas').width / K() - 480) / 2;
   const box = (g, x, y, w, h) => { const t = g.getTransform(), k = K(); return [(t.a * x + t.e) / k - OX(), (t.d * y + t.f) / k, (t.a * w) / k, (t.d * h) / k]; };
+  // Skala rysowania względem interfejsu (bloki HUD-u przy większym rozmiarze HUD-u): progi liczone w jednostkach bloku.
+  const sc = (g) => g.getTransform().a / K();
   const oRR = P.roundRect;
-  P.roundRect = function (x, y, w, h, r) { if (st.on && this.canvas.isConnected) { const b = box(this, x, y, w, h); if (b[2] >= 12 && b[3] >= 8) st.items.push({ k: 'r', b, i: st.seq++ }); } return oRR.call(this, x, y, w, h, r); };
+  P.roundRect = function (x, y, w, h, r) { if (st.on && this.canvas.isConnected) { const b = box(this, x, y, w, h); if (w >= 12 && h >= 8) st.items.push({ k: 'r', b, i: st.seq++ }); } return oRR.call(this, x, y, w, h, r); };
   // Przycinanie (przewijane listy): ostatni prostokąt ścieżki + stos save/restore.
   let lastRect = null; const clipStack = []; let clipNow = null;
   const oRect = P.rect; P.rect = function (x, y, w, h) { if (this.canvas.isConnected) lastRect = box(this, x, y, w, h); return oRect.call(this, x, y, w, h); };
@@ -93,7 +96,7 @@ const PATCH = () => {
         if (x1 - x0 < 1 || y1 - y0 < 1) return oFT.call(this, s, x, y);
         bb = [x0, y0, x1 - x0, y1 - y0];
       }
-      st.items.push({ k: 't', s, b: bb, i: st.seq++, col: String(this.fillStyle) });
+      st.items.push({ k: 't', s, b: bb, i: st.seq++, col: String(this.fillStyle), sc: sc(this) });
     }
     return oFT.call(this, s, x, y);
   };
@@ -109,11 +112,11 @@ async function run(lang, name, steps, report, errs, misses) {
     const u = await import('/src/data/unlocks.ts');
     localStorage.setItem('pixel-survivors-save', JSON.stringify({
       version: 10, unlocks: [...u.ALL_UNLOCKS], tutorialDone: true, seenVersion: '9.9.9',
-      settings: { flashWarned: true, debug: true, lang, volume: 0, music: 0, textLarge: !a.small, hints: !!a.hints, autoEquip: false }, // bez auto-ekwipunku: zwykły łup otwiera okna (kroki loot*)
+      settings: { flashWarned: true, debug: true, lang, volume: 0, music: 0, textLarge: !a.small, hints: !!a.hints, autoEquip: false, hudScale: +(a.hud ?? 1) }, // bez auto-ekwipunku: zwykły łup otwiera okna (kroki loot*)
     }));
   }, { lang, ...args });
   await p.reload(); await p.waitForTimeout(1500);
-  const tag = ['hints', 'small', 'wide', 'touch', 'pad'].filter((k) => args[k]).join('-'), dir = `/tmp/layout-shots/${tag ? tag + '-' : ''}${lang}`, ox = args.wide ? (1800 / 3 - 480) / 2 : 0;
+  const tag = ['hints', 'small', 'wide', 'touch', 'pad', 'hud'].filter((k) => args[k]).join('-'), dir = `/tmp/layout-shots/${tag ? tag + '-' : ''}${lang}`, ox = args.wide ? (1800 / 3 - 480) / 2 : 0;
   fs.mkdirSync(dir, { recursive: true });
   for (const st of steps) {
     if (st.k) for (const key of st.k.split(' ')) { await p.keyboard.press(key, { delay: 50 }); await p.waitForTimeout(st.w ?? 250); }
@@ -140,7 +143,8 @@ async function run(lang, name, steps, report, errs, misses) {
         if (cont) {
           const [rx, ry, rw, rh] = cont.b;
           const L = rx - x, R = x + w - (rx + rw), T = ry - y, Bo = y + h - (ry + rh);
-          const parts = [['L', L], ['R', R], ['T', T], ['B', Bo]].filter(([, v]) => v > E).map(([k, v]) => k + v.toFixed(1));
+          // Tolerancja w jednostkach bloku: wystawanie o ułamek piksela w skali 1 zostaje ułamkiem po powiększeniu HUD-u.
+          const parts = [['L', L], ['R', R], ['T', T], ['B', Bo]].filter(([, v]) => v > E * Math.max(1, t.sc ?? 1)).map(([k, v]) => k + v.toFixed(1));
           if (parts.length) issues.push(`SPILL "${t.s}" ${parts.join(' ')} box@${cont.b.map((v) => v.toFixed(0)).join(',')}`);
         }
       }

@@ -168,7 +168,18 @@ export const BAL = {
   /** Automatyczny ekwipunek po łupie: zamiana przy przewadze oceny o `margin` i `perUpg` pkt za każde ulepszenie założonego. */
   /** Scenariusze map (0.56): bezpieczniki rytmu, oddech, gęstość zwykłych fal w trakcie uderzenia, czas „trwania” uderzenia. */
   scripts: { first: 20, gap: 12, last: 0.9, breath: 5, beatDensity: 0.85, beatDur: 10, tierSize: 0.1, size: 1.3 },
-  autoEquip: { margin: 0.08, perUpg: 0.5 },
+  /**
+   * `melee`: profil wag oceny (itemScore) dla buildu z przewagą broni bliskiego zasięgu (`kinds`); reszta wag bez zmian.
+   * Ilość (`amount`) zostaje przy domyślnej wadze: orbita, fala, smagnięcie i cięcie rosną z nią liniowo (systems/weapons.ts).
+   */
+  autoEquip: {
+    margin: 0.08, perUpg: 0.5,
+    melee: { kinds: ['aura', 'orbit', 'cleave', 'lash', 'nova'] as string[], w: { area: 1.4, duration: 0.9 } as Partial<Record<keyof Stats, number>> },
+  },
+  /** Limit pojedynczego trafienia gracza jako ułamek maks. HP (0.59): `base`, +`perTorment` na poziom Udręki, do `max`. */
+  /** Odrodzenie (Feniks i inne): nietykalność (s) i promień, w którym zwykli wrogowie giną, a pociski znikają. */
+  revive: { iframes: 3, r: 130 },
+  hitCap: { base: 0.4, perTorment: 0.04, max: 0.8 },
   trance: { min: 3, taken: 0.15, killHeal: 0.002 },
   /** Zasięg wyboru celu broni naprowadzanych (było 200 / 170): strzelają do wrogów bliżej, nie z drugiego końca ekranu. */
   homing: { bolt: 160, chain: 130 },

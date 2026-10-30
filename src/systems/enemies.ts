@@ -672,6 +672,20 @@ function shoot(run: Run, e: Enemy, sh: ShootDef, dmg: number): void {
 /** Elita "Ostrzał": kwiat skręcających pocisków. */
 const ELITE_FLOWER: Volley = { shape: 'ring', count: 8, speed: 45, turn: 0.8, altTurn: true, sprite: 'eb_orange' };
 
+/**
+ * Udręka „Pośmiertna salwa” (deathBurst): zabita elita po chwili wystrzeliwuje pierścień (kwiat jak Ostrzał, gęstszy).
+ * Bez salwy, gdy cel mapy został już wykonany (ekran zwycięstwa) albo boss mapy już padł (jak kopie Rozszczepiacza).
+ */
+export function eliteDeathBurst(run: Run, e: Enemy): void {
+  const x = e.x, y = e.y, dmg = e.damage * BAL.bulletDmg;
+  run.schedule(0.2, () => {
+    if (run.outcome !== 'none' || (run.bossSpawned && !run.boss && run.mode !== 'endless')) return;
+    fireVolley(run, x, y, { ...ELITE_FLOWER, count: 12 }, rng.range(0, TAU), dmg);
+    const f = run.addFx('ring', x, y, C.orange, 0.25);
+    if (f) f.r = 22;
+  });
+}
+
 /** Ruch, strzelanie, separacja, odrzut, obrażenia kontaktowe i usuwanie martwych. */
 export function updateEnemies(run: Run, dt: number): void {
   const items = run.enemies.items;

@@ -11,7 +11,7 @@ import { startBeat, type Spot } from './situations';
  * Scenariusz mapy (0.56, data/scripts.ts): kolejne uderzenia przy ułamku postępu celu, z bezpiecznikami rytmu
  * (pierwsze najwcześniej po `first` s, odstęp ≥ `gap` s, żadnego po `last` postępu). Rój, szarża i linia strzelców
  * idą przez sytuacje (`beat_*`: zapowiedź, „Rozbite!”, sitLog), twardziel to elita ze stałymi cechami mapy, ostrzał
- * terenu to kręgi `run.strikes` w miejscu gracza, oddech wstrzymuje zwykłe fale.
+ * terenu to kręgi `run.strikes` w miejscu gracza, oddech wstrzymuje zwykłe fale (w Udręce noBreath zamiast niego ostrzał).
  */
 export function updateScript(run: Run, dt: number): void {
   run.breathT = Math.max(0, run.breathT - dt);
@@ -48,7 +48,9 @@ function fireBeat(run: Run, beat: Beat): void {
   const foes = (role: 'swarm' | 'rush' | 'shoot' | 'tank') => ROLE_FOES[role][biome] ?? ROLE_FOES[role][0];
   const a0 = rng.range(0, Math.PI * 2);
   const spots: Spot[] = [];
-  switch (beat.role) {
+  // Udręka „Bez wytchnienia” (noBreath): oddech staje się ostrzałem terenu.
+  const role = beat.role === 'breath' && run.flag('noBreath') > 0 ? 'bombard' : beat.role;
+  switch (role) {
     case 'breath':
       run.breathT = S.breath;
       run.showBanner('A moment of calm');

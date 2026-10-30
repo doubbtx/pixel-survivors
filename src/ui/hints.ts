@@ -5,6 +5,8 @@ import { sfx } from '../core/audio';
 import type { SaveData } from '../core/save';
 import { panel } from './widgets';
 import { tile, UI } from './theme';
+import { hudScale } from '../core/input';
+import { belowHud, hudGap } from './hud';
 
 /**
  * Podpowiedzi kontekstowe: każda pokazuje się raz (zapis `save.seenHints`), w chwili gdy gracz pierwszy raz
@@ -115,9 +117,15 @@ export class Hints {
   render(r: Renderer, box: HintBox | null, touch: boolean): void {
     if (!this.cur || !this.save.settings.hints) return;
     const overlay = box !== null;
-    const b = box ?? (touch ? { x: (W - 192) / 2, y: 52, w: 192 } : { x: (W - 240) / 2, y: H - UI.edge - UI.ability - 8, w: 240, up: true });
+    // Na dotyku pod blokami lewego górnego rogu (karta, statusy, synergie) i banerem (ui/hud.ts
+    // belowHud), węższa, gdy po prawej sięgają niżej przyciski dotykowe albo panel zadania; inaczej w prawej części dołu nad
+    // paskiem umiejętności (jak w nakładkach), bo urośnięte gniazda broni i komunikat ekranu gry zajmują środek dołu.
+    const k = hudScale(), tx = (W - 192) / 2;
+    const b = box ?? (touch ? { x: tx, y: 52, w: Math.min(192, hudGap(52)[1] - UI.gap - tx) }
+      : k > 1 ? { x: 232, y: H - UI.edge - (UI.ability + 4) * k - 2, w: W - 240, up: true }
+      : { x: (W - 240) / 2, y: H - UI.edge - UI.ability - 8, w: 240, up: true });
     const lines = wrapText((touch && TOUCH_TEXT[this.cur]) || HINTS[this.cur], (b.w - 12) / HINT_SCALE);
-    const h = 9 + lines.length * 9, y = b.up ? b.y - h : b.y;
+    const h = 9 + lines.length * 9, y = b.up ? b.y - h : !box && touch ? belowHud(b.x, b.x + b.w, b.y, h) : b.y;
     const a = Math.min(1, this.t * 3, (SHOW - this.t) * 6);
     r.withAlpha(a, () => {
       // Cicha płytka (nie kolejne okno): kamienne tło i turkusowy znacznik po lewej, który mówi „to wskazówka”.

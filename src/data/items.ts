@@ -741,8 +741,11 @@ const SCORE_W: Partial<Record<keyof Stats, number>> = {
   might: 1.2, atkSpeed: 1.2, amount: 2, crit: 1, critMult: 0.8, area: 0.7, duration: 0.5, cdr: 0.7, elemPower: 0.7,
   maxHp: 0.8, armor: 0.8, regen: 0.6, lifesteal: 0.8, speedBonus: 0.5, magnet: 0.2, growth: 0.3, greed: 0.2,
 };
-export function itemScore(it: Item | null, ref = it?.ilvl ?? 1): number {
+/** Wagi oceny (`over` nadpisuje część z nich, np. profil buildu w Run.autoEquip). */
+export type ScoreWeights = Partial<Record<keyof Stats, number>>;
+export function itemScore(it: Item | null, ref = it?.ilvl ?? 1, over?: ScoreWeights): number {
   if (!it) return -1;
+  const W = over ? { ...SCORE_W, ...over } : SCORE_W;
   // Normalizacja do maksymalnego rzutu na wspólnym poziomie `ref` (najwyższy ilvl w porównaniu): HP skaluje się wykładniczo,
   // obrażenia liniowo — bez tego automat w późnej grze wybierał HP zamiast obrażeń (review Agenta 2).
   const kind = BASE_BY_ID[it.base].kind;
@@ -750,12 +753,12 @@ export function itemScore(it: Item | null, ref = it?.ilvl ?? 1): number {
   const st = itemStats(it);
   if (it.implicit.mode === 'add') {
     const k = it.implicit.stat, v = implicitOf(it);
-    s += (v / IMPLICIT[kind].value(ref)) * (SCORE_W[k] ?? 0.4);
+    s += (v / IMPLICIT[kind].value(ref)) * (W[k] ?? 0.4);
     st[k] = (st[k] ?? 0) - v;
   }
   for (const [k, v] of Object.entries(st) as [keyof Stats, number][]) {
     const a = AFFIX_BY_STAT[k];
-    s += (v / (a ? a.max * affixScale(a, ref) : 1)) * (SCORE_W[k] ?? 0.4);
+    s += (v / (a ? a.max * affixScale(a, ref) : 1)) * (W[k] ?? 0.4);
   }
   if (it.unique) s += 6;
   if (it.super) s += 3;

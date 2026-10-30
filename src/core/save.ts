@@ -79,6 +79,8 @@ export interface Settings {
   textLarge: boolean;
   /** Ograniczenie błysków (dostępność): bez migania i białych błysków. */
   reduceFlash: boolean;
+  /** Rozmiar HUD-u w grze (1 / 1.25 / 1.5; core/input.ts `setHudScale`): bloki w rogach rosną w stronę środka. Większy domyślnie na dotyku. */
+  hudScale: number;
   /** Ostrzeżenie o błyskach pokazane (pierwsze uruchomienie). */
   flashWarned: boolean;
   /** Przypisania klawiszy (core/input.ts REBIND: akcja → KeyboardEvent.code); brak = domyślny. */
@@ -224,7 +226,8 @@ function defaults(): SaveData {
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
       playerFx: 'dim', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en',
-      textLarge: true, reduceFlash: false, flashWarned: false, keys: {} },
+      textLarge: true, reduceFlash: false, flashWarned: false, keys: {},
+      hudScale: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches ? 1.25 : 1 },
     records: {},
     slots: { endless: null, expedition: null },
     notice: '',
@@ -288,10 +291,19 @@ export function loadSave(): SaveData {
   };
 }
 
-/** Ustawienia z zapisu: brakujące pola domyślne; dawne "ukryj pociski gracza" przechodzi w `playerFx: 'hidden'`. */
+/** Dozwolone rozmiary HUD-u (Ustawienia → Czytelność). */
+export const HUD_SCALES = [1, 1.25, 1.5];
+
+/**
+ * Ustawienia z zapisu: brakujące pola domyślne; dawne "ukryj pociski gracza" przechodzi w `playerFx: 'hidden'`;
+ * rozmiar HUD-u spoza listy (stary zapis bez pola, ręczna edycja) → domyślny.
+ */
 function settingsOf(base: Settings, saved: Partial<Settings> & { hideProjectiles?: boolean } = {}): Settings {
   const { hideProjectiles, ...rest } = saved;
-  return { ...base, ...rest, playerFx: rest.playerFx ?? (hideProjectiles ? 'hidden' : 'visible') };
+  return {
+    ...base, ...rest, playerFx: rest.playerFx ?? (hideProjectiles ? 'hidden' : 'visible'),
+    hudScale: HUD_SCALES.includes(rest.hudScale as number) ? (rest.hudScale as number) : base.hudScale,
+  };
 }
 
 export function writeSave(d: SaveData): void {

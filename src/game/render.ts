@@ -19,7 +19,7 @@ import type { Enemy } from '../entities/types';
 import { taskTarget } from '../systems/tasks';
 import { drawElemMark } from '../gfx/elemmark';
 import { drawWeather } from '../gfx/weather';
-import { situationRing } from '../systems/situations';
+import { situationRing, situationWarn } from '../systems/situations';
 
 /** Pociski z 4 klatkami obrotu (sprite `${nazwa}0..3`): Sierp krwi, Kości. */
 const SPIN = new Set(['sickle', 'dice', 'gdice']);
@@ -882,7 +882,7 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
   }
   // Zapowiedź sytuacji: znaczniki w miejscach pojawienia się (w polu widzenia), krąg wokół gracza przy pierścieniach.
   if (run.situation) {
-    const w = run.situation, k = 1 - w.t / BAL.situations.warn, pulse = !run.reduceFlash && run.step % 10 < 5;
+    const w = run.situation, k = 1 - w.t / situationWarn(run), pulse = !run.reduceFlash && run.step % 10 < 5;
     for (const s of w.spots) {
       if (!s.mark) continue;
       const sx = X(run.player.x + s.dx), sy = Y(run.player.y + s.dy), R = (s.key ? 9 : 7) * ZOOM;

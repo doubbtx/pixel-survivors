@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.59',
+    lines: [
+      "A single hit can take at most 40% of your max HP (more on Torment): glass-cannon builds still hurt, but a boss no longer kills you in one frame. Phoenix and other revives now give 3 s of invulnerability, wipe the enemies around you and clear nearby bullets; the end screen shows revives used on the map.",
+      "Phone: no keyboard labels on touch, Backpack and Build buttons next to pause, the same Back button in the top-left of every screen, a HUD size option (Settings > Readability), button names on touch ability slots. With auto-equip on, common and magic loot goes straight to the backpack with one message.",
+      "Torment now changes rules: short warnings, no breathers, elites explode into bullets, one fewer level-up option. Auto-equip prefers area and duration for melee builds and never takes off items with a super bonus or uniques. Ult cards only show up for the ultimate you picked. Plus 26 smaller fixes from the code review.",
+    ],
+  },
+  {
     version: '0.58',
     lines: [
       "Big bug-fix pass (code review by a team of agents): a crash when a boss died from your own hit chain, portals during a boss fight, Plague and Mushin fixes, lost loot and revives after resuming, many touch fixes (backpack, shop, map preview, relic swap, double-tap confirmations), keyboard selection no longer stolen by a resting mouse, translations, fire zones from Spark no longer multiply endlessly, and smoother frames with many enemies.",

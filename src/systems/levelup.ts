@@ -248,6 +248,11 @@ function statOptions(): Option[] {
   }));
 }
 
+/** Liczba kart w ofercie awansu: 3 + premia (maks. 4); Udręka „Klątwa kart” (cardCurse) zabiera jedną (min. 2). */
+export function offerCount(run: Run): number {
+  return Math.max(2, Math.min(4, 3 + run.stats.choices) - run.flag('cardCurse'));
+}
+
 /**
  * Losuje `count` różnych opcji (ważonych). Dostępna ewolucja (albo fuzja) jest zawsze wśród nich
  * (dawniej gwarantowała ją skrzynia, która teraz daje przedmioty). Brakujące miejsca dopełniają premie statystyk.

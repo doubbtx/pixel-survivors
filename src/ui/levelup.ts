@@ -5,7 +5,7 @@ import { drawText, wrapText, textWidth, descS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { RARITIES } from '../data/items';
-import { generateOptions, applyOption, canBanish, optionScore, type Option, type Recipe } from '../systems/levelup';
+import { generateOptions, offerCount, applyOption, canBanish, optionScore, type Option, type Recipe } from '../systems/levelup';
 import type { Run } from '../game/run';
 import { button, dim, inside, slot, cardFrame, cardBadge, cardIcon } from './widgets';
 import { hintShowing } from './hints';
@@ -135,7 +135,7 @@ export class LevelUpView {
   }
 
   private get count(): number {
-    return Math.min(4, 3 + this.run.stats.choices);
+    return offerCount(this.run);
   }
 
   private roll(): void {

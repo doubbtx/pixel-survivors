@@ -12,7 +12,7 @@ import { abilityMaxCd } from '../systems/abilities';
 import { passiveIcon } from '../data/passives';
 import { fmt, fmtTime, hpText } from '../util/format';
 import type { LoopStats } from '../core/loop';
-import { actionKey, abilitySlotPos, ABILITY_SLOT, TOUCH_PAUSE, TOUCH_MENU, TOUCH_BAG_PILL, touchMenuPos, STICK_R, type Input } from '../core/input';
+import { actionKey, abilitySlotPos, ABILITY_SLOT, TOUCH_PAUSE, TOUCH_MENU, TOUCH_BAG_PILL, touchMenuPos, touchColumn, STICK_R, hudScale, type Input } from '../core/input';
 import type { Run } from '../game/run';
 import { drawSynergyHud } from './synergies';
 import { resFrac, resMax } from '../systems/resource';
@@ -25,6 +25,7 @@ import { drawElemMark } from '../gfx/elemmark';
 import { situationName, situationRing } from '../systems/situations';
 import { UI, SMALL, OUT, tile, meter, iconSlot, cornerTag, label, approach } from './theme';
 import { hintShowing } from './hints';
+import { pointer } from './widgets';
 
 /**
  * HUD (tylko rysowanie; stan gry czyta z `Run`, własny stan animacji trzyma w `HudAnim`; rozmiary i kolory w ui/theme.ts).
@@ -206,12 +207,23 @@ const WALL_HINT_R = 400;
 const ARROW_MX = 26, ARROW_MY = 52;
 
 /**
+ * Wysokość komunikatów nad dolnymi blokami HUD-u (komunikat ekranu gry w ui/game-screen.ts, podpowiedź joysticka).
+ * Przy większym HUD-zie urośnięte gniazda zajmują dół, więc komunikat stoi nad napisami strzałek sekretów przy dolnej
+ * krawędzi (te sięgają do H − ARROW_MY·k − 17).
+ */
+export function messageY(): number {
+  const k = hudScale();
+  return k > 1 ? H - ARROW_MY * k - 27 : H - 40;
+}
+
+/**
  * Strzałki przy krawędzi ekranu do sekretów poza widokiem: obiekty mapy (grzyby: najbliższy), biały jeleń
  * i najbliższa pęknięta ściana. Z nazwą i odległością.
  */
-function drawSecretArrows(r: Renderer, run: Run): void {
+function drawSecretArrows(r: Renderer, run: Run, hk: number): void {
   // Świat na całą szerokość ekranu (SW), interfejs przesunięty o OX: współrzędne strzałek w układzie interfejsu.
-  const p = run.player, k = SW / VIEW_W;
+  // Odstęp od krawędzi rośnie z rozmiarem HUD-u (`hk`), jak bloki w rogach.
+  const p = run.player, k = SW / VIEW_W, mx = ARROW_MX * hk, my = ARROW_MY * hk;
   const targets: { x: number; y: number; label: string; col?: number }[] = [];
   let mush: MapObject | null = null;
   const d2 = (x: number, y: number) => (x - p.x) ** 2 + (y - p.y) ** 2;
@@ -233,7 +245,7 @@ function drawSecretArrows(r: Renderer, run: Run): void {
     const sx = (t.x - run.camX) * k - OX, sy = (t.y - run.camY) * k;
     if (sx > -OX && sx < W + OX && sy > 0 && sy < H) continue;
     const cx = W / 2, cy = H / 2, dx = sx - cx, dy = sy - cy;
-    const s = Math.min((W / 2 - ARROW_MX) / Math.max(1e-6, Math.abs(dx)), (H / 2 - ARROW_MY) / Math.max(1e-6, Math.abs(dy)));
+    const s = Math.min((W / 2 - mx) / Math.max(1e-6, Math.abs(dx)), (H / 2 - my) / Math.max(1e-6, Math.abs(dy)));
     const ax = cx + dx * s, ay = cy + dy * s, a = Math.atan2(dy, dx);
     const tri = (len: number, wid: number, col: number) => {
       r.g.fillStyle = PAL[col];
@@ -305,34 +317,38 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
 }
 
 /** Szał (Borgun) i błogosławieństwa kapliczek: małe wskaźniki z czasem pod kartą bohatera. Zwraca dolną krawędź. */
-function drawStatusRow(r: Renderer, run: Run, x: number, y: number): number {
+function drawStatusRow(r: Renderer, run: Run, x: number, y: number): [number, number] {
   const chips: { text: string; col: number; frac: number }[] = [];
   if (run.rageT > 0) chips.push({ text: `Szał ${Math.ceil(run.rageT)}s`, col: UI.threat, frac: Math.min(1, run.rageT / Math.max(run.rageT, run.rageMax)) });
   if (run.inBanner) chips.push({ text: `Banner +${Math.round(BAL.eliteTraits.bannerTaken * 100)}% dmg taken`, col: UI.threat, frac: 1 });
   if (run.flowT > 0) chips.push({ text: run.flowT === Infinity ? 'Flow' : `Flow ${Math.ceil(run.flowT)}s`, col: C.cyan, frac: run.flowT === Infinity ? 1 : run.flowT / run.flowMax });
   for (const b of run.buffs) chips.push({ text: Number.isFinite(b.t) ? `${b.name} ${Math.ceil(b.t)}s` : b.name, col: UI.reward, frac: 1 });
-  if (!chips.length) return y - UI.gap - 1;
+  if (!chips.length) return [y - UI.gap - 1, x];
   const maxX = UI.edge + UI.card.w + 60;
-  let cx = x;
+  let cx = x, right = x;
   for (const c of chips) {
     const w = textWidth(c.text) * smallS() + 8;
     if (cx > x && cx + w > maxX) { cx = x; y += 11; }
     tile(r, cx, y, w, 10, c.col);
     if (c.frac < 1) r.rect(cx + 1, y + 8.5, (w - 2) * c.frac, 0.75, c.col);
     drawText(r.g, c.text, cx + w / 2, y + 0.5, c.col, { align: 'center', ...SMALL });
+    right = Math.max(right, cx + w);
     cx += w + UI.gap;
   }
-  return y + 10;
+  return [y + 10, right];
 }
 
 /** Zegar, jeden pasek celu z licznikiem (albo pasek bossa), etykiety wydarzenia i kombo. */
-/** Środek górnej krawędzi: zegar, cel albo pasek bossa, wydarzenie i kombo. Zwraca dolną krawędź (baner pod spodem). */
-function drawCenter(r: Renderer, run: Run, a: HudAnim): number {
+/**
+ * Środek górnej krawędzi: zegar, cel albo pasek bossa, wydarzenie i kombo. Zwraca dolną krawędź (baner pod spodem).
+ * `left` / `right`: krawędzie bloków w górnych rogach (większy HUD) — pasek bossa z czaszką mieści się między nimi.
+ */
+function drawCenter(r: Renderer, run: Run, a: HudAnim, left: number, right: number): number {
   const g = r.g, cx = W / 2;
   drawText(g, fmtTime(run.time), cx, UI.edge + UI.xpH - 1, C.white, { align: 'center', scale: 1.5, ...OUT });
   let y = UI.edge + UI.xpH + 15;
   if (run.boss) {
-    const b = run.boss, bw = 150;
+    const b = run.boss, bw = Math.min(150, 2 * (right - 2 - cx), 2 * (cx - left - 13));
     drawText(g, run.bossTitle ?? run.levelInfo.bossName, cx, y - 1, C.salmon, { align: 'center', ...SMALL });
     meter(r, cx - bw / 2, y + 7, bw, 5, b.hp / b.maxHp, C.pink);
     // Boss słabnie (długa walka): napis z mnożnikiem nad paskiem.
@@ -361,17 +377,20 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim): number {
   if (ev) items.push([`${LEVEL_EVENTS[ev.id].name} ${Math.ceil(ev.t)}s`, LEVEL_EVENTS[ev.id].color, 1]);
   if (a.combo > 0.02) items.push([a.comboText, UI.reward, a.combo]);
   const ws = items.map(([t]) => textWidth(t) * smallS() + 8), total = ws.reduce((s, w) => s + w, 0) + UI.gap * 2 * (items.length - 1);
+  // Większy HUD: gdy obok siebie nie mieszczą się między blokami w rogach, jedna pod drugą.
+  const stack = hudScale() > 1 && items.length > 1 && total > 2 * Math.min(cx - left, right - cx) - 2 * UI.gap;
   let lx = cx - total / 2;
   items.forEach(([t, col, al], i) => {
     // Etykieta wsuwa się lekko z góry przy pojawieniu się i odjeżdża przy wygaszaniu.
+    if (stack) { label(r, t, cx, y - (1 - al) * 3, col, al); y += i < items.length - 1 ? 11 : 0; return; }
     label(r, t, lx + ws[i] / 2, y - (1 - al) * 3, col, al);
     lx += ws[i] + UI.gap * 2;
   });
   return y + (items.length ? 10 : 0);
 }
 
-/** Zabójstwa i złoto w jednym wierszu (prawy górny róg, szerokość minimapy). Zwraca dolną krawędź. */
-function drawCounters(r: Renderer, run: Run, a: HudAnim): number {
+/** Zabójstwa i złoto w jednym wierszu (prawy górny róg, szerokość minimapy). Zwraca lewą i dolną krawędź. */
+function drawCounters(r: Renderer, run: Run, a: HudAnim): [number, number] {
   const g = r.g, y = UI.edge + UI.xpH, right = W - UI.edge;
   const kills = fmt(run.kills), gold = fmt(Math.floor(a.goldShown));
   const kw = textWidth(kills) * smallS(), gw = textWidth(gold) * smallS();
@@ -383,7 +402,7 @@ function drawCounters(r: Renderer, run: Run, a: HudAnim): number {
   if (a.goldFlash > 0) r.withAlpha(a.goldFlash, () => r.roundRect(gx - 1, y + 1.5, gw + 2, 8, 1, C.gold));
   drawSprite(g, 'coin', gx - 6, y + 5.5);
   drawText(g, gold, right - 4, y + 1.5, a.goldFlash > 0.2 ? C.white : UI.reward, { align: 'right', ...SMALL });
-  return y + 11;
+  return [x, y + 11];
 }
 
 /** Panel zadania (pod minimapą): nazwa, nagroda, postęp i pasek czasu. */
@@ -396,8 +415,17 @@ function drawTask(r: Renderer, run: Run, x: number, y: number, w: number): void 
   meter(r, x + 3, y + 18, w - 6, 3, t.life / t.max, t.started && t.life < 5 ? UI.threat : C.cyan);
 }
 
-/** Bronie (górny rząd) i pasywki (dolny rząd): ikony, poziom w rogu, puste gniazda przygaszone bez ramek. */
-function drawInventory(r: Renderer, run: Run, touch: boolean): void {
+/** Szerokość bloku broni i pasywek (z mocą bossa i relikwiami) w skali 1, od lewej krawędzi gniazd. */
+function inventoryW(run: Run): number {
+  const S = UI.slot, step = S + UI.gap;
+  return Math.max(BAL.weaponSlots * step - UI.gap, run.power ? BAL.weaponSlots * step + 3 + S : 0, run.relics.length ? BAL.passiveSlots * step + 3 + run.relics.length * step - UI.gap : 0);
+}
+
+/**
+ * Bronie (górny rząd) i pasywki (dolny rząd): ikony, poziom w rogu, puste gniazda przygaszone bez ramek.
+ * `k`: skala bloku (rozmiar HUD-u) wokół lewego dolnego rogu — do obszaru dotyku plakietki plecaka.
+ */
+function drawInventory(r: Renderer, run: Run, touch: boolean, k: number): void {
   const g = r.g, S = UI.slot, step = S + UI.gap;
   const y1 = H - UI.edge - 2 * S - UI.gap, y2 = H - UI.edge - S;
   for (let i = 0; i < BAL.weaponSlots; i++) {
@@ -441,23 +469,35 @@ function drawInventory(r: Renderer, run: Run, touch: boolean): void {
     // Wysokość 10: przy dużym tekście (smallS 0.85) napis wystawał o 1 px pod plakietkę.
     tile(r, UI.edge, y1 - 12, tw, 10, C.lime);
     drawText(g, t, UI.edge + 3, y1 - 11.5, C.lime, SMALL);
-    // Rysowane w bloku przesuniętym o −OX (szeroki ekran): obszar dotyku we współrzędnych ekranu.
-    if (touch) Object.assign(TOUCH_BAG_PILL, { on: true, x: UI.edge - OX, y: y1 - 12, w: tw, h: 10 });
+    // Rysowane w bloku przesuniętym o −OX (szeroki ekran) i skalowanym wokół lewego dolnego rogu: obszar dotyku we współrzędnych ekranu.
+    if (touch) Object.assign(TOUCH_BAG_PILL, { on: true, x: UI.edge - OX, y: H - UI.edge + (y1 - 12 - (H - UI.edge)) * k, w: tw * k, h: 10 * k });
   }
 }
 
 /** Znaki gniazd umiejętności na dotyku (kolejność jak ABILITIES: od lewej). */
 const TOUCH_LABEL: Record<AbilitySlot, string> = { q: 'Q', e: 'E', dash: 'Dodge', ult: 'R' };
 
-/** Pasek umiejętności: odnowienie przez przyciemnienie i licznik, ładunek R od dołu, jeden rozbłysk przy gotowości. */
-function drawAbilities(r: Renderer, run: Run, a: HudAnim, touch: boolean): void {
+/**
+ * Pasek umiejętności: odnowienie przez przyciemnienie i licznik, ładunek R od dołu, jeden rozbłysk przy gotowości.
+ * Rysowany w skali 1 pod przekształceniem płótna (rozmiar HUD-u `k`): na dotyku wokół prawego dolnego rogu (jak obszary
+ * dotyku w core/input.ts), inaczej wokół środka dolnej krawędzi — odsunięty w prawo, gdy zachodziłby na gniazda broni
+ * (prawa krawędź `invRight`, współrzędne interfejsu).
+ */
+function drawAbilities(r: Renderer, run: Run, a: HudAnim, touch: boolean, k: number, invRight: number): void {
+  if (touch) { corner(r, 0, W + OX - 4, H - 4, k, () => drawAbilityBar(r, run, a, true, 0)); return; }
+  const half = (4 * UI.ability + 3 * UI.abilityGap) / 2 + 3, cx = Math.max(W / 2, invRight + 2 * UI.gap + half * k);
+  corner(r, 0, cx, H - UI.edge, k, () => drawAbilityBar(r, run, a, false, cx));
+}
+
+/** Gniazda umiejętności w skali 1 (pasek na środku `cx` albo na dotyku w miejscach z core/input.ts). */
+function drawAbilityBar(r: Renderer, run: Run, a: HudAnim, touch: boolean, cx: number): void {
   const g = r.g;
   const S = touch ? ABILITY_SLOT : UI.ability, step = S + UI.abilityGap;
-  const x0 = Math.round(W / 2 - (4 * S + 3 * UI.abilityGap) / 2), y0 = H - UI.edge - S;
+  const x0 = Math.round(cx - (4 * S + 3 * UI.abilityGap) / 2), y0 = H - UI.edge - S;
   if (!touch) r.withAlpha(0.4, () => r.roundRect(x0 - 3, y0 - 4, 4 * step - UI.abilityGap + 6, S + 7, UI.radius + 1, C.black));
   ABILITIES.forEach((sl, i) => {
     const ab = run.abilities[sl];
-    const [x, y] = touch ? abilitySlotPos(i) : [x0 + i * step, y0];
+    const [x, y] = touch ? abilitySlotPos(i, 1) : [x0 + i * step, y0];
     const isUlt = sl === 'ult', ready = a.ready[sl];
     iconSlot(r, x, y, S, ready ? (isUlt ? UI.reward : UI.border) : C.navy, 0.6);
     if (isUlt && !ready) {
@@ -493,7 +533,7 @@ function drawAbilities(r: Renderer, run: Run, a: HudAnim, touch: boolean): void 
 }
 
 /** Statystyki diagnostyczne (F3 lub `): klatki, czas aktualizacji, liczby encji i klawisze testowe. */
-function drawDiagnostics(r: Renderer, run: Run, loop: LoopStats, cheats: boolean): void {
+function drawDiagnostics(r: Renderer, run: Run, loop: LoopStats, cheats: boolean, top: number): void {
   const lines = [
     `FPS ${loop.fps}  update ${loop.updateMs.toFixed(2)} ms`,
     `wrogowie ${run.enemies.count}`,
@@ -501,8 +541,8 @@ function drawDiagnostics(r: Renderer, run: Run, loop: LoopStats, cheats: boolean
     `cząsteczki ${run.particles.count}  XP ${run.gems.count}  efekty ${run.fx.count}`,
     cheats ? 'F4 cel+   F6 awans   F7 łup' : 'Klawisze testowe: Ustawienia, tryb debug',
   ];
-  // Pod minimapą po prawej (środek ekranu zostaje dla walki i podpowiedzi).
-  const w = 150, x = W - UI.edge - w, y = H / 2 - 20;
+  // Pod minimapą po prawej (środek ekranu zostaje dla walki i podpowiedzi); przy większym HUD-zie niżej (`top`).
+  const w = 150, x = W - UI.edge - w, y = Math.max(H / 2 - 20, top);
   tile(r, x, y, w, lines.length * 8 + 4, C.lime);
   lines.forEach((s, i) => drawText(r.g, s, x + 4, y + 1.5 + i * 8, C.lime, SMALL));
 }
@@ -519,13 +559,48 @@ function drawDanger(r: Renderer, run: Run): void {
   });
 }
 
-/** Rysowanie bloku HUD przesuniętego w poziomie (szeroki ekran: lewy blok −OX, prawy +OX). */
-function shifted(r: Renderer, dx: number, draw: () => void): void {
-  if (!dx) { draw(); return; }
-  r.g.save();
-  r.g.translate(dx, 0);
+/**
+ * Rysowanie bloku HUD w rogu: przesunięcie w poziomie (szeroki ekran: lewy blok −OX, prawy +OX) i skala `k` (rozmiar HUD-u)
+ * wokół narożnika bloku (ax, ay), więc blok rośnie w stronę środka ekranu. Wskaźnik myszy (podpowiedzi po najechaniu,
+ * np. ikony synergii) na czas rysowania przeliczony do układu bloku; -1, -1 = brak myszy, zostaje bez zmian.
+ */
+function corner(r: Renderer, dx: number, ax: number, ay: number, k: number, draw: () => void): void {
+  if (!dx && k === 1) { draw(); return; }
+  const g = r.g, px = pointer.x, py = pointer.y;
+  g.save();
+  g.translate(dx + ax, ay);
+  g.scale(k, k);
+  g.translate(-ax, -ay);
+  if (px !== -1 || py !== -1) { pointer.x = ax + (px - dx - ax) / k; pointer.y = ay + (py - ay) / k; }
   draw();
-  r.g.restore();
+  pointer.x = px; pointer.y = py;
+  g.restore();
+}
+
+/**
+ * Bloki HUD-u w górnych rogach z ostatniego rysowania (x0, y0, x1, y1; współrzędne interfejsu): karta bohatera, statusy,
+ * synergie, liczniki z minimapą, panel zadania i przyciski dotykowe. Baner, podpowiedź na dotyku i samouczek je omijają.
+ */
+const TOP_RECTS: [number, number, number, number][] = [];
+/** Baner z ostatniego rysowania (te same współrzędne; pusty, gdy go nie ma): podpowiedź na dotyku schodzi też pod niego. */
+const BANNER_RECT: [number, number, number, number][] = [];
+
+/** Najwyższe y ≥ `y`, przy którym pas x0..x1 o wysokości `h` nie nachodzi na bloki HUD-u w górnych rogach ani na baner. */
+export function belowHud(x0: number, x1: number, y: number, h: number, banner = true): number {
+  for (let moved = true; moved;) {
+    moved = false;
+    for (const [a, b, c, d] of banner ? [...TOP_RECTS, ...BANNER_RECT] : TOP_RECTS) {
+      if (x0 < c && x1 > a && y < d && y + h > b) { y = Math.ceil(d) + 1; moved = true; }
+    }
+  }
+  return y;
+}
+
+/** Wolny pas na środku poniżej `y`: prawa krawędź bloków lewego rogu i lewa krawędź bloków prawego, sięgających niżej niż y. */
+export function hudGap(y: number): [number, number] {
+  let l = -OX, rt = W + OX;
+  for (const [a, , c, d] of TOP_RECTS) if (d > y) { if (a < W / 2) l = Math.max(l, c); else rt = Math.min(rt, a); }
+  return [l, rt];
 }
 
 export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean, cheats: boolean, minimap: boolean, input: Input): void {
@@ -540,28 +615,62 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
   if ((run.xpPulse > 0 || a.levelFlash > 0) && !run.reduceFlash) r.withAlpha(Math.min(0.8, run.xpPulse * 3 + a.levelFlash), () => r.rect(-OX, 0, (W + 2 * OX) * (a.levelFlash > 0 ? 1 : a.xp), UI.xpH, C.white));
 
   const touch = input.lastDevice === 'touch';
-  shifted(r, -OX, () => {
-    const cardBottom = drawHeroCard(r, run, a);
-    const statusBottom = drawStatusRow(r, run, UI.edge, cardBottom + UI.gap + 1);
-    drawSynergyHud(r, run, UI.edge, statusBottom + UI.gap + 1, UI.card.w);
-    drawInventory(r, run, touch);
+  // Rozmiar HUD-u (Ustawienia → Czytelność): bloki w rogach skalowane wokół swojego narożnika, środek górnej krawędzi
+  // (zegar, cel, pasek bossa, baner) bez zmian — omija bloki w rogach (krawędzie poniżej, współrzędne interfejsu).
+  const k = hudScale(), top = UI.edge + UI.xpH;
+  // Prostokąt bloku w skali 1 (x0, y0, x1, y1) przeliczony wokół narożnika (ax, top) i przesunięty o dx.
+  const rect = (dx: number, ax: number, x0: number, y0: number, x1: number, y1: number) =>
+    TOP_RECTS.push([dx + ax + (x0 - ax) * k, top + (y0 - top) * k, dx + ax + (x1 - ax) * k, top + (y1 - top) * k]);
+  TOP_RECTS.length = BANNER_RECT.length = 0;
+  corner(r, -OX, UI.edge, top, k, () => {
+    const cardBottom = drawHeroCard(r, run, a), sy = cardBottom + UI.gap + 1;
+    const [statusBottom, statusRight] = drawStatusRow(r, run, UI.edge, sy);
+    const synY = statusBottom + UI.gap + 1, synBottom = drawSynergyHud(r, run, UI.edge, synY, UI.card.w);
+    rect(-OX, UI.edge, UI.edge, top, UI.edge + UI.card.w, cardBottom);
+    if (statusBottom > sy) rect(-OX, UI.edge, UI.edge, sy, statusRight, statusBottom);
+    if (synBottom > synY) rect(-OX, UI.edge, UI.edge, synY, UI.edge + UI.card.w, synBottom);
   });
+  const leftX = -OX + UI.edge + UI.card.w * k;
+  // Bronie i pasywki: na dotyku blok mniejszy, gdy (z relikwiami) sięgałby pod przyciski umiejętności w prawym dolnym rogu.
+  const invW = inventoryW(run), invK = touch ? Math.min(k, (abilitySlotPos(0)[0] - 2 * UI.gap + OX - UI.edge) / invW) : k;
+  corner(r, -OX, UI.edge, H - UI.edge, invK, () => drawInventory(r, run, touch, invK));
 
-  const centerBottom = drawCenter(r, run, a);
-
-  shifted(r, OX, () => {
-    let ry = drawCounters(r, run, a) + UI.gap;
+  // Przyciski dotykowe (pauza, build, plecak) na lewo od liczników: w wierszu (środek ich omija) albo w kolumnie (większy HUD;
+  // wtedy zachodzą na blok po prawej jak minimapa — baner też je omija). Dolna krawędź kolumny / wiersza (współrzędne ekranu).
+  const btnX = Math.min(TOUCH_PAUSE.x, touchMenuPos(TOUCH_MENU.length - 1)[0]);
+  const btnBottom = touchMenuPos(TOUCH_MENU.length - 1)[1] + TOUCH_PAUSE.s;
+  if (touch) TOP_RECTS.push([btnX, TOUCH_PAUSE.y, TOUCH_PAUSE.x + TOUCH_PAUSE.s, btnBottom]);
+  let rightX = W + OX, taskBottom = top;
+  corner(r, OX, W - UI.edge, top, k, () => {
+    const [cx, cb] = drawCounters(r, run, a);
+    let ry = cb + UI.gap;
     const mw = UI.minimap.w;
     if (minimap) { drawMinimap(r, run, W - UI.edge - mw, ry, mw, UI.minimap.h); ry += UI.minimap.h + UI.gap; }
-    if (run.task) drawTask(r, run, W - UI.edge - 96, ry, 96);
+    // Krawędź liczników z minimapą (panel zadania niżej, z dala od środka górnej krawędzi i banera).
+    rightX = OX + W - UI.edge + (cx - (W - UI.edge)) * k;
+    rect(OX, W - UI.edge, cx, top, W - UI.edge, ry);
+    if (run.task) {
+      // Kolumna przycisków dotykowych (bez minimapy stałaby na panelu, który jest szerszy): panel pod kolumną.
+      if (touch && touchColumn()) ry = Math.max(ry, top + (btnBottom + UI.gap - top) / k);
+      drawTask(r, run, W - UI.edge - 96, ry, 96);
+      rect(OX, W - UI.edge, W - UI.edge - 96, ry, W - UI.edge, ry + 24);
+      ry += 24 + UI.gap;
+    }
+    taskBottom = top + (ry - top) * k;
   });
-  drawSecretArrows(r, run);
+  const centerBottom = drawCenter(r, run, a, leftX, touch ? Math.min(rightX, btnX) : rightX);
+  drawSecretArrows(r, run, k);
 
   // Baner (zapowiedzi, fazy bossa, elity): wąska wstęga tuż pod środkowym blokiem, wsuwa się i znika. Wysoko, z dala od
   // głowy bohatera, nad którą wylatują napisy serii zabójstw (wcześniej nachodziły na baner).
   if (run.bannerT > 0) {
     const big = run.banner.length <= 26, sc = big ? 1.25 : 0.9;
-    const tw = textWidth(run.banner) * sc + 24, th = big ? 15 : 11, by = centerBottom + 3;
+    // Wysokość o 1 px większa niż kiedyś: polskie litery z ogonkiem (ę, ą) wystawały o 1 px pod płytkę.
+    const tw = textWidth(run.banner) * sc + 24, th = big ? 16 : 12;
+    // Baner, który zachodziłby na blok w górnym rogu (karta, statusy, synergie, liczniki, minimapa, zadanie, przyciski
+    // dotykowe; przy większym HUD-zie sięgają dalej do środka), zjeżdża pod niego.
+    const by = belowHud(W / 2 - tw / 2, W / 2 + tw / 2, centerBottom + 3, th, false);
+    BANNER_RECT.push([W / 2 - tw / 2, by, W / 2 + tw / 2, by + th]);
     const al = Math.min(1, run.bannerT * 3, (2.5 - run.bannerT) * 6 + 0.2);
     r.withAlpha(al, () => {
       tile(r, W / 2 - tw / 2, by, tw, th, undefined, 0.75);
@@ -570,7 +679,7 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
     });
   }
 
-  drawAbilities(r, run, a, touch);
+  drawAbilities(r, run, a, touch, k, -OX + UI.edge + invW * invK);
 
   // Sterowanie dotykowe: przyciski pauzy, buildu i plecaka oraz wirtualny joystick (gdy palec jest na ekranie).
   if (touch) {
@@ -608,11 +717,12 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
     if (s) {
       const dx = s.x - s.ox, dy = s.y - s.oy, d = Math.hypot(dx, dy), k = d > STICK_R ? STICK_R / d : 1;
       stick(s.ox, s.oy, dx * k, dy * k, 1);
-    } else stick(UI.edge + STICK_R + 14 - OX, H - 74, 0, 0, 0.3); // nad slotami broni
+    } else stick(UI.edge + STICK_R + 14 - OX, H - UI.edge - (2 * UI.slot + UI.gap) * invK - 32, 0, 0, 0.3); // nad slotami broni
     if (!s && run.time < 6 && !hintShowing()) {
-      drawText(g, 'Dotknij lewej połowy ekranu i przesuń, żeby chodzić', W / 2, H - 60, C.lavender, { align: 'center', ...OUT });
+      // Większy HUD: nad komunikatem ekranu gry (messageY), który stoi nad dolnymi blokami.
+      drawText(g, 'Dotknij lewej połowy ekranu i przesuń, żeby chodzić', W / 2, k > 1 ? messageY() - 10 : H - 60, C.lavender, { align: 'center', ...OUT });
     }
   }
 
-  if (diag) drawDiagnostics(r, run, loop, cheats);
+  if (diag) drawDiagnostics(r, run, loop, cheats, taskBottom + UI.gap);
 }

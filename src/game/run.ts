@@ -34,7 +34,7 @@ import { updateWeapons } from '../systems/weapons';
 import { updateScript, resetScript } from '../systems/scripts';
 import { updateSpawner, spawnEnemy } from '../systems/spawner';
 import { situationKill, type Spot } from '../systems/situations';
-import { updateEnemies } from '../systems/enemies';
+import { updateEnemies, eliteDeathBurst } from '../systems/enemies';
 import { updateProjectiles, updateEnemyBullets } from '../systems/projectiles';
 import { updateZones } from '../systems/zones';
 import { updatePickups } from '../systems/pickups';
@@ -1075,6 +1075,9 @@ export class Run {
     const out: { item: Item; old: Item | null }[] = [];
     const auto = !!fresh, A = BAL.autoEquip;
     const kindOf = (it: Item) => BASE_BY_ID[it.base].kind;
+    // Wagi zależne od buildu: przewaga broni bliskiego zasięgu → profil `A.melee` (obszar, czas trwania), inaczej domyślne.
+    const melee = this.weapons.filter((w) => A.melee.kinds.includes(w.def.kind)).length;
+    const sw = melee * 2 > this.weapons.length ? A.melee.w : undefined;
     for (const s of SLOTS) {
       if (s.id === 'ring2') continue;
       const ids: SlotId[] = s.id === 'ring1' ? ['ring1', 'ring2'] : [s.id];
@@ -1084,7 +1087,9 @@ export class Run {
       const ref = Math.max(...pool.map((x) => x.ilvl));
       const worn = (x: Item) => ids.some((id) => this.equipment[id] === x);
       // Zapas dla założonego (tryb automatyczny): margines + ulepszenia z kuźni.
-      const keep = (x: Item) => { const v = itemScore(x, ref); return auto && worn(x) ? v * (1 + A.margin) + (x.upg ?? 0) * A.perUpg : v; };
+      // Automat nie zdejmuje założonych przedmiotów z super-bonusem ani unikatów (0.59: gracz stracił odrodzenie z „Popiołu
+      // feniksa”, bo zamiana na lepsze liczby zabrała efekt); zrobi to tylko przycisk Najlepsze albo gracz ręcznie.
+      const keep = (x: Item) => { const v = itemScore(x, ref, sw); return auto && worn(x) ? (x.super || x.unique ? Infinity : v * (1 + A.margin) + (x.upg ?? 0) * A.perUpg) : v; };
       const best = [...pool].sort((p, q) => keep(q) - keep(p)).slice(0, ids.length);
       const free = ids.filter((id) => !best.includes(this.equipment[id]!));
       const place = best.filter((it) => !worn(it));
@@ -1764,6 +1769,8 @@ export class Run {
       const ring = this.addFx('ring', e.x, e.y, C.gold, 0.35);
       if (ring) ring.r = 34;
       sfx.play('explode');
+      // Udręka „Pośmiertna salwa”: pierścień pocisków z miejsca śmierci elity.
+      if (this.flag('deathBurst') > 0) eliteDeathBurst(this, e);
       // Mapa elit: skrzynia co N-ta elita; Polowanie: miniboss kończy łowy, eskorta bez skrzyń.
       const X = BAL.expedition, hunt = this.levelInfo.objective.kind === 'hunt', mini = BIOME_MINIBOSS.includes(e.def.id);
       if (hunt && mini) this.huntKilled = true;
@@ -1951,6 +1958,10 @@ export class Run {
     // Trans bitewny (0.49): w tłumie przy sobie mniej obrażeń.
     const trance = this.tranceOn() ? 1 - BAL.trance.taken : 1;
     let dmg = trance * base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this) * (this.inBanner && !this.relic('turncoat') ? 1 + BAL.eliteTraits.bannerTaken : 1);
+    // Limit jednego trafienia (0.59, gracz: boss aktu 1 zabił na hita szklany build): najwyżej ułamek maks. HP,
+    // na Udręce wyżej (BAL.hitCap). Kara za szklany build zostaje (2–3 trafienia), bez śmierci w jednej klatce.
+    const H = BAL.hitCap, cap = Math.min(H.max, H.base + H.perTorment * (this.expedition?.torment ?? 0));
+    dmg = Math.min(dmg, this.stats.maxHp * cap);
     const total = dmg;
     this.takenTotal += total;
     const absorbed = Math.min(p.shield, dmg);
@@ -1986,8 +1997,14 @@ export class Run {
       if (this.revivesLeft > 0) {
         this.revivesUsed++;
         p.hp = this.stats.maxHp * 0.5;
-        p.iframes = 2;
+        // Odrodzenie (0.59, prośba gracza): dłuższa nietykalność, zwykli wrogowie wokół giną (boss nie), wrogie pociski znikają.
+        const R = BAL.revive;
+        p.iframes = R.iframes;
+        this.enemiesInCircle(p.x, p.y, R.r, (e) => { if (!e.boss && !e.dead) this.killEnemy(e); });
+        for (const b of [...this.bullets.items]) if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < R.r * R.r) this.bullets.release(b);
         this.explode(p.x, p.y, 60, this.cardDamage(40), 'Feniks', C.orange, 6);
+        const ring = this.addFx('ring', p.x, p.y, C.orange, 0.6);
+        if (ring) ring.r = R.r;
         this.showBanner('Feniks!');
         return true;
       }

@@ -228,10 +228,16 @@ export class ExpeditionMapView {
     const n = this.run.expedition!.torment ?? 0;
     // Mysz: pod kursorem; klawiatura / pad: przez 3 s po zmianie (playtest 4: przy T zasad nie było widać).
     if (!n || (!hovered(TOR_X, BTN_Y, TOR_W, BTN_H) && performance.now() - this.torAt > 3000)) return;
-    const lines = TORMENT.slice(0, n).map((t, i) => `${i + 1}. ${tr(t.name)}`), h = lines.length * 9 + 6;
-    r.rect(TOR_X, BTN_Y - h - 2, 170, h, C.black);
-    panel(r, TOR_X, BTN_Y - h - 2, 170, h);
-    lines.forEach((l, i) => drawText(r.g, l, TOR_X + 4, BTN_Y - h + 1 + i * 9, C.salmon, { scale: smallS() }));
+    // Poziomy zmieniające zasady mają pod nazwą opis (szary, wcięty), łamany do szerokości ramki.
+    const TW = 200, lines: [string, number, number][] = [];
+    TORMENT.slice(0, n).forEach((t, i) => {
+      lines.push([`${i + 1}. ${tr(t.name)}`, 4, C.salmon]);
+      if (t.desc) for (const l of wrapText(t.desc, (TW - 16) / smallS())) lines.push([l, 10, C.lgray]);
+    });
+    const h = lines.length * 9 + 6;
+    r.rect(TOR_X, BTN_Y - h - 2, TW, h, C.black);
+    panel(r, TOR_X, BTN_Y - h - 2, TW, h);
+    lines.forEach(([l, dx, col], i) => drawText(r.g, l, TOR_X + dx, BTN_Y - h + 1 + i * 9, col, { scale: smallS() }));
   }
 
   render(r: Renderer): void {

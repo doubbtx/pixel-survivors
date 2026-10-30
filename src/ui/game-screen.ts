@@ -2,7 +2,7 @@ import { tr } from '../core/i18n';
 import { W, H, type Renderer } from '../core/renderer';
 import { C, RAMP } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
-import type { Action } from '../core/input';
+import { hudScale, type Action } from '../core/input';
 import { sfx } from '../core/audio';
 import { heroRecord, type HeroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
@@ -15,10 +15,12 @@ import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
 import { button, Menu, dim, panel, inside, slot, bar, Scroll, Confirm } from './widgets';
-import { renderHud } from './hud';
+import { renderHud, messageY, belowHud, hudGap } from './hud';
+import { UI } from './theme';
 import { drawSkills } from './skills';
 import type { AbilitySlot } from '../data/heroes';
 import { abilityMaxCd } from '../systems/abilities';
+import { offerCount } from '../systems/levelup';
 import { LevelUpView } from './levelup';
 import { LootView, InventoryView, drawItemSlot } from './items';
 import { SLOTS, type Item } from '../data/items';
@@ -406,13 +408,18 @@ export class GameScreen implements Screen {
   /** Panel samouczka pod licznikiem czasu: krok, tytuł, opis dla urządzenia gracza; na końcu przejście dalej. */
   private renderTutorial(): void {
     const r = this.app.r, g = r.g, tut = this.tut!, { title, body } = tut.text(this.app.input);
-    const w = 220, x = W / 2 - w / 2, y = 44, lines = wrapText(body, w - 16);
-    const h = 22 + lines.length * 11 + (tut.finished ? 12 : 0);
+    // Większy HUD: panel w wolnym pasie między blokami w górnych rogach (karta bohatera, kolumna przycisków dotykowych);
+    // gdy pas jest za wąski, pod blokami (ui/hud.ts hudGap, belowHud).
+    let w = 220, x = W / 2 - w / 2, y = 44;
+    const [gl, gr] = hudGap(y), fit = Math.min(w, gr - gl - 2 * UI.gap), big = hudScale() > 1;
+    if (big && fit >= 160) { w = fit; x = Math.max(gl + UI.gap, Math.min(W / 2 - w / 2, gr - UI.gap - w)); }
+    const lines = wrapText(body, w - 16), h = 22 + lines.length * 11 + (tut.finished ? 12 : 0);
+    if (big && fit < 160) y = belowHud(x, x + w, y, h + 10);
     panel(r, x, y, w, h);
     drawText(g, title, x + 8, y + 5, C.yellow, { shadow: C.black });
     drawText(g, tut.finished ? '' : `${Math.min(tut.step + 1, tut.total)}/${tut.total}`, x + w - 8, y + 6, C.lavender, { align: 'right', scale: smallS() });
     lines.forEach((l, i) => drawText(g, l, x + 8, y + 18 + i * 11, C.white));
-    if (tut.finished) drawText(g, this.app.input.lastDevice === 'touch' ? 'Tap to continue' : 'Enter: continue', W / 2, y + h - 11, C.lime, { align: 'center', scale: smallS() });
+    if (tut.finished) drawText(g, this.app.input.lastDevice === 'touch' ? 'Tap to continue' : 'Enter: continue', x + w / 2, y + h - 11, C.lime, { align: 'center', scale: smallS() });
     else drawText(g, this.app.input.lastDevice === 'touch' ? 'Pause (top right): skip tutorial' : 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: smallS() });
   }
 
@@ -656,7 +663,7 @@ export class GameScreen implements Screen {
       if (run.bag.length < BAL.bagSize) { run.stash(it); fresh.push(it); } else gold += run.salvage(it);
     }
     const parts: string[] = [];
-    if (fresh.length) parts.push(`+${fresh.length} ${tr('to backpack')}`);
+    if (fresh.length) parts.push(tr(fresh.length === 1 ? '+1 item to backpack' : `+${fresh.length} items to backpack`));
     if (gold > 0) parts.push(`${tr('salvaged')}: +${fmt(gold)} zł`);
     const swap = fresh.length ? this.autoEquipNote(fresh) : '';
     if (swap) parts.push(swap);
@@ -905,7 +912,8 @@ export class GameScreen implements Screen {
         this.anvil!.render(r);
         break;
       case 'play':
-        if (this.toastT > 0) drawText(r.g, this.toast, W / 2, H - 40, C.yellow, { align: 'center', outline: C.black });
+        // Większy HUD: komunikat wyżej, nad urośniętymi gniazdami (ui/hud.ts messageY).
+        if (this.toastT > 0) drawText(r.g, this.toast, W / 2, messageY(), C.yellow, { align: 'center', outline: C.black });
         break;
       case 'map':
         this.map!.render(r);
@@ -966,7 +974,7 @@ export class GameScreen implements Screen {
       ['Szybkość ataku', pct(s.atkSpeed), s.atkSpeed !== 0], ['Szybkość odnowienia', pct(s.cdr), s.cdr !== 0],
       ['Obszar', `x${s.area.toFixed(2)}`, s.area !== 1], ['Pociski', `+${s.amount}`, s.amount > 0],
       ['Czas działania', `x${s.duration.toFixed(2)}`, s.duration !== 1], ['Siła żywiołów', pct(s.elemPower), s.elemPower !== 0],
-      ['Szczęście', pct(run.luck()), run.luck() > 0], ['Karty przy awansie', String(Math.min(4, 3 + s.choices)), s.choices > 0],
+      ['Szczęście', pct(run.luck()), run.luck() > 0], ['Karty przy awansie', String(offerCount(run)), offerCount(run) !== 3],
     ];
     stats.forEach(([k, v, on], i) => {
       const cx = x0 + (i % 2) * (colW + 8), y = 59 + Math.floor(i / 2) * 11;
@@ -1118,6 +1126,8 @@ export class GameScreen implements Screen {
     const essence = `+${fmt(this.essence)} esencji dla: ${run.hero.name} (Rozwój w menu głównym)`;
     const info: [string, number][] = [[modeLine, C.lgray], [essence, C.cyan]];
     if (feats) info.push([`Wyczyny: ${feats}`, C.gold]);
+    // Odrodzenia (Feniks, Niezłomny, Popiół feniksa): ile zużyto na tej mapie — 0.59, gracz nie zauważył, że Feniks zadziałał wcześniej.
+    if (run.flag('revive') > 0) info.push([`${tr('Revives used on this map')}: ${run.revivesUsed}/${run.flag('revive')}`, C.orange]);
     if (this.unlockedRun.length) info.push([`Unlocked: ${this.unlockedRun.map((u) => u.name).join(', ')}`, C.lime]);
     info.forEach(([t, col], i) => drawText(g, t, W / 2, 69 + i * 10, col, { align: 'center', shadow: C.black }));
     // Panel zakładek zaczyna się tuż pod liniami informacji (bez pustego pasa, gdy ich nie ma).
@@ -1194,7 +1204,9 @@ export class GameScreen implements Screen {
     drawText(g, 'DPS', x1, this.endY + 6, C.lavender, { align: 'right' });
     const all = [...run.dmgBySource.entries()].sort((a, b) => b[1] - a[1]);
     const total = all.reduce((sum, x) => sum + x[1], 0) || 1, best = all[0]?.[1] || 1;
-    all.slice(0, 7).forEach(([name, dmg], i) => {
+    // Tyle wierszy, ile mieści panel (0.59: na szerokim telefonie „+N więcej” wchodziło na ostatni wiersz).
+    const rows = Math.max(1, Math.min(7, Math.floor((this.endH - 19 - 12) / 11)));
+    all.slice(0, rows).forEach(([name, dmg], i) => {
       const y = this.endY + 19 + i * 11;
       bar(r, x0 + 120, y + 2, 140, 5, dmg / best, RAMP.gold);
       drawText(g, name, x0, y, C.white);
@@ -1202,7 +1214,7 @@ export class GameScreen implements Screen {
       drawText(g, `${Math.round((100 * dmg) / total)}%`, x1 - 55, y, C.lgray, { align: 'right' });
       drawText(g, fmt(dmg / Math.max(1, run.totalTime)), x1, y, C.lgray, { align: 'right' });
     });
-    if (all.length > 7) drawText(g, `+${all.length - 7} więcej`, x1, this.endY + this.endH - 11, C.lavender, { align: 'right', scale: smallS() });
+    if (all.length > rows) drawText(g, `+${all.length - rows} więcej`, x1, this.endY + this.endH - 10, C.lavender, { align: 'right', scale: smallS() });
   }
 
   /** Ekran końca: wykres DPS w czasie (pomiar co BAL.dpsEvery s). */
@@ -1248,19 +1260,31 @@ export class GameScreen implements Screen {
       drawText(g, String(p.level), x + 17, wy + 9, C.white, { align: 'right', outline: C.black, scale: smallS() });
       x += 20;
     }
-    // Karty (jeden rząd).
-    const per = Math.floor((END_W - 24) / 17);
-    run.cards.slice(0, per).forEach((c, i) => {
-      const cx = x0 + i * 17, cy = wy + 22;
+    // Karty: własny rząd pod bronią, a gdy panel jest niski (propozycja trybu łatwego podnosi menu, szeroki ekran telefonu —
+    // 0.59, zrzut gracza: karty i sekrety wchodziły na menu) w tym samym rzędzie za pasywkami, do krawędzi panelu.
+    const bottom = this.endY + this.endH, right = END_X + END_W - 12;
+    const own = wy + 22 + 16 + 12 <= bottom;
+    let cx = own ? x0 : x + 8;
+    const cy = own ? wy + 22 : wy + 1;
+    let shown = 0;
+    for (const c of run.cards) {
+      if (cx + 16 > right - (shown < run.cards.length - 1 ? 14 : 0)) break;
       const def = CARD_BY_ID[c.id];
       drawSprite(g, def.icon!, cx + 8, cy + 8);
       if (c.stacks > 1) drawText(g, String(c.stacks), cx + 14, cy + 9, C.white, { outline: C.black, scale: smallS() });
-    });
+      cx += 17;
+      shown++;
+    }
+    if (shown < run.cards.length) drawText(g, `+${run.cards.length - shown}`, cx + 1, cy + 5, C.lavender, { scale: smallS() });
     const extra = [
-      ...[...run.secrets].map((id) => SECRET_BY_ID[id]?.name).filter(Boolean),
-      run.power ? `Moc: ${BOSS_POWER_BY_ID[run.power.id].name} ${run.power.level}` : '',
+      ...[...run.secrets].map((id) => SECRET_BY_ID[id]?.name).filter(Boolean).map((n) => tr(n!)),
+      run.power ? `${tr('Moc')}: ${tr(BOSS_POWER_BY_ID[run.power.id].name)} ${run.power.level}` : '',
     ].filter(Boolean).join(', ');
-    if (extra) drawText(g, extra, x0, this.endY + this.endH - 11, C.hotpink, { scale: smallS() });
+    // Sekrety i moc: pod ostatnim rzędem, w panelu; gdy brak miejsca — obok nazwy bohatera (nad slotami broni).
+    const rowEnd = (own ? cy : wy) + 19;
+    const ey = Math.min(bottom - 10, Math.max(rowEnd + 1, bottom - 11));
+    if (extra && ey >= rowEnd) drawText(g, extra, x0, ey, C.hotpink, { scale: smallS() });
+    else if (extra) drawText(g, extra, x0 + 32, top + 28, C.hotpink, { scale: smallS() });
   }
 }
 

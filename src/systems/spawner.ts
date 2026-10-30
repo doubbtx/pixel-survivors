@@ -78,6 +78,8 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
     e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp')) * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (run.expedition && run.levelInfo.boss && !run.dungeon ? BAL.expedition.bossHp : 1);
     e.speed = def.speed;
     run.boss = e;
+    // Udręka „Bossowie +30% obrażeń” (bossFoeDmg): obrażenia bossa, z nich też jego salwy (systems/enemies.ts).
+    e.damage *= 1 + run.flag('bossFoeDmg');
     if (run.relic('hourglass') && !run.dungeon) e.damage *= BAL.relics.bossDmg;
     run.bossSoftShown = false;
   }

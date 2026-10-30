@@ -179,17 +179,19 @@ export interface ExpeditionState {
 /**
  * Udręka (0.46, dla doświadczonych): poziomy ponad Koszmarem, odblokowywane kolejno wygraną wyprawą (Koszmar → Udręka 1,
  * Udręka N → N+1). Zasady się sumują: poziom N = flagi poziomów 1..N na każdej mapie. Więcej esencji (BAL.torment.essence).
+ * Część poziomów zmienia zasady, nie liczby (0.59, `desc` w podpowiedzi na mapie): shortWarn (systems/situations.ts),
+ * noBreath (systems/scripts.ts), deathBurst (systems/enemies.ts), cardCurse (systems/levelup.ts offerCount).
  */
-export const TORMENT: { name: string; flags: Record<string, number> }[] = [
-  { name: 'Enemies +30% HP', flags: { enemyHp: 0.3 } },
+export const TORMENT: { name: string; desc?: string; flags: Record<string, number> }[] = [
+  { name: 'Short warnings', desc: 'Enemy formations arrive after half the usual warning.', flags: { shortWarn: 1 } },
   { name: 'Elites 50% more often', flags: { eliteRate: 0.5 } },
-  { name: 'Enemies +30% damage', flags: { enemyDmg: 0.3 } },
-  { name: 'Healing -30%', flags: { healCut: 0.3 } },
-  { name: 'Enemies 15% faster', flags: { enemySpeed: 0.15 } },
-  { name: 'Bosses +50% HP and +30% damage', flags: { bossHp: 0.5, bossDmg: 0.3 } },
+  { name: 'Enemies +30% HP, +30% damage', flags: { enemyHp: 0.3, enemyDmg: 0.3 } },
+  { name: 'No breathers', desc: 'Moments of calm on scripted maps become bombardments.', flags: { noBreath: 1 } },
+  { name: 'Death burst', desc: 'Elites fire a ring of bullets when they die.', flags: { deathBurst: 1 } },
+  { name: 'Bosses +50% HP and +30% damage', flags: { bossHp: 0.5, bossFoeDmg: 0.3 } },
   { name: 'Enemy bullets faster and denser', flags: { bulletSpeed: 0.25, bulletDensity: 0.3 } },
   { name: 'Elites get an extra trait', flags: { eliteMods: 1 } },
-  { name: 'More enemies', flags: { enemyCount: 0.3 } },
+  { name: 'Card curse', desc: 'Level-ups offer one fewer card (at least 2).', flags: { cardCurse: 1 } },
   { name: 'Enemies +50% HP, +30% damage', flags: { enemyHp: 0.5, enemyDmg: 0.3 } },
 ];
 

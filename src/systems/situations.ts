@@ -169,16 +169,21 @@ export function updateSituations(run: Run, dt: number, waveT: number): void {
   const late = waveT > S.lateAfter;
   run.situationT = rng.range(...(late ? S.everyLate : S.every)) * (run.relic('warhorn') ? 0.5 : 1);
   const scale = Math.min(1, waveT / 600);
-  run.situation = { id: def.id, t: S.warn, a: rng.range(0, Math.PI * 2), spots: [] };
+  run.situation = { id: def.id, t: situationWarn(run), a: rng.range(0, Math.PI * 2), spots: [] };
   run.situation.spots = def.plan(scale, run.situation.a);
   run.lastSituation = def.id;
   run.showBanner(`${def.name}!`);
   sfx.play('boss');
 }
 
+/** Czas zapowiedzi sytuacji i uderzeń scenariusza (s); Udręka „Krótkie ostrzeżenia” (shortWarn) skraca go o połowę. */
+export function situationWarn(run: Run): number {
+  return BAL.situations.warn * (run.flag('shortWarn') > 0 ? 0.5 : 1);
+}
+
 /** Uderzenie scenariusza jako sytuacja: zapowiedź (baner, strzałka albo krąg), potem formacja z `spots`. */
 export function startBeat(run: Run, id: string, a: number, spots: Spot[]): void {
-  run.situation = { id, t: BAL.situations.warn, a, spots };
+  run.situation = { id, t: situationWarn(run), a, spots };
   run.showBanner(`${situationName(id)}!`);
   sfx.play('boss');
 }

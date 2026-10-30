@@ -1,6 +1,6 @@
 import { Renderer } from './core/renderer';
 import { C } from './core/palette';
-import { Input, setBindings } from './core/input';
+import { Input, setBindings, setHudScale } from './core/input';
 import { startLoop } from './core/loop';
 import { sfx } from './core/audio';
 import { spawnEnemy } from './systems/spawner';
@@ -35,6 +35,7 @@ renderer.setWorldRes(save.settings.lowFx ? 2 : 3);
 setLang(save.settings.lang);
 setTextSize(save.settings.textLarge);
 setBindings(save.settings.keys);
+setHudScale(save.settings.hudScale);
 // Czcionka: wymuszenie wczytania (płótno samo jej nie zażąda), potem nowe pomiary szerokości napisów.
 const SAMPLE = 'Aa ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ';
 Promise.all([document.fonts.load('12px "Jersey 10"', SAMPLE), document.fonts.load('24px "Jersey 10"', SAMPLE)]).then(resetFontCache, () => undefined);

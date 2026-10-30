@@ -3,7 +3,7 @@ import { C, PAL } from '../core/palette';
 import { drawText, wrapText, textWidth, setTextSize, DESC, descS, descLH, smallS } from '../core/font';
 import { tr } from '../core/i18n';
 import { sfx } from '../core/audio';
-import { heroRecord, type AimMode, type PlayerFx } from '../core/save';
+import { heroRecord, HUD_SCALES, type AimMode, type PlayerFx } from '../core/save';
 import { drawSprite, drawShadow, blit, TILE } from '../gfx/sprites';
 import { animFrame } from '../gfx/actors';
 import { HEROES, HERO_BY_ID, resourceDesc, resourceDetails, heroAbilities, type HeroDef, type AbilityDef } from '../data/heroes';
@@ -18,6 +18,7 @@ import { UI } from './theme';
 import { drawSkills } from './skills';
 import { setLang, type Lang } from '../core/i18n';
 import { music, MENU_MOOD } from '../core/music';
+import { setHudScale } from '../core/input';
 import { GameScreen } from './game-screen';
 import { CodexScreen } from './codex';
 import { CollectionScreen } from './collection';
@@ -694,6 +695,7 @@ export class SettingsScreen implements Screen {
     const fx = cycle(FX_MODES, () => s.playerFx, (v) => { s.playerFx = v; });
     const dim = cycle(DIM_LEVELS, () => s.bgDim, (v) => { s.bgDim = v; });
     const zoom = cycle(ZOOM_LEVELS, () => s.zoom, (v) => { s.zoom = v; app.r.setZoom(v); });
+    const hud = cycle(HUD_SCALES, () => s.hudScale, (v) => { s.hudScale = v; setHudScale(v); });
     const lang = cycle<Lang>(['en', 'pl'], () => s.lang, (v) => { s.lang = v; setLang(v); });
     const yes = (v: boolean) => (v ? 'tak' : 'nie');
     // Przełącznik: Enter i strzałki zmieniają wartość.
@@ -728,6 +730,7 @@ export class SettingsScreen implements Screen {
       [
         sw('Reduce flashing', () => yes(s.reduceFlash), () => { s.reduceFlash = !s.reduceFlash; app.persist(); }, 'For players sensitive to flashing lights: no blinking warnings (they stay lit instead) and no white hit flashes.'),
         sw('Text size', () => (s.textLarge ? 'Large' : 'Normal'), () => { s.textLarge = !s.textLarge; setTextSize(s.textLarge); app.persist(); }, 'Large: descriptions (abilities, cards, items, map, pause) at full size instead of smaller text. Longer texts scroll or split into pages.'),
+        opt('HUD size', () => `${Math.round(s.hudScale * 100)}%`, hud, () => 'In-game HUD panels (hero card, counters and minimap, weapon slots, ability bar) at a larger size. Corner panels grow toward the middle of the screen; on touch screens weapon slots may stay smaller to make room.'),
         opt('Przyciemnienie tła', () => DIM_LABEL[Math.max(0, DIM_LEVELS.indexOf(s.bgDim))], dim, () => 'Ciemniejsze podłoże i dekoracje: postacie, wrogowie i pociski bardziej odcinają się od tła.'),
         sw('Wyraźne pociski wrogów', () => yes(s.bulletOutline), toggle('bulletOutline'), 'Pociski wrogów dostają ciemną obwódkę, lepiej odcinają się od tła i efektów.'),
         sw('Znacznik gracza', () => yes(s.playerMarker), toggle('playerMarker'), 'Pulsujący krąg pod twoją postacią, łatwo ją znaleźć w tłumie.'),
@@ -743,7 +746,9 @@ export class SettingsScreen implements Screen {
       ] as [MenuItem, () => string][]] : []),
     ];
     const list = [...rows[this.tab], [{ label: () => 'Wróć', act: () => app.go(this.back) }, () => ''] as [MenuItem, () => string]];
-    this.menu = new Menu(list.map(([it]) => it), W / 2, SET_LIST_Y, 340, SET_ROW);
+    // Długie zakładki (Czytelność) mają gęstsze wiersze: lista nie wyższa niż 11 wierszy po 15, więc trzy linie opisu
+    // pod nią mieszczą się nad podpisem z klawiszami.
+    this.menu = new Menu(list.map(([it]) => it), W / 2, SET_LIST_Y, 340, Math.min(SET_ROW, Math.floor((11 * SET_ROW) / list.length)));
     this.menu.previewOnTouch = true;
     this.hints = list.map(([, h]) => h);
   }
@@ -770,11 +775,11 @@ export class SettingsScreen implements Screen {
     r.clear(C.black);
     titleBar(r, 'Ustawienia', 6);
     SET_TABS.forEach((t, i) => button(r, setTabX(i), SET_TAB_Y, SET_TAB_W, 16, t, { active: i === this.tab, accent: C.gold }));
-    panel(r, W / 2 - 180, SET_LIST_Y - 6, 360, this.menu.items.length * SET_ROW + 10, C.slate);
+    panel(r, W / 2 - 180, SET_LIST_Y - 6, 360, this.menu.items.length * this.menu.lineH + 10, C.slate);
     this.menu.render(r);
     drawText(g, 'Tab / Q / E: kategoria    Lewo/prawo: zmień', W / 2, H - 14, C.lavender, { align: 'center' });
     // Opis pod oknem listy (długie zakładki mają wyższe okno, opis zjeżdża niżej).
-    const descY = Math.max(222, SET_LIST_Y + 4 + this.menu.items.length * SET_ROW + 4);
+    const descY = Math.max(222, SET_LIST_Y + 4 + this.menu.items.length * this.menu.lineH + 4);
     wrapText(this.hints[this.menu.sel](), 420).forEach((l, i) => drawText(g, l, W / 2, descY + i * 11, C.lavender, { align: 'center' }));
   }
 }

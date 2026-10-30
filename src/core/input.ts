@@ -119,19 +119,40 @@ export function keyGlyphs(s: string): string {
 }
 
 
+/**
+ * Rozmiar HUD-u (Ustawienia → Czytelność, Settings.hudScale: 1 / 1.25 / 1.5): bloki w rogach ekranu (ui/hud.ts) skalowane
+ * wokół swojego narożnika, więc rosną w stronę środka. Tutaj, bo od niego zależą też obszary dotyku gniazd umiejętności.
+ */
+let hudK = 1;
+export function setHudScale(k: number): void { hudK = k; }
+export const hudScale = (): number => hudK;
+
 /** Gniazda umiejętności w HUD (prawy dół) — na telefonie są też przyciskami dotykowymi. Kolejność: Q, E, unik, R. */
 export const ABILITY_SLOT = 32;
-export function abilitySlotPos(i: number): [number, number] {
+/**
+ * Lewy górny róg gniazda `i` w skali `k` (domyślnie rozmiar HUD-u; ui/hud.ts rysuje w skali 1 pod przekształceniem płótna
+ * wokół tego samego narożnika: prawy dolny róg okna minus margines 4). Bok gniazda: ABILITY_SLOT · k.
+ */
+export function abilitySlotPos(i: number, k = hudK): [number, number] {
   // Szeroki ekran: przy prawej krawędzi okna (OX), jak cały prawy blok HUD.
-  return [W + OX - 4 - (4 - i) * (ABILITY_SLOT + 3), H - ABILITY_SLOT - 4];
+  return [W + OX - 4 - (4 - i) * (ABILITY_SLOT + 3) * k, H - 4 - ABILITY_SLOT * k];
 }
 const TOUCH_ACTIONS: Action[] = ['q', 'e', 'dash', 'ult'];
-/** Przycisk pauzy na ekranie dotykowym (lewo od licznika zabójstw). */
-export const TOUCH_PAUSE = { get x(): number { return W + OX - 110; }, y: 8, s: 20 };
-/** Przyciski dotykowe obok pauzy (od pauzy w lewo): build (C) i plecak (I); ten sam rozmiar i wiersz co pauza. */
+/**
+ * Przyciski dotykowe pauzy, buildu i plecaka w kolumnie (większy HUD): blok liczników i minimapy sięga wtedy dalej w lewo,
+ * a wiersz przycisków wszedłby pod zegar, cel i pasek bossa — kolumna stoi na lewo od tego bloku.
+ */
+export const touchColumn = (): boolean => hudK > 1;
+/**
+ * Przycisk pauzy na ekranie dotykowym (lewo od licznika zabójstw). W kolumnie (większy HUD): 8 px na lewo od bloku liczników
+ * i minimapy (szerokość 70 = UI.minimap.w, skalowana, plus margines 4).
+ */
+export const TOUCH_PAUSE = { get x(): number { return touchColumn() ? W + OX - 4 - 70 * hudK - 8 - 20 : W + OX - 110; }, y: 8, s: 20 };
+/** Przyciski dotykowe obok pauzy (od pauzy w lewo albo w kolumnie w dół): build (C) i plecak (I); ten sam rozmiar co pauza. */
 export const TOUCH_MENU: Action[] = ['build', 'inventory'];
 export function touchMenuPos(i: number): [number, number] {
-  return [TOUCH_PAUSE.x - (i + 1) * (TOUCH_PAUSE.s + 4), TOUCH_PAUSE.y];
+  const d = (i + 1) * (TOUCH_PAUSE.s + 4);
+  return touchColumn() ? [TOUCH_PAUSE.x, TOUCH_PAUSE.y + d] : [TOUCH_PAUSE.x - d, TOUCH_PAUSE.y];
 }
 /** Plakietka „nowy przedmiot w plecaku” w HUD (współrzędne ekranu, ustawia ui/hud.ts przy rysowaniu): dotknięcie otwiera plecak. */
 export const TOUCH_BAG_PILL = { on: false, x: 0, y: 0, w: 0, h: 0 };
@@ -231,8 +252,9 @@ export class Input {
   private touchDown(id: number): boolean {
     const { x, y } = this.mouse;
     for (let i = 0; i < TOUCH_ACTIONS.length; i++) {
-      const [bx, by] = abilitySlotPos(i);
-      if (x >= bx - 3 && x < bx + ABILITY_SLOT + 3 && y >= by - 6 && y < by + ABILITY_SLOT + 4) {
+      // Obszar dotyku skalowany tak samo jak rysowane gniazdo (rozmiar HUD-u).
+      const [bx, by] = abilitySlotPos(i), k = hudK;
+      if (x >= bx - 3 * k && x < bx + (ABILITY_SLOT + 3) * k && y >= by - 6 * k && y < by + (ABILITY_SLOT + 4) * k) {
         const a = TOUCH_ACTIONS[i];
         this.touchHeld.set(id, a);
         this.held.add(a);
@@ -241,11 +263,14 @@ export class Input {
       }
     }
     const P = TOUCH_PAUSE;
-    if (x >= P.x - 4 && x < P.x + P.s + 4 && y >= P.y - 4 && y < P.y + P.s + 4) { this.pressedSet.add('pause'); return true; }
-    // Build i plecak: margines w poziomie 2 px (połowa odstępu), żeby obszary sąsiednich przycisków się nie nakładały.
+    // W kolumnie pod pauzą jest build: dolny margines pauzy 2 px (połowa odstępu), jak margines buildu niżej.
+    if (x >= P.x - 4 && x < P.x + P.s + 4 && y >= P.y - 4 && y < P.y + P.s + (touchColumn() ? 2 : 4)) { this.pressedSet.add('pause'); return true; }
+    // Build i plecak: margines 2 px (połowa odstępu) w stronę sąsiednich przycisków (w wierszu poziomo, w kolumnie pionowo),
+    // żeby ich obszary się nie nakładały; w drugą stronę 4 px.
+    const mx = touchColumn() ? 4 : 2, my = touchColumn() ? 2 : 4;
     for (let i = 0; i < TOUCH_MENU.length; i++) {
       const [bx, by] = touchMenuPos(i);
-      if (x >= bx - 2 && x < bx + P.s + 2 && y >= by - 4 && y < by + P.s + 4) { this.pressedSet.add(TOUCH_MENU[i]); return true; }
+      if (x >= bx - mx && x < bx + P.s + mx && y >= by - my && y < by + P.s + my) { this.pressedSet.add(TOUCH_MENU[i]); return true; }
     }
     const B = TOUCH_BAG_PILL;
     if (B.on && x >= B.x - 2 && x < B.x + B.w + 2 && y >= B.y - 4 && y < B.y + B.h + 4) { this.pressedSet.add('inventory'); return true; }

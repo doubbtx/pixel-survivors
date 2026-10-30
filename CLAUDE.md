@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.58.0)
+## Stan (wersja 0.59.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -781,6 +781,15 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   i18n banerów ultów i uderzeń, Iskra bez wykładniczych stref ognia, ellipse/minimapa/miniony/strefy (wydajność), c_fever
   drenuje HP, karty ultów działają z alt-ultem, Mushin czas od poziomu, telegrafy wrogów nie znikają z cullingiem.
   26 drobnych (low) zostawionych — lista w raporcie przeglądu.
+- 0.59.0 (ultracode runda 2 + uwagi gracza): 26 poprawek low z przeglądu (m.in. pasek bossa Endless, Mushin reset, ukryci wrogowie
+  w ultach, bossHpFrac, pressT, kowadło po wczytaniu, autozapis bez nagród, etykiety klawiszy po zmianie przypisań, rysik, tint
+  zdarzeń); C1 etykiety/podpowiedzi dotyku (isTouch, keyGlyphs), C2 TOUCH_MENU + pigułka plecaka, C3 wspólny przycisk Wstecz
+  (widgets BACK_BTN, lewy górny róg), C4 batchLoot (rarity<2 do plecaka + jeden autoEquip), C5 Settings.hudScale (1/1.25/1.5,
+  hud.ts transform + abilitySlotPos, belowHud/hudGap), C7 Udręka z regułami (shortWarn, noBreath, deathBurst, cardCurse,
+  bossFoeDmg), C8 profil walki wręcz w autoEquip (BAL.autoEquip.melee). Gracz: `BAL.hitCap` (40% maks. HP, +4%/Udręka, do 80%)
+  w hurtPlayer; `BAL.revive` (3 s, promień 130: zwykli wrogowie giną, pociski znikają); automat nie zdejmuje super/unikatów;
+  karty ultów h_k_rain/h_i_inferno/h_v_dance/h_a_judge `ult: 'base'`; ekran końca: karty w rzędzie broni przy niskim panelu,
+  sekrety tłumaczone, wiersze Obrażeń wg wysokości, linia odrodzeń.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

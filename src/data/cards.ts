@@ -63,6 +63,7 @@ import { spawnTurret } from '../systems/turrets';
  * Flagi map Ekspedycji (data/expedition.ts, na czas poziomu):
  *  enemyDmg / enemyCount / eliteRate / bulletDensity   silniejsi, liczniejsi wrogowie, częstsze elity, gęstsze salwy
  *  healCut         leczenie słabsze o ułamek
+ *  bossFoeDmg      +obrażenia bossów zadawane graczowi (ułamek; Udręka), nie mylić z bossDmg gracza
  *  mapLoot / mapGold / mapXp   więcej przedmiotów, złota, doświadczenia
  *  shrineRate / goldSlimeRate  częstsze kapliczki i Złote szlamy
  *  cd.q / cd.e / cd.dash        skrócenie odnowienia danej umiejętności
@@ -263,7 +264,7 @@ export const CARDS: CardDef[] = [
   { id: 'c_fever', name: 'Gorączka', rarity: 'gold', tags: ['Klątwa', 'Szybkość'], cursed: true, desc: 'Umiejętności odnawiają się 35% szybciej, ale tracisz 1 HP/s.', stats: { cdr: 0.35 }, flags: { hpDrain: 1 } },
   { id: 'c_greed', name: 'Przeklęte złoto', rarity: 'gold', tags: ['Klątwa'], cursed: true, desc: '+100% złota, +50% XP, ale wrogowie mają +25% HP.', stats: { greed: 1, growth: 0.5 }, flags: { enemyHp: 0.25 } },
   { id: 'h_k_volley', name: 'Grad z nieba', rarity: 'gold', tags: ['Pociski', 'Umiejętności'], hero: 'kestra', desc: 'Salwa: +4 strzały, każda przebija 2 wrogów więcej.', stackable: true, flags: { 'k_volley.count': 4, 'k_volley.pierce': 2 } },
-  { id: 'h_k_rain', name: 'Ulewa', rarity: 'gold', tags: ['Obszar', 'Umiejętności'], hero: 'kestra', desc: 'Deszcz strzał: +2 s, +20 promienia.', stackable: true, flags: { 'k_rain.duration': 2, 'k_rain.radius': 20 } },
+  { id: 'h_k_rain', name: 'Ulewa', rarity: 'gold', tags: ['Obszar', 'Umiejętności'], hero: 'kestra', ult: 'base', desc: 'Deszcz strzał: +2 s, +20 promienia.', stackable: true, flags: { 'k_rain.duration': 2, 'k_rain.radius': 20 } },
   { id: 'h_b_ram', name: 'Taran', rarity: 'gold', tags: ['Umiejętności'], hero: 'borgun', desc: 'Szarża: +40 dystansu, +20 obrażeń, +0.6 s ogłuszenia.', stackable: true, flags: { 'b_charge.dist': 40, 'b_charge.damage': 20, 'b_charge.stun': 0.6 } },
   {
     id: 'h_b_wrath', name: 'Wieczny gniew', rarity: 'gold', tags: ['Życie', 'Umiejętności'], hero: 'borgun', ult: 'base', desc: 'Gniew tytana trwa 4 s dłużej, a zabójstwa w jego trakcie leczą 1 HP.',
@@ -271,7 +272,7 @@ export const CARDS: CardDef[] = [
     hooks: { onKill: (run) => { if (run.abilities.ult.activeT > 0) run.heal(1); } },
   },
   { id: 'h_i_ring', name: 'Wieczny płomień', rarity: 'gold', tags: ['Ogień', 'Umiejętności'], hero: 'ignara', desc: 'Pierścień ognia: +2 s, +8 obrażeń co tick, +10 promienia.', stackable: true, flags: { 'i_ring.duration': 2, 'i_ring.damage': 8, 'i_ring.radius': 10 } },
-  { id: 'h_i_inferno', name: 'Ognisty deszcz', rarity: 'gold', tags: ['Ogień', 'Obszar'], hero: 'ignara', desc: 'Inferno: +2 s, +20 obrażeń, +8 promienia wybuchów.', stackable: true, flags: { 'i_inferno.duration': 2, 'i_inferno.damage': 20, 'i_inferno.blast': 8 } },
+  { id: 'h_i_inferno', name: 'Ognisty deszcz', rarity: 'gold', tags: ['Ogień', 'Obszar'], hero: 'ignara', ult: 'base', desc: 'Inferno: +2 s, +20 obrażeń, +8 promienia wybuchów.', stackable: true, flags: { 'i_inferno.duration': 2, 'i_inferno.damage': 20, 'i_inferno.blast': 8 } },
   { id: 'g_prism', name: 'Pryzmat żywiołów', rarity: 'gold', tags: ['Ogień', 'Krytyk'], desc: 'Trafienia mają 15% szans nałożyć losowy żywioł.', stackable: true, flags: { 'elemChance.any': 0.15 } },
   { id: 'g_reactor', name: 'Reaktor', rarity: 'gold', tags: ['Obszar', 'Ogień'], desc: 'Reakcje żywiołów są o 50% silniejsze.', stackable: true, flags: { reactPower: 0.5 } },
   { id: 'g_storm', name: 'Burza żywiołów', rarity: 'gold', tags: ['Umiejętności'], desc: '+30% siły żywiołów, porażeni wrogowie dostają dodatkowe +10% obrażeń.', stats: { elemPower: 0.3 }, flags: { shockBonus: 0.1 } },
@@ -426,7 +427,7 @@ export const CARDS: CardDef[] = [
     },
   },
   { id: 'h_v_exec', name: 'Kat', rarity: 'gold', tags: ['Umiejętności', 'Krytyk'], hero: 'vesper', desc: 'Egzekucja: +30 obrażeń, +8 promienia, zabija od razu wrogów do 5% HP więcej.', stackable: true, flags: { 'v_exec.damage': 30, 'v_exec.radius': 8, 'v_exec.exec': 0.05 } },
-  { id: 'h_v_dance', name: 'Wirujący taniec', rarity: 'gold', tags: ['Umiejętności', 'Szybkość'], hero: 'vesper', desc: 'Taniec ostrzy: +1.5 s, +15 obrażeń cięć.', stackable: true, flags: { 'v_dance.duration': 1.5, 'v_dance.damage': 15 } },
+  { id: 'h_v_dance', name: 'Wirujący taniec', rarity: 'gold', tags: ['Umiejętności', 'Szybkość'], hero: 'vesper', ult: 'base', desc: 'Taniec ostrzy: +1.5 s, +15 obrażeń cięć.', stackable: true, flags: { 'v_dance.duration': 1.5, 'v_dance.damage': 15 } },
   { id: 'h_v_blood', name: 'Krwawe żniwo', rarity: 'gold', tags: ['Życie', 'Krytyk'], hero: 'vesper', desc: 'Egzekucja leczy 4% HP za każdego zabitego wroga.', stackable: true, flags: { execHeal: 0.04 } },
   { id: 'h_v_shadow', name: 'Mistrzyni cieni', rarity: 'prism', tags: ['Krytyk', 'Szybkość'], hero: 'vesper', desc: 'Łowczyni działa o 6 zabójstw wcześniej, a Cios z cienia odnawia też Zniknięcie.', flags: { 'passive.n': 6, stepResetDash: 1 } },
   { id: 'h_a_guard', name: 'Twin Spears', rarity: 'silver', tags: ['Obszar'], hero: 'aurel', desc: 'Spear of Light: +1 spear, +12 damage.', stackable: true, flags: { 'a_guard.count': 1, 'a_guard.damage': 12 } },
@@ -436,7 +437,7 @@ export const CARDS: CardDef[] = [
     hooks: { onDash: (run, n) => run.heal(run.stats.maxHp * 0.04 * n) },
   },
   { id: 'h_a_sanct', name: 'Święty krąg', rarity: 'gold', tags: ['Życie', 'Obszar'], hero: 'aurel', desc: 'Uświęcona ziemia: +2 s, +12 promienia, leczy o 0.5% HP na sekundę więcej.', stackable: true, flags: { 'a_sanct.duration': 2, 'a_sanct.radius': 12, 'a_sanct.heal': 0.5 } },
-  { id: 'h_a_judge', name: 'Wyrok', rarity: 'gold', tags: ['Umiejętności'], hero: 'aurel', desc: 'Sąd: +4 cele, +30 obrażeń słupów.', stackable: true, flags: { 'a_judge.count': 4, 'a_judge.damage': 30 } },
+  { id: 'h_a_judge', name: 'Wyrok', rarity: 'gold', tags: ['Umiejętności'], hero: 'aurel', ult: 'base', desc: 'Sąd: +4 cele, +30 obrażeń słupów.', stackable: true, flags: { 'a_judge.count': 4, 'a_judge.damage': 30 } },
   { id: 'h_a_shield', name: 'Tarcza wiary', rarity: 'gold', tags: ['Tarcze', 'Życie'], hero: 'aurel', desc: 'Guardian works every 4 s instead of 6 s, and its shield can grow 10% HP higher.', flags: { 'passive.n': 2, 'passive.shieldCap': 0.1 } },
   { id: 'h_a_saint', name: 'Święty patron', rarity: 'prism', tags: ['Życie', 'Obszar'], hero: 'aurel', desc: 'Branded enemies take +25% damage from you, and hits on them heal twice as much.', flags: { brandDmg: 0.25, guardHeal: 1 } },
   // Takezo (szermierz, 0.32): opisy po angielsku, polski w core/i18n-pl.ts.
