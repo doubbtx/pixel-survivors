@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.60.0)
+## Stan (wersja 0.61.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -801,7 +801,17 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   i podpowiedź. Pomiar (bot stojący od aktu 2, nieśmiertelny): śmierci w akcie 2 0-12 → ~155; akt 3 przeciętnego buildu
   już nie bez trafień; bardzo mocne buildy dalej czyszczą poza kadrem (dalej: presja niezależna od tempa zabijania).
   Test w worktree: `node_modules` musi być prawdziwy (junction → Vite 403 na czcionce).
-- 0.61 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
+- 0.61.0 (odblokowania zawartości, gracz: „nie wszystko od razu, ale nie ciężko”): data/unlocks.ts `CONTENT` (`w:<broń>`,
+  `p:<pasywka>`, `fusions`, `cards:<tag>`, `prism:1..3`, `evo:<broń>` = warianty po pierwszej ewolucji tej broni, `evo:all`
+  dla starych zapisów), `isOpen`, `lockText` (warunek i najlepszy postęp `save.unlockBest`), `grants` (Kości → Podkowa).
+  Start: 5 broni ogólnych (bolt orbit aura chain boomerang), 12 pasywek (zablokowane tylko te od wariantów: magnet, ember,
+  whetstone, clover, horseshoe), `BAL.discovery.goldPerTag` złotych kart na tag i `prism` pryzmatycznych (data/cards.ts
+  `cardLock`); karty bohaterów i bronie bohaterów zawsze otwarte. Warunki „w jednym runie” z `BAL.discovery.goals` (liczniki
+  `Run.critHits`, `jackpots`, `evolvedBases`, w snapshocie `unlockStats`). Odkrycia: `grantDiscovery` (punkty za run, akt,
+  minuty Endless; co `every` punktów najbliższa zablokowana zawartość z kolejki). `Run.content` (= `save.unlocks`) filtruje
+  pulę awansu (systems/levelup.ts `openFusions`, `openEvolves`), `cardPool`. UI: Księga ewolucji, Arsenał i Kolekcja kart
+  pokazują warunek, ekran końca „Next discovery x/3”. Zapis v12 (migracja 11 → 12: kto grał, dostaje wszystko).
+- 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`
   (single 1.25, crowd 0.5, hybrid 1.15; stany żywiołów dziedziczą przez bazę), `spread` 0.12 rad dla salwy w jeden cel.

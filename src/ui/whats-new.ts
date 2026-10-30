@@ -18,6 +18,13 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.61',
+    lines: [
+      "Weapons now have roles: single target (great on bosses and elites, aims at them first), crowd (clears hordes, weak on bosses) and hybrid. Go all in on one and suffer on the other side, or mix. The role is shown on level-up cards and in the weapon details.",
+      "New players start with part of the weapons, passives and cards; the rest unlocks through play (defeat a boss, reach a level, trigger reactions...). Every finished run also brings you closer to the next discovery. Locked things show how to get them in the Codex and the Collection. If you already played, everything stays unlocked.",
+    ],
+  },
+  {
     version: '0.60',
     lines: [
       "Balance: standing still is no longer safe. Kill explosions, reactions and chain effects no longer crit a second time or set off more explosions, so enemies stop dying off-screen. Lifesteal heals at most 4% of your max HP per second, ranged enemies fire as soon as they are in range, and late acts keep getting harder.",

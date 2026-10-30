@@ -4,7 +4,7 @@ import { drawText, wrapText, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
-import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel, evolvesOf } from '../data/weapons';
+import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel, evolvesOf, roleInfo } from '../data/weapons';
 import { PASSIVES, PASSIVE_BY_ID } from '../data/passives';
 import { HEROES, HERO_BY_ID } from '../data/heroes';
 import { AUGMENTS, FUSION_RULES } from '../data/augments';
@@ -46,7 +46,7 @@ function weaponPage(): Page {
         lock: [`w:${w.id}`, `p:${e.passive}`, ...(i ? [`evo:${w.id}`] : [])],
         parts: [w.icon, pa.icon], result: into.icon, title: into.name, color: into.color,
         how: `${w.name} at level ${maxLevel(w)} + passive ${pa.name}, then level up.${heroNote(w.hero)}`,
-        desc: `${into.desc}${el ? ` Element: ${ELEMENTS[el].name}.` : ''}`,
+        desc: `${into.desc}${el ? ` Element: ${ELEMENTS[el].name}.` : ''} ${roleInfo(into.role).desc}`,
       });
     });
   }
@@ -73,7 +73,7 @@ function fusionPage(): Page {
       lock: ['fusions', `w:${f.a}`, `w:${f.b}`],
       parts: [a.icon, b.icon], result: into.icon, title: into.name, color: into.color,
       how: `${a.name} + ${b.name}, both at max level or evolved, then level up.${heroNote(a.hero ?? b.hero)}`,
-      desc: into.desc,
+      desc: `${into.desc} ${roleInfo(into.role).desc}`,
     };
   });
   return { title: 'Fusions', intro: FUSION_RULES, entries };
