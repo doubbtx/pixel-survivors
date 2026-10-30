@@ -12,7 +12,7 @@ import {
   NODE_INFO, actBiome, chooseTier, tierOpen, MAP_RARITY, MAP_MOD_BY_ID, MAP_BONUS_BY_ID, EX_BLESSINGS, CAMP_BUFFS, exRow, isCombat, levelAt, linked, nextLanes, depthAt, mapReward,
   type MapNode, TORMENT, type NodeKind } from '../data/expedition';
 import type { Run } from '../game/run';
-import { fmt } from '../util/format';
+import { fmt, hpText } from '../util/format';
 import { panel, inside, hovered, button, Scroll } from './widgets';
 import { tile, iconSlot, UI } from './theme';
 import { CHUNK, groundChunk, groundBase, groundFrame } from '../gfx/ground';
@@ -255,7 +255,7 @@ export class ExpeditionMapView {
     // Razem z mnożnikiem Udręki (playtest 4: przy Udręce 10 licznik pokazywał +0%), tak jak w game-screen (mapMul).
     const essence = Math.round(((1 + ex.bonus * X.rewardEssence / 100) * (1 + (ex.torment ?? 0) * BAL.torment.essence) - 1) * 100);
     const chips: [string, number, string?][] = [
-      [`HP ${fmt(Math.ceil(run.player.hp))}/${fmt(run.stats.maxHp)}`, C.salmon], [`złoto ${fmt(Math.floor(run.gold))}`, C.gold],
+      [`HP ${hpText(run.player.hp, run.stats.maxHp)}`, C.salmon], [`złoto ${fmt(Math.floor(run.gold))}`, C.gold],
       [`esencja +${essence}%`, C.cyan, 'Nagrody za modyfikatory ukończonych map. Na koniec wyprawy dostaniesz tyle więcej esencji do Rozwoju.'],
     ];
     if (bless) chips.push([`${bless.name} (${ex.blessing!.maps})`, C.yellow]);

@@ -10,7 +10,7 @@ import type { AbilitySlot } from '../data/heroes';
 import { BAL } from '../data/balance';
 import { abilityMaxCd } from '../systems/abilities';
 import { passiveIcon } from '../data/passives';
-import { fmt, fmtTime } from '../util/format';
+import { fmt, fmtTime, hpText } from '../util/format';
 import type { LoopStats } from '../core/loop';
 import { actionKey, abilitySlotPos, ABILITY_SLOT, TOUCH_PAUSE, STICK_R, type Input } from '../core/input';
 import type { Run } from '../game/run';
@@ -267,7 +267,7 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
   if (a.hitFlash > 0 && !run.reduceFlash) r.withAlpha(a.hitFlash / 0.18 * 0.7, () => r.roundRect(bx, py, bw, 8, 1, C.white));
   if (run.healGlow > 0) r.withAlpha(Math.min(1, run.healGlow * 2), () => r.roundFrame(bx - 0.5, py - 0.5, bw + 1, 9, 1, C.lime, 0.75));
   if (p.shield > 0) r.rect(bx, py + 8.5, bw * Math.min(1, p.shield / st.maxHp), 1, C.cyan);
-  drawText(g, `${fmt(Math.ceil(p.hp))} / ${fmt(Math.round(st.maxHp))}`, bx + bw / 2, py + 0.3, C.white, { align: 'center', scale: 0.75, outline: C.black });
+  drawText(g, hpText(p.hp, st.maxHp, ' / '), bx + bw / 2, py + 0.3, C.white, { align: 'center', scale: 0.75, outline: C.black });
   if (a.hitT > 0) {
     const t = `-${fmt(Math.round(a.hitAmt))}`, up = (0.9 - a.hitT) * 4;
     r.withAlpha(Math.min(1, a.hitT * 3), () => drawText(g, t, x + w + 3, py - up, C.red, { outline: C.black }));
@@ -466,10 +466,13 @@ function drawAbilities(r: Renderer, run: Run, a: HudAnim, touch: boolean): void 
       r.withAlpha(k * 0.3, () => r.roundRect(x, y, S, S, UI.radius, C.white));
     }
     // Klawisz: mała plakietka w lewym dolnym rogu; poziom umiejętności kreskami nad gniazdem.
-    const kl = sl === 'dash' && actionKey('dash') === 'Space' ? 'Spc' : actionKey(sl), kw = textWidth(kl) * smallS() + 3;
-    const kh = smallS() > 0.75 ? 7.5 : 6.5;
-    r.withAlpha(0.8, () => r.roundRect(x, y + S - kh, kw, kh, 1, C.black));
-    drawText(g, kl, x + 1.5, y + S - kh - (kh > 7 ? 2 : 1), ready ? C.white : UI.textDim, { scale: smallS() });
+    // Plakietka klawisza (na dotyku bez niej: gniazdo samo jest przyciskiem).
+    if (!touch) {
+      const kl = sl === 'dash' && actionKey('dash') === 'Space' ? 'Spc' : actionKey(sl), kw = textWidth(kl) * smallS() + 3;
+      const kh = smallS() > 0.75 ? 7.5 : 6.5;
+      r.withAlpha(0.8, () => r.roundRect(x, y + S - kh, kw, kh, 1, C.black));
+      drawText(g, kl, x + 1.5, y + S - kh - (kh > 7 ? 2 : 1), ready ? C.white : UI.textDim, { scale: smallS() });
+    }
     if (ab.def.maxLevel > 1) for (let l = 0; l < ab.level; l++) r.rect(x + 1 + l * 4, y - 2.5, 3, 1, UI.reward);
   });
 }
@@ -495,9 +498,19 @@ function drawDanger(r: Renderer, run: Run): void {
   const edge = Math.max(low, run.hurtFx * 1.4);
   if (edge <= 0) return;
   r.withAlpha(Math.min(0.5, edge), () => {
-    r.rect(0, 0, W, 3, C.red); r.rect(0, H - 3, W, 3, C.red);
-    r.rect(0, 0, 3, H, C.red); r.rect(W - 3, 0, 3, H, C.red);
+    const L = -OX, R = W + OX; // krawędzie okna (szeroki ekran)
+    r.rect(L, 0, R - L, 3, C.red); r.rect(L, H - 3, R - L, 3, C.red);
+    r.rect(L, 0, 3, H, C.red); r.rect(R - 3, 0, 3, H, C.red);
   });
+}
+
+/** Rysowanie bloku HUD przesuniętego w poziomie (szeroki ekran: lewy blok −OX, prawy +OX). */
+function shifted(r: Renderer, dx: number, draw: () => void): void {
+  if (!dx) { draw(); return; }
+  r.g.save();
+  r.g.translate(dx, 0);
+  draw();
+  r.g.restore();
 }
 
 export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean, cheats: boolean, minimap: boolean, input: Input): void {
@@ -506,19 +519,26 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
   drawDanger(r, run);
 
   // Cienki pasek doświadczenia na całej szerokości; błysk po zebraniu kryształu i przy awansie.
-  meter(r, 0, 0, W, UI.xpH, a.xp, UI.xp);
-  if ((run.xpPulse > 0 || a.levelFlash > 0) && !run.reduceFlash) r.withAlpha(Math.min(0.8, run.xpPulse * 3 + a.levelFlash), () => r.rect(0, 0, a.levelFlash > 0 ? W : W * a.xp, UI.xpH, C.white));
+  // Szeroki ekran (20:9): pasek XP na całą szerokość okna, lewy blok przy lewej krawędzi, prawy przy prawej (OX);
+  // środek (czas, cel, baner) zostaje na środku. Na 16:9 OX = 0.
+  meter(r, -OX, 0, W + 2 * OX, UI.xpH, a.xp, UI.xp);
+  if ((run.xpPulse > 0 || a.levelFlash > 0) && !run.reduceFlash) r.withAlpha(Math.min(0.8, run.xpPulse * 3 + a.levelFlash), () => r.rect(-OX, 0, (W + 2 * OX) * (a.levelFlash > 0 ? 1 : a.xp), UI.xpH, C.white));
 
-  const cardBottom = drawHeroCard(r, run, a);
-  const statusBottom = drawStatusRow(r, run, UI.edge, cardBottom + UI.gap + 1);
-  drawSynergyHud(r, run, UI.edge, statusBottom + UI.gap + 1, UI.card.w);
+  shifted(r, -OX, () => {
+    const cardBottom = drawHeroCard(r, run, a);
+    const statusBottom = drawStatusRow(r, run, UI.edge, cardBottom + UI.gap + 1);
+    drawSynergyHud(r, run, UI.edge, statusBottom + UI.gap + 1, UI.card.w);
+    drawInventory(r, run);
+  });
 
   const centerBottom = drawCenter(r, run, a);
 
-  let ry = drawCounters(r, run, a) + UI.gap;
-  const mw = UI.minimap.w;
-  if (minimap) { drawMinimap(r, run, W - UI.edge - mw, ry, mw, UI.minimap.h); ry += UI.minimap.h + UI.gap; }
-  if (run.task) drawTask(r, run, W - UI.edge - 96, ry, 96);
+  shifted(r, OX, () => {
+    let ry = drawCounters(r, run, a) + UI.gap;
+    const mw = UI.minimap.w;
+    if (minimap) { drawMinimap(r, run, W - UI.edge - mw, ry, mw, UI.minimap.h); ry += UI.minimap.h + UI.gap; }
+    if (run.task) drawTask(r, run, W - UI.edge - 96, ry, 96);
+  });
   drawSecretArrows(r, run);
 
   // Baner (zapowiedzi, fazy bossa, elity): wąska wstęga tuż pod środkowym blokiem, wsuwa się i znika. Wysoko, z dala od
@@ -534,7 +554,6 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
     });
   }
 
-  drawInventory(r, run);
   const touch = input.lastDevice === 'touch';
   drawAbilities(r, run, a, touch);
 
@@ -560,8 +579,8 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
     if (s) {
       const dx = s.x - s.ox, dy = s.y - s.oy, d = Math.hypot(dx, dy), k = d > STICK_R ? STICK_R / d : 1;
       stick(s.ox, s.oy, dx * k, dy * k, 1);
-    } else stick(UI.edge + STICK_R + 14, H - 74, 0, 0, 0.3); // nad slotami broni
-    if (!s && run.time < 6) {
+    } else stick(UI.edge + STICK_R + 14 - OX, H - 74, 0, 0, 0.3); // nad slotami broni
+    if (!s && run.time < 6 && !hintShowing()) {
       drawText(g, 'Dotknij lewej połowy ekranu i przesuń, żeby chodzić', W / 2, H - 60, C.lavender, { align: 'center', ...OUT });
     }
   }

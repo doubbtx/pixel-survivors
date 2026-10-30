@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.49.2)
+## Stan (wersja 0.49.3)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -821,6 +821,11 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - 0.49.2: przerysowani ostatni starsi wrogowie (gfx/actors.ts): jeleń (stawy nóg, pierś, grzywa, ucho, poroże z jarzącymi się
   końcami, smugi ducha), ognik (oczy z żarem, paszcza, iskry, języki u dołu), wirujący (pięć osobnych ostrzy z krawędzią tnącą,
   pierścień z nitami, czerwone oko; `starPts` usunięte), mimik (deski ze słojami, żelazne okucia z nitami, pazury, oczy w szparze).
+- 0.49.3 (zrzut z telefonu): HP jako `hpText()` (util/format.ts: obie liczby w górę, bieżące ≤ maks.; było „107 / 106”)
+  w HUD, sklepie i na mapie. Na dotyku gniazda umiejętności bez plakietek klawiszy. Szeroki ekran: HUD przy krawędziach okna —
+  `shifted()` w hud.ts (lewy blok −OX: karta bohatera, statusy, synergie, bronie; prawy +OX: liczniki, minimapa, zadanie),
+  pasek XP i czerwona ramka niskiego HP na całą szerokość; `abilitySlotPos` i `TOUCH_PAUSE.x` (core/input.ts) z +OX, więc
+  rysunek i dotyk się zgadzają. Napis o joysticku chowa się, gdy jest podpowiedź (ta sama treść).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

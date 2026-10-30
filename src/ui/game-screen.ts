@@ -1116,7 +1116,7 @@ export class GameScreen implements Screen {
       drawText(g, `${Math.round((100 * dmg) / total)}%`, x1 - 55, y, C.lgray, { align: 'right' });
       drawText(g, fmt(dmg / Math.max(1, run.totalTime)), x1, y, C.lgray, { align: 'right' });
     });
-    if (all.length > 7) drawText(g, `+${all.length - 7} więcej`, x1, this.endY + this.endH - 10, C.lavender, { align: 'right', scale: smallS() });
+    if (all.length > 7) drawText(g, `+${all.length - 7} więcej`, x1, this.endY + this.endH - 11, C.lavender, { align: 'right', scale: smallS() });
   }
 
   /** Ekran końca: wykres DPS w czasie (pomiar co BAL.dpsEvery s). */

@@ -1,4 +1,4 @@
-import { W, H, type Renderer } from './renderer';
+import { W, H, OX, type Renderer } from './renderer';
 
 /** Abstrakcyjne akcje — logika gry nie wie nic o konkretnych klawiszach czy przyciskach pada. */
 export type Action =
@@ -98,11 +98,12 @@ export function keyGlyphs(s: string): string {
 /** Gniazda umiejętności w HUD (prawy dół) — na telefonie są też przyciskami dotykowymi. Kolejność: Q, E, unik, R. */
 export const ABILITY_SLOT = 32;
 export function abilitySlotPos(i: number): [number, number] {
-  return [W - 4 - (4 - i) * (ABILITY_SLOT + 3), H - ABILITY_SLOT - 4];
+  // Szeroki ekran: przy prawej krawędzi okna (OX), jak cały prawy blok HUD.
+  return [W + OX - 4 - (4 - i) * (ABILITY_SLOT + 3), H - ABILITY_SLOT - 4];
 }
 const TOUCH_ACTIONS: Action[] = ['q', 'e', 'dash', 'ult'];
 /** Przycisk pauzy na ekranie dotykowym (lewo od licznika zabójstw). */
-export const TOUCH_PAUSE = { x: W - 110, y: 8, s: 20 };
+export const TOUCH_PAUSE = { get x(): number { return W + OX - 110; }, y: 8, s: 20 };
 /** Zasięg wychylenia wirtualnego joysticka (piksele logiczne). */
 export const STICK_R = 26;
 

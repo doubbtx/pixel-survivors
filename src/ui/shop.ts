@@ -5,7 +5,7 @@ import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
-import { fmt } from '../util/format';
+import { fmt, hpText } from '../util/format';
 import {
   SERVICES, ELIXIR_BY_ID, itemPrice, servicePrice, elixirPrice, refreshPrice, shopUpgradePrice, elixirLine,
   type ShopState,
@@ -182,7 +182,7 @@ export class ShopView {
       });
     }
     const lines = [
-      `HP ${Math.ceil(run.player.hp)}/${Math.ceil(run.stats.maxHp)}  plecak ${run.bag.length}/${BAL.bagSize}  odł. ${run.shards}  losowania ${run.rerolls}/${run.banishes}/${run.cardRerolls}`,
+      `HP ${hpText(run.player.hp, run.stats.maxHp)}  plecak ${run.bag.length}/${BAL.bagSize}  odł. ${run.shards}  losowania ${run.rerolls}/${run.banishes}/${run.cardRerolls}`,
       'Enter/klik: kup  R: odśwież  I: ekwipunek  K: kowadło',
     ];
     // Przy podpowiedzi jej ramka zastępuje stan i klawisze.

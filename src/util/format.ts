@@ -23,3 +23,9 @@ export function fmtTime(sec: number): string {
   const m = Math.floor(s / 60);
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
+
+/** HP do wyświetlenia: obie liczby w górę, bieżące nie większe niż maksimum (wcześniej „107 / 106” przez różne zaokrąglenia). */
+export function hpText(hp: number, max: number, sep = '/'): string {
+  const m = Math.ceil(max);
+  return `${fmt(Math.min(Math.ceil(hp), m))}${sep}${fmt(m)}`;
+}
