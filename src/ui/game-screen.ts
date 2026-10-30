@@ -14,7 +14,7 @@ import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
-import { button, Menu, dim, panel, inside, slot, bar, Scroll, Confirm } from './widgets';
+import { button, Menu, dim, panel, inside, slot, bar, Scroll, Confirm, drawTip, type Tip } from './widgets';
 import { renderHud, messageY, belowHud, hudGap } from './hud';
 import { UI } from './theme';
 import { drawSkills } from './skills';
@@ -22,7 +22,7 @@ import type { AbilitySlot } from '../data/heroes';
 import { abilityMaxCd } from '../systems/abilities';
 import { offerCount } from '../systems/levelup';
 import { LevelUpView } from './levelup';
-import { LootView, InventoryView, drawItemSlot } from './items';
+import { LootView, InventoryView, drawItemSlot, itemTip } from './items';
 import { SLOTS, type Item } from '../data/items';
 import { CardPickView, rarityColor } from './cards';
 import { ShopView } from './shop';
@@ -127,6 +127,10 @@ export class GameScreen implements Screen {
   private unlockedRun: UnlockDef[] = [];
   private bossSeen = 0;
   private pauseScroll = new Scroll();
+  /** Przewijanie zakładek ekranu końca (wyróżnienia, obrażenia, build), zerowane przy zmianie zakładki. */
+  private endScroll = new Scroll();
+  /** Zakładka Build ekranu końca: opis rzeczy pod kursorem (rysowany na końcu, nad menu) i jej prostokąt. */
+  private endTip: [Tip, number, number, number, number] | undefined;
   private pauseMenu: Menu;
   private endMenu: Menu;
   /** Zakładka ekranu końca: obrażenia, wykres DPS, karta buildu. */
@@ -841,23 +845,29 @@ export class GameScreen implements Screen {
           sfx.play('select');
           this.pauseScroll.reset();
         }
-        if (this.pausePage === 2) this.pauseScroll.update(inp, ...this.pauseArea());
-        PAUSE_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.pauseTab(i))) { this.pausePage = i; sfx.play('select'); } });
-        // Build: klik w kartę pokazuje / chowa jej opis.
-        if (this.pausePage === 1 && inp.pressed('click')) {
+        // Build i Umiejętności przewijane (wszystkie karty i pełne opisy).
+        if (this.pausePage > 0) this.pauseScroll.update(inp, ...this.pauseArea());
+        PAUSE_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.pauseTab(i)) && this.pausePage !== i) { this.pausePage = i; this.pauseScroll.reset(); sfx.play('select'); } });
+        // Build: klik w kartę pokazuje / chowa jej opis (tylko w widocznej części listy).
+        if (this.pausePage === 1 && inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.pauseArea())) {
           const hit = this.cardRects.findIndex((rc) => inside(inp.mouse.x, inp.mouse.y, ...rc));
           if (hit >= 0) { this.pauseCard = this.pauseCard === hit ? -1 : hit; sfx.play('select'); }
         }
         this.pauseMenu.update(inp);
         break;
-      case 'end':
+      case 'end': {
         this.endMenu.update(inp);
+        const page = this.endPage;
         if (inp.pressed('inventory') || inp.pressed('left') || inp.pressed('right')) {
           this.endPage = (this.endPage + (inp.pressed('left') ? END_TABS.length - 1 : 1)) % END_TABS.length;
           sfx.play('select');
         }
         END_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.endTab(i))) this.endPage = i; });
+        if (this.endPage !== page) this.endScroll.reset();
+        // Listy zakładek przewijane (kółko, przeciąganie palcem, PageUp/PageDown, prawa gałka pada).
+        this.endScroll.update(inp, ...this.endArea());
         break;
+      }
     }
   }
 
@@ -999,56 +1009,54 @@ export class GameScreen implements Screen {
     });
   }
 
-  /** Pauza, zakładka Build: pasywki z poziomami, ekwipunek i karty (pełny rozmiar tekstu). */
+  /**
+   * Pauza, zakładka Build: pasywki z poziomami, ekwipunek i wszystkie karty (przewijane). Opis karty, przedmiotu
+   * i pasywki w okienku pod myszą / dotknięciem; kliknięcie w kartę przypina jej opis.
+   */
   private renderPauseBuild(x0: number, colW: number, head: (t: string, y: number) => void): void {
-    const r = this.app.r, g = r.g, run = this.run;
-    head('Pasywki', 47);
-    if (!run.passives.length) drawText(g, 'No passives yet', x0, 59, C.lavender);
+    const r = this.app.r, g = r.g, run = this.run, area = this.pauseArea(), oy = this.pauseScroll.begin(r, ...area);
+    const tips: [Tip, number, number, number, number][] = [];
+    let y = 47 - oy;
+    head('Pasywki', y);
+    if (!run.passives.length) drawText(g, 'No passives yet', x0, y + 12, C.lavender);
     run.passives.forEach((p, i) => {
-      const cx = x0 + (i % 2) * (colW + 8), y = 59 + Math.floor(i / 2) * 21;
-      slot(r, cx, y, 18, p.evo ? C.gold : C.slate);
-      drawSprite(g, passiveIcon(p), cx + 9, y + 9);
-      drawText(g, PASSIVE_BY_ID[p.id].name, cx + 22, y - 1, C.white);
-      drawText(g, `poz. ${p.level}`, cx + 22, y + 9, C.lavender);
+      const cx = x0 + (i % 2) * (colW + 8), py = y + 13 + Math.floor(i / 2) * 22;
+      slot(r, cx, py, 18, p.evo ? C.gold : C.slate);
+      drawSprite(g, passiveIcon(p), cx + 9, py + 9);
+      drawText(g, PASSIVE_BY_ID[p.id].name, cx + 22, py - 1, C.white);
+      drawText(g, `poz. ${p.level}`, cx + 22, py + 9, C.lavender);
+      tips.push([passiveTip(p), cx, py, colW, 20]);
     });
-    const ey = 59 + Math.ceil(Math.max(1, run.passives.length) / 2) * 21 + 2;
-    head('Ekwipunek', ey);
-    SLOTS.forEach((sl, i) => drawItemSlot(r, run.equipment[sl.id], x0 + i * 22, ey + 12, 20, false));
-    // Karty: nazwy w dwóch kolumnach, reszta jako „+N więcej”.
-    const cy = ey + 38, nCards = run.cards.reduce((n, c) => n + c.stacks, 0);
-    head(`Karty (${nCards})`, cy);
-    const rows = Math.max(1, Math.floor((H - 26 - (cy + 12)) / 11)), max = rows * 2;
-    const shown = run.cards.length > max ? max - 1 : max;
-    if (run.cards.length) drawText(g, 'Click or point at a card: description', x0, H - 22, C.lavender, { scale: smallS() });
+    y += 13 + Math.ceil(Math.max(1, run.passives.length) / 2) * 22 + 1;
+    head('Ekwipunek', y);
+    SLOTS.forEach((sl, i) => {
+      const it = run.equipment[sl.id];
+      drawItemSlot(r, it, x0 + i * 22, y + 12, 20, false);
+      if (it) tips.push([itemTip(it), x0 + i * 22, y + 12, 20, 20]);
+    });
+    // Karty: wszystkie, nazwy w dwóch kolumnach (lista przewija się razem z zakładką).
+    y += 38;
+    head(`Karty (${run.cards.reduce((n, c) => n + c.stacks, 0)})`, y);
+    y += 12;
     this.cardRects = [];
-    const m = this.app.input.mouse;
+    const m = this.app.input.mouse, inArea = inside(m.x, m.y, ...area);
     let hover = -1;
-    run.cards.slice(0, shown).forEach((c, i) => {
-      const def = CARD_BY_ID[c.id], cx = x0 + (i % 2) * (colW + 8), y = cy + 12 + Math.floor(i / 2) * 11;
-      this.cardRects.push([cx - 1, y - 1, colW, 11]);
-      const on = this.pauseCard === i || inside(m.x, m.y, cx - 1, y - 1, colW, 11);
-      if (on && hover < 0 && this.pauseCard < 0) hover = i;
-      if (this.pauseCard === i || (this.pauseCard < 0 && hover === i)) r.withAlpha(0.25, () => r.rect(cx - 2, y - 1, colW, 11, C.lavender));
-      drawText(g, `${def.name}${c.stacks > 1 ? ' x' + c.stacks : ''}`, cx, y, def.cursed ? C.hotpink : rarityColor(def.rarity, 0));
+    run.cards.forEach((c, i) => {
+      const def = CARD_BY_ID[c.id], cx = x0 + (i % 2) * (colW + 8), cy = y + Math.floor(i / 2) * 11;
+      this.cardRects.push([cx - 1, cy - 1, colW, 11]);
+      if (inArea && hover < 0 && inside(m.x, m.y, cx - 1, cy - 1, colW, 11)) hover = i;
+      if (this.pauseCard === i || (this.pauseCard < 0 && hover === i)) r.withAlpha(0.25, () => r.rect(cx - 2, cy - 1, colW, 11, C.lavender));
+      drawText(g, `${def.name}${c.stacks > 1 ? ' x' + c.stacks : ''}`, cx, cy, def.cursed ? C.hotpink : rarityColor(def.rarity, 0));
     });
-    if (run.cards.length > shown) drawText(g, `+${run.cards.length - shown} więcej`, x0 + (shown % 2) * (colW + 8), cy + 12 + Math.floor(shown / 2) * 11, C.lavender);
-    if (!run.cards.length) drawText(g, 'Brak kart', x0, cy + 12, C.lavender);
-    // Opis karty: przypiętej kliknięciem albo pod kursorem; okienko nad listą kart (nie zasłania wskazanej karty).
-    const idx = this.pauseCard >= 0 && this.pauseCard < shown ? this.pauseCard : hover;
-    if (idx >= 0) this.renderCardTip(run.cards[idx], x0, colW, this.cardRects[idx][1]);
-  }
-
-  /** Okienko z opisem karty (pauza, Build): nazwa w kolorze rzadkości, tagi, opis i liczba kopii. */
-  private renderCardTip(c: { id: string; stacks: number }, x0: number, colW: number, rowY: number): void {
-    const r = this.app.r, g = r.g, def = CARD_BY_ID[c.id], w = colW * 2 + 8, tw = (w - 12) / descS(), lh = descLH();
-    const lines = wrapText(def.desc, tw), h = 26 + lines.length * lh + (c.stacks > 1 ? lh : 0);
-    const y = Math.max(40, rowY - h - 3);
-    panel(r, x0 - 4, y, w + 2, h);
-    drawText(g, def.name, x0 + 2, y + 4, def.cursed ? C.hotpink : rarityColor(def.rarity, 0), { shadow: C.black });
-    drawText(g, def.tags.join(' / '), x0 + w - 6, y + 4, C.lavender, { align: 'right', scale: smallS() });
-    let ly = y + 17;
-    for (const l of lines) { drawText(g, l, x0 + 2, ly, C.white, DESC); ly += lh; }
-    if (c.stacks > 1) drawText(g, `x${c.stacks}: the effect stacks`, x0 + 2, ly, C.lime, DESC);
+    y += Math.ceil(run.cards.length / 2) * 11;
+    if (!run.cards.length) { drawText(g, 'Brak kart', x0, y, C.lavender); y += 11; }
+    else { drawText(g, 'Click or point at a card: description', x0, y + 1, C.lavender, { scale: smallS() }); y += 11; }
+    this.pauseScroll.end(r, y + oy - area[1] + 2, ...area);
+    // Opis: karta przypięta kliknięciem albo wskazana; inaczej przedmiot lub pasywka pod kursorem.
+    const idx = this.pauseCard >= 0 && this.pauseCard < run.cards.length ? this.pauseCard : hover;
+    if (idx >= 0) { const rc = this.cardRects[idx]; drawTip(r, cardTip(run.cards[idx]), x0, rc[1], colW * 2 + 8, rc[3], colW * 2 + 8); return; }
+    const t = inArea ? tips.find(([, tx, ty, tw, th]) => inside(m.x, m.y, tx, ty, tw, th)) : undefined;
+    if (t) drawTip(r, t[0], t[1], t[2], t[3], t[4], colW + 40);
   }
 
   /** Zakładka `i` prawej kolumny pauzy: [x, y, szerokość, wysokość]. */
@@ -1090,6 +1098,12 @@ export class GameScreen implements Screen {
   private endTab(i: number): [number, number, number, number] {
     const n = END_TABS.length;
     return [END_X + i * ((END_W + 4) / n), this.endY - 17, (END_W + 4) / n - 4, 14];
+  }
+
+  /** Przewijany obszar zakładki ekranu końca (Obrażenia: pod nagłówkiem kolumn, który stoi w miejscu). */
+  private endArea(): [number, number, number, number] {
+    const top = this.endPage === 1 ? 17 : 2;
+    return [END_X + 2, this.endY + top, END_W - 4, this.endH - top - 2];
   }
 
   private renderEnd(): void {
@@ -1144,6 +1158,7 @@ export class GameScreen implements Screen {
     else if (this.endPage === 2) this.renderDpsGraph();
     else this.renderBuild();
     this.endMenu.render(r);
+    if (this.endPage === 3 && this.endTip) drawTip(r, ...this.endTip);
   }
 
   /**
@@ -1164,15 +1179,17 @@ export class GameScreen implements Screen {
       { title: 'Longest combo', value: String(run.bestCombo), note: 'kills, no hits taken', icon: 'pi_fury', rec: run.bestCombo > (before.bestCombo ?? 0) && run.bestCombo > 0 },
       { title: 'Best kill streak', value: String(run.bestStreak), note: 'quick kills', icon: 'cd_explode', rec: run.bestStreak > (before.bestStreak ?? 0) && run.bestStreak > 0 },
     ];
-    const cw = (END_W - 24 - 4 * 4) / 5, ch = 48, y = this.endY + 6;
+    const area = this.endArea(), oy = this.endScroll.begin(r, ...area);
+    const cw = (END_W - 24 - 4 * 4) / 5, ch = 48, y = this.endY + 6 - oy;
     cards.forEach((c, i) => {
       const x = END_X + 12 + i * (cw + 4);
       r.withAlpha(0.85, () => r.roundRect(x, y, cw, ch, 3, C.navy, C.black));
       r.roundFrame(x + 0.5, y + 0.5, cw - 1, ch - 1, 3, c.rec ? C.gold : C.slate, c.rec ? 1 : 0.75);
-      drawText(g, c.title, x + cw / 2, y + 3, C.lgray, { align: 'center', scale: smallS() });
+      // Dłuższe tytuły (po polsku „Najmocniejszy cios”) zmniejszone do szerokości kafelka.
+      drawText(g, c.title, x + cw / 2, y + 3, C.lgray, { align: 'center', scale: Math.min(smallS(), (cw - 6) / textWidth(c.title)) });
       if (c.icon) drawSprite(g, c.icon, x + cw / 2, y + 18);
       drawText(g, c.value, x + cw / 2, y + 27, c.rec ? C.yellow : C.white, { align: 'center', shadow: C.black, scale: textWidth(c.value) > cw - 6 ? 0.75 : 1 });
-      drawText(g, c.note, x + cw / 2, y + 38, C.lavender, { align: 'center', scale: smallS() });
+      drawText(g, c.note, x + cw / 2, y + 38, C.lavender, { align: 'center', scale: Math.min(smallS(), (cw - 6) / Math.max(1, textWidth(c.note))) });
       if (c.rec && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: smallS() });
     });
     // Pobite rekordy bohatera (porównanie z zapisem sprzed runu).
@@ -1183,19 +1200,18 @@ export class GameScreen implements Screen {
     if (this.mode === 'endless' && run.totalTime > before.bestEndless && before.bestEndless > 0) broke.push(`Endless: ${fmtTime(run.totalTime)}`);
     if (ex && ex.cleared > before.bestExpedition && before.bestExpedition > 0) broke.push(`Expedition: ${ex.cleared} maps`);
     for (const c of cards) if (c.rec && (c.title === 'Peak DPS' ? (before.bestDps ?? 0) : c.title === 'Longest combo' ? (before.bestCombo ?? 0) : (before.bestStreak ?? 0)) > 0) broke.push(`${c.title}: ${c.value}`);
-    const ly = y + ch + 5, room = Math.max(0, Math.floor((this.endY + this.endH - ly - 13) / 10)) * 2;
+    const ly = y + ch + 5;
     // Pierwszy run bohatera: plakietki „Record!” bez wcześniejszych rekordów — zamiast sprzecznego „bez rekordów” (playtest).
     const first = !broke.length && cards.some((c) => c.rec);
-    // Niski panel (dużo linii informacji nad zakładkami): bez miejsca na listę sama liczba w tytule — wcześniej
-    // splice(-1, …) zostawiał wszystkie wpisy poza ostatnim i lista wchodziła na menu.
-    const title = broke.length ? (room ? 'Records broken' : `${tr('Records broken')}: ${broke.length}`) : first ? 'Your first records! Beat them next time.' : 'No records broken this time';
+    const title = broke.length ? `${tr('Records broken')}: ${broke.length}` : first ? 'Your first records! Beat them next time.' : 'No records broken this time';
     drawText(g, title, END_X + 12, ly, broke.length || first ? C.gold : C.lavender);
-    if (broke.length > room) broke.splice(Math.max(0, room - 1), broke.length, ...(room ? [`+${broke.length - room + 1} more`] : []));
+    // Pełna lista w dwóch kolumnach; niski panel (dużo linii informacji) przewija się zamiast ucinać.
     broke.forEach((t, i) => {
       const bx = END_X + 16 + (i % 2) * (END_W / 2 - 10), by = ly + 11 + Math.floor(i / 2) * 10;
       drawText(g, '-', bx, by, C.gold);
       drawText(g, t, bx + 6, by, C.yellow);
     });
+    this.endScroll.end(r, ly + 13 + Math.ceil(broke.length / 2) * 10 + oy - area[1], ...area);
   }
 
   /** Ekran końca: obrażenia per źródło (suma, udział i DPS, pasek udziału). */
@@ -1207,53 +1223,74 @@ export class GameScreen implements Screen {
     drawText(g, 'DPS', x1, this.endY + 6, C.lavender, { align: 'right' });
     const all = [...run.dmgBySource.entries()].sort((a, b) => b[1] - a[1]);
     const total = all.reduce((sum, x) => sum + x[1], 0) || 1, best = all[0]?.[1] || 1;
-    // Tyle wierszy, ile mieści panel (0.59: na szerokim telefonie „+N więcej” wchodziło na ostatni wiersz).
-    const rows = Math.max(1, Math.min(7, Math.floor((this.endH - 19 - 12) / 11)));
-    all.slice(0, rows).forEach(([name, dmg], i) => {
-      const y = this.endY + 19 + i * 11;
+    // Wszystkie źródła; lista pod nagłówkiem kolumn przewija się (wcześniej 7 wierszy i „+N więcej” bez wglądu w resztę).
+    const area = this.endArea(), oy = this.endScroll.begin(r, ...area);
+    all.forEach(([name, dmg], i) => {
+      const y = area[1] + 2 + i * 11 - oy;
       bar(r, x0 + 120, y + 2, 140, 5, dmg / best, RAMP.gold);
       drawText(g, name, x0, y, C.white);
       drawText(g, fmt(dmg), x1 - 110, y, C.gold, { align: 'right' });
       drawText(g, `${Math.round((100 * dmg) / total)}%`, x1 - 55, y, C.lgray, { align: 'right' });
       drawText(g, fmt(dmg / Math.max(1, run.totalTime)), x1, y, C.lgray, { align: 'right' });
     });
-    if (all.length > rows) drawText(g, `+${all.length - rows} więcej`, x1, this.endY + this.endH - 10, C.lavender, { align: 'right', scale: smallS() });
+    this.endScroll.end(r, all.length * 11 + 4, ...area);
   }
 
   /** Ekran końca: wykres DPS w czasie (pomiar co BAL.dpsEvery s). */
   private renderDpsGraph(): void {
     const r = this.app.r, g = r.g, log = this.run.dpsLog;
     if (log.length < 2) { drawText(g, 'Za krótki run na wykres.', W / 2, this.endY + this.endH / 2 - 5, C.lavender, { align: 'center' }); return; }
-    const x0 = END_X + 16, x1 = END_X + END_W - 12, y0 = this.endY + 18, y1 = this.endY + this.endH - 14, max = Math.max(1, ...log);
+    const x0 = END_X + 40, x1 = END_X + END_W - 12, y0 = this.endY + 18, y1 = this.endY + this.endH - 14, max = Math.max(1, ...log);
     const avg = log.reduce((a, b) => a + b, 0) / log.length;
     drawText(g, `Najwyżej ${fmt(Math.round(max))} DPS`, x0, this.endY + 5, C.gold);
     drawText(g, `Średnio ${fmt(avg)} DPS`, x1, this.endY + 5, C.lgray, { align: 'right' });
+    // Skala logarytmiczna: obrażenia rosną wykładniczo, w skali liniowej większość runu leżała płasko przy zerze.
+    // Linie siatki i podpisy osi Y co rząd wielkości (co dwa przy dużej rozpiętości).
+    const lo = Math.max(1, Math.min(...log.filter((v) => v > 0), max));
+    const eLo = Math.floor(Math.log10(lo)), eHi = Math.max(eLo + 1, Math.ceil(Math.log10(max)));
+    const py = (v: number) => y1 - ((y1 - y0) * (Math.log10(Math.max(10 ** eLo, v)) - eLo)) / (eHi - eLo);
+    const step = Math.ceil((eHi - eLo) / Math.max(1, Math.floor((y1 - y0) / 14)));
+    for (let e = eLo; e <= eHi; e += step) {
+      const ty = py(10 ** e);
+      r.withAlpha(0.4, () => { for (let x = x0 + 2; x < x1; x += 6) r.rect(x, ty, 3, 0.5, C.slate); });
+      drawText(g, fmt(10 ** e).replace(".0", ""), x0 - 3, ty - 4, C.lavender, { align: 'right', scale: smallS() });
+    }
     r.rect(x0, y1, x1 - x0, 1, C.slate);
     r.rect(x0, y0, 1, y1 - y0, C.slate);
-    const ay = y1 - ((y1 - y0) * avg) / max;
+    const ay = py(avg);
     for (let x = x0; x < x1; x += 4) r.rect(x, ay, 2, 1, C.dgray);
-    const px = (i: number) => x0 + ((x1 - x0) * i) / (log.length - 1), py = (v: number) => y1 - ((y1 - y0) * v) / max;
+    const px = (i: number) => x0 + ((x1 - x0) * i) / (log.length - 1);
     r.withAlpha(0.3, () => { for (let i = 0; i < log.length; i++) r.rect(px(i) - 1, py(log[i]), 2, y1 - py(log[i]), C.dblue); });
     for (let i = 1; i < log.length; i++) r.line(px(i - 1), py(log[i - 1]), px(i), py(log[i]), C.gold);
     drawText(g, '0:00', x0, y1 + 2, C.lavender, { scale: smallS() });
     drawText(g, fmtTime(log.length * BAL.dpsEvery), x1, y1 + 2, C.lavender, { align: 'right', scale: smallS() });
   }
 
-  /** Ekran końca: karta buildu (bohater, bronie, pasywki, przedmioty, karty, sekrety i moc bossa). */
+  /**
+   * Ekran końca: karta buildu (bohater, przedmioty, bronie, pasywki, wszystkie karty z nazwami, sekrety i moc bossa).
+   * Treść przewija się w panelu; opis rzeczy pod myszą albo po dotknięciu ikony w okienku (`drawTip`).
+   */
   private renderBuild(): void {
-    const r = this.app.r, g = r.g, run = this.run, x0 = END_X + 12, top = this.endY + 6;
-    drawSprite(g, `${run.heroSprite}@0`, x0 + 12, top + 14, { scale: 2 });
-    drawText(g, run.hero.name, x0 + 32, top, run.hero.color, { scale: 2, shadow: C.black });
-    drawText(g, `${run.hero.role}   poziom postaci ${run.level}${run.pactLevel ? `   Pakt ${run.pactLevel}` : ''}`, x0 + 32, top + 18, C.lavender, { scale: smallS() });
-    // Przedmioty (8 slotów) po prawej.
-    SLOTS.forEach((sl, i) => drawItemSlot(r, run.equipment[sl.id], END_X + END_W - 12 - (4 - (i % 4)) * 20, top + Math.floor(i / 4) * 20, 18, false));
+    const r = this.app.r, g = r.g, run = this.run, x0 = END_X + 12, right = END_X + END_W - 12;
+    const area = this.endArea(), oy = this.endScroll.begin(r, ...area), top = this.endY + 6 - oy;
+    const tips: [Tip, number, number, number, number][] = [];
+    // Zwarty nagłówek (niski panel nad menu): bohater w jednym rzędzie z ośmioma przedmiotami, więcej miejsca na karty.
+    drawSprite(g, `${run.heroSprite}@0`, x0 + 7, top + 9);
+    drawText(g, run.hero.name, x0 + 18, top - 2, run.hero.color, { shadow: C.black });
+    drawText(g, `${run.hero.role}   poziom postaci ${run.level}${run.pactLevel ? `   Pakt ${run.pactLevel}` : ''}`, x0 + 18, top + 9, C.lavender, { scale: smallS() });
+    SLOTS.forEach((sl, i) => {
+      const it = run.equipment[sl.id], ix = right - (SLOTS.length - i) * 20 + 2, iy = top - 1;
+      drawItemSlot(r, it, ix, iy, 18, false);
+      if (it) tips.push([itemTip(it), ix, iy, 18, 18]);
+    });
     // Bronie i pasywki z poziomami.
     let x = x0;
-    const wy = top + 42;
+    const wy = top + 22;
     for (const w of run.weapons) {
       slot(r, x, wy, 18, w.def.evolved ? C.gold : C.slate);
       drawSprite(g, WEAPON_BY_ID[w.def.id].icon, x + 9, wy + 9);
       drawText(g, w.def.evolved ? '*' : String(w.level), x + 17, wy + 9, C.white, { align: 'right', outline: C.black, scale: smallS() });
+      tips.push([{ title: w.def.name, col: w.def.color, tag: w.def.fused ? 'fuzja' : w.def.evolved ? 'ewolucja' : `poz. ${w.level}/${maxLevel(w.def)}`, lines: [[w.def.desc, C.white]] }, x, wy, 18, 18]);
       x += 20;
     }
     x += 8;
@@ -1261,34 +1298,51 @@ export class GameScreen implements Screen {
       slot(r, x, wy, 18);
       drawSprite(g, passiveIcon(p), x + 9, wy + 9);
       drawText(g, String(p.level), x + 17, wy + 9, C.white, { align: 'right', outline: C.black, scale: smallS() });
+      tips.push([passiveTip(p), x, wy, 18, 18]);
       x += 20;
     }
-    // Karty: własny rząd pod bronią, a gdy panel jest niski (propozycja trybu łatwego podnosi menu, szeroki ekran telefonu —
-    // 0.59, zrzut gracza: karty i sekrety wchodziły na menu) w tym samym rzędzie za pasywkami, do krawędzi panelu.
-    const bottom = this.endY + this.endH, right = END_X + END_W - 12;
-    const own = wy + 22 + 16 + 12 <= bottom;
-    let cx = own ? x0 : x + 8;
-    const cy = own ? wy + 22 : wy + 1;
-    let shown = 0;
-    for (const c of run.cards) {
-      if (cx + 16 > right - (shown < run.cards.length - 1 ? 14 : 0)) break;
-      const def = CARD_BY_ID[c.id];
-      drawSprite(g, def.icon!, cx + 8, cy + 8);
-      if (c.stacks > 1) drawText(g, String(c.stacks), cx + 14, cy + 9, C.white, { outline: C.black, scale: smallS() });
-      cx += 17;
-      shown++;
+    // Karty: wszystkie, ikona i nazwa w trzech kolumnach (wcześniej rząd ikon ucięty do „+N” bez nazw).
+    let y = wy + 24;
+    if (run.cards.length) {
+      const head = `${tr('Karty')} (${run.cards.reduce((n, c) => n + c.stacks, 0)})`, hint = 'Point at or tap an icon: details';
+      drawText(g, head, x0, y, C.lavender);
+      drawText(g, hint, right, y + 1, C.lavender, { align: 'right', scale: smallS() });
+      y += 12;
+      const cols = 3, colW = (right - x0 - (cols - 1) * 8) / cols;
+      run.cards.forEach((c, i) => {
+        const def = CARD_BY_ID[c.id], cx = x0 + (i % cols) * (colW + 8), cy = y + Math.floor(i / cols) * 18;
+        drawSprite(g, def.icon!, cx + 8, cy + 8);
+        const name = `${tr(def.name)}${c.stacks > 1 ? ` x${c.stacks}` : ''}`, room = colW - 22;
+        drawText(g, name, cx + 19, cy + 3, def.cursed ? C.hotpink : rarityColor(def.rarity, 0), { scale: Math.max(0.7, Math.min(1, room / textWidth(name))) });
+        tips.push([cardTip(c), cx, cy, colW, 17]);
+      });
+      y += Math.ceil(run.cards.length / cols) * 18 + 2;
     }
-    if (shown < run.cards.length) drawText(g, `+${run.cards.length - shown}`, cx + 1, cy + 5, C.lavender, { scale: smallS() });
+    // Sekrety i moc bossa: pełne nazwy, zawijane.
     const extra = [
       ...[...run.secrets].map((id) => SECRET_BY_ID[id]?.name).filter(Boolean).map((n) => tr(n!)),
-      run.power ? `${tr('Moc')}: ${tr(BOSS_POWER_BY_ID[run.power.id].name)} ${run.power.level}` : '',
+      run.power ? tr(`Moc: ${BOSS_POWER_BY_ID[run.power.id].name} ${run.power.level}`) : '',
     ].filter(Boolean).join(', ');
-    // Sekrety i moc: pod ostatnim rzędem, w panelu; gdy brak miejsca — obok nazwy bohatera (nad slotami broni).
-    const rowEnd = (own ? cy : wy) + 19;
-    const ey = Math.min(bottom - 10, Math.max(rowEnd + 1, bottom - 11));
-    if (extra && ey >= rowEnd) drawText(g, extra, x0, ey, C.hotpink, { scale: smallS() });
-    else if (extra) drawText(g, extra, x0 + 32, top + 28, C.hotpink, { scale: smallS() });
+    if (extra) for (const l of wrapText(extra, (right - x0) / descS())) { drawText(g, l, x0, y, C.hotpink, DESC); y += descLH(); }
+    this.endScroll.end(r, y + oy - area[1] + 2, ...area);
+    const m = this.app.input.mouse;
+    // Okienko rysowane po menu (renderEnd), żeby menu go nie przykrywało.
+    this.endTip = inside(m.x, m.y, ...area) ? tips.find(([, tx, ty, tw, th]) => inside(m.x, m.y, tx, ty, tw, th)) : undefined;
   }
+}
+
+/** Opis karty do okienka podpowiedzi: nazwa w kolorze rzadkości, tagi, opis i liczba kopii. */
+function cardTip(c: { id: string; stacks: number }): Tip {
+  const def = CARD_BY_ID[c.id];
+  const lines: [string, number][] = [[def.desc, C.white]];
+  if (c.stacks > 1) lines.push([`x${c.stacks}: the effect stacks`, C.lime]);
+  return { title: def.name, col: def.cursed ? C.hotpink : rarityColor(def.rarity, 0), tag: def.tags.join(' / '), lines };
+}
+
+/** Opis pasywki (po ewolucji: nazwa i opis ewolucji). */
+function passiveTip(p: { id: string; level: number; evo?: boolean }): Tip {
+  const def = PASSIVE_BY_ID[p.id];
+  return { title: p.evo ? def.evo.name : def.name, col: p.evo ? C.gold : C.white, tag: `poz. ${p.level}`, lines: [[p.evo ? def.evo.desc : def.desc, C.white]] };
 }
 
 /**
