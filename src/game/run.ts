@@ -279,7 +279,7 @@ export class Run {
   /** Trafienia z ostatnich HIT_LOG s (czas runu, źródło, obrażenia): ochrona przed wybuchem (BAL.burst) i podsumowanie śmierci. */
   private hitLog: { t: number; src: string; dmg: number }[] = [];
   /** Śmiertelny cios (ekran końca): źródło, jego obrażenia, liczba trafień i suma obrażeń z ostatnich HIT_LOG s. */
-  killedBy: { src: string; dmg: number; hits: number; recent: number } | null = null;
+  killedBy: { src: string; share: number; last: string; dmg: number; hits: number; recent: number } | null = null;
   /** Seria zabójstw: liczba i czas ostatniego zabójstwa; krok ostatniego efektu krytyka (limit efektów w tłumie). */
   streakN = 0;
   streakT = -9;
@@ -2084,7 +2084,11 @@ export class Run {
         return true;
       }
       p.hp = 0;
-      this.killedBy = { src, dmg: total, hits: this.hitLog.length, recent: this.hitLog.reduce((a, h) => a + h.dmg, 0) };
+      // Zabójca = źródło z największymi obrażeniami w HIT_LOG s (playtest: ostatni cios za 3 HP wskazywał nie tego wroga).
+      const by = new Map<string, number>();
+      for (const h of this.hitLog) by.set(h.src, (by.get(h.src) ?? 0) + h.dmg);
+      const [top, share] = [...by].sort((a, b) => b[1] - a[1])[0] ?? [src, total];
+      this.killedBy = { src: top, share, last: src, dmg: total, hits: this.hitLog.length, recent: this.hitLog.reduce((a, h) => a + h.dmg, 0) };
       this.outcome = 'dead';
       this.outcomeT = 1.8;
       this.burst(p.x, p.y, C.red, 50, 80);

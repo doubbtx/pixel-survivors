@@ -897,7 +897,7 @@ export const PL: Record<string, string> = {
   "Next discovery: {}/{}": "Następne odkrycie: {}/{}",
   "Damage taken": "Otrzymane",
   "No damage taken": "Bez otrzymanych obrażeń",
-  "Killed by: {}, last hit -{} HP ({}% of max HP), last {} s: {} hits, -{} HP": "Zabił cię: {}, ostatni cios -{} HP ({}% maks. HP), ostatnie {} s: {} trafień, -{} HP",
+  "Killed by: {} ({}% of the damage in the last {} s, {} hits), last hit: {} -{} HP": "Zabił cię: {} ({}% obrażeń z ostatnich {} s, trafień: {}), ostatni cios: {} -{} HP",
   "Bullets": "Pociski",
   "Bombardment": "Ostrzał",
   "When you die, the end screen says what killed you and has a Damage taken tab. Very fast bursts of damage are softened, so you get a moment to react, but standing still is still deadly. Keys you mash in combat (dodge, ultimate) no longer pick cards or skip the end screen.": "Po śmierci ekran końca mówi, co cię zabiło, i ma zakładkę Otrzymane. Bardzo szybkie serie obrażeń są złagodzone, więc masz chwilę na reakcję, ale stanie w miejscu dalej zabija. Klawisze wciskane w walce (unik, ultimate) nie wybierają już kart ani nie pomijają ekranu końca.",

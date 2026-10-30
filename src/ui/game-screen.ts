@@ -135,6 +135,8 @@ export class GameScreen implements Screen {
   private endMenu: Menu;
   /** Zakładka ekranu końca: obrażenia, wykres DPS, karta buildu. */
   private endPage = 0;
+  /** Chwila otwarcia ekranu końca (this.clock): do END_GUARD s strzałki / WASD z walki nie przestawiają menu ani zakładek. */
+  private endAt = 0;
   /** Rekordy bohatera sprzed runu (do „pobitych rekordów” w podsumowaniu). */
   private recStart: HeroRecord;
 
@@ -300,6 +302,7 @@ export class GameScreen implements Screen {
     this.app.persist();
     this.state = 'end';
     this.delay = END_DELAY;
+    this.endAt = this.clock;
   }
 
   /** Wczesne porażki pod rząd (playtest): po dwóch ekran końca proponuje tryb łatwy jednym przyciskiem. */
@@ -384,6 +387,7 @@ export class GameScreen implements Screen {
     this.app.persist();
     this.state = 'end';
     this.delay = END_DELAY;
+    this.endAt = this.clock;
   }
 
   private showToast(text: string, t = 2.5): void {
@@ -893,6 +897,8 @@ export class GameScreen implements Screen {
         this.pauseMenu.update(inp);
         break;
       case 'end': {
+        // Gracz zwykle jeszcze trzyma kierunek ruchu (playtest: W/D przestawiały menu na „Menu główne”).
+        if (this.clock - this.endAt < END_GUARD) break;
         this.endMenu.update(inp);
         const page = this.endPage;
         if (inp.pressed('inventory') || inp.pressed('left') || inp.pressed('right')) {
@@ -1189,11 +1195,11 @@ export class GameScreen implements Screen {
     const feats = [...new Set(run.featsRun)].map((id) => FEAT_BY_ID[id].name).join(', ');
     const essence = `+${fmt(this.essence)} esencji dla: ${run.hero.name} (Rozwój w menu głównym)`;
     const info: [string, number][] = [[modeLine, C.lgray], [essence, C.cyan]];
-    // Przyczyna śmierci (0.62, playtest: „nie wiem, co mnie zabiło”): śmiertelny cios i seria trafień z ostatnich HIT_LOG s.
+    // Przyczyna śmierci (0.62, playtest: „nie wiem, co mnie zabiło”): główne źródło z ostatnich HIT_LOG s i śmiertelny cios.
     const k = run.outcome === 'dead' ? run.killedBy : null;
     if (k) {
-      const pct = Math.round((100 * k.dmg) / Math.max(1, run.stats.maxHp));
-      info.unshift([tr(`Killed by: ${tr(k.src)}, last hit -${fmt(Math.ceil(k.dmg))} HP (${pct}% of max HP), last ${HIT_LOG} s: ${k.hits} hits, -${fmt(Math.ceil(k.recent))} HP`), C.salmon]);
+      const pct = Math.round((100 * k.share) / Math.max(1, k.recent));
+      info.unshift([tr(`Killed by: ${tr(k.src)} (${pct}% of the damage in the last ${HIT_LOG} s, ${k.hits} hits), last hit: ${tr(k.last)} -${fmt(Math.ceil(k.dmg))} HP`), C.salmon]);
     }
     if (feats) info.push([`Wyczyny: ${feats}`, C.gold]);
     // Odrodzenia (Feniks, Niezłomny, Popiół feniksa): ile zużyto na tej mapie — 0.59, gracz nie zauważył, że Feniks zadziałał wcześniej.
