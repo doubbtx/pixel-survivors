@@ -35,6 +35,7 @@ export const HINTS = {
   resource: 'Pasek pod HP to zasób bohatera. Każdy bohater zdobywa go i używa inaczej, opis w Pomocy (Esc).',
   task: 'Zadanie! Dotknij turkusowego kamienia, żeby je zacząć. Za wykonanie nagroda, za część porażek karna fala.',
   close: 'Close combat: hits on enemies right next to you deal +20% damage; each such hit flashes a white ring around you. Melee weapons are built for it.',
+  gear: 'Better loot is equipped automatically (Settings > General). Best gear [R] in the backpack checks everything; items you take off yourself stay off.',
   hurt: 'Oberwałeś! Trafia cię tylko mały środek postaci, więc da się przecisnąć między pociskami. Spacja = unik.',
 } as const;
 

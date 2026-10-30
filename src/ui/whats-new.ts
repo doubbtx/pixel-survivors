@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.55',
+    lines: [
+      "Auto-equip is smarter: it compares stats at the same item level (damage is no longer pushed out by HP late in a run), it only swaps for a clearly better new item (forged items get extra margin), it never puts on uniques or items you took off yourself, and a message tells you what was swapped.",
+    ],
+  },
+  {
     version: '0.53',
     lines: [
       "Best gear: after every loot your best items are equipped automatically (Settings > General, on by default), and the Best gear [R] button in the backpack does it on demand. Uniques and super bonuses count extra, so they are not swapped out for small gains.",

@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.53.0)
+## Stan (wersja 0.55.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -760,6 +760,11 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   afiksu × SCORE_W, +6 unikat, +3 super, +2 Przebudzenie) i `Run.autoEquip()` (najlepsze w slocie spośród założonych i plecaka,
   pierścienie: dwa najlepsze, zamiana do plecaka, idempotentne). Ustawienie `autoEquip` (domyślnie tak) po każdym łupie
   (game-screen 'loot'), przycisk „Best gear [R]” w InventoryView. Wersja 0.52 zostawiona drugiej sesji.
+- 0.55.0 (review Agenta 2 do 0.53): `itemScore(it, ref)` normalizuje do maks. rzutu na wspólnym ilvl (affixScale, implicit add
+  przez IMPLICIT[kind].value(ref); broń ln×30) — wcześniej HP (skala wykładnicza) wypierało obrażenia. `autoEquip(fresh?)`:
+  po łupie tylko nowe przedmioty z okna (game-screen `lootBefore`), bez `noAuto` (ustawiane przy ręcznym zdjęciu / zamianie
+  w Run.equip/unequip) i bez unikatów; zapas `BAL.autoEquip` (margin 8%, +0.5 pkt / ulepszenie). Toast „Założono: X (zamiast Y)”,
+  podpowiedź 'gear'. Przycisk Najlepsze [R] = pełna optymalizacja.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

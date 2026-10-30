@@ -1037,6 +1037,8 @@ export class Run {
     const old = this.equipment[slot];
     this.bag = this.bag.filter((b) => b !== it);
     this.equipment[slot] = it;
+    // Zdjęty ręcznie: automat po łupie już go nie założy (decyzja gracza).
+    if (old) old.noAuto = true;
     let gold = 0;
     if (old && this.bag.length < BAL.bagSize) this.bag.push(old);
     else if (old) { gold = salvageGold(old, this.stats.greed); this.gold += gold; this.shards += salvageShards(old); }
@@ -1045,31 +1047,39 @@ export class Run {
   }
 
   /**
-   * Najlepszy ekwipunek (0.52): w każdym slocie przedmiot z najwyższą oceną (`itemScore`) spośród założonych i plecaka;
-   * pierścienie: dwa najlepsze. Zdjęte trafiają do plecaka (zamiana miejsc, więc plecak się nie przepełnia). Zwraca liczbę zmian.
+   * Najlepszy ekwipunek (0.53): w każdym slocie przedmiot z najwyższą oceną (`itemScore` na wspólnym ilvl) spośród założonych
+   * i kandydatów; pierścienie: dwa najlepsze. Zdjęte trafiają do plecaka (zamiana 1:1). Tryb automatyczny (po łupie, `fresh`):
+   * kandydaci tylko spośród nowego łupu, bez przedmiotów zdjętych ręcznie (`noAuto`) i bez unikatów (mają koszt), zamiana
+   * dopiero przy przewadze `BAL.autoEquip.margin` (+ zapas za ulepszenia w kuźni). Zwraca opisy zamian.
    */
-  autoEquip(): number {
-    let n = 0;
+  autoEquip(fresh?: Item[]): { item: Item; old: Item | null }[] {
+    const out: { item: Item; old: Item | null }[] = [];
+    const auto = !!fresh, A = BAL.autoEquip;
     const kindOf = (it: Item) => BASE_BY_ID[it.base].kind;
     for (const s of SLOTS) {
       if (s.id === 'ring2') continue;
       const ids: SlotId[] = s.id === 'ring1' ? ['ring1', 'ring2'] : [s.id];
-      const pool = [...ids.map((id) => this.equipment[id]), ...this.bag.filter((b) => kindOf(b) === s.kind)].filter((x): x is Item => !!x);
-      const best = [...pool].sort((a, b) => itemScore(b) - itemScore(a)).slice(0, ids.length);
-      // Najlepsze już założone zostają na swoich miejscach; pozostałe sloty dostają resztę najlepszych.
+      const cand = (auto ? fresh! : this.bag).filter((b) => this.bag.includes(b) && kindOf(b) === s.kind && !(auto && (b.noAuto || b.unique)));
+      if (!cand.length) continue;
+      const pool = [...ids.map((id) => this.equipment[id]), ...cand].filter((x): x is Item => !!x);
+      const ref = Math.max(...pool.map((x) => x.ilvl));
+      const worn = (x: Item) => ids.some((id) => this.equipment[id] === x);
+      // Zapas dla założonego (tryb automatyczny): margines + ulepszenia z kuźni.
+      const keep = (x: Item) => { const v = itemScore(x, ref); return auto && worn(x) ? v * (1 + A.margin) + (x.upg ?? 0) * A.perUpg : v; };
+      const best = [...pool].sort((p, q) => keep(q) - keep(p)).slice(0, ids.length);
       const free = ids.filter((id) => !best.includes(this.equipment[id]!));
-      const place = best.filter((it) => !ids.some((id) => this.equipment[id] === it));
+      const place = best.filter((it) => !worn(it));
       free.forEach((id, i) => {
         const next = place[i], cur = this.equipment[id];
         if (!next) return;
         this.bag = this.bag.filter((x) => x !== next);
         this.equipment[id] = next;
         if (cur) this.bag.push(cur);
-        n++;
+        out.push({ item: next, old: cur });
       });
     }
-    if (n) this.onBuildChanged();
-    return n;
+    if (out.length) this.onBuildChanged();
+    return out;
   }
 
   /** Nowy przedmiot do plecaka (oznaczony jako nowy w ekwipunku). */
@@ -1083,6 +1093,7 @@ export class Run {
     const it = this.equipment[slot];
     if (!it || this.bag.length >= BAL.bagSize) return false;
     this.equipment[slot] = null;
+    it.noAuto = true;
     this.bag.push(it);
     this.onBuildChanged();
     return true;

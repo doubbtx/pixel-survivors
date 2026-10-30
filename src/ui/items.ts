@@ -262,7 +262,7 @@ export class InventoryView {
 
   /** Najlepszy ekwipunek (przycisk / R): Run.autoEquip. */
   private best(): void {
-    const n = this.run.autoEquip();
+    const n = this.run.autoEquip().length;
     this.say(n ? `${tr('Best gear equipped')} (${n})` : tr('You already wear the best items'));
     sfx.play(n ? 'pickup' : 'select');
   }

@@ -423,6 +423,8 @@ export interface Item {
   cracked?: boolean;
   peak?: number;
   pity?: number;
+  /** Zdjęty ręcznie: automatyczny ekwipunek po łupie go pomija (przycisk Najlepsze nie). */
+  noAuto?: boolean;
 }
 
 /** Źródło przedmiotu; 'shop' = oferta sklepu między poziomami. */
@@ -731,18 +733,30 @@ export function compareItems(next: Item, cur: Item | null): StatDiff[] {
 }
 
 /**
- * Ocena przedmiotu do „Najlepszego ekwipunku” (0.52): mnożnik broni (log, ~1.5 maks. afiksu Siły za +10%), statystyki
- * znormalizowane do maksymalnego rzutu afiksu i ważone (obrażenia > przetrwanie > wygoda), zapas dla unikatów, super-bonusów
+ * Ocena przedmiotu do „Najlepszego ekwipunku” (0.53): mnożnik broni (log ×30), statystyki
+ * znormalizowane do maksymalnego rzutu afiksu na wspólnym ilvl i ważone (obrażenia > przetrwanie > wygoda), zapas dla unikatów, super-bonusów
  * i Przebudzenia z kuźni (+9), żeby automat ich nie zdejmował dla drobnej różnicy.
  */
 const SCORE_W: Partial<Record<keyof Stats, number>> = {
   might: 1.2, atkSpeed: 1.2, amount: 2, crit: 1, critMult: 0.8, area: 0.7, duration: 0.5, cdr: 0.7, elemPower: 0.7,
   maxHp: 0.8, armor: 0.8, regen: 0.6, lifesteal: 0.8, speedBonus: 0.5, magnet: 0.2, growth: 0.3, greed: 0.2,
 };
-export function itemScore(it: Item | null): number {
+export function itemScore(it: Item | null, ref = it?.ilvl ?? 1): number {
   if (!it) return -1;
-  let s = it.implicit.mode === 'mul' ? Math.log(implicitOf(it)) * 16 : 0;
-  for (const [k, v] of Object.entries(itemStats(it)) as [keyof Stats, number][]) s += (v / (AFFIX_BY_STAT[k]?.max ?? 1)) * (SCORE_W[k] ?? 0.4);
+  // Normalizacja do maksymalnego rzutu na wspólnym poziomie `ref` (najwyższy ilvl w porównaniu): HP skaluje się wykładniczo,
+  // obrażenia liniowo — bez tego automat w późnej grze wybierał HP zamiast obrażeń (review Agenta 2).
+  const kind = BASE_BY_ID[it.base].kind;
+  let s = it.implicit.mode === 'mul' ? Math.log(implicitOf(it)) * 30 : 0;
+  const st = itemStats(it);
+  if (it.implicit.mode === 'add') {
+    const k = it.implicit.stat, v = implicitOf(it);
+    s += (v / IMPLICIT[kind].value(ref)) * (SCORE_W[k] ?? 0.4);
+    st[k] = (st[k] ?? 0) - v;
+  }
+  for (const [k, v] of Object.entries(st) as [keyof Stats, number][]) {
+    const a = AFFIX_BY_STAT[k];
+    s += (v / (a ? a.max * affixScale(a, ref) : 1)) * (SCORE_W[k] ?? 0.4);
+  }
   if (it.unique) s += 6;
   if (it.super) s += 3;
   if ((it.upg ?? 0) >= 9 && !it.cracked) s += 2;

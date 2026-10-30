@@ -704,7 +704,7 @@ export class SettingsScreen implements Screen {
         opt('Język', () => (s.lang === 'en' ? 'English' : 'Polski'), lang, () => 'Language / Język: English, Polski.'),
         sw('Trudność', () => (s.easy ? 'łatwa' : 'normalna'), toggle('easy'), `Łatwa: wrogowie zadają ${Math.round(BAL.easy.dmg * 100)}% mniej obrażeń i mają ${Math.round(BAL.easy.hp * 100)}% mniej HP. Bez odznak Paktu.`),
         opt('Celowanie', () => AIM_LABEL[s.aim] ?? AIM_LABEL.mixed, aim, () => AIM_HINT[s.aim] ?? AIM_HINT.mixed),
-        sw('Auto-equip best items', () => yes(s.autoEquip), toggle('autoEquip'), 'After every loot the best items from your backpack are equipped by themselves (uniques and super bonuses count extra). The Best gear button in the backpack does the same on demand.'),
+        sw('Auto-equip best items', () => yes(s.autoEquip), toggle('autoEquip'), 'Better new loot is equipped by itself (not uniques, not items you took off yourself). The Best gear button in the backpack checks everything on demand.'),
         sw('Pauza po wyjściu z okna', () => yes(s.autoPause), toggle('autoPause'), 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.'),
         sw('Podpowiedzi', () => yes(s.hints), toggle('hints'), 'Krótkie wskazówki przy pierwszym spotkaniu z mechaniką (awans, skrzynie, elity, reakcje...).'),
         [{ label: () => (app.save.seenHints.length ? 'Pokaż podpowiedzi od nowa' : 'Podpowiedzi: wszystkie przed tobą'), act: () => { app.save.seenHints = []; app.persist(); } }, () => 'Kolejna gra pokaże wszystkie podpowiedzi jeszcze raz.'],

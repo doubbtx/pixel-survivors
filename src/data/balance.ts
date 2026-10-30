@@ -165,6 +165,8 @@ export const BAL = {
    * `near` × keepDist). Trans bitewny: przy ≥ `min` wrogach w pierścieniu bliskiego dystansu −`taken` obrażeń, zabójstwo z bliska
    * leczy `killHeal` maks. HP (wspólny budżet drainHeal). */
   press: { keepMul: 0.75, step: 30, t: 1.5, near: 1.5 },
+  /** Automatyczny ekwipunek po łupie: zamiana przy przewadze oceny o `margin` i `perUpg` pkt za każde ulepszenie założonego. */
+  autoEquip: { margin: 0.08, perUpg: 0.5 },
   trance: { min: 3, taken: 0.15, killHeal: 0.002 },
   /** Zasięg wyboru celu broni naprowadzanych (było 200 / 170): strzelają do wrogów bliżej, nie z drugiego końca ekranu. */
   homing: { bolt: 160, chain: 130 },

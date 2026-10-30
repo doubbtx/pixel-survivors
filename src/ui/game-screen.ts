@@ -20,7 +20,7 @@ import type { AbilitySlot } from '../data/heroes';
 import { abilityMaxCd } from '../systems/abilities';
 import { LevelUpView } from './levelup';
 import { LootView, InventoryView, drawItemSlot } from './items';
-import { SLOTS } from '../data/items';
+import { SLOTS, type Item } from '../data/items';
 import { CardPickView, rarityColor } from './cards';
 import { ShopView } from './shop';
 import { SynergyView } from './synergies';
@@ -80,6 +80,8 @@ export class GameScreen implements Screen {
   private rewardTotal = 0;
   private rewardDone = 0;
   private lastPick: State | null = null;
+  /** Plecak przed oknem łupu (nowe przedmioty dla automatycznego ekwipunku). */
+  private lootBefore = new Set<Item>();
   private loot: LootView | null = null;
   private inventory: InventoryView | null = null;
   private shop: ShopView | null = null;
@@ -595,6 +597,7 @@ export class GameScreen implements Screen {
       if (this.levelUp.options.some((o) => o.kind === 'augment')) this.hints.show('augment');
       if (this.levelUp.options.some((o) => o.kind === 'fusion')) this.hints.show('fusion');
     } else {
+      this.lootBefore = new Set(run.bag);
       this.loot = new LootView(run, run.pendingLoot.shift()!);
       this.state = 'loot';
       this.hints.show('loot');
@@ -705,8 +708,12 @@ export class GameScreen implements Screen {
         const res = this.loot!.update(inp);
         if (res.done) {
           // Najlepszy ekwipunek po łupie (Ustawienia, domyślnie włączone).
-          const swapped = this.app.save.settings.autoEquip ? this.run.autoEquip() : 0;
-          if (res.note || swapped) this.showToast([res.note, swapped ? `${tr('Best gear equipped')} (${swapped})` : ''].filter(Boolean).join('. '));
+          // Tylko nowy łup z tego okna (bez przedmiotów zdjętych ręcznie i unikatów, z zapasem dla założonych).
+          const fresh = this.run.bag.filter((x) => !this.lootBefore.has(x));
+          const sw = this.app.save.settings.autoEquip && fresh.length ? this.run.autoEquip(fresh) : [];
+          const swap = sw.length ? `${tr('Equipped')}: ${sw[0].item.name}${sw[0].old ? ` (${tr('instead of')} ${sw[0].old.name})` : ''}${sw.length > 1 ? ` +${sw.length - 1}` : ''}` : '';
+          if (sw.length) this.hints.show('gear');
+          if (res.note || swap) this.showToast([res.note, swap].filter(Boolean).join('. '));
           this.state = this.overlayReturn;
           this.openPending();
         }
