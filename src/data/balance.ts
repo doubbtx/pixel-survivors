@@ -163,6 +163,14 @@ export const BAL = {
     id: { chain: 0.85 } as Record<string, number>,
   },
   close: { r: 50, bonus: 0.2 },
+  /** Role broni (0.61, WeaponDef.role): mnożnik obrażeń na bossach, elitach i minibossach (`big`). Pojedynczy cel celuje
+   * najpierw w bossa / elitę w zasięgu, a pociski w jeden cel rozchodzą się o `spread` rad zamiast 0.15 (bliżej celu). */
+  roles: {
+    single: { big: 1.25 },
+    crowd: { big: 0.5 },
+    hybrid: { big: 1.15 },
+    spread: 0.12,
+  },
   /** 0.49 (runda 2, Agent 2): strzelcy bliżej (keepDist ×0.75) i po salwie naciskają o `step` px przez `t` s (gdy bliżej niż
    * `near` × keepDist). Trans bitewny: przy ≥ `min` wrogach w pierścieniu bliskiego dystansu −`taken` obrażeń, zabójstwo z bliska
    * leczy `killHeal` maks. HP (wspólny budżet drainHeal). */
@@ -201,6 +209,16 @@ export const BAL = {
   /** Bronie 0.43: Kości (szansa szóstki: baza + Szczęście × sixLuck, maks. sixMax) i budżet leczenia Sierpa krwi (ułamek maks. HP na sekundę). */
   dice: { six: 1 / 6, sixLuck: 1 / 8, sixMax: 0.5, low: 0.5, high: 1.6, blast: 0.5, blastR: 20, coinEvery: 1 },
   drainPerSec: 0.015,
+  /**
+   * Odkrycia (0.61, data/unlocks.ts grantDiscovery): punkty za koniec runu (`run`), każdy ukończony akt Ekspedycji
+   * (`act`) i co `endlessMin` minut Endless; co `every` punktów otwiera się najbliższa zablokowana zawartość.
+   * Od startu otwarte: `goldPerTag` pierwszych złotych kart każdego tagu i `prism` pierwszych pryzmatycznych (data/cards.ts `cardLock`).
+   */
+  discovery: {
+    run: 1, act: 1, endlessMin: 5, every: 3, goldPerTag: 2, prism: 5,
+    /** Progi warunków „w jednym runie” (data/unlocks.ts CONTENT); próg synergii = jej poziom (1 = 3 punkty, 2 = 6). */
+    goals: { magnet: 25, laser: 40, reactions: 250, crits: 3000, heal: 2500, kills: 3000, synTier: 2, minesMin: 10 },
+  },
   /** Kradzież życia (0.60): osobny budżet, ułamek maks. HP na sekundę; wcześniej 2% za każde trafienie = kilka pasków HP na s. */
   lifestealPerSec: 0.04,
   /** Piętno Aurela (0.43): leczenie za trafienie napiętnowanego (ułamek maks. HP, w budżecie drainPerSec; do Wiary liczy się `faith` leczenia), maks. czas, przedłużanie w Uświęconej ziemi (s/s), tarcza Opiekuna za napiętnowanego w `guardR`, wybuch Włóczni świtu. */

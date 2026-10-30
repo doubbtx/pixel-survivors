@@ -130,7 +130,10 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
   const shake = live ? run.shake : 0;
   const shx = shake > 0 ? rng.range(-shake, shake) * ZOOM : 0;
   const shy = shake > 0 ? rng.range(-shake, shake) * ZOOM : 0;
-  const ox = Math.round(run.camX * ZOOM + shx), oy = Math.round(run.camY * ZOOM + shy);
+  // Przesunięcie kamery zaokrąglone razem z pozycją bohatera: na szerokim ekranie połowa widoku nie jest całkowita
+  // (VW = SW / VIEW_S) i osobne zaokrąglanie kamery i bohatera trzęsło postacią o piksel przy ruchu w poziomie (0.61).
+  const hx = run.player.x * ZOOM, hy = run.player.y * ZOOM;
+  const ox = Math.round(hx) - Math.round(hx - run.camX * ZOOM - shx), oy = Math.round(hy) - Math.round(hy - run.camY * ZOOM - shy);
   const X = (x: number) => Math.round(x * ZOOM) - ox;
   const Y = (y: number) => Math.round(y * ZOOM) - oy;
   // rad: zasięg obiektu w pikselach ekranu (duże obiekty na ziemi nie znikają, gdy tylko środek wyjdzie poza ekran).

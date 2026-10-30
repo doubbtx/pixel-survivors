@@ -4,7 +4,7 @@ import { C } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
-import { WEAPON_BY_ID, FUSIONS, maxLevel, describeLevel, evolvesOf } from '../data/weapons';
+import { WEAPON_BY_ID, FUSIONS, maxLevel, describeLevel, evolvesOf, roleInfo } from '../data/weapons';
 import { passiveEvolves } from '../systems/levelup';
 import { PASSIVE_BY_ID, passiveIcon } from '../data/passives';
 import { AUGMENT_BY_ID, weaponBase, augmentWorks, fusionAugments, FUSION_RULES } from '../data/augments';
@@ -137,6 +137,8 @@ export class BuildView {
     const text = (s: string, col: number = C.lgray) => { for (const l of wrapText(s, tw)) { drawText(g, l, x, y, col, DESC); y += descLH(); } };
     const head = (s: string, col: number) => { y += 3; drawText(g, s, x, y, col); y += 11; };
     text(d.desc, C.white);
+    const ri = roleInfo(d.role);
+    text(ri.desc, ri.color);
     if (!d.evolved && w.level < maxLevel(d)) text(`Następny poziom: ${describeLevel(d, w.level + 1)}`);
     // Wierność broni: stopień i następny próg (tylko przy jednej broni).
     if (run.weapons.length === 1) {
@@ -168,6 +170,9 @@ export class BuildView {
       const pas = PASSIVE_BY_ID[evo.passive], into = WEAPON_BY_ID[evo.into], maxed = w.level >= maxLevel(d), has = run.passives.some((p) => p.id === pas.id) || (i === 0 && run.loyal > 0);
       recipe(r, x, y, [d.icon, maxed], [pas.icon, has], into.icon);
       drawText(g, into.name, x + 86, y, C.yellow, SMALL);
+      // Rola ewolucji (warianty mogą iść w bossa albo w tłum).
+      const er = roleInfo(into.role);
+      drawText(g, er.name, x + 90 + textWidth(into.name) * SMALL.scale, y, er.color, SMALL);
       drawText(g, `${has ? 'masz' : 'brak'}: ${pas.name}${maxed ? '' : `, broń: poziom ${maxLevel(d)}`}`, x + 86, y + 9, has ? C.lime : C.salmon, SMALL);
       y += 22;
     });

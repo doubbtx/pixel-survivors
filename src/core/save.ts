@@ -9,7 +9,7 @@ import { ALL_UNLOCKS } from '../data/unlocks';
  * która przekształca dane do wersji o 1 wyższej. Ładowanie aplikuje migracje po kolei.
  */
 const KEY = 'pixel-survivors-save';
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 
 export interface HeroRecord {
   bestTime: number;
@@ -131,8 +131,12 @@ export interface SaveData {
   seenVersion: string;
   /** Wyczyny (data/feats.ts): ile razy zdobyty każdy. */
   feats: Record<string, number>;
-  /** Odblokowania (data/unlocks.ts): bohaterowie, tryby, trudności, kuźnia. */
+  /** Odblokowania (data/unlocks.ts): bohaterowie, tryby, trudności, kuźnia, zawartość (bronie, pasywki, karty, fuzje, warianty). */
   unlocks: string[];
+  /** Punkty odkryć do następnej zawartości (data/unlocks.ts grantDiscovery). */
+  discovery?: number;
+  /** Najlepszy postęp warunków „w jednym runie” zablokowanej zawartości (id → wartość). */
+  unlockBest?: Record<string, number>;
   /** Samouczek ukończony albo pominięty (nowa gra zaczyna od niego). */
   tutorialDone: boolean;
 }
@@ -217,6 +221,14 @@ const MIGRATIONS: Record<number, Migration> = {
     if (s.zoom === undefined || s.zoom === 1.25) s.zoom = 1;
     return { ...old, version: 11, settings: s };
   },
+  // 11 → 12 (0.61): odblokowania zawartości (bronie, pasywki, karty, fuzje, warianty ewolucji). Gracz, który już grał,
+  // dostaje wszystko (jak przy 8 → 9), nowy zapis odkrywa po kolei.
+  11: (old) => {
+    const records = Object.values((old.records ?? {}) as Record<string, { bestTime?: number }>);
+    const played = records.some((r) => (r.bestTime ?? 0) > 0);
+    const unlocks = (old.unlocks as string[] | undefined) ?? [];
+    return { ...old, version: 12, unlocks: played ? [...new Set([...unlocks, ...ALL_UNLOCKS])] : unlocks };
+  },
 };
 
 function defaults(): SaveData {
@@ -287,6 +299,8 @@ export function loadSave(): SaveData {
     seenVersion: d.seenVersion ?? '',
     feats: { ...d.feats },
     unlocks: d.unlocks ?? [],
+    discovery: d.discovery ?? 0,
+    unlockBest: { ...d.unlockBest },
     tutorialDone: d.tutorialDone ?? false,
   };
 }

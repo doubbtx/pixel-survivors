@@ -46,7 +46,7 @@ import { PowerPickView } from './powers';
 import { RelicPickView } from './relics';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { Tutorial } from '../game/tutorial';
-import { grantUnlocks, maxTier, unlocked, type UnlockCtx, type UnlockDef } from '../data/unlocks';
+import { grantUnlocks, grantDiscovery, discoveryLeft, maxTier, unlocked, type UnlockCtx, type UnlockDef } from '../data/unlocks';
 import { heroSkins } from '../data/pacts';
 import { FEAT_BY_ID } from '../data/feats';
 import { featsOnWin } from '../systems/feats';
@@ -148,6 +148,7 @@ export class GameScreen implements Screen {
     // Nowy run: pakty ryzyka wybrane przed startem (ui/pacts.ts) obowiązują do jego końca.
     if (!snapshot && !tutorial && unlocked(app.save, 'pacts')) this.run.pacts = { ...app.save.pacts.chosen };
     this.run.unlocked = new Set(app.save.achievements);
+    this.run.content = new Set(app.save.unlocks);
     // Skórka za odznakę Paktu (tylko jeśli nadal zdobyta).
     const skin = app.save.skins[heroId] ?? '';
     this.run.skin = heroSkins(app.save.pacts.best[heroId] ?? 0).some((b) => b.id === skin) ? skin : '';
@@ -293,6 +294,7 @@ export class GameScreen implements Screen {
     this.suggestEasy();
     this.updateRecords();
     this.unlock({});
+    this.discover();
     this.awardEssence();
     this.endSlot();
     this.app.persist();
@@ -372,6 +374,7 @@ export class GameScreen implements Screen {
       }
     }
     this.unlock({ boss: true, acts: this.run.expedition!.act, won: true });
+    this.discover(true);
     const X = BAL.expedition;
     this.awardEssence(X.winEssenceMul * (this.run.expedition!.act > X.acts ? X.voidEssenceMul : 1));
     this.endSlot();
@@ -389,7 +392,26 @@ export class GameScreen implements Screen {
   private unlock(c: Partial<UnlockCtx>): void {
     const s = this.app.save, ex = this.run.expedition;
     if (this.tut) return;
-    const fresh = grantUnlocks(s, { boss: false, acts: 0, won: false, tier: ex?.tier ?? 0, ...c });
+    const fresh = grantUnlocks(s, { boss: false, acts: 0, won: false, tier: ex?.tier ?? 0, run: this.run, ...c });
+    this.announce(fresh);
+  }
+
+  /**
+   * Koniec runu (śmierć, poddanie, wygrana): punkty odkryć (BAL.discovery) — każdy run przybliża następną zablokowaną
+   * zawartość, nawet bez spełnienia jej warunku.
+   */
+  private discover(won = false): void {
+    if (this.tut) return;
+    const D = BAL.discovery, ex = this.run.expedition;
+    const acts = ex ? ex.act - (won ? 0 : 1) : 0;
+    const pts = D.run + D.act * acts + (this.mode === 'endless' ? Math.floor(this.run.totalTime / 60 / D.endlessMin) : 0);
+    this.announce(grantDiscovery(this.app.save, pts));
+  }
+
+  /** Nowe odblokowania: zawartość runu od razu, zapis, komunikat w menu głównym, banery w grze po kolei. */
+  private announce(fresh: UnlockDef[]): void {
+    const s = this.app.save, ex = this.run.expedition;
+    this.run.content = new Set(s.unlocks);
     if (!fresh.length) return;
     const last = fresh[fresh.length - 1];
     s.notice = `Unlocked: ${last.name}. ${last.hint}`;
@@ -1143,6 +1165,8 @@ export class GameScreen implements Screen {
     // Odrodzenia (Feniks, Niezłomny, Popiół feniksa): ile zużyto na tej mapie — 0.59, gracz nie zauważył, że Feniks zadziałał wcześniej.
     if (run.flag('revive') > 0) info.push([`${tr('Revives used on this map')}: ${run.revivesUsed}/${run.flag('revive')}`, C.orange]);
     if (this.unlockedRun.length) info.push([`Unlocked: ${this.unlockedRun.map((u) => u.name).join(', ')}`, C.lime]);
+    // Odkrycia (0.61): ile punktów do następnej zablokowanej zawartości (data/unlocks.ts grantDiscovery).
+    if (!this.tut && discoveryLeft(this.app.save)) info.push([tr(`Next discovery: ${this.app.save.discovery ?? 0}/${BAL.discovery.every}`), C.cyan]);
     info.forEach(([t, col], i) => drawText(g, t, W / 2, 69 + i * 10, col, { align: 'center', shadow: C.black }));
     // Panel zakładek zaczyna się tuż pod liniami informacji (bez pustego pasa, gdy ich nie ma).
     this.endY = 88 + info.length * 10;
