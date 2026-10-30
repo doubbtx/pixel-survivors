@@ -16,7 +16,7 @@ import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
 import { button, Menu, dim, panel, inside, slot, bar, Scroll, Confirm, drawTip, type Tip } from './widgets';
 import { renderHud, messageY, belowHud, hudGap } from './hud';
-import { UI } from './theme';
+import { UI, tile } from './theme';
 import { drawSkills } from './skills';
 import type { AbilitySlot } from '../data/heroes';
 import { abilityMaxCd } from '../systems/abilities';
@@ -52,7 +52,7 @@ import { FEAT_BY_ID } from '../data/feats';
 import { featsOnWin } from '../systems/feats';
 import { BESTIARY_BY_ID, loreBonus, loreMuls } from '../data/bestiary';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
-import { WEAPON_BY_ID, maxLevel } from '../data/weapons';
+import { WEAPON_BY_ID, WEAPONS, ROLE_BY_SRC, maxLevel } from '../data/weapons';
 import { SECRET_BY_ID } from '../data/secrets';
 
 const PEEK_LABELS = ['Build [C]', 'Plecak [I]', 'Synergie [Y]'];
@@ -164,7 +164,7 @@ export class GameScreen implements Screen {
     this.pauseMenu = tutorial ? new Menu([
       { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-      { label: () => 'Skip tutorial', act: () => this.endTutorial() },
+      { label: () => 'Skip tutorial', act: () => this.endTutorial(true) },
     ], PL + PLW / 2, 60, PLW - 14) : new Menu([
       { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
       { label: () => 'Ekwipunek', act: () => this.openInventory('pause') },
@@ -350,7 +350,7 @@ export class GameScreen implements Screen {
         this.showToast(`${ex.act > BAL.expedition.acts ? 'Sekretny akt 4: Pustka' : `Akt ${ex.act}`}! +${Math.round(BAL.levelClearHeal * 100)}% HP`);
       }
       // Bonus mapy po ukończeniu: skrzynia, karta albo leczenie (nakładki wracają na mapę). Przed openMap, żeby leczenie weszło do zapisu.
-      if (m.bonus === 'chest') run.pendingLoot.push(run.rollLoot('boss'));
+      if (m.bonus === 'chest') run.pendingLoot.push({ ...run.rollLoot('boss'), title: 'Map bonus!' });
       if (m.bonus === 'card') run.pendingCards.push('elite');
       if (m.bonus === 'heal') run.heal(run.stats.maxHp * 0.4);
       this.openMap();
@@ -449,10 +449,15 @@ export class GameScreen implements Screen {
     else drawText(g, this.app.input.lastDevice === 'touch' ? 'Pause (top right): skip tutorial' : 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: smallS() });
   }
 
-  /** Koniec albo pominięcie samouczka: zapis i menu główne (Ekspedycja polecana, komunikat o Rozwoju i Kolekcji). */
-  private endTutorial(): void {
+  /**
+   * Koniec albo pominięcie samouczka: zapis i menu główne (Ekspedycja polecana, komunikat o Rozwoju i Kolekcji).
+   * Pominięty (0.62, playtest: gra pisała „Tutorial done!”): inny komunikat, z informacją, gdzie wyłączyć podpowiedzi.
+   */
+  private endTutorial(skipped = false): void {
     this.app.save.tutorialDone = true;
-    this.app.save.notice ||= 'Tutorial done! Start an Expedition. Essence from every run goes to Progress, new cards to Collection.';
+    this.app.save.notice ||= skipped
+      ? 'Tutorial skipped. Start an Expedition. Hints for new mechanics can be turned off in Settings > General.'
+      : 'Tutorial done! Start an Expedition. Essence from every run goes to Progress, new cards to Collection.';
     this.app.persist();
     this.app.go(new MainMenu(this.app));
   }
@@ -494,7 +499,7 @@ export class GameScreen implements Screen {
     ex.cleared++;
     switch (kind) {
       case 'treasure':
-        run.pendingLoot.push({ source: 'boss', item: rollItem(run.depth, 'boss', run.luck() + X.treasureLuck) });
+        run.pendingLoot.push({ source: 'boss', item: rollItem(run.depth, 'boss', run.luck() + X.treasureLuck), title: 'Treasure!' });
         this.saveSlot(false);
         this.openPending();
         break;
@@ -735,6 +740,8 @@ export class GameScreen implements Screen {
     // Wersja wydawana (__DEV_TOOLS__ = false) nie ma żadnego z nich.
     if (__DEV_TOOLS__ && inp.pressed('debug')) this.diag = !this.diag;
     this.hints.update(dt, this.state);
+    // Mapa: ramka podpowiedzi leży na dalszych węzłach, więc gaśnie, gdy gracz zaczyna wybierać (playtest 0.62).
+    if (this.state === 'map' && inp.anyPressed()) this.hints.dismiss();
     // Muzyka: intensywność z liczby wrogów, lochu i wydarzenia; boss na pełno; poza walką ciszej.
     const fight = this.state === 'play' && run.outcome === 'none';
     const crowd = Math.min(1, run.enemies.count / BAL.musicCrowd) * 0.8 + (run.dungeon || run.levelEvent ? 0.2 : 0);
@@ -949,7 +956,7 @@ export class GameScreen implements Screen {
         break;
       case 'map':
         this.map!.render(r);
-        if (this.toastT > 0) drawText(r.g, this.toast, W / 2, H - 44, C.lime, { align: 'center', outline: C.black }); // nad przyciskami mapy (playtest)
+        if (this.toastT > 0) this.renderMapToast();
         break;
       case 'pause':
         this.renderPause();
@@ -959,6 +966,19 @@ export class GameScreen implements Screen {
         break;
     }
     if (this.state !== 'pause' && this.state !== 'end') this.hints.render(r, HINT_BOX[this.state] ?? null, this.app.input.lastDevice === 'touch');
+  }
+
+  /**
+   * Komunikat na mapie Ekspedycji: płytka na wstędze tytułu, między nazwą biomu a plakietkami (0.62, playtest: nad przyciskami
+   * leżał na opisie węzła). Najwyżej dwie linie, wygasa pod koniec.
+   */
+  private renderMapToast(): void {
+    const r = this.app.r, maxW = 224, lines = wrapText(this.toast, maxW - 12).slice(0, 2);
+    const w = Math.max(...lines.map((l) => textWidth(l))) + 12, h = lines.length * 11 + 3, x = W / 2 - w / 2;
+    r.withAlpha(Math.min(1, this.toastT * 3), () => {
+      tile(r, x, 2, w, h, C.lime, 0.95);
+      lines.forEach((l, i) => drawText(r.g, l, W / 2, 3.5 + i * 11, C.lime, { align: 'center', shadow: C.black }));
+    });
   }
 
   /**
@@ -1192,12 +1212,15 @@ export class GameScreen implements Screen {
   private renderHighlights(): void {
     const r = this.app.r, g = r.g, run = this.run, before = this.recStart, ex = run.expedition;
     const all = [...run.dmgBySource.entries()].sort((a, b) => b[1] - a[1]);
-    const total = all.reduce((sum, x) => sum + x[1], 0) || 1, top = all[0];
+    const total = all.reduce((sum, x) => sum + x[1], 0) || 1;
+    // Najlepsza broń to broń (0.62, playtest: kafelek pokazywał reakcję „Toxic Blast”); największe źródło spoza broni
+    // (reakcja, synergia, egzekucja) osobnym wierszem pod kafelkami.
+    const top = all.find(([name]) => ROLE_BY_SRC[name]), other = all[0] && !ROLE_BY_SRC[all[0][0]] ? all[0] : undefined;
     const topW = top ? run.weapons.find((w) => w.def.name === top[0]) : undefined;
     // Krótki run bez pomiarów: szczyt co najmniej równy średniej.
     const peak = Math.max(total / Math.max(1, run.totalTime), ...run.dpsLog);
     const cards: { title: string; value: string; note: string; icon?: string; rec: boolean }[] = [
-      { title: 'Best weapon', value: top ? top[0] : '-', note: top ? `${Math.round((100 * top[1]) / total)}% of damage` : '', icon: topW?.def.icon, rec: false },
+      { title: 'Best weapon', value: top ? top[0] : '-', note: top ? `${Math.round((100 * top[1]) / total)}% of damage` : '', icon: topW?.def.icon ?? WEAPONS.find((w) => w.name === top?.[0])?.icon, rec: false },
       { title: 'Peak DPS', value: fmt(Math.round(peak)), note: `average ${fmt(Math.round(total / Math.max(1, run.totalTime)))}`, icon: 'cd_tempest', rec: peak > (before.bestDps ?? 0) && peak > 0 },
       { title: 'Biggest hit', value: fmt(run.maxHit), note: run.maxHitSrc, icon: 'pi_crit', rec: false },
       { title: 'Longest combo', value: String(run.bestCombo), note: 'kills, no hits taken', icon: 'pi_fury', rec: run.bestCombo > (before.bestCombo ?? 0) && run.bestCombo > 0 },
@@ -1224,7 +1247,8 @@ export class GameScreen implements Screen {
     if (this.mode === 'endless' && run.totalTime > before.bestEndless && before.bestEndless > 0) broke.push(`Endless: ${fmtTime(run.totalTime)}`);
     if (ex && ex.cleared > before.bestExpedition && before.bestExpedition > 0) broke.push(`Expedition: ${ex.cleared} maps`);
     for (const c of cards) if (c.rec && (c.title === 'Peak DPS' ? (before.bestDps ?? 0) : c.title === 'Longest combo' ? (before.bestCombo ?? 0) : (before.bestStreak ?? 0)) > 0) broke.push(`${c.title}: ${c.value}`);
-    const ly = y + ch + 5;
+    if (other) drawText(g, `Top source overall: ${other[0]}, ${Math.round((100 * other[1]) / total)}% (not a weapon)`, END_X + 12, y + ch + 5, C.lgray);
+    const ly = y + ch + 5 + (other ? 11 : 0);
     // Pierwszy run bohatera: plakietki „Record!” bez wcześniejszych rekordów — zamiast sprzecznego „bez rekordów” (playtest).
     const first = !broke.length && cards.some((c) => c.rec);
     const title = broke.length ? `${tr('Records broken')}: ${broke.length}` : first ? 'Your first records! Beat them next time.' : 'No records broken this time';

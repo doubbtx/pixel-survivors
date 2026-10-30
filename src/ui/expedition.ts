@@ -353,10 +353,14 @@ export class ExpeditionMapView {
         if (reachable && !picked) r.withAlpha(0.25 + 0.2 * Math.sin(t * 4 + lane), () => r.roundRect(x - NODE / 2 - 2, y - NODE / 2 - 2, NODE + 4, NODE + 4, UI.radius + 1, nodeColor(m)));
         iconSlot(r, x - NODE / 2, y - NODE / 2 + bob, NODE, picked ? C.white : visited ? C.gold : nodeColor(m), 0.8);
         drawSprite(g, NODE_INFO[m.kind].icon, x, y + bob);
+        // Podpis z boku węzła, ze strzałką (0.62, playtest: pod węzłem stał tuż nad sąsiadem z niższego rzędu i wyglądał
+        // jak jego; między rzędami jest tylko 10 px). W ostatniej kolumnie po lewej.
         if (picked) label = () => {
-          const nm = NODE_INFO[m.kind].name, w = textWidth(nm) * smallS() + 6;
-          tile(r, x - w / 2, y + NODE / 2 + 3, w, 9, C.white, 0.85);
-          drawText(g, nm, x, y + NODE / 2 + 3, C.white, { align: 'center', scale: smallS() });
+          const nm = NODE_INFO[m.kind].name, w = textWidth(nm) * smallS() + 6, left = row === last, ly = y - 4.5 + bob;
+          const lx = left ? x - NODE / 2 - 5 - w : x + NODE / 2 + 5;
+          tile(r, lx, ly, w, 9, C.white, 0.85);
+          drawText(g, left ? '>' : '<', left ? lx + w + 2.5 : lx - 2.5, ly, C.white, { align: 'center', scale: smallS() });
+          drawText(g, nm, lx + w / 2, ly, C.white, { align: 'center', scale: smallS() });
         };
         // Liczba modyfikatorów mapy: kropki pod węzłem; bonus mapy: zielony znak w rogu.
         if (!picked) for (let k = 0; k < (m.mods?.length ?? 0); k++) r.rect(x - 8 + k * 3, y + NODE / 2 + 1 + bob, 2, 2, C.salmon);

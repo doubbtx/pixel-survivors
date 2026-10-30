@@ -46,12 +46,18 @@ export type HintId = keyof typeof HINTS;
 /** Miejsce na podpowiedź: lewy górny róg i szerokość; `up`: `y` to dolna krawędź. */
 export interface HintBox { x: number; y: number; w: number; up?: boolean }
 
-/** Ekran, na którym pokazuje się podpowiedź (stan GameScreen); pozostałe dotyczą samej gry ('play'). Inne czekają w kolejce. */
-const HINT_SCREEN: Partial<Record<HintId, string>> = {
-  levelup: 'levelup', augment: 'levelup', fusion: 'levelup', loot: 'loot', unique: 'loot', cards: 'cards',
-  power: 'power', map: 'map', shop: 'shop', anvil: 'anvil',
+/**
+ * Ekrany, na których pokazuje się podpowiedź (stany GameScreen); pozostałe dotyczą samej gry ('play'). Inne czekają w kolejce.
+ * Wiedza, która nie ratuje życia w tej sekundzie (ekwipunek, reakcje, synergie, sekrety), czeka na spokojny ekran
+ * (0.62, playtest: podpowiedzi o plecaku i reakcjach wyskakiwały w największym ścisku).
+ */
+const CALM = ['levelup', 'cards', 'map'];
+const HINT_SCREEN: Partial<Record<HintId, string[]>> = {
+  levelup: ['levelup'], augment: ['levelup'], fusion: ['levelup'], loot: ['loot'], unique: ['loot'], cards: ['cards'],
+  power: ['power'], map: ['map'], shop: ['shop'], anvil: ['anvil'],
+  gear: ['loot', 'map'], reaction: CALM, synergy: CALM, secret: CALM,
 };
-const screenOf = (id: HintId) => HINT_SCREEN[id] ?? 'play';
+const onScreen = (id: HintId, screen: string) => (HINT_SCREEN[id] ?? ['play']).includes(screen);
 
 /** Wersje podpowiedzi na dotyk (bez klawiszy); pozostałe nie wspominają klawiszy (np. `close`) i są wspólne. */
 const TOUCH_TEXT: Partial<Record<HintId, string>> = {
@@ -69,6 +75,8 @@ const TOUCH_TEXT: Partial<Record<HintId, string>> = {
 };
 
 const SHOW = 6;
+/** W walce krócej: ramka leży na polu bitwy. */
+const SHOW_PLAY = 5;
 /** Podpowiedź jest teraz na ekranie: nakładki chowają wtedy linię klawiszy i przyciski podglądu, w których miejscu stoi ramka. */
 let showing = false;
 export const hintShowing = (): boolean => showing;
@@ -79,6 +87,8 @@ export class Hints {
   private queue: HintId[] = [];
   private cur: HintId | null = null;
   private t = 0;
+  /** Czas wyświetlania bieżącej podpowiedzi (wygaszanie i zamykanie). */
+  private shown = SHOW;
 
   constructor(private readonly save: SaveData, private readonly persist: () => void) {}
 
@@ -93,20 +103,25 @@ export class Hints {
   /** `screen`: bieżący stan ekranu gry; pokazywane są tylko podpowiedzi do niego (inne czekają w kolejce). */
   update(dt: number, screen: string): void {
     showing = false;
-    if (this.cur && screenOf(this.cur) !== screen) {
+    if (this.cur && !onScreen(this.cur, screen)) {
       // Podpowiedź nie pasuje do ekranu: wraca na początek kolejki.
       this.queue.unshift(this.cur);
       this.cur = null;
     }
     if (this.cur) { this.t -= dt; if (this.t <= 0) this.cur = null; }
     showing = !!this.cur && this.save.settings.hints;
-    const i = this.queue.findIndex((id) => screenOf(id) === screen);
+    const i = this.queue.findIndex((id) => onScreen(id, screen));
     if (!this.cur && i >= 0) {
       this.cur = this.queue.splice(i, 1)[0];
-      this.t = SHOW;
+      this.t = this.shown = screen === 'play' ? SHOW_PLAY : SHOW;
       showing = this.save.settings.hints;
       sfx.play('hover');
     }
+  }
+
+  /** Gracz już działa (np. wybiera węzeł mapy): podpowiedź wygasa, gdy była na ekranie co najmniej sekundę. */
+  dismiss(): void {
+    if (this.cur && this.shown - this.t > 1) this.t = Math.min(this.t, 0.2);
   }
 
   /**
@@ -126,7 +141,7 @@ export class Hints {
       : { x: (W - 240) / 2, y: H - UI.edge - UI.ability - 8, w: 240, up: true });
     const lines = wrapText((touch && TOUCH_TEXT[this.cur]) || HINTS[this.cur], (b.w - 12) / HINT_SCALE);
     const h = 9 + lines.length * 9, y = b.up ? b.y - h : !box && touch ? belowHud(b.x, b.x + b.w, b.y, h) : b.y;
-    const a = Math.min(1, this.t * 3, (SHOW - this.t) * 6);
+    const a = Math.min(1, this.t * 3, (this.shown - this.t) * 6);
     r.withAlpha(a, () => {
       // Cicha płytka (nie kolejne okno): kamienne tło i turkusowy znacznik po lewej, który mówi „to wskazówka”.
       if (overlay) panel(r, b.x, y, b.w, h);

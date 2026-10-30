@@ -6,7 +6,7 @@ import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { RARITIES } from '../data/items';
 import { WEAPON_BY_ID, roleInfo } from '../data/weapons';
-import { generateOptions, offerCount, applyOption, canBanish, optionScore, type Option, type Recipe } from '../systems/levelup';
+import { generateOptions, offerCount, applyOption, canBanish, optionScore, reachesThreshold, type Option, type Recipe } from '../systems/levelup';
 import type { Run } from '../game/run';
 import { button, dim, inside, slot, cardFrame, cardBadge, cardIcon } from './widgets';
 import { hintShowing } from './hints';
@@ -76,6 +76,32 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   // Rola broni (0.61): plakietka na dolnej krawędzi karty (opcje broni mają id broni).
   const wd = o.kind === 'weaponNew' || o.kind === 'weaponUp' || o.kind === 'evolve' || o.kind === 'fusion' ? WEAPON_BY_ID[o.id] : undefined;
   if (wd) { const ri = roleInfo(wd.role); label(r, ri.name, cx, y + CARD_H - 4, ri.color); }
+}
+
+/** Dlaczego karta jest „Polecana” (te same powody co optionScore w systems/levelup.ts, od najważniejszego). */
+function recommendWhy(run: Run, o: Option): string {
+  if (o.kind === 'evolve' || o.kind === 'abilityEvolve' || o.kind === 'passiveEvolve') return 'evolution, the biggest power jump';
+  if (o.kind === 'fusion') return 'fusion, a stronger hybrid and a free weapon slot';
+  const tag = o.tags.find((t) => reachesThreshold(run, t));
+  if (tag) return `reaches a new ${tag} synergy tier`;
+  if (o.hint.startsWith('Fuzja z')) return 'a step toward a fusion';
+  if (o.hint.startsWith('Potrzebna do ewolucji') || o.hint.endsWith('(masz)')) return 'a step toward an evolution';
+  if (o.quality) return 'a high quality upgrade';
+  return o.kind === 'weaponUp' ? 'levels up a weapon you already use' : 'the strongest option in this offer';
+}
+
+/**
+ * Wyjaśnienie zaznaczonej karty pod przyciskami (0.62, playtest nowicjusza: „Hybrid”, „Crowd”, „Magic 2/8”, liczby przy
+ * ikonach i „Recommended” bez wyjaśnienia): najwyżej dwie linie z powodu polecenia, roli broni, jakości i tagów synergii.
+ */
+function explain(run: Run, o: Option, recommended: boolean): string[] {
+  const out: string[] = [];
+  if (recommended) out.push(`Recommended: ${recommendWhy(run, o)}`);
+  const wd = o.kind === 'weaponNew' || o.kind === 'weaponUp' || o.kind === 'evolve' || o.kind === 'fusion' ? WEAPON_BY_ID[o.id] : undefined;
+  if (wd) out.push(roleInfo(wd.role).desc);
+  if (o.quality) out.push(`${o.tag}: upgrade quality (extra bonus stats), then level after the pick / max level`);
+  if (o.tags.length) out.push('Icons with numbers: synergy tags, points after the pick / next tier');
+  return out.slice(0, 2);
 }
 
 /**
@@ -253,10 +279,17 @@ export class LevelUpView {
       const on = b.label.startsWith('Banish') && this.banishMode;
       button(r, b.x, BTN_Y, BTN_W, 20, b.label, { active: on, accent: on ? C.red : C.gold, col: on ? C.salmon : undefined });
     }
-    // Podpis na ciemnym tle: pod nim są sloty HUD. Przy podpowiedzi jej ramka stoi w tym miejscu.
+    // Podpis na ciemnym tle: pod nim są sloty HUD. Przy podpowiedzi jej ramka stoi w tym miejscu. Zwykle wyjaśnia zaznaczoną
+    // kartę (powód polecenia, rola, jakość, tagi), w trybie wygnania i przy kartach bez oznaczeń: wygnanie i klawisze.
     if (hintShowing()) return;
-    const note = isTouch() ? 'Banishing removes a new weapon or passive from the pool for the rest of the run.   Tap a card: choose' : 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', nw = textWidth(note) + 12;
-    r.withAlpha(0.85, () => r.roundRect(W / 2 - nw / 2, 235, nw, 14, 4, C.black));
-    drawText(r.g, note, W / 2, 236.5, C.lavender, { align: 'center', shadow: C.black });
+    const sel = this.options[this.sel], rec = !this.banishMode && this.sel === best && this.options.length > 1;
+    const why = sel && !this.banishMode ? explain(this.run, sel, rec) : [];
+    const notes = why.length ? why : [isTouch() ? 'Banishing removes a new weapon or passive from the pool for the rest of the run.   Tap a card: choose' : 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór'];
+    // Długa linia (polski, duży tekst) zmniejszana do szerokości ekranu, najwyżej do 0.75.
+    const sc = notes.map((n) => Math.max(0.75, Math.min(1, (W - 24) / textWidth(n))));
+    // Dwie linie mieszczą się między przyciskami (do y 230) a przyciskami podglądu C/I/Y (od y 254).
+    const nw = Math.max(...notes.map((n, i) => textWidth(n) * sc[i])) + 12, nh = notes.length * 10 + 3, ny = notes.length > 1 ? 231 : 235;
+    r.withAlpha(0.85, () => r.roundRect(W / 2 - nw / 2, ny, nw, nh, 4, C.black));
+    notes.forEach((n, i) => drawText(r.g, n, W / 2, ny + 1 + i * 10, i === 0 && rec ? C.yellow : C.lavender, { align: 'center', shadow: C.black, scale: sc[i] }));
   }
 }
