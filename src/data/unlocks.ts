@@ -69,20 +69,21 @@ const inRun = (get: (r: Run) => number, n: number) => ({
  */
 const CARD_TAGS: Tag[] = ['Ogień', 'Krytyk', 'Pociski', 'Obszar', 'Tarcze', 'Życie', 'Szybkość', 'Umiejętności', 'Przywołania', 'Klątwa'];
 const PRISM_GROUPS = 3;
+const G = BAL.discovery.goals;
 export const CONTENT: UnlockDef[] = [
   { id: 'w:meteor', name: WEAPON_BY_ID.meteor.name, how: 'Defeat a boss.', hint: 'A new weapon can now show up on level-up.', check: (_s, c) => c.boss },
   { id: 'fusions', name: 'Weapon fusions', how: 'Defeat a boss.', hint: 'Two maxed weapons can now fuse into a hybrid (Codex: Fusions).', check: (_s, c) => c.boss },
-  { id: 'p:magnet', name: PASSIVE_BY_ID.magnet.name, how: 'Reach level 20 in a run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.level, 20) },
-  { id: 'w:mines', name: WEAPON_BY_ID.mines.name, how: 'Complete act 1 of an Expedition or survive 10 minutes in Endless.', hint: 'A new weapon can now show up on level-up.', check: (_s, c) => c.acts >= 1 || (!!c.run && c.run.mode === 'endless' && c.run.totalTime >= 600) },
-  { id: 'p:ember', name: PASSIVE_BY_ID.ember.name, how: 'Trigger 100 elemental reactions in one run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.reactions, 100) },
-  { id: 'w:laser', name: WEAPON_BY_ID.laser.name, how: 'Reach level 30 in a run.', hint: 'A new weapon can now show up on level-up.', ...inRun((r) => r.level, 30) },
-  { id: 'p:whetstone', name: PASSIVE_BY_ID.whetstone.name, how: 'Land 1000 critical hits in one run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.critHits, 1000) },
-  { id: 'w:sickle', name: WEAPON_BY_ID.sickle.name, how: 'Heal 1000 HP in one run.', hint: 'A new weapon can now show up on level-up.', ...inRun((r) => r.healed, 1000) },
-  { id: 'p:clover', name: PASSIVE_BY_ID.clover.name, how: 'Kill 1500 enemies in one run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.kills, 1500) },
+  { id: 'p:magnet', name: PASSIVE_BY_ID.magnet.name, how: `Reach level ${G.magnet} in a run.`, hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.level, G.magnet) },
+  { id: 'w:mines', name: WEAPON_BY_ID.mines.name, how: `Complete act 1 of an Expedition or survive ${G.minesMin} minutes in Endless.`, hint: 'A new weapon can now show up on level-up.', check: (_s, c) => c.acts >= 1 || (!!c.run && c.run.mode === 'endless' && c.run.totalTime >= G.minesMin * 60) },
+  { id: 'p:ember', name: PASSIVE_BY_ID.ember.name, how: `Trigger ${G.reactions} elemental reactions in one run.`, hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.reactions, G.reactions) },
+  { id: 'w:laser', name: WEAPON_BY_ID.laser.name, how: `Reach level ${G.laser} in a run.`, hint: 'A new weapon can now show up on level-up.', ...inRun((r) => r.level, G.laser) },
+  { id: 'p:whetstone', name: PASSIVE_BY_ID.whetstone.name, how: `Land ${G.crits} critical hits in one run.`, hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.critHits, G.crits) },
+  { id: 'w:sickle', name: WEAPON_BY_ID.sickle.name, how: `Heal ${G.heal} HP in one run.`, hint: 'A new weapon can now show up on level-up.', ...inRun((r) => r.healed, G.heal) },
+  { id: 'p:clover', name: PASSIVE_BY_ID.clover.name, how: `Kill ${G.kills} enemies in one run.`, hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.kills, G.kills) },
   { id: 'w:dice', name: WEAPON_BY_ID.dice.name, how: 'Get a Lucky find.', hint: 'A new weapon and a new passive can now show up on level-up.', grants: ['p:horseshoe'], ...inRun((r) => r.jackpots, 1) },
   ...CARD_TAGS.map((t): UnlockDef => ({
-    id: `cards:${t}`, name: `${t}: gold cards`, how: `Activate the ${t} synergy in a run (3 points).`, hint: 'More gold cards can now show up.',
-    check: (_s, c) => (c.run?.synTiers[t] ?? 0) >= 1,
+    id: `cards:${t}`, name: `${t}: gold cards`, how: `Raise the ${t} synergy to tier ${G.synTier} in a run.`, hint: 'More gold cards can now show up.',
+    check: (_s, c) => (c.run?.synTiers[t] ?? 0) >= G.synTier,
   })),
   { id: 'prism:1', name: 'Prismatic cards I', how: 'Complete act 1 of an Expedition or defeat 2 bosses in Endless.', hint: 'More prismatic cards can now show up.', check: (_s, c) => c.acts >= 1 || (c.run?.mode === 'endless' && c.run.bossKills >= 2) },
   { id: 'prism:2', name: 'Prismatic cards II', how: 'Complete act 2 of an Expedition or defeat 4 bosses in Endless.', hint: 'More prismatic cards can now show up.', check: (_s, c) => c.acts >= 2 || (c.run?.mode === 'endless' && c.run.bossKills >= 4) },

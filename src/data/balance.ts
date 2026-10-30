@@ -206,7 +206,11 @@ export const BAL = {
    * (`act`) i co `endlessMin` minut Endless; co `every` punktów otwiera się najbliższa zablokowana zawartość.
    * Od startu otwarte: `goldPerTag` pierwszych złotych kart każdego tagu i `prism` pierwszych pryzmatycznych (data/cards.ts `cardLock`).
    */
-  discovery: { run: 1, act: 1, endlessMin: 5, every: 3, goldPerTag: 2, prism: 5 },
+  discovery: {
+    run: 1, act: 1, endlessMin: 5, every: 3, goldPerTag: 2, prism: 5,
+    /** Progi warunków „w jednym runie” (data/unlocks.ts CONTENT); próg synergii = jej poziom (1 = 3 punkty, 2 = 6). */
+    goals: { magnet: 25, laser: 40, reactions: 250, crits: 3000, heal: 2500, kills: 3000, synTier: 2, minesMin: 10 },
+  },
   /** Kradzież życia (0.60): osobny budżet, ułamek maks. HP na sekundę; wcześniej 2% za każde trafienie = kilka pasków HP na s. */
   lifestealPerSec: 0.04,
   /** Piętno Aurela (0.43): leczenie za trafienie napiętnowanego (ułamek maks. HP, w budżecie drainPerSec; do Wiary liczy się `faith` leczenia), maks. czas, przedłużanie w Uświęconej ziemi (s/s), tarcza Opiekuna za napiętnowanego w `guardR`, wybuch Włóczni świtu. */
