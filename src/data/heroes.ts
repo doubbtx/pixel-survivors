@@ -397,8 +397,14 @@ const pc = (v: number) => `${Math.round(v * 100)}%`;
 /** Liczba z najwyżej dwoma miejscami po przecinku (separator wg języka). */
 const dec = (v: number) => { const t = String(Math.round(v * 100) / 100); return getLang() === 'pl' ? t.replace('.', ',') : t; };
 
+/** Opis zasobu wg wybranego ultimate: z Mushin (Takezo) zdanie o Iai zużywającym Rytm zastępuje zapełnianie. */
+export function resourceDesc(h: HeroDef, alt: boolean): string {
+  const d = h.resource.desc;
+  return alt && h.altUlt?.kind === 'mushin' ? d.replace('Iai (R) spends it on a stronger cut.', 'Mushin (R) fills it at once (Flow).') : d;
+}
+
 /** Szczegóły zasobu z liczbami z BAL.resource (ekran wyboru bohatera). */
-export function resourceDetails(kind: ResourceKind): string[] {
+export function resourceDetails(kind: ResourceKind, alt = false): string[] {
   const R = BAL.resource;
   switch (kind) {
     case 'focus': return [
@@ -433,15 +439,17 @@ export function resourceDetails(kind: ResourceKind): string[] {
     ];
     case 'faith': return [
       `Maks. ${R.faith.max}. Zabójstwo w pobliżu +1 (elita 3, boss 10), leczenie +${R.faith.heal} za 1% HP.`,
-      `Pełna: Łaska (koszt ${R.faith.grace}): leczenie ${pc(R.faith.graceHeal)} HP, tarcza ${pc(R.faith.graceShield)} HP, sługi +${R.faith.minionLife} s.`,
+      `Pełna: Łaska (koszt ${R.faith.grace}): leczenie ${pc(R.faith.graceHeal)} HP, tarcza ${pc(R.faith.graceShield)} HP.`,
       `Sąd (R) zużywa całą: +${pc(R.faith.judgDmg)} obrażeń za punkt, +1 cel za każde ${R.faith.judgExtra}.`,
     ];
     case 'rhythm': return [
-      `Max ${R.rhythm.max}. Every hit: +${R.rhythm.hit} (at most every ${R.rhythm.gap} s), a parry: +${R.parry.rhythm}.`,
+      `Max ${R.rhythm.max}. Every hit: +${dec(R.rhythm.hit)} (at most every ${dec(R.rhythm.gap)} s), a parry: +${R.parry.rhythm}.`,
       // Za punkt poniżej 1%: miejsca po przecinku (pc() zaokrąglałby 0,75% do 1%), w PL przecinek dziesiętny.
       `While it builds: +${dec(R.rhythm.atk * 100)}% attack speed per point (full bar: +${pc(R.rhythm.atk * R.rhythm.max)}). Getting hit does not lower it.`,
       `Full: Flow until you take damage: +${pc(R.rhythm.flowAtk)} attack speed, +${pc(R.rhythm.flowDmg)} damage, Thousand Cuts ready. A hit ends it and the bar drains to zero (${R.rhythm.drain} per second).`,
-      `Iai (R): outside Flow spends it all (+${pc(R.rhythm.iai)} damage per point), in Flow deals x${R.rhythm.flowIai} and Flow goes on.`,
+      // Mushin (alternatywny ultimate) nie zużywa Rytmu, tylko go od razu zapełnia.
+      alt ? 'Mushin (R): fills Rhythm at once (Flow).'
+        : `Iai (R): outside Flow spends it all (+${pc(R.rhythm.iai)} damage per point), in Flow deals x${R.rhythm.flowIai} and Flow goes on.`,
     ];
   }
 }

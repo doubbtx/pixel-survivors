@@ -1,4 +1,5 @@
 import { C } from '../core/palette';
+import { getLang } from '../core/i18n';
 import { rng } from '../core/rng';
 import { sfx } from '../core/audio';
 import { BAL } from '../data/balance';
@@ -122,7 +123,7 @@ export function resourceOnHurt(run: Run, dmg: number): void {
     // Przepływ trwa do pierwszego trafienia; flaga rhythm.flow: jeszcze tyle sekund po trafieniu, potem opadanie.
     const grace = run.flag('rhythm.flow');
     run.flowT = run.flowMax = Math.max(0, grace);
-    if (grace > 0) run.popText(run.player.x, run.player.y - 16, `Flow ${grace}s`, C.cyan);
+    if (grace > 0) run.popText(run.player.x, run.player.y - 16, `Flow ${getLang() === 'pl' ? String(grace).replace('.', ',') : grace}s`, C.cyan);
     else breakRhythm(run);
   }
   // Rytm w trakcie budowania nie spada od trafień (0.50, prośba gracza): łamie go dopiero trafienie w Przepływie.

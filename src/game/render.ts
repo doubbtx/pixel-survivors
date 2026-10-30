@@ -133,9 +133,10 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
   const ox = Math.round(run.camX * ZOOM + shx), oy = Math.round(run.camY * ZOOM + shy);
   const X = (x: number) => Math.round(x * ZOOM) - ox;
   const Y = (y: number) => Math.round(y * ZOOM) - oy;
-  const vis = (x: number, y: number) => {
-    const sx = X(x), sy = Y(y);
-    return sx > -MARGIN && sx < VW + MARGIN && sy > -MARGIN && sy < VH + MARGIN;
+  // rad: zasięg obiektu w pikselach ekranu (duże obiekty na ziemi nie znikają, gdy tylko środek wyjdzie poza ekran).
+  const vis = (x: number, y: number, rad = 0) => {
+    const sx = X(x), sy = Y(y), m = MARGIN + rad;
+    return sx > -m && sx < VW + m && sy > -m && sy < VH + m;
   };
   const p = run.player;
   const px = X(p.x), py = Y(p.y);
@@ -165,7 +166,7 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
 
   // Teren: kałuże bagna i lodu (pod wszystkim, co stoi na ziemi).
   for (const t of run.terrain) {
-    if ((t.kind !== 'swamp' && t.kind !== 'ice') || !vis(t.x, t.y)) continue;
+    if ((t.kind !== 'swamp' && t.kind !== 'ice') || !vis(t.x, t.y, t.r * ZOOM)) continue;
     const tx = X(t.x), ty = Y(t.y), tr = t.r * ZOOM, ice = t.kind === 'ice';
     r.withAlpha(ice ? 0.35 : 0.6, () => r.circle(tx, ty, tr, ice ? C.blue : C.dbrown, true));
     r.withAlpha(ice ? 0.3 : 0.45, () => r.circle(tx - tr * 0.15, ty - tr * 0.15, tr * 0.6, ice ? C.cyan : C.green, true));
@@ -298,7 +299,7 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
 
   // Sieci Pajęczarzy: szare promienie i okręgi.
   for (const w of run.webs) {
-    if (!vis(w.x, w.y)) continue;
+    if (!vis(w.x, w.y, w.r * ZOOM)) continue;
     const wx = X(w.x), wy = Y(w.y), wr = w.r * ZOOM;
     r.withAlpha(Math.min(0.7, w.t), () => {
       for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; r.line(wx, wy, wx + Math.cos(a) * wr, wy + Math.sin(a) * wr, C.lgray); }
@@ -420,7 +421,8 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
     if ((run.step + Math.floor(gm.x * 13)) % 120 < 5) { r.rect(gx - 1, gy - 4, 1, 3, C.white); r.rect(gx - 2, gy - 3, 3, 1, C.white); }
   }
   for (const it of run.pickups.items) {
-    if (!vis(it.x, it.y)) continue;
+    // Skrzynia: zasięg słupa światła (rośnie z jakością).
+    if (!vis(it.x, it.y, it.item ? 40 + it.item.rarity * 28 : 0)) continue;
     const bob = Math.round(Math.sin(run.time * 4 + it.x) * 1.5);
     const sx = X(it.x), sy = Y(it.y);
     // Skrzynia: poświata, rozchodzący się pierścień i słup światła w kolorze jakości (od Magicznego),
@@ -463,7 +465,7 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
 
   // Sztandary elit (R3): złota strefa z drzewcem (gracz w niej dostaje więcej obrażeń, wrogowie się leczą).
   for (const b of run.banners) {
-    if (!vis(b.x, b.y)) continue;
+    if (!vis(b.x, b.y, BAL.eliteTraits.bannerR * ZOOM)) continue;
     const bx = X(b.x), by = Y(b.y), R = BAL.eliteTraits.bannerR * ZOOM;
     r.withAlpha(0.12, () => r.circle(bx, by, R, C.gold, true));
     r.withAlpha(b.t < 1 && !run.reduceFlash && run.step % 8 < 4 ? 0.3 : 0.7, () => r.circle(bx, by, R, C.gold));
@@ -475,7 +477,8 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
     // Wróg poza ekranem z trwającą zapowiedzią ataku (linia celownika, szarży, zapowiedź bossa) też przechodzi dalej:
     // zapowiedź sięga na ekran, a sprite po prostu przytnie płótno (naraz zapowiada niewielu wrogów).
     const tell = e.dashT > 0 || (e.boss && e.actT > 0 && e.actT < BOSS_TELL);
-    if (e.dead || (!vis(e.x, e.y) && !tell)) continue;
+    // Dowódca: liczy się zasięg jego aury, nie tylko środek.
+    if (e.dead || (!vis(e.x, e.y, e.elite?.includes('commander') ? BAL.eliteTraits.auraR * ZOOM : 0) && !tell)) continue;
     const ex = X(e.x), ey = Y(e.y);
     if (e.elite) r.circle(ex, ey + e.radius * ZOOM, e.radius * ZOOM * 1.2, run.blink(30, 15) ? C.yellow : C.orange);
     // Dowódca (R3): złoty pierścień aury.
@@ -623,8 +626,8 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
   // Bliski dystans (0.47): słaby pierścień zasięgu bonusu, gdy trafienia z bliska trwają.
   const ck = 1 - (run.totalTime - run.closeAt) / 0.5;
   // Trans bitewny (0.49): turkusowy pierścień, dopóki ≥ 3 wrogów jest przy bohaterze (−15% obrażeń).
-  if (run.tranceOn()) r.withAlpha(0.45, () => r.circle(px, py, BAL.close.r * ZOOM, C.cyan));
-  else if (ck > 0 && run.closeAt >= 0) r.withAlpha(0.4 * ck, () => r.circle(px, py, BAL.close.r * ZOOM, C.white));
+  if (run.outcome !== 'dead' && run.tranceOn()) r.withAlpha(0.45, () => r.circle(px, py, BAL.close.r * ZOOM, C.cyan));
+  else if (run.outcome !== 'dead' && ck > 0 && run.closeAt >= 0) r.withAlpha(0.4 * ck, () => r.circle(px, py, BAL.close.r * ZOOM, C.white));
   // Bastion światła (R4): złota kopuła wokół bohatera (pociski wrogów w niej znikają).
   if (run.bastionT > 0) {
     const rr = run.bastionR * ZOOM;
@@ -643,8 +646,8 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
         drawSprite(g, w.def.proj ?? 'blade', px + Math.cos(a) * R, py + Math.sin(a) * R, { scale: s.area >= 1.5 ? 2 : 1 });
       }
     }
-    // Poświaty pocisków gracza (pełne efekty, do 200 naraz).
-    if (fancy) lit(g, (glow) => {
+    // Poświaty pocisków gracza (pełne efekty, do 200 naraz; bez nich przy przygaszonych atakach).
+    if (fancy && glow) lit(g, (glow) => {
       let n = 0;
       for (const pr of run.projectiles.items) {
         if (n > 200 || pr.kind === 'wave' || !vis(pr.x, pr.y)) continue;
@@ -725,7 +728,7 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
         }
         case 'fade': {
           // Znikający wróg według materiału (DEATH_STYLE): rozprysk, bryły spadające, odłamki na boki; reszta blednie i unosi się.
-          const sc = Math.max(1, Math.round(f.r)), flash = k > 0.7 && !run.reduceFlash, flipX = f.a0 === 1, t = 1 - k;
+          const sc = f.r, flash = k > 0.7 && !run.reduceFlash, flipX = f.a0 === 1, t = 1 - k;
           const style = DEATH_STYLE[f.sprite.slice(0, f.sprite.indexOf('@'))] ?? 'fade', x = X(f.x), y = Y(f.y);
           if (style === 'splat') {
             // Spłaszcza się i rozlewa, kilka kropli w bok.
@@ -850,6 +853,11 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
     r.withAlpha(0.7 * (1 - k), () => { r.circle(px, py, 10 + k * VW * 0.7, col); r.circle(px, py, 8 + k * VW * 0.66, C.white); });
     if (!run.reduceFlash) r.withAlpha(0.35 * (1 - k), () => { const e = 10; r.rect(0, 0, VW, e, col); r.rect(0, VH - e, VW, e, col); r.rect(0, 0, e, VH, col); r.rect(VW - e, 0, e, VH, col); });
   }
+  // Wydarzenia poziomu: zabarwione niebo (pod pogodą i liczbami obrażeń, żeby ich nie przyciemniać).
+  if (run.levelEvent) {
+    const id = run.levelEvent.id;
+    r.withAlpha(id === 'storm' ? 0.22 : 0.1, () => r.rect(0, 0, VW, VH, id === 'blood' ? C.dred : id === 'gold' ? C.gold : C.navy));
+  }
   // Pogoda biomu (gfx/weather.ts, ~100 prostokątów): nad sceną, pod liczbami obrażeń; w lochu bez pogody.
   if (!run.dungeon) {
     g.save();
@@ -866,11 +874,7 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
     r.withAlpha(Math.min(1, n.life * 5) * autoA, () => drawLabel(g, n.text, X(n.x), Y(n.y) - 6, n.col, C.black, n.big ? pop : 0.75));
   }
 
-  // Wydarzenia poziomu: zabarwione niebo i kręgi ostrzegawcze piorunów burzy.
-  if (run.levelEvent) {
-    const id = run.levelEvent.id;
-    r.withAlpha(id === 'storm' ? 0.22 : 0.1, () => r.rect(0, 0, VW, VH, id === 'blood' ? C.dred : id === 'gold' ? C.gold : C.navy));
-  }
+  // Kręgi ostrzegawcze piorunów burzy.
   for (const s of run.strikes) {
     const sx = X(s.x), sy = Y(s.y), col = s.seed ? C.lime : s.foe ? C.orange : C.cyan, R = (s.r ?? BAL.levelEvents.stormR) * ZOOM;
     r.circle(sx, sy, R, !run.reduceFlash && run.step % 8 < 4 ? C.white : col);

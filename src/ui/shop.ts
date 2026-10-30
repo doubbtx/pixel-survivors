@@ -1,5 +1,5 @@
 import { W, H, type Renderer } from '../core/renderer';
-import type { Input } from '../core/input';
+import { isTouch, type Input } from '../core/input';
 import { C } from '../core/palette';
 import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
@@ -14,7 +14,7 @@ import { buyItem, buyService, buyElixir, buyShopUpgrade, refreshShop, type BuyRe
 import type { Run } from '../game/run';
 import { CardPickView } from './cards';
 import { drawItemSlot, drawItemCard } from './items';
-import { button, dim, panel, slot, inside } from './widgets';
+import { button, backButton, backHit, dim, panel, slot, inside } from './widgets';
 import { hintShowing } from './hints';
 
 const CELL = 28;
@@ -27,8 +27,8 @@ const DET_X = 278, DET_W = 196;
 const BTN_Y = 236;
 /** Przesunięcie treści panelu usługi / rozbudowy w dół: blok wyśrodkowany w panelu szczegółów (bez pustego dołu). */
 const OY = 18;
-/** Przyciski pod listą (x, szerokość): odśwież, ekwipunek, kowadło, wyjście — wspólne dla rysowania i kliknięć. */
-const BTNS = { refresh: [10, 58], inv: [72, 56], anvil: [132, 46], close: [182, 88] } as const;
+/** Przyciski pod listą (x, szerokość): odśwież, ekwipunek, kowadło — wspólne dla rysowania i kliknięć. Wyjście: wspólny Wstecz w rogu. */
+const BTNS = { refresh: [10, 58], inv: [72, 56], anvil: [132, 46] } as const;
 
 /** Pozycja oferty: przedmiot, usługa albo eliksir. */
 type Entry =
@@ -55,8 +55,8 @@ export class ShopView {
   private armed: string | null = null;
   private cardPick: CardPickView | null = null;
 
-  /** `onChange` — po każdym zakupie (zapis runu); `exitLabel` — podpis przycisku wyjścia. */
-  constructor(private readonly run: Run, private readonly onChange: () => void, private readonly exitLabel: string) {}
+  /** `onChange` — po każdym zakupie (zapis runu). */
+  constructor(private readonly run: Run, private readonly onChange: () => void) {}
 
   private get shop(): ShopState {
     return this.run.shop!;
@@ -121,7 +121,7 @@ export class ShopView {
     this.noteT = Math.max(0, this.noteT - dt);
     // Klawiatura, pad albo mysz rozbrajają dotykowe „pierwsze dotknięcie”.
     if (input.lastDevice !== 'touch') this.armed = null;
-    if (input.pressed('back') || input.pressed('pause')) return 'close';
+    if (input.pressed('back') || input.pressed('pause') || backHit(input)) return 'close';
     if (input.pressed('inventory')) return 'inventory';
     if (input.pressed('anvil')) return 'anvil';
     if (input.pressed('up')) this.cy = (this.cy + 2) % 3;
@@ -154,7 +154,6 @@ export class ShopView {
       if (inside(m.x, m.y, BTNS.refresh[0], BTN_Y, BTNS.refresh[1], 16)) this.refresh();
       if (inside(m.x, m.y, BTNS.inv[0], BTN_Y, BTNS.inv[1], 16)) return 'inventory';
       if (inside(m.x, m.y, BTNS.anvil[0], BTN_Y, BTNS.anvil[1], 16)) return 'anvil';
-      if (inside(m.x, m.y, BTNS.close[0], BTN_Y, BTNS.close[1], 16)) return 'close';
       if (inside(m.x, m.y, DET_X, BTN_Y, DET_W, 16)) this.buy(this.row(this.cy)[this.cx]);
     }
     this.lastMouse = m.lastMove;
@@ -166,6 +165,7 @@ export class ShopView {
     const g = r.g, run = this.run, shop = this.shop;
     dim(r);
     drawText(g, 'Sklep', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
+    backButton(r);
     drawSprite(g, 'coin', W - 70, 18);
     drawText(g, fmt(Math.floor(run.gold)), W - 62, 13, C.yellow, { outline: C.black });
 
@@ -194,7 +194,7 @@ export class ShopView {
     }
     const lines = [
       `HP ${hpText(run.player.hp, run.stats.maxHp)}  plecak ${run.bag.length}/${BAL.bagSize}  odł. ${run.shards}  losowania ${run.rerolls}/${run.banishes}/${run.cardRerolls}`,
-      'Enter/klik: kup  R: odśwież  I: ekwipunek  K: kowadło',
+      isTouch() ? 'Tap: details, tap again: buy' : 'Enter/klik: kup  R: odśwież  I: ekwipunek  K: kowadło',
     ];
     // Przy podpowiedzi jej ramka zastępuje stan i klawisze.
     if (!hintShowing()) lines.forEach((l, i) => drawText(g, l, 14, 206 + i * 11, i < 1 ? C.lgray : C.lavender));
@@ -208,7 +208,6 @@ export class ShopView {
     btn(BTNS.refresh, `Odśwież ${rp}`, run.gold >= rp ? C.yellow : C.red);
     btn(BTNS.inv, 'Ekwipunek', C.lgray);
     btn(BTNS.anvil, 'Kowadło', this.run.expedition?.noForge ? C.dgray : C.orange);
-    btn(BTNS.close, this.exitLabel, C.white);
     if (this.noteT > 0) drawText(g, this.note, W / 2, H - 13, this.noteBad ? C.salmon : C.lime, { align: 'center', outline: C.black });
   }
 

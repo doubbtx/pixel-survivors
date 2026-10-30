@@ -105,6 +105,21 @@ export function button(r: Renderer, x: number, y: number, w: number, h: number, 
 }
 
 /**
+ * Wspólny przycisk Wstecz nakładek i podekranów (bronie, synergie, pomoc, księga, kolekcja, ekwipunek, sklep, kowadło):
+ * zawsze w lewym górnym rogu, w tym samym miejscu i rozmiarze. Esc / pad zamykają ekran jak dotąd.
+ */
+export const BACK_BTN = [6, 8, 60, 16] as const;
+
+export function backButton(r: Renderer): void {
+  button(r, ...BACK_BTN, 'Wstecz [Esc]');
+}
+
+/** Klik / dotknięcie w przycisk Wstecz w tej klatce. */
+export function backHit(input: Input): boolean {
+  return input.pressed('click') && inside(input.mouse.x, input.mouse.y, ...BACK_BTN);
+}
+
+/**
  * Żar: ciepła poświata pod zaznaczonym elementem (pozycja menu, aktywny przycisk, wybrana karta). Jedyny „świecący”
  * element interfejsu: okna są ciche, światło ogniska pokazuje, gdzie jest gracz.
  */

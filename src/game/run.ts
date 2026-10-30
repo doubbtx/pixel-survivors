@@ -386,6 +386,8 @@ export class Run {
   mushinEvo = false;
   private mushinWin = 0;
   private mushinCnt = 0;
+  /** Nowy Mushin: świeże okno licznika kontr (resztka z poprzedniego nie blokuje ripost). */
+  resetMushinWindow(): void { this.mushinWin = 1; this.mushinCnt = 0; }
   /** Rytm opada (0.43): po otrzymaniu obrażeń pasek spada do zera (bez przyrostu), potem buduje się od nowa. */
   rhythmDrain = false;
   /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej). */
@@ -620,6 +622,9 @@ export class Run {
     this.mapObjects = [];
     this.buffs = [];
     this.dungeon = null;
+    // HP bossa z zapisu dotyczy tylko bieżącego poziomu (fromSnapshot ustawia je po startLevel).
+    this.bossHpFrac = 1;
+    this.resetMushinWindow();
     this.shrineT = BAL.events.shrineEvery * 0.5;
     this.portalT = BAL.events.portalEvery;
     this.swordRolled = false;
@@ -689,7 +694,7 @@ export class Run {
 
   /** Postęp celu poziomu 0..1. Po jego osiągnięciu pojawia się boss. */
   objectiveProgress(): number {
-    if (this.mode === 'endless') return Math.min(1, this.time / this.nextBossAt);
+    if (this.mode === 'endless') return Math.min(1, this.depthTime() / BAL.endlessBossEvery); // od ostatniego bossa
     const o = this.levelInfo.objective;
     // Polowanie: cel wykonany po zabiciu minibossa albo gdy uciekł (limit czasu).
     if (o.kind === 'hunt') { const t = this.time - this.huntPaused; return this.huntKilled || t >= o.time ? 1 : Math.min(0.99, t / o.time); }
@@ -2210,7 +2215,7 @@ export class Run {
       abilityEvo: (Object.keys(ab) as AbilitySlot[]).filter((k) => ab[k].def.evolved),
       stage: inProgress ? {
         time: this.time, kills: this.levelKills, eliteT: this.eliteT, nextEvent: this.nextEvent,
-        bossHpFrac: this.boss ? this.boss.hp / this.boss.maxHp : 1, nextBossAt: this.nextBossAt,
+        bossHpFrac: this.boss && !this.dungeon ? this.boss.hp / this.boss.maxHp : 1, nextBossAt: this.nextBossAt,
         revivesUsed: this.revivesUsed,
       } : undefined,
       expedition: this.expedition ? structuredClone(this.expedition) : undefined,

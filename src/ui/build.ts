@@ -13,7 +13,7 @@ import { BAL } from '../data/balance';
 import { buildElements } from '../systems/tasks';
 import { bonusLines } from '../data/upgrades';
 import type { Run } from '../game/run';
-import { dim, panel, slot, inside, hovered, button, Scroll } from './widgets';
+import { dim, panel, slot, inside, hovered, button, backButton, backHit, Scroll } from './widgets';
 
 const CELL = 22, STEP = 26, GX = 16, WY = 50, PY = 116, COLS = 6;
 const DX = 186, SMALL: { readonly scale: number } = { get scale() { return smallS(); } };
@@ -81,10 +81,10 @@ export class BuildView {
 
   /** Zwraca true, gdy ekran ma zostać zamknięty. */
   update(input: Input): boolean {
-    if (input.pressed('back') || input.pressed('pause') || input.pressed('build') || input.pressed('confirm')) return true;
+    if (input.pressed('back') || input.pressed('pause') || input.pressed('build') || input.pressed('confirm') || backHit(input)) return true;
     const m = input.mouse, before = this.sel * 2 + Number(this.elems);
     this.scroll.update(input, ...AREA);
-    if (input.pressed('inventory') || (input.pressed('click') && inside(m.x, m.y, 80, H - 26, 90, 16))) { this.elems = !this.elems; sfx.play('select'); }
+    if (input.pressed('inventory') || (input.pressed('click') && inside(m.x, m.y, 14, H - 26, 90, 16))) { this.elems = !this.elems; sfx.play('select'); }
     const n = this.count;
     if (n) {
       if (input.pressed('left') || input.pressed('up')) { this.sel = (this.sel - 1 + n) % n; sfx.play('select'); }
@@ -96,7 +96,7 @@ export class BuildView {
     }
     this.lastMouse = m.lastMove;
     if (this.sel * 2 + Number(this.elems) !== before) this.scroll.reset();
-    return input.pressed('click') && inside(m.x, m.y, 14, H - 26, 60, 16);
+    return false;
   }
 
   render(r: Renderer): void {
@@ -116,8 +116,8 @@ export class BuildView {
     }
     drawText(g, 'Strzałki / mysz: wybór', GX, H - 56, C.lavender, SMALL);
     drawText(g, 'C / Esc: wróć', GX, H - 47, C.lavender, SMALL);
-    button(r, 14, H - 26, 60, 16, 'Wstecz [Esc]');
-    button(r, 80, H - 26, 90, 16, this.elems ? 'Szczegóły' : 'Żywioły [Tab]');
+    backButton(r);
+    button(r, 14, H - 26, 90, 16, this.elems ? 'Szczegóły' : 'Żywioły [Tab]');
     panel(r, DX, 34, W - DX - 6, H - 40);
     if (!this.elems && !this.count) return;
     this.sel = Math.min(this.sel, Math.max(0, this.count - 1));

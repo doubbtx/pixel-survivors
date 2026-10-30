@@ -82,8 +82,8 @@ export const BAL = {
     streak: { max: 40, gap: 0.08, might: 0.5, exec: 0.04, danceEvery: 6 },
     /**
      * Wiara (Aurel): zabójstwa w `range` (+1, elita 3, boss 10), leczenie +heal za każdy 1% maks. HP. Pełna: Łaska (leczenie i tarcza
-     * jako ułamek HP, sługi +minionLife s) i zużycie `grace`. Sąd: +judgDmg obrażeń za punkt, +1 cel za judgExtra punktów, Sąd ostateczny zostawia `keep`.
-     * Strażnicy leczą `guardHeal` maks. HP trafieniem; Opiekun: tarcza shieldPer za sługę (do shieldCap); Uświęcona ziemia przedłuża sługi o sanctLife s na sekundę.
+     * jako ułamek HP) i zużycie `grace`. Sąd: +judgDmg obrażeń za punkt, +1 cel za judgExtra punktów, Sąd ostateczny zostawia `keep`.
+     * Strażnicy leczą `guardHeal` maks. HP trafieniem; Opiekun: tarcza shieldPer za sługę (do shieldCap).
      */
     /**
      * Rytm (Takezo, 0.34.2): +1 za trafienie co `gap` s (odbicie: BAL.resource.parry.rhythm), +atk szybkości ataku za punkt w trakcie budowania;
@@ -94,7 +94,7 @@ export const BAL = {
     rhythm: { max: 40, gap: 0.04, hit: 1.5, drain: 16, atk: 0.0075, iai: 0.02, flow: 5, flowAtk: 0.6, flowDmg: 0.2, flowIai: 2 },
     /** Mikiri (pasywka Takezo): szansa na odbicie base + perLevel × (poziom − 1), najwyżej max (razem z flagą passive.parry); po odbiciu iframes s nietykalności (tylko to trafienie); kontra wokół (riposteR), +rhythm rytmu, odbity pocisk: reflect × obrażenia kart. */
     parry: { base: 0.05, perLevel: 0.006, max: 0.35, riposteR: 26, rhythm: 6, reflect: 1.5, iframes: 0.1 },
-    faith: { max: 100, range: 150, heal: 0.5, graceHeal: 0.15, graceShield: 0.1, minionLife: 3, grace: 60, judgDmg: 0.01, judgExtra: 10, keep: 0.3, guardHeal: 0.004, shieldPer: 0.03, shieldCap: 0.18, sanctLife: 0.5 },
+    faith: { max: 100, range: 150, heal: 0.5, graceHeal: 0.15, graceShield: 0.1, grace: 60, judgDmg: 0.01, judgExtra: 10, keep: 0.3, guardHeal: 0.004, shieldPer: 0.03, shieldCap: 0.18 },
   },
   /**
    * Zadania w trakcie poziomu (data/tasks.ts, systems/tasks.ts): pierwsze po `first` s, kolejne co `every` s; kamień czeka `acceptLife` s

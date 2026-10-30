@@ -12,7 +12,7 @@ import { abilityMaxCd } from '../systems/abilities';
 import { passiveIcon } from '../data/passives';
 import { fmt, fmtTime, hpText } from '../util/format';
 import type { LoopStats } from '../core/loop';
-import { actionKey, abilitySlotPos, ABILITY_SLOT, TOUCH_PAUSE, STICK_R, type Input } from '../core/input';
+import { actionKey, abilitySlotPos, ABILITY_SLOT, TOUCH_PAUSE, TOUCH_MENU, TOUCH_BAG_PILL, touchMenuPos, STICK_R, type Input } from '../core/input';
 import type { Run } from '../game/run';
 import { drawSynergyHud } from './synergies';
 import { resFrac, resMax } from '../systems/resource';
@@ -397,7 +397,7 @@ function drawTask(r: Renderer, run: Run, x: number, y: number, w: number): void 
 }
 
 /** Bronie (górny rząd) i pasywki (dolny rząd): ikony, poziom w rogu, puste gniazda przygaszone bez ramek. */
-function drawInventory(r: Renderer, run: Run): void {
+function drawInventory(r: Renderer, run: Run, touch: boolean): void {
   const g = r.g, S = UI.slot, step = S + UI.gap;
   const y1 = H - UI.edge - 2 * S - UI.gap, y2 = H - UI.edge - S;
   for (let i = 0; i < BAL.weaponSlots; i++) {
@@ -434,13 +434,20 @@ function drawInventory(r: Renderer, run: Run): void {
     drawSprite(g, def.icon, x + S / 2, y2 + S / 2);
     if (id === 'cloak' && run.cloakCd > 0) r.withAlpha(0.6, () => r.rect(x, y2, S, S * Math.min(1, run.cloakCd / BAL.relics.cloakCd), C.black));
   });
-  // Nowy przedmiot w plecaku: krótkie przypomnienie nad gniazdami.
+  // Nowy przedmiot w plecaku: krótkie przypomnienie nad gniazdami; na dotyku plakietka otwiera plecak (core/input.ts).
+  TOUCH_BAG_PILL.on = false;
   if (run.bag.some((it) => it.fresh)) {
-    const t = '! Nowy przedmiot w plecaku (I)', tw = textWidth(t) * smallS() + 6;
-    tile(r, UI.edge, y1 - 12, tw, 9, C.lime);
+    const t = touch ? '! New item in your backpack (tap)' : '! Nowy przedmiot w plecaku (I)', tw = textWidth(t) * smallS() + 6;
+    // Wysokość 10: przy dużym tekście (smallS 0.85) napis wystawał o 1 px pod plakietkę.
+    tile(r, UI.edge, y1 - 12, tw, 10, C.lime);
     drawText(g, t, UI.edge + 3, y1 - 11.5, C.lime, SMALL);
+    // Rysowane w bloku przesuniętym o −OX (szeroki ekran): obszar dotyku we współrzędnych ekranu.
+    if (touch) Object.assign(TOUCH_BAG_PILL, { on: true, x: UI.edge - OX, y: y1 - 12, w: tw, h: 10 });
   }
 }
+
+/** Znaki gniazd umiejętności na dotyku (kolejność jak ABILITIES: od lewej). */
+const TOUCH_LABEL: Record<AbilitySlot, string> = { q: 'Q', e: 'E', dash: 'Dodge', ult: 'R' };
 
 /** Pasek umiejętności: odnowienie przez przyciemnienie i licznik, ładunek R od dołu, jeden rozbłysk przy gotowości. */
 function drawAbilities(r: Renderer, run: Run, a: HudAnim, touch: boolean): void {
@@ -474,9 +481,9 @@ function drawAbilities(r: Renderer, run: Run, a: HudAnim, touch: boolean): void 
       r.withAlpha(k * 0.3, () => r.roundRect(x, y, S, S, UI.radius, C.white));
     }
     // Klawisz: mała plakietka w lewym dolnym rogu; poziom umiejętności kreskami nad gniazdem.
-    // Plakietka klawisza (na dotyku bez niej: gniazdo samo jest przyciskiem).
-    if (!touch) {
-      const kl = sl === 'dash' && actionKey('dash') === 'Space' ? 'Spc' : actionKey(sl), kw = textWidth(kl) * smallS() + 3;
+    // Na dotyku stały znak gniazda (Q, E, Unik, R), żeby samouczek i podpowiedzi mogły się do niego odwołać.
+    {
+      const kl = touch ? TOUCH_LABEL[sl] : sl === 'dash' && actionKey('dash') === 'Space' ? 'Spc' : actionKey(sl), kw = textWidth(kl) * smallS() + 3;
       const kh = smallS() > 0.75 ? 7.5 : 6.5;
       r.withAlpha(0.8, () => r.roundRect(x, y + S - kh, kw, kh, 1, C.black));
       drawText(g, kl, x + 1.5, y + S - kh - (kh > 7 ? 2 : 1), ready ? C.white : UI.textDim, { scale: smallS() });
@@ -532,11 +539,12 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
   meter(r, -OX, 0, W + 2 * OX, UI.xpH, a.xp, UI.xp);
   if ((run.xpPulse > 0 || a.levelFlash > 0) && !run.reduceFlash) r.withAlpha(Math.min(0.8, run.xpPulse * 3 + a.levelFlash), () => r.rect(-OX, 0, (W + 2 * OX) * (a.levelFlash > 0 ? 1 : a.xp), UI.xpH, C.white));
 
+  const touch = input.lastDevice === 'touch';
   shifted(r, -OX, () => {
     const cardBottom = drawHeroCard(r, run, a);
     const statusBottom = drawStatusRow(r, run, UI.edge, cardBottom + UI.gap + 1);
     drawSynergyHud(r, run, UI.edge, statusBottom + UI.gap + 1, UI.card.w);
-    drawInventory(r, run);
+    drawInventory(r, run, touch);
   });
 
   const centerBottom = drawCenter(r, run, a);
@@ -562,15 +570,28 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
     });
   }
 
-  const touch = input.lastDevice === 'touch';
   drawAbilities(r, run, a, touch);
 
-  // Sterowanie dotykowe: przycisk pauzy i wirtualny joystick (gdy palec jest na ekranie).
+  // Sterowanie dotykowe: przyciski pauzy, buildu i plecaka oraz wirtualny joystick (gdy palec jest na ekranie).
   if (touch) {
     const P = TOUCH_PAUSE;
     iconSlot(r, P.x, P.y, P.s, UI.border);
     r.rect(P.x + 6, P.y + 5, 3, 10, C.white);
     r.rect(P.x + 11, P.y + 5, 3, 10, C.white);
+    TOUCH_MENU.forEach((act, i) => {
+      const [x, y] = touchMenuPos(i), fresh = act === 'inventory' && run.bag.some((it) => it.fresh);
+      iconSlot(r, x, y, P.s, fresh ? C.lime : UI.border);
+      if (act === 'build') {
+        // Build: siatka gniazd (bronie i pasywki), jedno złote.
+        for (const [dx, dy] of [[5, 5], [11, 5], [5, 11], [11, 11]]) r.rect(x + dx, y + dy, 4, 4, dx === 5 && dy === 5 ? UI.reward : C.white);
+      } else {
+        // Plecak: uchwyt, korpus, klapa ze sprzączką.
+        r.rect(x + 8, y + 4, 4, 1, C.white); r.rect(x + 7, y + 5, 1, 2, C.white); r.rect(x + 12, y + 5, 1, 2, C.white);
+        r.rect(x + 5, y + 7, 10, 9, C.white);
+        r.rect(x + 5, y + 10, 10, 1, C.dgray);
+        r.rect(x + 9, y + 10, 2, 2, fresh ? C.lime : C.dgray);
+      }
+    });
     const s = input.stick;
     // Joystick: obręcz z kreskami kierunków i kulka z odblaskiem; bez palca blady zarys w lewym dolnym rogu (gdzie dotknąć).
     const stick = (ox: number, oy: number, kx: number, ky: number, a: number) => r.withAlpha(a, () => {

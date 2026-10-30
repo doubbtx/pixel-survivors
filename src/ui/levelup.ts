@@ -1,5 +1,5 @@
 import { W, type Renderer } from '../core/renderer';
-import type { Input } from '../core/input';
+import { isTouch, type Input } from '../core/input';
 import { C } from '../core/palette';
 import { drawText, wrapText, textWidth, descS } from '../core/font';
 import { sfx } from '../core/audio';
@@ -250,7 +250,7 @@ export class LevelUpView {
     }
     // Podpis na ciemnym tle: pod nim są sloty HUD. Przy podpowiedzi jej ramka stoi w tym miejscu.
     if (hintShowing()) return;
-    const note = 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', nw = textWidth(note) + 12;
+    const note = isTouch() ? 'Banishing removes a new weapon or passive from the pool for the rest of the run.   Tap a card: choose' : 'Wygnanie usuwa nową broń lub pasywkę z puli do końca runu.   1-4 / klik: wybór', nw = textWidth(note) + 12;
     r.withAlpha(0.85, () => r.roundRect(W / 2 - nw / 2, 235, nw, 14, 4, C.black));
     drawText(r.g, note, W / 2, 236.5, C.lavender, { align: 'center', shadow: C.black });
   }

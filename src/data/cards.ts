@@ -260,7 +260,7 @@ export const CARDS: CardDef[] = [
   { id: 'g_quiver', name: 'Kołczan', rarity: 'gold', tags: ['Pociski'], desc: '+1 pocisk dla każdej broni.', stats: { amount: 1 } },
   { id: 'g_momentum', name: 'Pęd', rarity: 'gold', tags: ['Szybkość'], desc: '+10% szybkości. Każdy % bonusu szybkości to też % obrażeń.', flags: { momentum: 1 }, stats: { speedBonus: 0.1 } },
   { id: 'c_glass', name: 'Szklana armata', rarity: 'gold', tags: ['Klątwa', 'Pociski'], cursed: true, desc: '+80% obrażeń, ale -40% maks. HP.', stats: { might: 0.8 }, mul: { maxHp: 0.6 } },
-  { id: 'c_fever', name: 'Gorączka', rarity: 'gold', tags: ['Klątwa', 'Szybkość'], cursed: true, desc: '-35% czasu odnowienia, ale tracisz 1 HP/s.', stats: { cdr: 0.35 }, flags: { hpDrain: 1 } },
+  { id: 'c_fever', name: 'Gorączka', rarity: 'gold', tags: ['Klątwa', 'Szybkość'], cursed: true, desc: 'Umiejętności odnawiają się 35% szybciej, ale tracisz 1 HP/s.', stats: { cdr: 0.35 }, flags: { hpDrain: 1 } },
   { id: 'c_greed', name: 'Przeklęte złoto', rarity: 'gold', tags: ['Klątwa'], cursed: true, desc: '+100% złota, +50% XP, ale wrogowie mają +25% HP.', stats: { greed: 1, growth: 0.5 }, flags: { enemyHp: 0.25 } },
   { id: 'h_k_volley', name: 'Grad z nieba', rarity: 'gold', tags: ['Pociski', 'Umiejętności'], hero: 'kestra', desc: 'Salwa: +4 strzały, każda przebija 2 wrogów więcej.', stackable: true, flags: { 'k_volley.count': 4, 'k_volley.pierce': 2 } },
   { id: 'h_k_rain', name: 'Ulewa', rarity: 'gold', tags: ['Obszar', 'Umiejętności'], hero: 'kestra', desc: 'Deszcz strzał: +2 s, +20 promienia.', stackable: true, flags: { 'k_rain.duration': 2, 'k_rain.radius': 20 } },
@@ -375,7 +375,7 @@ export const CARDS: CardDef[] = [
     hooks: { onTick: (run, dt) => { if (every(run, 'p_legion', dt, 6)) spawnTurret(run, run.player.x, run.player.y, 12); } },
   },
   { id: 'p_overcrit', name: 'Nadkrytyk', rarity: 'prism', tags: ['Krytyk'], desc: '+15% krytyka. Szansa na krytyk ponad 100% może dać podwójny krytyk.', stats: { crit: 0.15 }, flags: { overcrit: 1 } },
-  { id: 'p_hourglass', name: 'Klepsydra losu', rarity: 'prism', tags: ['Umiejętności'], desc: '-40% czasu odnowienia, +30% czasu trwania.', stats: { cdr: 0.4, duration: 0.3 } },
+  { id: 'p_hourglass', name: 'Klepsydra losu', rarity: 'prism', tags: ['Umiejętności'], desc: 'Umiejętności odnawiają się 40% szybciej, +30% czasu trwania.', stats: { cdr: 0.4, duration: 0.3 } },
   { id: 'h_k_hawk', name: 'Jastrzębi wzrok', rarity: 'prism', tags: ['Krytyk', 'Pociski'], hero: 'kestra', desc: 'Sokole oko działa co 3. strzał zamiast co 4. i daje 2 strzały więcej.', flags: { 'passive.n': 1, 'passive.extra': 2 } },
   {
     id: 'h_b_quake', name: 'Trzęsienie ziemi', rarity: 'prism', tags: ['Obszar', 'Umiejętności'], hero: 'borgun', desc: 'Wstrząs uderza trzy razy.',

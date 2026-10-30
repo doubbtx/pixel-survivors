@@ -54,19 +54,19 @@ const STEPS: Step[] = [
   },
   {
     title: 'Abilities',
-    body: { kbm: 'Use your abilities: press {q}, then {e}.', pad: 'Use your abilities: press X, then B.', touch: 'Use your abilities: tap Q, then E (bottom right).' },
+    body: { kbm: 'Use your abilities: press {q}, then {e}.', pad: 'Use your abilities: press X, then B.', touch: 'Use your abilities: tap the first button at the bottom right (Q), then the second (E).' },
     enter: (run) => weak(run, 'bat', 8, 140),
     done: (_r, t) => t.cast.q && t.cast.e,
   },
   {
     title: 'Dodge',
-    body: { kbm: 'Press {dash} to dodge. You cannot be hurt while dodging, even through enemies.', pad: 'Press A to dodge. You cannot be hurt while dodging, even through enemies.', touch: 'Tap the dodge button (bottom right). You cannot be hurt while dodging, even through enemies.' },
+    body: { kbm: 'Press {dash} to dodge. You cannot be hurt while dodging, even through enemies.', pad: 'Press A to dodge. You cannot be hurt while dodging, even through enemies.', touch: 'Tap the third button at the bottom right (Dodge). You cannot be hurt while dodging, even through enemies.' },
     enter: (run) => weak(run, 'slime', 12, 70, 3),
     done: (_r, t) => t.cast.dash,
   },
   {
     title: 'Ultimate',
-    body: { kbm: 'Kills charge your ultimate. It is ready now: press {ult}.', pad: 'Kills charge your ultimate. It is ready now: press Y.', touch: 'Kills charge your ultimate. It is ready now: tap R.' },
+    body: { kbm: 'Kills charge your ultimate. It is ready now: press {ult}.', pad: 'Kills charge your ultimate. It is ready now: press Y.', touch: 'Kills charge your ultimate. It is ready now: tap the last button at the bottom right (R).' },
     enter: (run) => { run.ultCharge = run.ultNeed(); weak(run, 'bat', 10, 150); },
     done: (_r, t) => t.cast.ult,
   },

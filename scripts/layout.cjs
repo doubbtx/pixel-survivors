@@ -51,6 +51,9 @@ const GAME = [
   { js: `(()=>{${R}r.pendingLoot.push(r.rollLoot('boss'));})()` }, { k: 'KeyD', w: 900, chk: 'loot' }, { k: 'Enter', w: 500 },
   { js: `(()=>{${R}for(let i=0;i<4;i++)r.pendingLoot.push(r.rollLoot('boss'));})()` }, { k: 'KeyD', w: 900, chk: 'loot2' },
   { k: 'ArrowDown', w: 150 }, { k: 'Enter', w: 500, chk: 'loot3' }, { k: 'ArrowDown', w: 150 }, { k: 'Enter', w: 500, chk: 'loot4' }, { k: 'Enter', w: 500 }, { k: 'Enter', w: 500 },
+  // Seria łupu przy auto-ekwipunku: zwykłe i magiczne przedmioty od razu do plecaka, jeden komunikat (game-screen batchLoot).
+  { js: `(()=>{${R}s.app.save.settings.autoEquip=true;for(let i=0;i<3;i++){const l=r.rollLoot('elite');l.item.rarity=1;delete l.item.super;delete l.item.unique;r.pendingLoot.push(l);}})()`, wait: 400, chk: 'loot_batch' },
+  { js: `(()=>{${R}s.app.save.settings.autoEquip=false;})()` },
   { js: `(()=>{${R}r.pendingCards.push('boss');})()` }, { k: 'KeyD', w: 1200, chk: 'cards' }, { k: 'Digit1', w: 500 },
   { js: `(()=>{${R}r.pendingPowers++;})()` }, { k: 'KeyD', w: 1200, chk: 'power' }, { k: 'Digit1', w: 500 },
   { k: 'KeyI', w: 700, chk: 'inventory' }, { k: 'ArrowRight ArrowRight', w: 300, chk: 'inventory2' }, { k: 'Escape', w: 600 },
@@ -106,7 +109,7 @@ async function run(lang, name, steps, report, errs, misses) {
     const u = await import('/src/data/unlocks.ts');
     localStorage.setItem('pixel-survivors-save', JSON.stringify({
       version: 10, unlocks: [...u.ALL_UNLOCKS], tutorialDone: true, seenVersion: '9.9.9',
-      settings: { flashWarned: true, debug: true, lang, volume: 0, music: 0, textLarge: !a.small, hints: !!a.hints },
+      settings: { flashWarned: true, debug: true, lang, volume: 0, music: 0, textLarge: !a.small, hints: !!a.hints, autoEquip: false }, // bez auto-ekwipunku: zwykły łup otwiera okna (kroki loot*)
     }));
   }, { lang, ...args });
   await p.reload(); await p.waitForTimeout(1500);

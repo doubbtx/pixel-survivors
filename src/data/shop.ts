@@ -54,7 +54,7 @@ export const ELIXIRS: ElixirDef[] = [
   { id: 'focus', name: 'Eliksir precyzji', icon: 'pi_crit', stat: 'crit', value: () => 0.03, desc: '+{v} szansy na krytyk na stałe', pct: true },
   { id: 'reach', name: 'Eliksir zasięgu', icon: 'pi_lens', stat: 'area', value: () => 0.06, desc: '+{v} obszaru na stałe', pct: true },
   { id: 'fury', name: 'Eliksir furii', icon: 'pi_fury', stat: 'atkSpeed', value: () => 0.06, desc: '+{v} szybkości ataku na stałe', pct: true },
-  { id: 'haste', name: 'Eliksir pośpiechu', icon: 'pi_clock', stat: 'cdr', value: () => 0.04, desc: '-{v} czasu odnowienia na stałe', pct: true },
+  { id: 'haste', name: 'Eliksir pośpiechu', icon: 'pi_clock', stat: 'cdr', value: () => 0.04, desc: 'Umiejętności odnawiają się {v} szybciej na stałe', pct: true },
 ];
 
 export const ELIXIR_BY_ID: Record<string, ElixirDef> = Object.fromEntries(ELIXIRS.map((e) => [e.id, e]));

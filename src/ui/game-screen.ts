@@ -39,7 +39,7 @@ import { CodexScreen } from './codex';
 import { AUGMENT_BY_ID, augmentWorks } from '../data/augments';
 import { MainMenu, HeroSelect, SettingsScreen } from './menus';
 import { MetaScreen } from './meta';
-import { HERO_BY_ID } from '../data/heroes';
+import { HERO_BY_ID, resourceDesc } from '../data/heroes';
 import { PowerPickView } from './powers';
 import { RelicPickView } from './relics';
 import { ACHIEVEMENTS } from '../data/achievements';
@@ -118,7 +118,7 @@ export class GameScreen implements Screen {
   /** Poddanie: drugie naciśnięcie po chwili (nie podwójne dotknięcie), uzbrojenie wygasa. */
   private confirmQuit = new Confirm();
   private hints: Hints;
-  /** Czy ultimate był gotowy w poprzedniej klatce (komunikat „R gotowe!” przy zmianie). */
+  /** Czy ultimate był gotowy w poprzedniej klatce (komunikat „Ultimate ready!” przy zmianie). */
   private ultReady = false;
   /** Odblokowania zdobyte w tym runie (banery po kolei, lista na ekranie końca) i licznik bossów do wykrycia nowego. */
   private unlockQueue: UnlockDef[] = [];
@@ -192,8 +192,9 @@ export class GameScreen implements Screen {
       this.run.expedition.torment = Math.min(app.save.exTorment ?? 0, this.run.expedition.tormentMax);
       this.openMap();
     } else if (mode === 'expedition' && !snapshot!.inProgress) {
-      // Zapis z mapy: sklep, w którym gracz wyszedł, albo mapa.
-      if (this.run.shop) this.openShop('map');
+      // Zapis z mapy: sklep albo kowadło, przy którym gracz wyszedł, albo mapa.
+      if (this.run.shop) this.openShop();
+      else if (this.run.expedition?.atAnvil) this.openAnvil('map');
       else this.openMap();
     } else {
       this.saveSlot(true);
@@ -412,7 +413,7 @@ export class GameScreen implements Screen {
     drawText(g, tut.finished ? '' : `${Math.min(tut.step + 1, tut.total)}/${tut.total}`, x + w - 8, y + 6, C.lavender, { align: 'right', scale: smallS() });
     lines.forEach((l, i) => drawText(g, l, x + 8, y + 18 + i * 11, C.white));
     if (tut.finished) drawText(g, this.app.input.lastDevice === 'touch' ? 'Tap to continue' : 'Enter: continue', W / 2, y + h - 11, C.lime, { align: 'center', scale: smallS() });
-    else drawText(g, 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: smallS() });
+    else drawText(g, this.app.input.lastDevice === 'touch' ? 'Pause (top right): skip tutorial' : 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: smallS() });
   }
 
   /** Koniec albo pominięcie samouczka: zapis i menu główne (Ekspedycja polecana, komunikat o Rozwoju i Kolekcji). */
@@ -467,12 +468,13 @@ export class GameScreen implements Screen {
       case 'shop':
         run.shop = rollShop(run, run.depth);
         this.saveSlot(false);
-        this.openShop('map');
+        this.openShop();
         break;
       case 'anvil':
         run.shards += X.anvilShards * ex.act;
         run.mats.stone += BAL.forge.anvilStones * ex.act;
         run.mats.ore += BAL.forge.anvilOre * ex.act;
+        ex.atAnvil = true;
         this.saveSlot(false);
         this.openAnvil('map');
         break;
@@ -497,10 +499,9 @@ export class GameScreen implements Screen {
     this.delay = 0.1;
   }
 
-  private openShop(from: State): void {
+  private openShop(): void {
     this.hints.show('shop');
-    const label = from === 'map' ? 'Do mapy' : 'Wróć';
-    this.shop = new ShopView(this.run, () => this.saveSlot(false), label);
+    this.shop = new ShopView(this.run, () => this.saveSlot(false));
     this.state = 'shop';
     this.delay = 0.1;
   }
@@ -571,7 +572,7 @@ export class GameScreen implements Screen {
     if (run.task) h.show('task');
     if (run.secretsFound.size || run.mapObjects.some((o) => o.kind === 'fountain' || o.kind === 'rune' || o.kind === 'mushroom')) h.show('secret');
     const ready = run.ultCharge >= run.ultNeed() && run.abilities.ult.activeT <= 0;
-    if (ready && !this.ultReady) { run.showBanner('R gotowe!'); sfx.play('levelup'); h.show('ult'); }
+    if (ready && !this.ultReady) { run.showBanner('Ultimate ready!'); sfx.play('levelup'); h.show('ult'); }
     this.ultReady = ready;
     if (run.step % 30 !== 0) return;
     if (run.pickups.items.some((p) => p.kind === 'chest')) h.show('chest');
@@ -587,6 +588,7 @@ export class GameScreen implements Screen {
    */
   private openPending(): boolean {
     const run = this.run;
+    this.batchLoot();
     const left = run.pendingLoot.length + run.pendingLevels + run.pendingCards.length + run.pendingPowers + run.pendingRelics;
     if (!left) {
       this.rewardTotal = 0; this.rewardDone = 0; this.lastPick = null;
@@ -625,6 +627,41 @@ export class GameScreen implements Screen {
     this.delay = this.state === this.lastPick ? REPEAT_DELAY : OVERLAY_DELAY;
     this.lastPick = this.state;
     return true;
+  }
+
+  /** Run.autoEquip dla nowego łupu; zwraca komunikat o zamianie („Equipped: X (instead of Y) +1”) albo ''. */
+  private autoEquipNote(fresh: Item[]): string {
+    const sw = this.run.autoEquip(fresh);
+    if (!sw.length) return '';
+    this.hints.show('gear');
+    return `${tr('Equipped')}: ${tr(sw[0].item.name)}${sw[0].old ? ` (${tr('instead of')} ${tr(sw[0].old.name)})` : ''}${sw.length > 1 ? ` +${sw.length - 1}` : ''}`;
+  }
+
+  /**
+   * Mniej okien łupu przy auto-ekwipunku (Ustawienia): zwykłe i magiczne przedmioty bez unikatu i super-bonusu od razu do
+   * plecaka (pełny plecak: rozłożone jak „Wszystko do plecaka”), potem jeden autoEquip i jeden komunikat. Rzadkie i lepsze,
+   * unikaty i super dalej w osobnym oknie. Wołane na początku openPending, zanim seria policzy nagrody, więc licznik
+   * „Rewards X/Y” ich nie liczy. Samouczek: bez tego (krok „Loot” uczy okna łupu).
+   */
+  private batchLoot(): void {
+    const run = this.run;
+    if (!this.app.save.settings.autoEquip || this.tut) return;
+    const quick = (it: Item) => it.rarity < 2 && !it.unique && !it.super;
+    const items = run.pendingLoot.filter((l) => quick(l.item)).map((l) => l.item);
+    if (!items.length) return;
+    run.pendingLoot = run.pendingLoot.filter((l) => !quick(l.item));
+    const fresh: Item[] = [];
+    let gold = 0;
+    for (const it of items) {
+      if (run.bag.length < BAL.bagSize) { run.stash(it); fresh.push(it); } else gold += run.salvage(it);
+    }
+    const parts: string[] = [];
+    if (fresh.length) parts.push(`+${fresh.length} ${tr('to backpack')}`);
+    if (gold > 0) parts.push(`${tr('salvaged')}: +${fmt(gold)} zł`);
+    const swap = fresh.length ? this.autoEquipNote(fresh) : '';
+    if (swap) parts.push(swap);
+    sfx.play('chest');
+    this.showToast(parts.join(', '));
   }
 
   /** Zapamiętuje naciśnięcia Q/E/uniku/R, które inaczej zginęłyby w endStep (symulacja stoi). */
@@ -695,7 +732,9 @@ export class GameScreen implements Screen {
         this.castBuf.clear();
         run.update(dt, inp);
         // Co ~5 s zapis trwającego poziomu — po zamknięciu gry poziom wznowi się z tego miejsca.
-        if (run.outcome === 'none' && run.step % 300 === 0) this.saveSlot(true);
+        // Bez zapisu, gdy czekają nagrody (awans, karta, moc, łup, relikwia): nie wchodzą do zapisu i przepadłyby po wznowieniu.
+        const owed = run.pendingLevels + run.pendingCards.length + run.pendingPowers + run.pendingLoot.length + run.pendingRelics;
+        if (run.outcome === 'none' && run.step % 300 === 0 && !owed) this.saveSlot(true);
         if (run.outcome === 'dead') {
           if (run.outcomeT <= 0) this.onRunOver();
         } else if (run.outcome === 'victory' && run.outcomeT > 0) {
@@ -740,9 +779,7 @@ export class GameScreen implements Screen {
           // Najlepszy ekwipunek po łupie (Ustawienia, domyślnie włączone).
           // Tylko nowy łup z tego okna (bez przedmiotów zdjętych ręcznie i unikatów, z zapasem dla założonych).
           const fresh = this.run.bag.filter((x) => !this.lootBefore.has(x));
-          const sw = this.app.save.settings.autoEquip && fresh.length ? this.run.autoEquip(fresh) : [];
-          const swap = sw.length ? `${tr('Equipped')}: ${tr(sw[0].item.name)}${sw[0].old ? ` (${tr('instead of')} ${tr(sw[0].old.name)})` : ''}${sw.length > 1 ? ` +${sw.length - 1}` : ''}` : '';
-          if (sw.length) this.hints.show('gear');
+          const swap = this.app.save.settings.autoEquip && fresh.length ? this.autoEquipNote(fresh) : '';
           if (res.note || swap) this.showToast([res.note, swap].filter(Boolean).join('. '));
           this.state = this.overlayReturn;
           this.openPending();
@@ -759,7 +796,12 @@ export class GameScreen implements Screen {
         }
         break;
       case 'anvil':
-        if (this.anvil!.update(inp, dt)) { this.state = this.anvilReturn; this.delay = 0.1; }
+        if (this.anvil!.update(inp, dt)) {
+          this.state = this.anvilReturn;
+          this.delay = 0.1;
+          // Wyjście od kowadła z węzła mapy: zapis już bez znacznika.
+          if (this.run.expedition?.atAnvil) { this.run.expedition.atAnvil = false; this.saveSlot(false); }
+        }
         break;
       case 'synergies':
         if (this.synergies!.update(inp)) { this.state = this.synReturn; this.delay = 0.1; }
@@ -785,6 +827,8 @@ export class GameScreen implements Screen {
       }
       case 'pause':
         if (inp.pressed('pause')) { this.state = this.overlayReturn; return; }
+        // Skrót [C] z etykiety menu pauzy (samouczek nie ma tej pozycji).
+        if (inp.pressed('build') && !this.tut) { this.confirmQuit.reset(); this.openBuild('pause'); return; }
         if (inp.pressed('left') || inp.pressed('right')) {
           this.pausePage = (this.pausePage + (inp.pressed('left') ? PAUSE_TABS.length - 1 : 1)) % PAUSE_TABS.length;
           sfx.play('select');
@@ -919,7 +963,7 @@ export class GameScreen implements Screen {
       ['HP', fmt(s.maxHp), true], ['Pancerz', fmt(s.armor), s.armor > 0],
       ['Regeneracja', `${s.regen.toFixed(1)}/s`, s.regen > 0], ['Leczenie z obrażeń', `${Math.round(s.lifesteal * 100)}%`, s.lifesteal > 0],
       ['Obrażenia', `x${s.might.toFixed(2)}`, s.might !== 1], ['Krytyk', `${Math.round(s.crit * 100)}% (x${s.critMult.toFixed(1)})`, true],
-      ['Szybkość ataku', pct(s.atkSpeed), s.atkSpeed !== 0], ['Odnowienie', pct(-s.cdr), s.cdr !== 0],
+      ['Szybkość ataku', pct(s.atkSpeed), s.atkSpeed !== 0], ['Szybkość odnowienia', pct(s.cdr), s.cdr !== 0],
       ['Obszar', `x${s.area.toFixed(2)}`, s.area !== 1], ['Pociski', `+${s.amount}`, s.amount > 0],
       ['Czas działania', `x${s.duration.toFixed(2)}`, s.duration !== 1], ['Siła żywiołów', pct(s.elemPower), s.elemPower !== 0],
       ['Szczęście', pct(run.luck()), run.luck() > 0], ['Karty przy awansie', String(Math.min(4, 3 + s.choices)), s.choices > 0],
@@ -1017,7 +1061,7 @@ export class GameScreen implements Screen {
       return { def: a.def, level: a.level, cd, evo: true };
     }), x0, area[1] + 4 - oy, pw - 22);
     const tw = (pw - 22) / descS();
-    for (const [t, col] of [[`Pasywka: ${tr(run.hero.passive.name)}. ${tr(run.hero.passive.desc)}`, C.yellow], [`Zasób: ${tr(run.hero.resource.name)}. ${tr(run.hero.resource.desc)}`, run.hero.resource.color]] as const) {
+    for (const [t, col] of [[`Pasywka: ${tr(run.hero.passive.name)}. ${tr(run.hero.passive.desc)}`, C.yellow], [`Zasób: ${tr(run.hero.resource.name)}. ${tr(resourceDesc(run.hero, run.altUlt))}`, run.hero.resource.color]] as const) {
       for (const line of wrapText(t, tw)) { drawText(g, line, x0, y, col, DESC); y += descLH(); }
       y += 3;
     }

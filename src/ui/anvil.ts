@@ -21,7 +21,7 @@ import {
 } from '../systems/anvil';
 import type { Run } from '../game/run';
 import { drawItemSlot, drawItemCard } from './items';
-import { button, Menu, dim, panel, inside } from './widgets';
+import { button, backButton, backHit, Menu, dim, panel, inside } from './widgets';
 
 const CELL = 24, STEP = 25;
 const GRID_X = 14, EQ_Y = 46, BAG_Y = 80;
@@ -294,7 +294,7 @@ export class AnvilView {
       if (this.hammer <= 0) this.finishStrike();
       return false;
     }
-    const back = input.pressed('back') || input.pressed('pause') || (input.pressed('click') && inside(input.mouse.x, input.mouse.y, 6, 9, 54, 16));
+    const back = input.pressed('back') || input.pressed('pause') || backHit(input);
     if (this.cardButtons(input)) { this.lastMouse = input.mouse.lastMove; return false; }
     if (this.stage === 'pick') {
       if (back) return true;
@@ -327,15 +327,16 @@ export class AnvilView {
     const g = r.g, run = this.run;
     dim(r);
     drawText(g, 'Kowadło', W / 2, 10, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    button(r, 6, 9, 54, 16, 'Wstecz [Esc]', { scale: 0.85 });
+    backButton(r);
     drawSprite(g, 'coin', W - 118, 18);
     drawText(g, fmt(Math.floor(run.gold)), W - 110, 13, C.yellow, { outline: C.black });
     drawSprite(g, 'sh_shard', W - 58, 18);
     drawText(g, fmt(run.shards), W - 50, 13, C.cyan, { outline: C.black });
     // Zapasy kuźni: materiały (lewo) i zwoje (przy tytule).
+    // Od x 76: lewy górny róg zajmuje wspólny przycisk Wstecz (widgets.ts BACK_BTN).
     MATERIALS.forEach((m, i) => {
-      drawSprite(g, m.icon, 70 + i * 24, 18);
-      drawText(g, String(run.mats[m.id]), 78 + i * 24, 13, run.mats[m.id] ? m.color : C.lavender, { outline: C.black });
+      drawSprite(g, m.icon, 76 + i * 23, 18);
+      drawText(g, String(run.mats[m.id]), 84 + i * 23, 13, run.mats[m.id] ? m.color : C.lavender, { outline: C.black });
     });
     SCROLLS.forEach((s, i) => {
       drawSprite(g, s.icon, 296 + i * 22, 18);

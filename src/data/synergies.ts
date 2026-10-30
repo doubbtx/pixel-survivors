@@ -148,7 +148,7 @@ export const SYNERGIES: SynergyDef[] = [
   },
   {
     tag: 'Umiejętności', thresholds: STD, tiers: [
-      { desc: '-8% czasu odnowienia', stats: { cdr: 0.08 } },
+      { desc: 'Umiejętności odnawiają się 8% szybciej', stats: { cdr: 0.08 } },
       { desc: 'Ultimate ładuje się 30% szybciej', flags: { ultGain: 0.3 } },
       { desc: 'Q i E: 20% szans na reset odnowienia', hooks: { onAbilityCast: (run, slot) => { if ((slot === 'q' || slot === 'e') && rng.chance(0.2)) run.abilities[slot].cd = 0; } } },
     ],
@@ -181,7 +181,7 @@ export const VERSATILITY: { name: string; thresholds: number[]; tiers: SynergyTi
   thresholds: [4, 6, 8, 10],
   tiers: [
     { desc: '+10% obrażeń, +10% maks. HP', stats: { might: 0.1 }, mul: { maxHp: 1.1 } },
-    { desc: '+1 pocisk, -10% odnowienia', stats: { amount: 1, cdr: 0.1 } },
+    { desc: '+1 pocisk, umiejętności odnawiają się 10% szybciej', stats: { amount: 1, cdr: 0.1 } },
     {
       desc: 'Co 10 s tęczowy wybuch, leczy 10% HP',
       hooks: {

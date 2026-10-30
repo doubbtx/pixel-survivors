@@ -65,6 +65,10 @@ export const keyboardKey = (a: Action): string => keyName(keyOf(a));
 
 /** Gra padem (ostatnie urządzenie): podpowiedzi pokazują przyciski pada zamiast klawiszy (Input.lastDevice). */
 let padActive = false;
+/** Gra dotykiem (ostatnie urządzenie): napisy tracą oznaczenia klawiszy („ [R]”), bo na telefonie nie ma klawiatury. */
+let touchActive = false;
+/** Ostatnie urządzenie to dotyk (dla miejsc bez dostępu do Input, np. render ekranów). */
+export const isTouch = (): boolean => touchActive;
 const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'View', 'Start', 'L3', 'R3'];
 /** Przycisk pada dla akcji (pierwszy z PADMAP) albo null (ruch, akcje bez przycisku). */
 function padButton(a: Action): string | null {
@@ -74,6 +78,12 @@ function padButton(a: Action): string | null {
 
 /** Klawisz akcji do wyświetlenia (HUD, opisy umiejętności, samouczek): przy padzie nazwa przycisku pada. */
 export const actionKey = (a: Action): string => (padActive && padButton(a)) || keyboardKey(a);
+
+/** Czy tekst w nawiasach to nazwa klawisza (stałego, domyślnego albo przypisanego), a nie np. licznik „[2/3]”. */
+function isKeyLabel(k: string): boolean {
+  if (k === 'Esc' || k === 'Spc') return true;
+  return [...Object.keys(FIXED), ...REBIND.map(([, c]) => c), ...Object.values(bindings)].some((c) => c && keyName(c) === k);
+}
 
 /** Klawisze menu w napisach („[Esc]”, „[Enter]”) — stałe, poza przypisaniami. */
 const MENU_KEYS: Record<string, Action> = { Esc: 'back', Enter: 'confirm' };
@@ -85,7 +95,21 @@ const GLYPH_ORDER: Action[] = ['reroll', 'skip', 'banish', 'inventory', 'build',
  * Wołane raz, po tłumaczeniu (core/font.ts).
  */
 export function keyGlyphs(s: string): string {
-  if (!padActive || !s.includes('[')) return s;
+  if (!s.includes('[')) return s;
+  if (touchActive) {
+    // Dotyk: oznaczenie klawisza znika razem z jedną spacją („Reroll (3) [R]” → „Reroll (3)”, „[B] Przydziel” → „Przydziel”).
+    return s.replace(/( ?)\[([^\]]+)\]( ?)/g, (m, a: string, k: string, b: string) => (isKeyLabel(k) ? (a && b ? ' ' : '') : m));
+  }
+  if (!padActive) {
+    // Klawiatura: napisy mają domyślne klawisze — po zmianie przypisania pokazujemy bieżący klawisz akcji.
+    // Bez przypisań (szybka ścieżka) albo gdy klawisz z napisu nadal działa dla jakiejś akcji — bez zmian.
+    if (!Object.keys(bindings).length) return s;
+    return s.replace(/\[([^\]]+)\]/g, (m, k: string) => {
+      const a = GLYPH_ORDER.find((x) => (DEFAULT_KEY[x] && keyName(DEFAULT_KEY[x]!) === k) || Object.entries(FIXED).some(([c, acts]) => acts.includes(x) && keyName(c) === k));
+      if (!a || !bindings[a] || REBIND.some(([x]) => keyboardKey(x) === k)) return m;
+      return `[${keyboardKey(a)}]`;
+    });
+  }
   return s.replace(/ ?\[([^\]]+)\]/g, (m, k: string) => {
     const a = MENU_KEYS[k] ?? GLYPH_ORDER.find((x) => keyboardKey(x) === k || Object.entries(FIXED).some(([c, acts]) => acts.includes(x) && keyName(c) === k));
     if (!a) return m;
@@ -104,6 +128,13 @@ export function abilitySlotPos(i: number): [number, number] {
 const TOUCH_ACTIONS: Action[] = ['q', 'e', 'dash', 'ult'];
 /** Przycisk pauzy na ekranie dotykowym (lewo od licznika zabójstw). */
 export const TOUCH_PAUSE = { get x(): number { return W + OX - 110; }, y: 8, s: 20 };
+/** Przyciski dotykowe obok pauzy (od pauzy w lewo): build (C) i plecak (I); ten sam rozmiar i wiersz co pauza. */
+export const TOUCH_MENU: Action[] = ['build', 'inventory'];
+export function touchMenuPos(i: number): [number, number] {
+  return [TOUCH_PAUSE.x - (i + 1) * (TOUCH_PAUSE.s + 4), TOUCH_PAUSE.y];
+}
+/** Plakietka „nowy przedmiot w plecaku” w HUD (współrzędne ekranu, ustawia ui/hud.ts przy rysowaniu): dotknięcie otwiera plecak. */
+export const TOUCH_BAG_PILL = { on: false, x: 0, y: 0, w: 0, h: 0 };
 /** Zasięg wychylenia wirtualnego joysticka (piksele logiczne). */
 export const STICK_R = 26;
 
@@ -127,7 +158,7 @@ export class Input {
   private device: 'kbm' | 'pad' | 'touch' = 'kbm';
   /** Ostatnio używane urządzenie (podświetlenia, podpowiedzi klawiszy / przycisków pada). */
   get lastDevice(): 'kbm' | 'pad' | 'touch' { return this.device; }
-  set lastDevice(d: 'kbm' | 'pad' | 'touch') { this.device = d; padActive = d === 'pad'; }
+  set lastDevice(d: 'kbm' | 'pad' | 'touch') { this.device = d; padActive = d === 'pad'; touchActive = d === 'touch'; }
   /**
    * Sterowanie dotykowe w grze: lewa połowa ekranu = wirtualny joystick, gniazda umiejętności = przyciski.
    * Włącza je ekran gry w stanie rozgrywki (app.go wyłącza); poza tym dotyk działa jak klik myszą.
@@ -166,7 +197,8 @@ export class Input {
       const p = renderer.toLogical(e.clientX, e.clientY);
       this.mouse.x = p.x;
       this.mouse.y = p.y;
-      if (e.pointerType === 'touch') { this.lastDevice = 'touch'; return; }
+      // Rysik (pen) jak dotyk: joystick i przyciski umiejętności.
+      if (e.pointerType !== 'mouse') { this.lastDevice = 'touch'; return; }
       this.mouse.lastMove = performance.now();
       this.lastDevice = 'kbm';
     };
@@ -174,12 +206,12 @@ export class Input {
       const py = this.mouse.y;
       pos(e);
       // Przeciąganie palcem poza rozgrywką przewija panele (ui/widgets.ts Scroll).
-      if (e.pointerType === 'touch' && this.mouse.down && !this.touchControls) this.scroll += py - this.mouse.y;
+      if (e.pointerType !== 'mouse' && this.mouse.down && !this.touchControls) this.scroll += py - this.mouse.y;
       if (this.stick && this.stick.id === e.pointerId) { this.stick.x = this.mouse.x; this.stick.y = this.mouse.y; }
     });
     canvas.addEventListener('pointerdown', (e) => {
       pos(e);
-      if (e.pointerType === 'touch' && this.touchControls && this.touchDown(e.pointerId)) return;
+      if (e.pointerType !== 'mouse' && this.touchControls && this.touchDown(e.pointerId)) return;
       this.mouse.down = true;
       this.pressedSet.add('click');
     });
@@ -195,7 +227,7 @@ export class Input {
     canvas.addEventListener('wheel', (e) => { this.scroll += Math.sign(e.deltaY) * Math.min(40, Math.abs(e.deltaY) / 4 + 8); e.preventDefault(); }, { passive: false });
   }
 
-  /** Dotyk w trakcie gry: przycisk umiejętności, pauza albo start joysticka (lewa połowa). True = obsłużony. */
+  /** Dotyk w trakcie gry: przycisk umiejętności, pauza, build, plecak albo start joysticka (lewa połowa). True = obsłużony. */
   private touchDown(id: number): boolean {
     const { x, y } = this.mouse;
     for (let i = 0; i < TOUCH_ACTIONS.length; i++) {
@@ -210,6 +242,13 @@ export class Input {
     }
     const P = TOUCH_PAUSE;
     if (x >= P.x - 4 && x < P.x + P.s + 4 && y >= P.y - 4 && y < P.y + P.s + 4) { this.pressedSet.add('pause'); return true; }
+    // Build i plecak: margines w poziomie 2 px (połowa odstępu), żeby obszary sąsiednich przycisków się nie nakładały.
+    for (let i = 0; i < TOUCH_MENU.length; i++) {
+      const [bx, by] = touchMenuPos(i);
+      if (x >= bx - 2 && x < bx + P.s + 2 && y >= by - 4 && y < by + P.s + 4) { this.pressedSet.add(TOUCH_MENU[i]); return true; }
+    }
+    const B = TOUCH_BAG_PILL;
+    if (B.on && x >= B.x - 2 && x < B.x + B.w + 2 && y >= B.y - 4 && y < B.y + B.h + 4) { this.pressedSet.add('inventory'); return true; }
     if (x < W / 2 && !this.stick) { this.stick = { id, ox: x, oy: y, x, y }; return true; }
     return false;
   }

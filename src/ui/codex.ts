@@ -12,7 +12,7 @@ import { RARITIES } from '../data/items';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { passiveEvolves } from '../systems/levelup';
 import type { App, Screen } from './app';
-import { button, panel, slot, inside, Scroll, titleBar } from './widgets';
+import { button, backButton, backHit, panel, slot, inside, Scroll, titleBar } from './widgets';
 
 /** Wpis księgi: przepis z ikon (składniki → wynik), tytuł, sposób zdobycia i opis. */
 interface Entry {
@@ -128,14 +128,13 @@ export class CodexScreen implements Screen {
 
   update(): void {
     const inp = this.app.input, n = PAGES.length;
-    if (inp.pressed('back') || inp.pressed('pause')) { this.app.go(this.back); return; }
+    if (inp.pressed('back') || inp.pressed('pause') || backHit(inp)) { this.app.go(this.back); return; }
     this.scroll.update(inp, ...AREA, true);
     const before = this.page;
     if (inp.pressed('left')) { this.page = (this.page - 1 + n) % n; sfx.play('select'); }
     if (inp.pressed('right') || inp.pressed('confirm') || inp.pressed('inventory')) { this.page = (this.page + 1) % n; sfx.play('select'); }
     if (inp.pressed('click')) {
       PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, this.tabX(i), 30, TAB_W, 16)) { this.page = i; sfx.play('select'); } });
-      if (inside(inp.mouse.x, inp.mouse.y, W / 2 - 40, H - 22, 80, 16)) this.app.go(this.back);
     }
     if (this.page !== before) this.scroll.reset();
   }
@@ -179,7 +178,7 @@ export class CodexScreen implements Screen {
       y += h + 2;
     }
     this.scroll.end(r, y + oy - AREA[1], ...AREA);
-    button(r, W / 2 - 40, H - 22, 80, 16, 'Wstecz [Esc]');
+    backButton(r);
     drawText(g, '< > page   up/down scroll', W - 14, H - 18, C.lavender, { align: 'right', scale: smallS() });
   }
 }

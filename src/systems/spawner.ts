@@ -45,13 +45,15 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   e.age = 0; e.dead = false; e.elite = null; e.boss = false; e.scale = 1;
   e.dr = 0; e.regen = 0; e.extraRing = false; e.burstLeft = 0; e.burstT = 0; e.touchCd = 0; e.abilT = 0;
   e.hitStamp.fill(-9999);
-  e.phase = 0; e.invuln = 0; e.actT = 3; e.dashT = 0; e.dvx = 0; e.dvy = 0; e.z = 0; e.hidden = false; e.tx = 0; e.ty = 0; e.nextAlt = 0; e.told = false; e.sit = 0; e.summons = 0; e.traitT = 2; e.buffT = 0; e.brandT = 0; e.brandBoom = false; e.plague = false; e.markT = 0;
+  e.phase = 0; e.invuln = 0; e.actT = 3; e.dashT = 0; e.dvx = 0; e.dvy = 0; e.z = 0; e.hidden = false; e.tx = 0; e.ty = 0; e.nextAlt = 0; e.told = false; e.sit = 0; e.summons = 0; e.traitT = 2; e.buffT = 0; e.brandT = 0; e.brandBoom = false; e.plague = false; e.markT = 0; e.pressT = 0;
 
   if (o.elite) {
-    // Pakt „Elity z cechami”: dodatkowe, różne cechy.
+    // Pakt „Elity z cechami”: dodatkowe, różne cechy — z tymi samymi zasadami co zwykłe elity
+    // (cechy zachowania dopiero od aktu 2 / późniejszych fal, mapa odporności nigdy nie dostaje „Pancernego”).
     const mods = [...o.elite];
+    const traitsOn = run.expedition ? run.expedition.act >= 2 : run.waveTime() >= BAL.eliteTraits.from;
     for (let i = 0; i < run.flag('eliteMods'); i++) {
-      const left = Object.keys(ELITE_MODS).filter((k) => eliteCompatible(mods, k));
+      const left = Object.keys(ELITE_MODS).filter((k) => eliteCompatible(mods, k) && (traitsOn || !ELITE_MODS[k].kind) && !(k === 'armored' && run.levelInfo.resist));
       if (left.length) mods.push(rng.pick(left));
     }
     e.elite = mods;

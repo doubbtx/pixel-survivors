@@ -302,7 +302,7 @@ const CASTS: Record<AbilityKind, Cast> = {
   },
 
   titan(run, a, P) {
-    a.activeT = P('duration');
+    a.activeT = P('duration') * run.stats.duration;
     run.recomputeStats();
     run.showBanner(a.def.name + '!');
     run.addShake(5);
@@ -464,7 +464,7 @@ const CASTS: Record<AbilityKind, Cast> = {
     for (const off of a.def.evolved ? [-0.18, 0, 0.18] : [0]) {
       const ux = Math.cos(base + off), uy = Math.sin(base + off), L = U.falconLen;
       for (const e of run.enemies.items) {
-        if (e.dead) continue;
+        if (e.dead || e.hidden) continue;
         const t = Math.max(0, Math.min(L, (e.x - p.x) * ux + (e.y - p.y) * uy));
         if (Math.hypot(e.x - p.x - ux * t, e.y - p.y - uy * t) <= w + e.radius) run.damageEnemy(e, dmg, a.def.name, { kx: ux, ky: uy, knock: 4 });
       }
@@ -537,7 +537,7 @@ const CASTS: Record<AbilityKind, Cast> = {
     run.plagueSlow = !!a.def.evolved;
     // Flaga `plague` = zarażony bieżącym rzuceniem (bez tego wrogowie z poprzedniej Zarazy, np. boss, byli pomijani).
     for (const e of run.enemies.items) e.plague = false;
-    for (const e of run.enemies.items) if (onScreen(run, e)) run.plagueInfect(e, run.plagueSlow);
+    for (const e of run.enemies.items) if (!e.hidden && onScreen(run, e)) run.plagueInfect(e, run.plagueSlow);
     run.burst(run.player.x, run.player.y, C.lime, 24, 120);
     run.showBanner(a.def.name + '!');
   },
@@ -550,7 +550,7 @@ const CASTS: Record<AbilityKind, Cast> = {
     run.markDmg = P('damage') * U.markDmg * evo * run.stats.might;
     run.markExec = U.markExec + P('duration') * 0.015 + (a.def.evolved ? 0.05 : 0) + (run.hero.resource.kind === 'streak' ? resFrac(run) * U.markStreak : 0);
     run.markSrc = a.def.name;
-    for (const e of run.enemies.items) if (!e.dead && onScreen(run, e)) e.markT = U.markDelay;
+    for (const e of run.enemies.items) if (!e.dead && !e.hidden && onScreen(run, e)) e.markT = U.markDelay;
     run.showBanner(a.def.name + '!');
   },
 
@@ -573,6 +573,7 @@ const CASTS: Record<AbilityKind, Cast> = {
     run.mushinDmg = P('damage') * U.mushinDmg * run.stats.might;
     run.mushinSrc = a.def.name;
     run.mushinEvo = !!a.def.evolved;
+    run.resetMushinWindow();
     rhythmGain(run, 999);
     const f = run.addFx('ring', run.player.x, run.player.y, C.cyan, 0.4);
     if (f) f.r = 30;

@@ -157,7 +157,7 @@ export const AFFIXES: AffixDef[] = [
   { stat: 'maxHp', min: 8, max: 20, scaling: 'hp', label: '+{v} maks. HP', pct: false, suffix: 'Życia' },
   { stat: 'regen', min: 0.2, max: 0.5, scaling: 'hp', label: '+{v} HP na sekundę', pct: false, suffix: 'Odnowy' },
   { stat: 'armor', min: 1, max: 3, scaling: 'mild', label: '+{v} pancerza', pct: false, suffix: 'Obrony' },
-  { stat: 'cdr', min: 0.02, max: 0.05, scaling: 'mild', label: '-{v} czasu odnowienia', pct: true, suffix: 'Pośpiechu' },
+  { stat: 'cdr', min: 0.02, max: 0.05, scaling: 'mild', label: '{v} szybsze odnowienie', pct: true, suffix: 'Pośpiechu' },
   { stat: 'area', min: 0.04, max: 0.08, scaling: 'mild', label: '+{v} wielkości ataków', pct: true, suffix: 'Zasięgu' },
   { stat: 'crit', min: 0.02, max: 0.04, scaling: 'mild', label: '+{v} szansy na krytyk', pct: true, suffix: 'Precyzji' },
   { stat: 'critMult', min: 0.1, max: 0.25, scaling: 'mild', label: '+{v} obrażeń krytycznych', pct: true, suffix: 'Rzezi' },

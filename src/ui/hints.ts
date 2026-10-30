@@ -51,9 +51,19 @@ const HINT_SCREEN: Partial<Record<HintId, string>> = {
 };
 const screenOf = (id: HintId) => HINT_SCREEN[id] ?? 'play';
 
-/** Wersje podpowiedzi na dotyk (bez klawiszy). */
+/** Wersje podpowiedzi na dotyk (bez klawiszy); pozostałe nie wspominają klawiszy (np. `close`) i są wspólne. */
 const TOUCH_TEXT: Partial<Record<HintId, string>> = {
   move: 'Drag on the left half of the screen to move. Your weapons fire on their own, you dodge enemies and their shots.',
+  abilities: 'Buttons at the bottom right: Q and E are abilities (aimed at the nearest enemy), Dodge makes you untouchable for a moment.',
+  ult: 'Ultimate ready! Tap the last button at the bottom right (R). It charges with kills.',
+  hurt: 'You got hit! Only the small centre of your hero can be hit, so you can slip between bullets. Dodge button = untouchable dash.',
+  loot: 'New item: equip it or put it in the backpack. Pause (top right) > Equipment opens your gear at any time.',
+  levelup: 'Level up: tap a card to pick an upgrade. Card icons: evolution recipe and synergy tags. Buttons below: reroll, skip, banish.',
+  shop: 'Shop: tap an offer to see it, tap again to buy. Equipment: sell spare items for gold.',
+  map: 'Tap the next node, then Travel. Tap later nodes to preview routes. Difficulty buttons (top right) set the act difficulty: more modifiers (red dots) = bigger rewards.',
+  gear: 'Better loot is equipped automatically (Settings > General). The Best gear button in the backpack checks everything; items you take off yourself stay off.',
+  synergy: 'Synergy active! The list under the portrait shows tags and thresholds. Pause (top right) shows the details.',
+  resource: 'The bar under HP is your hero resource. Every hero gains and spends it differently, see Help in the pause menu (top right).',
 };
 
 const SHOW = 6;

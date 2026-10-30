@@ -172,6 +172,8 @@ export interface ExpeditionState {
   /** Udręka (0.46): poziom ponad Koszmarem wybrany na start wyprawy (0 = brak) i najwyższy odblokowany. */
   torment?: number;
   tormentMax?: number;
+  /** Gracz stoi przy kowadle z węzła mapy (wznowienie zapisu otwiera kowadło zamiast mapy). */
+  atAnvil?: boolean;
 }
 
 /**

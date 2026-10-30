@@ -6,7 +6,7 @@ import { drawSprite } from '../gfx/sprites';
 import { SYNERGIES, SYNERGY_BY_TAG, VERSATILITY, tierOf, type SynergyDef } from '../data/synergies';
 import type { Tag } from '../data/cards';
 import type { Run } from '../game/run';
-import { dim, panel, inside, hovered, button, Scroll } from './widgets';
+import { dim, panel, hovered, backButton, backHit, Scroll } from './widgets';
 import { UI, tile, iconSlot, cornerTag } from './theme';
 
 const OUT = { outline: C.black } as const;
@@ -93,15 +93,14 @@ export class SynergyView {
   /** Zwraca true, gdy ekran ma zostać zamknięty. */
   update(input: Input): boolean {
     this.scroll.update(input, ...LIST_AREA, true);
-    if (input.pressed('back') || input.pressed('pause') || input.pressed('confirm') || input.pressed('synergies')) return true;
-    return input.pressed('click') && inside(input.mouse.x, input.mouse.y, W - 70, 8, 62, 16);
+    return input.pressed('back') || input.pressed('pause') || input.pressed('confirm') || input.pressed('synergies') || backHit(input);
   }
 
   render(r: Renderer): void {
     const g = r.g, run = this.run;
     dim(r);
     drawText(g, 'Synergie', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
-    button(r, W - 70, 8, 62, 16, 'Wstecz [Esc]');
+    backButton(r);
     // Synergie w dwóch kolumnach; wysokość rzędu z najdłuższego opisu progów (przy dużym tekście lista się przewija).
     const lh = descLH() - 1, tw = (232 - 30) / descS();
     const lines = SYNERGIES.map((d) => d.tiers.map((t, k) => wrapText(`${d.thresholds[k]}: ${t.desc}`, tw)));

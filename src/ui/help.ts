@@ -3,7 +3,7 @@ import { C } from '../core/palette';
 import { drawText, wrapText, textWidth, descS } from '../core/font';
 import { sfx } from '../core/audio';
 import type { App, Screen } from './app';
-import { moreArrow, button, panel, inside, Scroll, titleBar } from './widgets';
+import { moreArrow, button, backButton, backHit, panel, inside, Scroll, titleBar } from './widgets';
 
 /** Strony pomocy: tytuł i akapity (pierwsze słowa przed dwukropkiem wyróżnione). */
 const PAGES: { title: string; lines: string[] }[] = [
@@ -71,6 +71,7 @@ const PAGES: { title: string; lines: string[] }[] = [
       'Dusze (Morwen): wrogowie ginący w pobliżu dają dusze. Pełne stają się sługą, R zużywa wszystkie na mocniejszą armię.',
       'Kombo (Vesper): każde trafienie podbija obrażenia. Egzekucja (E) zużywa całe kombo, oberwanie je zeruje.',
       'Faith (Aurel): from kills nearby and healing. When full it gives Grace (healing and a shield); Judgment (R) spends all of it. Spear of Light (Q) Brands enemies: your hits on them heal you.',
+      'Rhythm (Takezo): every hit builds Rhythm and attack speed; getting hit does not lower it. Full Rhythm starts Flow (much faster, stronger attacks) until you are hit, then the bar drains to zero. Iai (R) spends it.',
     ],
   },
   {
@@ -147,7 +148,7 @@ export class HelpScreen implements Screen {
 
   update(): void {
     const inp = this.app.input, n = PAGES.length;
-    if (inp.pressed('back') || inp.pressed('pause')) { this.app.go(this.back); return; }
+    if (inp.pressed('back') || inp.pressed('pause') || backHit(inp)) { this.app.go(this.back); return; }
     // Lewo/prawo: strona; góra/dół, kółko, palec: przewijanie strony, gdy się nie mieści.
     this.scroll.update(inp, ...AREA, true);
     const before = this.page;
@@ -155,7 +156,6 @@ export class HelpScreen implements Screen {
     if (inp.pressed('right') || inp.pressed('confirm')) { this.page = (this.page + 1) % n; sfx.play('select'); }
     if (inp.pressed('click')) {
       PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, this.tabX(i), 30, TAB_W, 16)) { this.page = i; sfx.play('select'); } });
-      if (inside(inp.mouse.x, inp.mouse.y, W / 2 - 40, H - 22, 80, 16)) this.app.go(this.back);
     }
     if (this.page !== before) this.scroll.reset();
   }
@@ -189,7 +189,7 @@ export class HelpScreen implements Screen {
       y += gap;
     }
     this.scroll.end(r, y + oy - AREA[1], ...AREA);
-    button(r, W / 2 - 40, H - 22, 80, 16, 'Wstecz [Esc]');
+    backButton(r);
     // Kolejna strona: strzałka i podpis.
     if (this.page < PAGES.length - 1) {
       moreArrow(r, W - 16, H - 14, 1);

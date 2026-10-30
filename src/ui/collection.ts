@@ -8,7 +8,7 @@ import { CARDS, type CardDef } from '../data/cards';
 import { HERO_BY_ID } from '../data/heroes';
 import type { App, Screen } from './app';
 import { drawCard, rarityColor } from './cards';
-import { button, panel, slot, inside, Scroll } from './widgets';
+import { button, backButton, backHit, panel, slot, inside, Scroll } from './widgets';
 import { UNIQUES, UNIQUE_COLOR, BASE_BY_ID, rollUnique, type Item } from '../data/items';
 import { drawItemCard } from './items';
 import { SECRETS } from '../data/secrets';
@@ -123,7 +123,7 @@ export class CollectionScreen implements Screen {
     this.step++;
     this.noteT = Math.max(0, this.noteT - dt);
     const inp = this.app.input, n = ORDERED.length;
-    if (inp.pressed('back')) { this.app.go(this.back); return; }
+    if (inp.pressed('back') || backHit(inp)) { this.app.go(this.back); return; }
     const tabs = this.tabs();
     if (inp.pressed('inventory')) {
       this.tab = tabs[(tabs.indexOf(this.tab) + 1) % tabs.length];
@@ -139,7 +139,7 @@ export class CollectionScreen implements Screen {
     if (this.tab === 'secrets') { this.updateSecrets(); return; }
     if (this.tab === 'bestiary') { this.updateBestiary(); return; }
     if (this.tab === 'achievements') { this.updateAchievements(); return; }
-    if (this.tab === 'feats') { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, 8, 8, 70, 18)) this.app.go(this.back); return; }
+    if (this.tab === 'feats') return;
     if (inp.pressed('left')) this.sel = (this.sel + n - 1) % n;
     if (inp.pressed('right')) this.sel = (this.sel + 1) % n;
     if (inp.pressed('up')) this.sel = (this.sel + n - COLS) % n;
@@ -153,7 +153,6 @@ export class CollectionScreen implements Screen {
       if (inp.pressed('click')) this.sel = i;
     }
     if (inp.pressed('click') && inside(m.x, m.y, CARD_X + 18, 214, 100, 16)) this.toggleBan(ORDERED[this.sel]);
-    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
   }
 
@@ -168,7 +167,6 @@ export class CollectionScreen implements Screen {
       const x = U_X + (i % U_COLS) * U_STEP, y = U_Y + Math.floor(i / U_COLS) * U_STEP;
       if (inside(m.x, m.y, x, y, U_TILE, U_TILE) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.uSel = i;
     });
-    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
   }
 
@@ -184,7 +182,6 @@ export class CollectionScreen implements Screen {
       const [x, y] = arsPos(i);
       if (inside(m.x, m.y, x, y, A_TILE, A_TILE) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.wSel = i;
     }
-    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
     if (this.wSel !== before) this.arsScroll.reset();
   }
@@ -272,7 +269,6 @@ export class CollectionScreen implements Screen {
     SECRETS.forEach((_, i) => {
       if (inside(m.x, m.y, 10, 40 + i * 14, 200, 13) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.sSel = i;
     });
-    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
   }
 
@@ -287,7 +283,6 @@ export class CollectionScreen implements Screen {
       const x = B_X + (i % B_COLS) * B_STEP, y = B_Y + Math.floor(i / B_COLS) * B_STEP;
       if (inside(m.x, m.y, x, y, B_TILE, B_TILE) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.bSel = i;
     });
-    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
   }
 
@@ -299,7 +294,6 @@ export class CollectionScreen implements Screen {
     ACHIEVEMENTS.forEach((_, i) => {
       if (inside(m.x, m.y, 10, 36 + i * 13, 220, 12) && (m.lastMove !== this.lastMouse || inp.pressed('click'))) this.aSel = i;
     });
-    if (inp.pressed('click') && inside(m.x, m.y, 8, 8, 70, 18)) this.app.go(this.back);
     this.lastMouse = m.lastMove;
   }
 
@@ -412,7 +406,7 @@ export class CollectionScreen implements Screen {
     const r = this.app.r, g = r.g, col = this.col;
     r.clear(C.black);
     // Górny rząd: Wstecz i wszystkie dostępne zakładki (zakładka pełni rolę tytułu; Tab przełącza po kolei).
-    button(r, 8, 8, 60, 16, 'Wstecz [Esc]');
+    backButton(r);
     const tabs = this.tabs();
     tabs.forEach((t, i) => {
       const [x, y, w, h] = this.tabRect(i, tabs.length), label = TAB_NAME[t];

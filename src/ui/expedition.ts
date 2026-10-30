@@ -1,6 +1,6 @@
 import { W, H, type Renderer } from '../core/renderer';
 import { SCRIPT_BY_ID } from '../data/scripts';
-import type { Input, Action } from '../core/input';
+import { isTouch, type Input, type Action } from '../core/input';
 import { C } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
@@ -448,7 +448,7 @@ export class ExpeditionMapView {
       const rx = MAP_X + MAP_W - 8;
       const open = tierOpen(ex);
       if (m.tiers) {
-        drawText(g, open ? 'Difficulty [1-4, R/X]' : 'Difficulty (set for this act)', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
+        drawText(g, open ? (isTouch() ? 'Difficulty' : 'Difficulty [1-4, R/X]') : 'Difficulty (set for this act)', tierPos(0)[0] - 4, tierPos(0)[1] + 2, C.lavender, { align: 'right', ...SMALL });
         m.tiers.forEach((t, i) => {
           const [bx, by] = tierPos(i), on = i === (m.rarity ?? 0), rr = MAP_RARITY[i];
           // Poziom jeszcze niezdobyty (data/unlocks.ts): przygaszony, z opisem, jak go odblokować.

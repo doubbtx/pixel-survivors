@@ -13,7 +13,7 @@ import {
 } from '../data/items';
 import type { Run } from '../game/run';
 import type { Stats } from '../entities/types';
-import { button, Menu, dim, panel, slot, inside, Scroll } from './widgets';
+import { button, backButton, backHit, Menu, dim, panel, slot, inside, Scroll } from './widgets';
 import { itemTags } from '../data/synergies';
 import { AWAKENINGS } from '../data/forge';
 import { drawTagIcons } from './synergies';
@@ -296,7 +296,7 @@ export class InventoryView {
   update(input: Input, dt: number): boolean {
     this.about.update(input, ...ABOUT_AREA);
     this.noteT = Math.max(0, this.noteT - dt);
-    if (input.pressed('back') || input.pressed('inventory') || input.pressed('pause')) return this.close();
+    if (input.pressed('back') || input.pressed('inventory') || input.pressed('pause') || backHit(input)) return this.close();
     if (input.pressed('up')) this.cy = (this.cy + 3) % 4;
     if (input.pressed('down')) this.cy = (this.cy + 1) % 4;
     if (input.pressed('left')) this.cx = (this.cx + 7) % 8;
@@ -324,8 +324,7 @@ export class InventoryView {
     if (input.pressed('click')) {
       if (inside(m.x, m.y, DET_X, 236, BTN_W, 16)) this.activate(this.cellAt(this.cx, this.cy));
       if (inside(m.x, m.y, DET_X + BTN_W + 6, 236, BTN_W, 16)) this.salvage(this.cellAt(this.cx, this.cy));
-      if (inside(m.x, m.y, 14, 236, 60, 16)) return this.close();
-      if (inside(m.x, m.y, 80, 236, 104, 16)) this.best();
+      if (inside(m.x, m.y, 14, 236, 104, 16)) this.best();
     }
     this.lastMouse = m.lastMove;
     return false;
@@ -378,8 +377,8 @@ export class InventoryView {
     const btn = (x: number, w: number, label: string, col: number) => {
       button(r, x, 236, w, 16, label, { col });
     };
-    btn(14, 60, 'Wstecz [Esc]', C.lgray);
-    btn(80, 104, 'Best gear [R]', C.lime);
+    backButton(r);
+    btn(14, 104, 'Best gear [R]', C.lime);
     if (it) {
       btn(DET_X, BTN_W, sel.kind === 'eq' ? 'Zdejmij' : 'Załóż', C.white);
       btn(DET_X + BTN_W + 6, BTN_W, `Rozłóż +${fmt(salvageGold(it, run.stats.greed))}`, C.gold);
