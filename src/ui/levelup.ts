@@ -47,7 +47,7 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   const hintAll = o.hint ? wrapText(o.hint, CARD_W - 12) : [];
   // Pasywka bez posiadanej broni do ewolucji: ścieżki ewolucji obrazkami (broń > ewolucja) w miejscu przepisu.
   const evoRow = !o.recipe && o.evolves?.length ? o.evolves : null;
-  const big = wrapText(o.desc, CARD_W - 14), room = (o.tags.length ? 5 : 6) - (o.recipe || evoRow ? 2 : 0);
+  const big = wrapText(o.desc, CARD_W - 14), room = o.recipe || evoRow ? 3 : o.tags.length ? 5 : 6;
   // Duży tekst (Ustawienia): opis zawsze w pełnym rozmiarze, podpowiedź ustępuje miejsca opisowi.
   let hint = o.recipe ? (hintAll.length === 1 ? hintAll : []) : hintAll.slice(0, 2);
   if (descS() >= 1 && big.length > room - hint.length) hint = [];
@@ -68,9 +68,9 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
     drawText(r.g, line, cx, ly + 2, C.lavender, { align: 'center' });
     ly += 11;
   }
-  // Przepis ewolucji / fuzji ikonami, nad tagami synergii.
-  if (o.recipe) drawRecipe(r, o.recipe, cx, y + CARD_H - (o.tags.length ? 38 : 26));
-  else if (evoRow) drawEvoRow(r, evoRow, cx, y + CARD_H - (o.tags.length ? 38 : 26));
+  // Przepis ewolucji / fuzji ikonami, nad tagami synergii; ta sama wysokość na każdej karcie (niżej zasłaniał numer karty).
+  if (o.recipe) drawRecipe(r, o.recipe, cx, y + CARD_H - 38);
+  else if (evoRow) drawEvoRow(r, evoRow, cx, y + CARD_H - 38);
   // Tagi synergii, które wzmacnia ta opcja, z postępem po wyborze.
   if (o.tags.length) drawTagGain(r, run, o.tags, cx, y + CARD_H - 14);
   // Rola broni (0.61): plakietka na dolnej krawędzi karty (opcje broni mają id broni).
