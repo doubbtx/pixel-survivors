@@ -320,7 +320,9 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
   lash(run, w, s, dt) {
     if (!ready(w, s, dt)) return;
     // Strona: kierunek patrzenia w poziomie; kolejne cięcia na zmianę w przeciwną stronę i rzędami wyżej / niżej.
-    const side0 = run.player.fx < 0 ? -1 : 1, n = Math.max(1, Math.round(s.amount)), row = 15 * s.area;
+    // 0.62: najwyżej BAL.lash.rows rzędów (2 cięcia na rząd). Z +10 pocisków 12 cięć w 6 rzędach przykrywało cały ekran
+    // i pierścień pojawiania wrogów — 85% zabójstw poza kadrem, strzelcy ginęli przed pierwszą salwą.
+    const side0 = run.player.fx < 0 ? -1 : 1, n = Math.min(2 * BAL.lash.rows, Math.max(1, Math.round(s.amount))), row = 15 * s.area;
     for (let k = 0; k < n; k++) {
       const side = k % 2 ? -side0 : side0, r = Math.floor(k / 2), dy = r === 0 ? 0 : (r % 2 ? -1 : 1) * Math.ceil(r / 2) * row;
       run.schedule(k * 0.07, () => lashCut(run, w, s, side, dy));
@@ -361,7 +363,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
 
 /** Jedno cięcie bicza: poziomy pas od bohatera w stronę `side` (±1), przesunięty w pionie o `dy`. */
 function lashCut(run: Run, w: WeaponInst, s: EffWeapon, side: number, dy: number): void {
-  const p = run.player, L = 58 * s.area, h = 7 * s.area, cx = p.x + side * L / 2, cy = p.y + dy;
+  const p = run.player, L = Math.min(BAL.lash.len, 58 * s.area), h = 7 * s.area, cx = p.x + side * L / 2, cy = p.y + dy;
   run.enemiesInCircle(cx, cy, L / 2 + h + 8, (e) => {
     if (Math.abs(e.x - cx) > L / 2 + e.radius || Math.abs(e.y - cy) > h + e.radius) return;
     run.damageEnemy(e, s.damage, w.def.name, { kx: side, ky: 0, knock: s.knock });

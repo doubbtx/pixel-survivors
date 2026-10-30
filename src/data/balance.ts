@@ -147,6 +147,14 @@ export const BAL = {
     dmg: (depth: number, t: number) => Math.min(6.3, Math.pow(2, depth - 1) * (depth <= 1 ? Math.min(1.6, 1 + t / 300) : Math.min(2, 1 + t / 120))),
     levelHp: 0.01,
     levelDmg: 0.012,
+    /**
+     * Ekspedycja (0.62, gracz: Koszmarna „bez problemu”): pogoń mocniejsza na wyższych poziomach map (indeks = MAP_RARITY)
+     * i na Udręce (`…PerTorment` na poziom), tylko dla buildu ponad `knee` × podłoga: powyżej kolana wykładnik
+     * `chaseExp` + `exp`, sufit pogoni `chaseMax` × `max`. Na Koszmarnej build 13× ponad podłogą (Takezo 61, 680K DPS
+     * w akcie 3) dostaje HP wrogów ×1.15 od razu (w symulacji ×1.3 po ustaleniu się, bo więcej wrogów żyje), 50× ponad
+     * podłogą ×1.35; build do 4× ponad podłogą (przeciętny bot, nowi gracze) bez zmian. Zwykła i Magiczna bez zmian.
+     */
+    tier: { knee: 4, exp: [0, 0, 0.06, 0.12] as number[], max: [1, 1, 1.25, 1.5] as number[], expPerTorment: 0.02, maxPerTorment: 0.05 },
   },
   /**
    * Sytuacje (systems/situations.ts, 0.39): pierwsza po `first` s czasu poziomu, potem co `every` s (po `lateAfter` s czasu fal
@@ -163,6 +171,9 @@ export const BAL = {
     id: { chain: 0.85 } as Record<string, number>,
   },
   close: { r: 50, bonus: 0.2 },
+  /** Cięcia poziome (wzorzec 'lash', katana Takezo, 0.62): najwyżej `rows` rzędów po 2 cięcia (dalsze pociski nie dokładają
+   * cięć) i długość cięcia najwyżej `len` px (połowa widoku ma 160 px) — wcześniej przy obszarze ×4 cięcie sięgało 235 px. */
+  lash: { rows: 3, len: 150 },
   /** Role broni (0.61, WeaponDef.role): mnożnik obrażeń na bossach, elitach i minibossach (`big`). Pojedynczy cel celuje
    * najpierw w bossa / elitę w zasięgu, a pociski w jeden cel rozchodzą się o `spread` rad zamiast 0.15 (bliżej celu). */
   roles: {

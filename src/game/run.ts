@@ -726,8 +726,12 @@ export class Run {
     this.dmgStep = 0;
     const t = this.waveTime();
     const base = P.baseHp * BAL.enemyHpMul(this.time) * BAL.depthHpMul(this.depth);
-    const floor = P.floor(this.level), chase = Math.pow((this.dpsEma * P.ttk(t)) / (base * floor), P.chaseExp);
-    this.powerMul = Math.min(P.max, Math.max(1, floor * Math.min(P.chaseMax, Math.max(P.chaseMin, chase))));
+    // Ekspedycja na wysokim poziomie map / Udręce: powyżej kolana (`P.tier.knee` × podłoga) pogoń stromsza (BAL.power.tier).
+    const ex = this.expedition, tier = ex?.tier ?? 0, tor = ex?.torment ?? 0, T = P.tier;
+    const extra = ex ? T.exp[tier] + T.expPerTorment * tor : 0, cap = P.chaseMax * (ex ? T.max[tier] + T.maxPerTorment * tor : 1);
+    const floor = P.floor(this.level), r = (this.dpsEma * P.ttk(t)) / (base * floor);
+    const chase = r > T.knee && extra > 0 ? Math.pow(T.knee, P.chaseExp) * Math.pow(r / T.knee, P.chaseExp + extra) : Math.pow(r, P.chaseExp);
+    this.powerMul = Math.min(P.max, Math.max(1, floor * Math.min(cap, Math.max(P.chaseMin, chase))));
   }
 
   private sample(): void {

@@ -815,6 +815,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   pikseli wszystkie kafelki wracały do poprzedniego wzoru i trawa przeskakiwała.
   Salwy `fan` / `shotgun` przy zagęszczaniu (`patternDensity`, `bulletDensity`) zachowują parzystość `count` (fireVolley): wachlarz
   Oka z 3 robił się 4 pociskami bez środkowego i stojący gracz nie dostawał trafień od ok. 6. minuty mapy i na Udręce.
+- 0.62.0 (gracz: Koszmarna „bez problemu”, Takezo 61, 680K DPS w akcie 3): symulacja buildu gracza na mapach aktu 3
+  (Run z prawdziwym spawnerem, skrypt agent-tough/tough.cjs w scratchpadzie: stoi / krąży, źródła obrażeń, zabici poza kadrem).
+  Przyczyny: Book of the Void z +10 pociskami robił 12 cięć w 6 rzędach, przy obszarze ×4 cięcie sięgało 235 px — 85% zabójstw
+  poza kadrem, 95% strzelców ginęło przed pierwszą salwą; mapy „pokonaj” kończyły się w ~38 s. Zmiany: `BAL.lash` (rows 3 =
+  najwyżej 6 cięć, len 150 px; systems/weapons.ts `lash`/`lashCut`); `BAL.power.tier` — na Rzadkiej / Koszmarnej / Udręce pogoń
+  HP stromsza powyżej `knee` × podłoga (Run.updatePower), słabsze buildy i Zwykła/Magiczna bez zmian. Pomiar (akt 3, głębokość 5):
+  zabici poza kadrem 77% → 36%, strzelcy bez salwy 87% → 56%, mapa 39 → 44 s, śmierci (bez odrodzeń) stojąc 6.5 → 47 na mapę,
+  krążąc 1.2 → 3.7; boss aktu 3 77-102 → 84-117 s. Bot bez god na Koszmarnej (21 runów) mediana 74 → 80 s, na Zwykłej bez zmian.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`
