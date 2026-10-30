@@ -493,6 +493,8 @@ export class Run {
   cmdBuffT = 0;
   /** Sierp krwi: pozostały budżet leczenia (HP), odnawiany co sekundę do BAL.drainPerSec × maks. HP; Kości: czas ostatniej monety. */
   drainLeft = 0;
+  /** Kradzież życia: pozostały budżet (HP), odnawiany do BAL.lifestealPerSec × maks. HP na sekundę. */
+  stealLeft = 0;
   diceCoinT = -99;
   cloakCd = 0;
   /** Sztandary elit (R3): wrogowie w strefie się leczą, gracz w strefie dostaje więcej obrażeń. */
@@ -750,6 +752,7 @@ export class Run {
     if (this.cmdBuffT > 0) this.cmdBuffT -= dt;
     if (this.cloakCd > 0) this.cloakCd -= dt;
     this.drainLeft = Math.min(this.stats.maxHp * BAL.drainPerSec, this.drainLeft + this.stats.maxHp * BAL.drainPerSec * dt);
+    this.stealLeft = Math.min(this.stats.maxHp * BAL.lifestealPerSec, this.stealLeft + this.stats.maxHp * BAL.lifestealPerSec * dt);
     if (!this.banners.length) return;
     const T = BAL.eliteTraits, p = this.player;
     for (const b of this.banners) {
@@ -1548,7 +1551,11 @@ export class Run {
     if (!pct) this.dmgStep += dealt / (resist * weak * soft);
     this.elemDmg[el ?? 'none'] = (this.elemDmg[el ?? 'none'] ?? 0) + dealt / (resist * weak);
     this.lastHitSrc = src;
-    if (st.lifesteal > 0) this.heal(Math.min(dmg * st.lifesteal, st.maxHp * 0.02));
+    if (st.lifesteal > 0 && !o.dot && this.stealLeft > 0) {
+      const h = Math.min(dmg * st.lifesteal, st.maxHp * 0.02, this.stealLeft);
+      this.stealLeft -= h;
+      this.heal(h);
+    }
     if (o.knock) {
       const l = Math.hypot(o.kx ?? 0, o.ky ?? 0) || 1;
       const f = o.knock * 25 * (1 - e.def.knockResist);

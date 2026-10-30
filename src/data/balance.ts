@@ -199,6 +199,8 @@ export const BAL = {
   /** Bronie 0.43: Kości (szansa szóstki: baza + Szczęście × sixLuck, maks. sixMax) i budżet leczenia Sierpa krwi (ułamek maks. HP na sekundę). */
   dice: { six: 1 / 6, sixLuck: 1 / 8, sixMax: 0.5, low: 0.5, high: 1.6, blast: 0.5, blastR: 20, coinEvery: 1 },
   drainPerSec: 0.015,
+  /** Kradzież życia (0.60): osobny budżet, ułamek maks. HP na sekundę; wcześniej 2% za każde trafienie = kilka pasków HP na s. */
+  lifestealPerSec: 0.04,
   /** Piętno Aurela (0.43): leczenie za trafienie napiętnowanego (ułamek maks. HP, w budżecie drainPerSec; do Wiary liczy się `faith` leczenia), maks. czas, przedłużanie w Uświęconej ziemi (s/s), tarcza Opiekuna za napiętnowanego w `guardR`, wybuch Włóczni świtu. */
   brand: { heal: 0.004, faith: 0.5, max: 12, shieldCap: 0.1, sanct: 1.5, guardR: 120, shieldPer: 0.02, boom: 0.6, boomR: 24, speed: 260, life: 0.6, width: 9 },
   relics: { max: 3, offer: 3, prismWeak: 2.25, prismResist: 0.25, huntElite: 0.4, huntRegular: 0.1, cloakTime: 1, cloakCd: 8, cloakHp: 0.75, maceTime: 6, maceDmgLoss: 0.15, turncoatHp: 1.5, turncoatAura: 0.5, hornWindow: 15, chaliceHeal: 0.15, bossDmg: 1.25, shopMarkup: 1.25 },
