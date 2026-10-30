@@ -2,17 +2,31 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>Pixel Survivors</title>
+    <meta name="theme-color" content="#181425" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <link rel="icon" type="image/png" href="favicon-32.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
     <style>
       html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
       body { display: flex; align-items: center; justify-content: center; }
       canvas { image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; cursor: crosshair; }
+      /* Ekran ładowania (zanim wczyta się skrypt gry); main.ts usuwa go po starcie. */
+      #splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4vmin;
+        background: radial-gradient(circle at 50% 55%, #3a4466 0%, #181425 70%); color: #feae34; font: bold 7vmin monospace; letter-spacing: 0.1em; }
+      #splash img { width: 22vmin; height: 22vmin; image-rendering: pixelated; border-radius: 4vmin; }
+      #splash small { color: #8b9bb4; font-size: 3vmin; animation: pulse 1s ease-in-out infinite alternate; }
+      @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
     </style>
-    <script type="module" crossorigin src="./assets/index-Bq7Wiubm.js"></script>
+    <script type="module" crossorigin src="./assets/index-rmML1oye.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-CAfZNAq4.css">
   </head>
   <body>
+    <div id="splash"><img src="icon-192.png" alt="" />Pixel Survivors<small>Loading...</small></div>
     <canvas id="game"></canvas>
   </body>
 </html>
