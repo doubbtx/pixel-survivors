@@ -1,6 +1,7 @@
 import { C } from '../core/palette';
 import { rng } from '../core/rng';
 import { BAL } from './balance';
+import { prismGroup } from './unlocks';
 import { SLOT, type Enemy, type Stats } from '../entities/types';
 import type { AbilitySlot } from './heroes';
 import type { Run } from '../game/run';
@@ -513,6 +514,23 @@ for (const c of CARDS) c.icon = CARD_ICONS[c.id] ?? `tag:${c.tags[0]}`;
 
 export const CARD_BY_ID: Record<string, CardDef> = Object.fromEntries(CARDS.map((c) => [c.id, c]));
 
+/**
+ * Blokada karty (0.61, data/unlocks.ts): złote karty ponad pierwsze `goldPerTag` swojego pierwszego tagu → `cards:<tag>`,
+ * pryzmatyczne ponad pierwsze `prism` → kolejno grupy `prism:1..3`. Karty bohaterów i z osiągnięć (`unlock`) bez blokady.
+ */
+const CARD_LOCK: Record<string, string> = (() => {
+  const out: Record<string, string> = {}, perTag: Record<string, number> = {};
+  let prism = 0;
+  for (const c of CARDS) {
+    if (c.hero || c.unlock) continue;
+    if (c.rarity === 'gold' && (perTag[c.tags[0]] = (perTag[c.tags[0]] ?? 0) + 1) > BAL.discovery.goldPerTag) out[c.id] = `cards:${c.tags[0]}`;
+    if (c.rarity === 'prism' && ++prism > BAL.discovery.prism) out[c.id] = prismGroup(prism - BAL.discovery.prism - 1);
+  }
+  return out;
+})();
+/** Id odblokowania potrzebne do karty ('' = dostępna od startu). */
+export const cardLock = (id: string): string => CARD_LOCK[id] ?? '';
+
 /** Źródło oferty kart; 'fight' = wygrana walka w Ekspedycji. */
 export type CardSource = 'level' | 'fight' | 'elite' | 'boss' | 'shop';
 
@@ -534,6 +552,7 @@ export function cardPool(run: Run, rarity: Rarity, exclude: string[] = []): Card
     c.rarity === rarity &&
     !run.cardBans.has(c.id) &&
     (!c.unlock || run.unlocked.has(c.unlock)) &&
+    (!CARD_LOCK[c.id] || run.content.has(CARD_LOCK[c.id])) &&
     (!c.hero || c.hero === run.hero.id) &&
     (!c.ult || (c.ult === 'alt') === run.altUlt) &&
     (c.stackable || !run.cards.some((x) => x.id === c.id)) &&

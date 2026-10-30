@@ -13,6 +13,7 @@ import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { AUGMENTS, weaponBase, augmentWorks, fusionAugments } from '../data/augments';
 import { rollQuality, rollWeaponBonus, addWeaponBonus, bonusLines, type WeaponBonus } from '../data/upgrades';
 import { RARITIES } from '../data/items';
+import { isOpen } from '../data/unlocks';
 
 /**
  * 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts); 'augment' = augment broni (data/augments.ts);
@@ -55,16 +56,24 @@ export interface Recipe {
   result: string;
 }
 
+/** Fuzje dostępne w runie (po odblokowaniu, data/unlocks.ts). */
+const openFusions = (run: Run) => (isOpen(run.content, 'fusions') ? FUSIONS : []);
+/** Ścieżki ewolucji dostępne w runie: podstawowa zawsze, warianty po `evo:<broń>`, pasywka odblokowana. */
+const openEvolves = (run: Run, def: WeaponDef) => {
+  const alts = isOpen(run.content, `evo:${weaponBase(def)}`);
+  return evolvesOf(def).filter((e, i) => (i === 0 || alts) && isOpen(run.content, `p:${e.passive}`));
+};
+
 /** Przepis broni: fuzja z posiadaną bronią (gdy jest), inaczej ewolucja (broń + pasywka). */
 function weaponRecipe(run: Run, def: WeaponDef): Recipe | undefined {
   const base = weaponBase(def);
-  for (const f of FUSIONS) {
+  for (const f of openFusions(run)) {
     const other = f.a === base ? f.b : f.b === base ? f.a : '';
     const w = other ? ownedBase(run, other) : undefined;
     if (w && w.def !== def) return { parts: [def.icon, w.def.icon], result: WEAPON_BY_ID[f.into].icon };
   }
   // Ewolucja: najpierw ta, do której masz już pasywkę.
-  const evs = evolvesOf(def), ev = evs.find((e) => run.passives.some((p) => p.id === e.passive)) ?? evs[0];
+  const evs = openEvolves(run, def), ev = evs.find((e) => run.passives.some((p) => p.id === e.passive)) ?? evs[0];
   return ev ? { parts: [def.icon, PASSIVE_BY_ID[ev.passive].icon], result: WEAPON_BY_ID[ev.into].icon } : undefined;
 }
 
@@ -89,7 +98,7 @@ function passiveRecipe(run: Run, id: string): Recipe | undefined {
 
 /** Podpowiedź ewolucji dla broni: które pasywki ją ewoluują (posiadana z dopiskiem). */
 function evolveHint(run: Run, def: WeaponDef): string {
-  const evs = evolvesOf(def);
+  const evs = openEvolves(run, def);
   if (!evs.length) return '';
   const names = evs.map((e) => `${PASSIVE_BY_ID[e.passive].name}${run.passives.some((x) => x.id === e.passive) ? ' (masz)' : ''}`);
   return `Ewolucja: max poziom + ${names.join(' / ')}`;
@@ -116,7 +125,7 @@ const ownedBase = (run: Run, base: string) => run.weapons.find((w) => weaponBase
 /** Podpowiedź fuzji: z którą posiadaną bronią ta broń może się połączyć (pierwsza pasująca receptura). */
 function fusionHint(run: Run, def: WeaponDef): string {
   const base = weaponBase(def);
-  for (const f of FUSIONS) {
+  for (const f of openFusions(run)) {
     const other = f.a === base ? f.b : f.b === base ? f.a : '';
     const w = other ? ownedBase(run, other) : undefined;
     if (w && w.def !== def) return `Fuzja z: ${w.def.name} (obie na max)`;
@@ -142,7 +151,9 @@ function candidates(run: Run): Option[] {
   for (const w of run.weapons) {
     const evs = evolvesOf(w.def);
     // Każda ścieżka z posiadaną pasywką to osobna opcja (id = ewolucja); Wierność broni: ewolucja podstawowa bez pasywki.
-    const ready = w.level >= maxLevel(w.def) ? evs.filter((e, i) => ownedP.has(e.passive) || (i === 0 && run.loyal > 0)) : [];
+    // Warianty (ALT_EVOS) dopiero po pierwszej ewolucji tej broni w którymś runie (data/unlocks.ts `evo:<broń>`).
+    const open = openEvolves(run, w.def);
+    const ready = w.level >= maxLevel(w.def) ? evs.filter((e, i) => open.includes(e) && (ownedP.has(e.passive) || (i === 0 && run.loyal > 0))) : [];
     if (ready.length) {
       for (const ev of ready) {
         const into = WEAPON_BY_ID[ev.into];
@@ -156,8 +167,8 @@ function candidates(run: Run): Option[] {
       out.push({ kind: 'weaponUp', id: w.def.id, name: w.def.name, desc, hint: fusionHint(run, w.def) || evolveHint(run, w.def), icon: w.def.icon, tag: `${q ? RARITIES[q].name.pl : 'Poziom'} ${w.level + 1}/${maxLevel(w.def)}`, color: q ? RARITIES[q].color : w.def.color, tags: [], quality: q, bonus, recipe: weaponRecipe(run, w.def) });
     }
   }
-  // Fuzje: obie bronie-rodzice gotowe.
-  for (const f of FUSIONS) {
+  // Fuzje: obie bronie-rodzice gotowe (po odblokowaniu fuzji, data/unlocks.ts).
+  for (const f of openFusions(run)) {
     const a = ownedBase(run, f.a), b = ownedBase(run, f.b), into = WEAPON_BY_ID[f.into];
     if (!a || !b || !fusionReady(a) || !fusionReady(b) || run.weapons.some((w) => w.def.id === f.into)) continue;
     const { kept, lost } = fusionAugments(into), has = (l: typeof kept) => l.filter((x) => run.aug(x.id)).map((x) => x.name);
@@ -177,7 +188,7 @@ function candidates(run: Run): Option[] {
     // Druga broń kończy Wierność broni (BAL.loyal).
     const lone = run.weapons.length === 1;
     const loyalHint = lone && run.loyal > 0 ? 'Tracisz Wierność broni!' : lone ? 'Kończy szansę na Wierność broni' : '';
-    const offerable = (d: (typeof WEAPONS)[number], taken: Set<string>) => !d.evolved && !taken.has(d.id) && !run.banished.has(d.id) && (!d.hero || d.hero === run.hero.id);
+    const offerable = (d: (typeof WEAPONS)[number], taken: Set<string>) => !d.evolved && !taken.has(d.id) && !run.banished.has(d.id) && (!d.hero || d.hero === run.hero.id) && isOpen(run.content, `w:${d.id}`);
     // Wolny slot, a wszystkie bronie bazowe już wykorzystane (długi run, kilka fuzji): składniki fuzji wracają do oferty
     // (0.41.2; wcześniej zostawały same premie statystyk). Ta sama fuzja nie powtórzy się (opcja fuzji pomija posiadaną hybrydę).
     let taken = ownedW;
@@ -202,7 +213,7 @@ function candidates(run: Run): Option[] {
   }
   if (run.passives.length < BAL.passiveSlots) {
     for (const d of PASSIVES) {
-      if (ownedP.has(d.id) || run.banished.has(d.id)) continue;
+      if (ownedP.has(d.id) || run.banished.has(d.id) || !isOpen(run.content, `p:${d.id}`)) continue;
       out.push({ kind: 'passiveNew', id: d.id, name: d.name, desc: d.desc, hint: passiveHint(run, d.id), icon: d.icon, tag: 'Nowa pasywka', color: C.white, tags: tagsOf(d.stat), recipe: passiveRecipe(run, d.id), evolves: evoIcons(run, d.id) });
     }
   }
@@ -290,6 +301,7 @@ export function applyOption(run: Run, o: Option): void {
     case 'evolve': {
       const w = run.weapons.find((x) => evolvesOf(x.def).some((e) => e.into === o.id))!;
       const into = o.id;
+      run.evolvedBases.add(weaponBase(w.def));
       if (run.basicWeaponId === w.def.id) run.basicWeaponId = into;
       w.def = WEAPON_BY_ID[into];
       w.level = 1;

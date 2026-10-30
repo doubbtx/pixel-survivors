@@ -201,6 +201,12 @@ export const BAL = {
   /** Bronie 0.43: Kości (szansa szóstki: baza + Szczęście × sixLuck, maks. sixMax) i budżet leczenia Sierpa krwi (ułamek maks. HP na sekundę). */
   dice: { six: 1 / 6, sixLuck: 1 / 8, sixMax: 0.5, low: 0.5, high: 1.6, blast: 0.5, blastR: 20, coinEvery: 1 },
   drainPerSec: 0.015,
+  /**
+   * Odkrycia (0.61, data/unlocks.ts grantDiscovery): punkty za koniec runu (`run`), każdy ukończony akt Ekspedycji
+   * (`act`) i co `endlessMin` minut Endless; co `every` punktów otwiera się najbliższa zablokowana zawartość.
+   * Od startu otwarte: `goldPerTag` pierwszych złotych kart każdego tagu i `prism` pierwszych pryzmatycznych (data/cards.ts `cardLock`).
+   */
+  discovery: { run: 1, act: 1, endlessMin: 5, every: 3, goldPerTag: 2, prism: 5 },
   /** Kradzież życia (0.60): osobny budżet, ułamek maks. HP na sekundę; wcześniej 2% za każde trafienie = kilka pasków HP na s. */
   lifestealPerSec: 0.04,
   /** Piętno Aurela (0.43): leczenie za trafienie napiętnowanego (ułamek maks. HP, w budżecie drainPerSec; do Wiary liczy się `faith` leczenia), maks. czas, przedłużanie w Uświęconej ziemi (s/s), tarcza Opiekuna za napiętnowanego w `guardR`, wybuch Włóczni świtu. */

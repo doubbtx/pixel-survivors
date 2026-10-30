@@ -204,6 +204,8 @@ export interface RunSnapshot {
   dpsLog?: number[];
   /** Wyróżnienia runu: najdłuższe kombo, seria zabójstw, najmocniejsze trafienie i jego źródło. */
   highlights?: [number, number, number, string];
+  /** Liczniki odblokowań zawartości (data/unlocks.ts): reakcje, krytyki, szczęśliwe trafy, bronie po ewolucji. */
+  unlockStats?: [number, number, number, string[]];
 }
 
 /**
@@ -395,8 +397,14 @@ export class Run {
   resetMushinWindow(): void { this.mushinWin = 1; this.mushinCnt = 0; }
   /** Rytm opada (0.43): po otrzymaniu obrażeń pasek spada do zera (bez przyrostu), potem buduje się od nowa. */
   rhythmDrain = false;
-  /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej). */
+  /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej; odblokowania zawartości). */
   reactions = 0;
+  /** Odblokowania zawartości (data/unlocks.ts): trafienia krytyczne, szczęśliwe trafy, bronie bazowe po ewolucji. */
+  critHits = 0;
+  jackpots = 0;
+  evolvedBases = new Set<string>();
+  /** Odblokowana zawartość (ustawia ui/game-screen.ts z `save.unlocks`; data/unlocks.ts `isOpen`). */
+  content = new Set<string>();
   /** Błysk paska XP po zebraniu kryształu (s). */
   xpPulse = 0;
   rerolls: number = BAL.rerolls;
@@ -1504,6 +1512,7 @@ export class Run {
       if (this.flag('overcrit') > 0 && st.crit > 1 && rng.chance(Math.min(1, st.crit - 1))) mult *= st.critMult;
     }
     const crit = mult > 1;
+    if (crit) this.critHits++;
     // Szał (super-bonus): obrażenia rosną z brakującym HP gracza.
     const rage = this.flag('rage') > 0 ? 1 + this.flag('rage') * (1 - this.player.hp / st.maxHp) : 1;
     // Porażenie (błyskawica): wróg otrzymuje więcej obrażeń ze wszystkich źródeł.
@@ -2156,6 +2165,7 @@ export class Run {
     const U = BAL.uniques, chance = source === 'boss' ? U.boss : source === 'elite' ? U.elite : 0, L = BAL.loot;
     // Szczęśliwy traf: Legendarny przedmiot albo unikat z dowolnego łupu.
     if (rng.chance(L.jackpot * (1 + this.luck()))) {
+      this.jackpots++;
       this.showBanner('Szczęśliwy traf!');
       // Szczęśliwy traf (0.33): złoty deszcz iskier, napis nad bohaterem i krótkie zatrzymanie.
       this.popText(this.player.x, this.player.y - 20, 'Lucky find!', C.gold);
@@ -2266,6 +2276,7 @@ export class Run {
       secrets: [...this.secrets], relics: [...this.relics], pendingRelics: this.pendingRelics,
       dpsLog: [...this.dpsLog],
       highlights: [this.bestCombo, this.bestStreak, this.maxHit, this.maxHitSrc],
+      unlockStats: [this.reactions, this.critHits, this.jackpots, [...this.evolvedBases]],
     };
   }
 
@@ -2302,6 +2313,11 @@ export class Run {
     run.pendingRelics = s.pendingRelics ?? 0;
     run.dpsLog = s.dpsLog ?? [];
     if (s.highlights) [run.bestCombo, run.bestStreak, run.maxHit, run.maxHitSrc] = s.highlights;
+    if (s.unlockStats) {
+      const [reactions, crits, jackpots, evolved] = s.unlockStats;
+      Object.assign(run, { reactions, critHits: crits, jackpots });
+      run.evolvedBases = new Set(evolved);
+    }
     for (const v of run.dmgBySource.values()) run.dmgTotal += v;
     run.dpsMark = run.dmgTotal;
     run.scrolls = { ...run.scrolls, ...s.scrolls };
