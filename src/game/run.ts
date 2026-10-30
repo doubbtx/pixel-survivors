@@ -8,7 +8,7 @@ import { VIEW_W, VIEW_H } from '../core/renderer';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
 import { HERO_BY_ID, evolveAbility, heroAbilities, type HeroDef, type AbilitySlot } from '../data/heroes';
-import { WEAPON_BY_ID } from '../data/weapons';
+import { WEAPON_BY_ID, ROLE_BY_SRC } from '../data/weapons';
 import { PASSIVE_BY_ID } from '../data/passives';
 import { levelDef, BIOME_CYCLE, VOID_BIOME, type LevelDef } from '../data/levels';
 import type { FeatId } from '../data/feats';
@@ -1520,7 +1520,9 @@ export class Run {
     // Kruszenie (reakcja): następne trafienie wzmocnione; Pogromca olbrzymów: elity i bossowie.
     let brittle = 1;
     if (e.brittle > 0 && !o.dot) { brittle = e.brittle; e.brittle = 0; }
-    const big = e.boss || e.elite ? 1 + this.flag('bossDmg') : 1;
+    // Rola broni (0.61): pojedynczy cel mocniejszy, tłum słabszy na bossach, elitach i minibossach (stany dziedziczą przez bazę).
+    const roleOf = ROLE_BY_SRC[src];
+    const big = e.boss || e.elite ? (1 + this.flag('bossDmg')) * (roleOf ? BAL.roles[roleOf].big : 1) : 1;
     const lore = this.lore[e.boss ? 'boss' : e.def.id] ?? 1;
     // Spokój (karta z osiągnięcia): więcej obrażeń po dłuższym czasie bez trafienia.
     const calm = this.flag('calm') > 0 && this.totalTime - this.lastHurtAt >= BAL.feats.calmAfter ? 1 + this.flag('calm') : 1;

@@ -67,6 +67,19 @@ function nearestN(run: Run, n: number, range: number): Enemy[] {
   return cand.slice(0, n);
 }
 
+/** Broń pojedynczego celu (rola 'single'): boss albo najbliższa elita w zasięgu; inne bronie i brak takiego celu — null. */
+function focusTarget(run: Run, w: WeaponInst, range: number): Enemy | null {
+  if (w.def.role !== 'single') return null;
+  const p = run.player, b = run.boss;
+  if (b && !b.dead && (b.x - p.x) ** 2 + (b.y - p.y) ** 2 <= range * range) return b;
+  let best: Enemy | null = null, bd = range * range;
+  for (const e of run.hash.query(p.x, p.y, range, run.qa)) {
+    const d = (e.x - p.x) ** 2 + (e.y - p.y) ** 2;
+    if (e.elite && !e.dead && d <= bd) { best = e; bd = d; }
+  }
+  return best;
+}
+
 function fireProjectile(run: Run, w: WeaponInst, s: EffWeapon, angle: number, forceCrit: boolean): void {
   const boomerang = w.def.kind === 'boomerang';
   const pr = run.spawnProjectile({
@@ -134,13 +147,16 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       sfx.play(weaponSound(w));
       return;
     }
-    const targets = nearestN(run, amount, BAL.homing.bolt);
+    // Pojedynczy cel: cała salwa w bossa / elitę, kolejne pociski w ten sam cel ciasno (rola 'single').
+    const focus = focusTarget(run, w, BAL.homing.bolt);
+    const targets = focus ? [focus] : nearestN(run, amount, BAL.homing.bolt);
     if (targets.length === 0) { w.timer = 0.1; return; }
+    const spread = w.def.role === 'single' ? BAL.roles.spread : 0.15;
     for (let i = 0; i < amount; i++) {
       const t = targets[i % targets.length];
       const base = Math.atan2(t.y - run.player.y, t.x - run.player.x);
       const extra = Math.floor(i / targets.length);
-      const off = extra === 0 ? 0 : (extra % 2 ? 1 : -1) * Math.ceil(extra / 2) * 0.15;
+      const off = extra === 0 ? 0 : (extra % 2 ? 1 : -1) * Math.ceil(extra / 2) * spread;
       fireProjectile(run, w, s, base + off, crit);
     }
     sfx.play(weaponSound(w));
@@ -248,9 +264,10 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     if (!ready(w, s, dt)) return;
     sfx.play(weaponSound(w));
     const p = run.player;
+    const focus = focusTarget(run, w, 140);
     const cand = run.hash.query(p.x, p.y, 140, run.qa).filter((e) => !e.dead);
     for (let i = 0; i < s.amount; i++) {
-      const t = cand.length ? rng.pick(cand) : null;
+      const t = focus ?? (cand.length ? rng.pick(cand) : null);
       const x = t ? t.x : p.x + rng.range(-100, 100);
       const y = t ? t.y : p.y + rng.range(-70, 70);
       const z = run.addZone('meteor', x, y, 20 * s.area, s.damage, 0, w.slot, w.def.name);
@@ -263,9 +280,10 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     if (!ready(w, s, dt)) return;
     sfx.play(weaponSound(w));
     const p = run.player;
-    const t = run.nearestEnemy(p.x, p.y, 180);
+    const t = focusTarget(run, w, 180) ?? run.nearestEnemy(p.x, p.y, 180);
     const base = facingAngle(run) ?? (t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx));
-    for (let i = 0; i < s.amount; i++) fireProjectile(run, w, s, base + (i - (s.amount - 1) / 2) * 0.5, false);
+    const spread = w.def.role === 'single' ? BAL.roles.spread : 0.5;
+    for (let i = 0; i < s.amount; i++) fireProjectile(run, w, s, base + (i - (s.amount - 1) / 2) * spread, false);
   },
 
   /** Promień: strefa 'beam' przyczepiona do gracza na czas `duration`. */
@@ -314,7 +332,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
     if (!ready(w, s, dt)) return;
     const p = run.player;
     const R = 26 * s.area;
-    const t = run.nearestEnemy(p.x, p.y, R + 30);
+    const t = focusTarget(run, w, R + 30) ?? run.nearestEnemy(p.x, p.y, R + 30);
     const base = facingAngle(run) ?? (t ? Math.atan2(t.y - p.y, t.x - p.x) : Math.atan2(p.fy, p.fx));
     let hits = 0;
     for (let k = 0; k < Math.max(1, s.amount); k++) {
