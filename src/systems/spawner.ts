@@ -17,6 +17,8 @@ const spawnR = (): number => Math.max(196, Math.hypot(VIEW_W, VIEW_H) / 2 + 12);
 
 export interface SpawnOpts {
   elite?: string[];
+  /** Uderzenie scenariusza (0.56): HP bez pogoni w górę (min(powerMul, 1)), żeby sprawdzian był przewidywalny. */
+  noChase?: boolean;
 }
 
 /** Tworzy wroga z definicji, skalując HP i obrażenia według czasu poziomu i głębokości (BAL). */
@@ -25,7 +27,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   if (!e) return null;
   const def = ENEMIES[id];
   const P = BAL.power, lvl = run.level - 1;
-  const hpMul = BAL.enemyHpMul(run.time) * BAL.depthHpMul(run.depth) * (1 + run.flag('enemyHp')) * run.powerMul * (1 + P.levelHp * lvl);
+  const hpMul = BAL.enemyHpMul(run.time) * BAL.depthHpMul(run.depth) * (1 + run.flag('enemyHp')) * (o.noChase ? Math.min(run.powerMul, 1) : run.powerMul) * (1 + P.levelHp * lvl);
   e.uid = run.newUid();
   e.def = def;
   e.sprite = def.behavior === 'boss' ? `boss${run.levelInfo.biome}` : def.sprite;
@@ -173,7 +175,7 @@ export function updateSpawner(run: Run, dt: number): void {
     }
   }
   updateSituations(run, dt, waveT);
-  while (!run.levelInfo.ambush && run.nextEvent < EVENTS.length && EVENTS[run.nextEvent].at <= t) {
+  while (!run.levelInfo.ambush && !run.levelInfo.script && run.nextEvent < EVENTS.length && EVENTS[run.nextEvent].at <= t) {
     const ev = EVENTS[run.nextEvent++];
     for (let i = 0; i < ev.count; i++) {
       const [x, y] = ringPos(run, (i / ev.count) * Math.PI * 2, 170);
@@ -208,7 +210,9 @@ export function updateSpawner(run: Run, dt: number): void {
 
   updateMiniboss(run, dt, waveT);
 
-  const target = BAL.targetEnemies(waveT) * (1 + run.flag('enemyCount'));
+  // Scenariusz: oddech bez nowych wrogów, w trakcie uderzenia zwykłe fale rzadsze (BAL.scripts).
+  if (run.breathT > 0) return;
+  const target = BAL.targetEnemies(waveT) * (1 + run.flag('enemyCount')) * (run.beatT > 0 ? BAL.scripts.beatDensity : 1);
   const deficit = target - run.enemies.count;
   if (deficit <= 0) return;
   run.spawnAcc += Math.min(BAL.spawnRateCap(waveT), deficit * 2) * dt;

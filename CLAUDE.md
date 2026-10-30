@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.55.0)
+## Stan (wersja 0.57.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -765,6 +765,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   po łupie tylko nowe przedmioty z okna (game-screen `lootBefore`), bez `noAuto` (ustawiane przy ręcznym zdjęciu / zamianie
   w Run.equip/unequip) i bez unikatów; zapas `BAL.autoEquip` (margin 8%, +0.5 pkt / ulepszenie). Toast „Założono: X (zamiast Y)”,
   podpowiedź 'gear'. Przycisk Najlepsze [R] = pełna optymalizacja.
+- 0.57.0 (pomysł gracza „scripted maps”, krytyka Agenta 2): prototyp scenariuszy map w akcie 1 Ekspedycji. data/scripts.ts
+  (MAP_SCRIPTS prolog/charge/barrage, uderzenia w ułamkach `objectiveProgress`, ROLE_FOES wg biomu), `MapNode.script` losowany
+  w rollActMap (rząd 0 = prolog), `LevelDef.script`. systems/scripts.ts: `updateScript` (BAL.scripts: pierwsze ≥ 20 s, odstęp
+  ≥ 12 s, nic po 0.9), role swarm/rush/shoot przez sytuacje `beat_*` (startBeat, scriptOnly w SITUATIONS, noChase HP),
+  tank = elita ze stałymi cechami mapy, bombard = 3 salwy `run.strikes`, breath = `run.breathT` bez spawnów; w trakcie
+  uderzenia zwykłe fale ×0.85. Na mapach ze scenariuszem bez losowych sytuacji i EVENTS. Podgląd węzła: „Plan: …”.
+  A/B (bot, 7 bohaterów × 4, mediana map): mieszane, w szumie (Borgun 1.5→2.5, Morwen 1.5→3.5, Kestra 1→0.5, reszta =);
+  buildy kit bez różnicy. Do oceny playtestem człowieka; dalej: akty 2–3, więcej szablonów (Oblężenie, Łowy).
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

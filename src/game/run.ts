@@ -31,6 +31,7 @@ import { fmt } from '../util/format';
 import { updatePlayer } from '../systems/player';
 import { updateAbilities, castAbility } from '../systems/abilities';
 import { updateWeapons } from '../systems/weapons';
+import { updateScript, resetScript } from '../systems/scripts';
 import { updateSpawner, spawnEnemy } from '../systems/spawner';
 import { situationKill, type Spot } from '../systems/situations';
 import { updateEnemies } from '../systems/enemies';
@@ -493,6 +494,11 @@ export class Run {
   sitActive: { uid: number; id: string; left: number; keys: number; keysLeft: number; t0: number; taken0: number } | null = null;
   situationT: number = BAL.situations.first;
   sitSeq = 0;
+  /** Scenariusz mapy (0.56): indeks następnego uderzenia, czas ostatniego, oddech (bez spawnów) i trwające uderzenie. */
+  beatIdx = 0;
+  lastBeatT = -99;
+  breathT = 0;
+  beatT = 0;
   lastSituation = '';
   readonly sitLog: { id: string; result: 'broken' | 'failed' | 'lost'; dur: number; taken: number }[] = [];
   /** Obrażenia zadane na bieżącej (ostatniej) mapie wg żywiołu źródła — udział żywiołów buildu na mapie Ekspedycji. */
@@ -632,6 +638,7 @@ export class Run {
     this.strikes = [];
     this.bossTitle = null;
     resetLevelFeats(this);
+    resetScript(this);
     this.featsLevel = [];
     delete this.cardState.halo;
     this.terrain = [];
@@ -804,6 +811,7 @@ export class Run {
     this.runTimers(dt);
     this.rebuildHash();
     updateSpawner(this, dt);
+    updateScript(this, dt);
     updateEnemies(this, dt);
     this.rebuildHash();
     updatePlayer(this, input, dt);

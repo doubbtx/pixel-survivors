@@ -68,6 +68,8 @@ export interface LevelDef {
   eliteMods?: string[];
   /** Pierwsza walka wyprawy (akt 1, rząd 0; 0.43.2 z playtestu): krótszy cel, mniejszy tłum, sytuacje / zadania / elity później. */
   gentle?: boolean;
+  /** Scenariusz mapy (data/scripts.ts, 0.56): zaplanowane uderzenia zamiast losowych sytuacji i okrążeń EVENTS. */
+  script?: string;
   flags?: Record<string, number>;
 }
 

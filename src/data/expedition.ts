@@ -1,4 +1,5 @@
 import { C } from '../core/palette';
+import { SCRIPT_POOL } from './scripts';
 import { rng } from '../core/rng';
 import type { Stats } from '../entities/types';
 import { BAL } from './balance';
@@ -140,6 +141,8 @@ export interface MapNode {
   affinity?: { el: Element; kind: 'weak' | 'resist' };
   /** Stałe cechy elit (Mapa elit, Zasadzka), widoczne na mapie. */
   eliteMods?: string[];
+  /** Scenariusz mapy (data/scripts.ts; prototyp: akt 1, walki i elity). */
+  script?: string;
 }
 
 export interface ExpeditionState {
@@ -253,6 +256,8 @@ export function rollActMap(act: number, tier: number, noForge = false): (MapNode
     map.push(kinds.map((k) => (!k ? null : isCombat(k) ? rollMapNode(k, act, tier, used) : { kind: k })));
   }
   rollAffinities(map, act);
+  // Scenariusze (0.56, prototyp): akt 1, zwykłe walki i mapy elit; pierwszy rząd — Prolog.
+  if (act === 1) map.forEach((row, r) => row.forEach((m) => { if (m && (m.kind === 'fight' || m.kind === 'elite')) m.script = r === 0 ? 'prolog' : rng.pick(SCRIPT_POOL); }));
   // Ukryty węzeł „?” w aktach 2-3 (zamiast losowego węzła środkowego rzędu).
   if (act >= 2 && act <= X.acts && rng.chance(X.secretChance)) {
     const row = rng.int(1, X.rows - 3), lanes = map[row].map((n, l) => (n ? l : -1)).filter((l) => l >= 0);
@@ -368,6 +373,7 @@ export function levelAt(act: number, row: number, m: MapNode, torment = 0): Leve
     flags: crowded(m.kind === 'hunt' ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.huntCrowd } : gentle ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.gentle.crowd, enemyDmg: (f.enemyDmg ?? 0) + X.gentle.dmg }
       : act === 1 && row === 1 && !boss && !torment ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.gentle.crowd * X.gentle.second, enemyDmg: (f.enemyDmg ?? 0) + X.gentle.dmg * X.gentle.second } : f, act),
     gentle,
+    script: m.script,
   };
 }
 

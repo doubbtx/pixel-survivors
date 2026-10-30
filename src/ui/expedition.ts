@@ -1,4 +1,5 @@
 import { W, H, type Renderer } from '../core/renderer';
+import { SCRIPT_BY_ID } from '../data/scripts';
 import type { Input, Action } from '../core/input';
 import { C } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
@@ -404,6 +405,9 @@ export class ExpeditionMapView {
         para(m.affinity.kind === 'weak' ? `Weak to ${en}: ${en} damage +${Math.round((X.weakMul - 1) * 100)}%` : `Resists ${en}: ${en} damage -${Math.round((1 - BAL.bossResist.mul) * 100)}%, its statuses and reactions blocked, +${X.resistReward}% loot`, m.affinity.kind === 'weak' ? C.lime : C.salmon);
         para(buildElements(run.elemDmg), C.lavender);
       }
+      // Scenariusz (0.56): nazwa i co czeka na mapie (decyzja przy wyborze trasy).
+      const sc = m.script ? SCRIPT_BY_ID[m.script] : null;
+      if (sc) para(`${tr('Plan')}: ${tr(sc.name)}. ${tr(sc.desc)}`, C.yellow);
       if (m.eliteMods) para(`Elites: ${m.eliteMods.map((k) => tr(ELITE_MODS[k].name)).join(' + ')}`, C.orange);
       // Węzły-wydarzenia: opis zasad (czym różnią się od zwykłej mapy) po informacjach, które zależą od buildu.
       if (m.kind === 'ambush' || m.kind === 'hunt' || m.kind === 'vault') para(kind.desc, kind.color);

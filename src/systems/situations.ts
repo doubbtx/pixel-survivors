@@ -37,12 +37,18 @@ interface SitDef {
   /** Pierścień wokół gracza (bez jednego kierunku): ostrzeżenie krąg, nie strzałka. */
   ring?: boolean;
   plan: (s: number, a: number) => Spot[];
+  /** Tylko z scenariusza mapy (data/scripts.ts), nie z losowania. */
+  scriptOnly?: boolean;
 }
 
 const at = (a: number, d: number): [number, number] => [Math.cos(a) * d, Math.sin(a) * d];
 const n = (base: number, grow: number, s: number) => Math.round(base + grow * s);
 
 const SITUATIONS: SitDef[] = [
+  // Uderzenia scenariuszy (0.56): rozstawienie liczy systems/scripts.ts, tu tylko nazwa i rodzaj ostrzeżenia.
+  { id: 'beat_swarm', name: 'Swarm', from: 0, ring: true, scriptOnly: true, plan: () => [] },
+  { id: 'beat_rush', name: 'Charge', from: 0, ring: true, scriptOnly: true, plan: () => [] },
+  { id: 'beat_shoot', name: 'Firing line', from: 0, scriptOnly: true, plan: () => [] },
   {
     // Mur tarcz: szereg tarczowników w poprzek kierunku, strzelcy za nimi — oskrzydlić albo przebić.
     id: 'shieldwall', name: 'Shield wall', from: 0,
@@ -149,14 +155,14 @@ export function updateSituations(run: Run, dt: number, waveT: number): void {
     // Nierozbita po `expire` s: „failed”, kolejna może przyjść.
     else if (run.totalTime - act.t0 > S.expire) { logSituation(run, 'failed'); run.sitActive = null; }
   }
-  if (run.scripted || run.levelInfo.ambush || run.levelEvent?.id === 'storm' || (run.bossSpawned && run.mode !== 'endless')) return;
+  if (run.scripted || run.levelInfo.script || run.levelInfo.ambush || run.levelEvent?.id === 'storm' || (run.bossSpawned && run.mode !== 'endless')) return;
   run.situationT -= dt;
   if (run.situationT > 0 || run.sitActive) return;
   const t = run.time;
   // Pierścień EVENTS tuż obok: odłóż (dwie formacje naraz to chaos, nie decyzja).
   if (EVENTS.some((ev) => Math.abs(ev.at - t) < S.eventGap)) { run.situationT = S.eventGap; return; }
   const biome = run.levelInfo.biome;
-  const pool = SITUATIONS.filter((d) => waveT >= d.from && (!d.biomes || d.biomes.includes(biome)) && d.id !== run.lastSituation);
+  const pool = SITUATIONS.filter((d) => !d.scriptOnly && waveT >= d.from && (!d.biomes || d.biomes.includes(biome)) && d.id !== run.lastSituation);
   if (!pool.length) { run.situationT = 10; return; }
   // Biomowe trochę częściej (tożsamość biomu), ogólne zawsze w puli.
   const def = rng.weighted(pool.map((d) => [d, d.biomes ? 1.4 : 1] as [SitDef, number]));
@@ -167,6 +173,13 @@ export function updateSituations(run: Run, dt: number, waveT: number): void {
   run.situation.spots = def.plan(scale, run.situation.a);
   run.lastSituation = def.id;
   run.showBanner(`${def.name}!`);
+  sfx.play('boss');
+}
+
+/** Uderzenie scenariusza jako sytuacja: zapowiedź (baner, strzałka albo krąg), potem formacja z `spots`. */
+export function startBeat(run: Run, id: string, a: number, spots: Spot[]): void {
+  run.situation = { id, t: BAL.situations.warn, a, spots };
+  run.showBanner(`${situationName(id)}!`);
   sfx.play('boss');
 }
 
@@ -182,7 +195,7 @@ function spawnSituation(run: Run, id: string, spots: Spot[]): void {
   }
   let count = 0, keys = 0;
   for (const s of spots) {
-    const e = spawnEnemy(run, s.id, p.x + s.dx, p.y + s.dy);
+    const e = spawnEnemy(run, s.id, p.x + s.dx, p.y + s.dy, { noChase: id.startsWith('beat_') });
     if (!e) continue;
     e.sit = uid;
     count++;

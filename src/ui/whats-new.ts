@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.57',
+    lines: [
+      "Scripted maps (prototype, Expedition act 1): every fight has a plan shown on the map (Prologue, Charge, Barrage). Instead of random situations you get planned moments: swarms, charges from several sides, a tough elite, a firing line, fire raining on the ground and a short moment of calm. Tell us how it plays!",
+    ],
+  },
+  {
     version: '0.55',
     lines: [
       "Auto-equip is smarter: it compares stats at the same item level (damage is no longer pushed out by HP late in a run), it only swaps for a clearly better new item (forged items get extra margin), it never puts on uniques or items you took off yourself, and a message tells you what was swapped.",
