@@ -153,8 +153,10 @@ export const BAL = {
      * `chaseExp` + `exp`, sufit pogoni `chaseMax` × `max`. Na Koszmarnej build 13× ponad podłogą (Takezo 61, 680K DPS
      * w akcie 3) dostaje HP wrogów ×1.15 od razu (w symulacji ×1.3 po ustaleniu się, bo więcej wrogów żyje), 50× ponad
      * podłogą ×1.35; build do 4× ponad podłogą (przeciętny bot, nowi gracze) bez zmian. Zwykła i Magiczna bez zmian.
+     * Sufit całego mnożnika (0.62, weteran: Koszmarna, akt 3, DPS 37M — mnożnik stał na 1000, zwykła mapa przechodzona
+     * w miejscu, miniboss Polowania w 3 s): `max` × `top[poziom]` + `topPerTorment` na poziom Udręki.
      */
-    tier: { knee: 4, exp: [0, 0, 0.06, 0.12] as number[], max: [1, 1, 1.25, 1.5] as number[], expPerTorment: 0.02, maxPerTorment: 0.05 },
+    tier: { knee: 4, exp: [0, 0, 0.06, 0.12] as number[], max: [1, 1, 1.25, 1.5] as number[], expPerTorment: 0.02, maxPerTorment: 0.05, top: [1, 1, 2, 4] as number[], topPerTorment: 0.4 },
   },
   /**
    * Sytuacje (systems/situations.ts, 0.39): pierwsza po `first` s czasu poziomu, potem co `every` s (po `lateAfter` s czasu fal
@@ -224,10 +226,12 @@ export const BAL = {
   /**
    * Odkrycia (0.61, data/unlocks.ts grantDiscovery): punkty za koniec runu (`run`), każdy ukończony akt Ekspedycji
    * (`act`) i co `endlessMin` minut Endless; co `every` punktów otwiera się najbliższa zablokowana zawartość.
+   * Pierwsze odkrycia tańsze (0.62, playtest: 4 przegrane runy bez żadnego odblokowania): n-te kosztuje `first[n]` punktów
+   * (n = ile zawartości już odblokowane, także z warunków), dalej `every` — nowy gracz dostaje coś po 1. i 2. runie.
    * Od startu otwarte: `goldPerTag` pierwszych złotych kart każdego tagu i `prism` pierwszych pryzmatycznych (data/cards.ts `cardLock`).
    */
   discovery: {
-    run: 1, act: 1, endlessMin: 5, every: 3, goldPerTag: 2, prism: 5,
+    run: 1, act: 1, endlessMin: 5, every: 3, first: [1, 1, 2] as number[], goldPerTag: 2, prism: 5,
     /** Progi warunków „w jednym runie” (data/unlocks.ts CONTENT); próg synergii = jej poziom (1 = 3 punkty, 2 = 6). */
     goals: { magnet: 25, laser: 40, reactions: 250, crits: 3000, heal: 2500, kills: 3000, synTier: 2, minesMin: 10 },
   },
@@ -499,7 +503,9 @@ export const BAL = {
     ambushGrow: 6,
     ambushEliteFrom: 4,
     huntLimit: 120,
-    huntHp: 1.5,
+    /** HP minibossa Polowania wg poziomu map (MAP_RARITY), +`huntHpPerTorment` na poziom Udręki (0.62, weteran: na Koszmarnej ginął w 3-7 s). */
+    huntHp: [1.5, 1.5, 2.25, 3] as number[],
+    huntHpPerTorment: 0.15,
     huntCrowd: -0.3,
     huntEscort: 2,
     arenaReward: 0.5,
@@ -531,6 +537,23 @@ export const BAL = {
     crowd: (act: number) => 0.5 + 0.25 * act,
     /** Pierwszy węzeł wyprawy (playtest 0.43.2: gracze i boty ginęli tu w 50-100 s): cel zabójstw, mniej wrogów (enemyCount), cisza bez sytuacji, zadań i wydarzeń (s), pierwsza elita (s). */
     gentle: { kills: 300, crowd: -0.5, dmg: -0.35, quiet: 90, stagger: 20, elite: 60, second: 0.5 },
+    /**
+     * Rampa aktu 1 (0.62, playtest: nowicjusz ginie na 1. mapie, mapy 2-3 to ściana). W akcie 1 głębokość rośnie od 1 do 4,
+     * a mnożnik obrażeń wrogów (enemyDmgMul × depthDmgMul × power.dmg) z ok. 0.7 na 1. mapie do ok. 5 na 3. mapie i 28
+     * u bossa — od głębokości 3 prawie każde trafienie zatrzymuje się na limicie BAL.hitCap (40% maks. HP). Na niskich
+     * poziomach map (wiersz = indeks MAP_RARITY, bez Udręki) ten mnożnik ma sufit `cap[poziom][rząd]` (LevelDef.dmgCap;
+     * ostatni = boss aktu, bazowe obrażenia bossa są 5× większe niż Oka) i mniejszy tłum `crowd[poziom][rząd]` (enemyCount,
+     * nigdy słabszy niż łagodny start). Na Zwykłej trafienie Oka to najwyżej ok. 3% HP na 1. mapie, 4% na 2., 8-11% na 3.-4.,
+     * 13-15% na 5.-6., pocisk bossa ok. 18%. Mniej strzelców `shooters[poziom][rząd]` (flaga shooters: waga strzelców w falach
+     * i liczebność linii strzelców scenariusza; boty: 75-100% obrażeń na początku to pociski) i leczenie `heal[poziom]` maks. HP
+     * po każdej ukończonej mapie aktu (bot: wchodził na 2. mapę z 7-50% HP, bez leczenia między mapami). Rzadka i wyżej: bez zmian.
+     */
+    ramp: {
+      cap: [[0.6, 0.7, 1.2, 1.6, 2.1, 2.6, 0.7], [1, 1.6, 3, 4, 5.5, 7, 1.4]] as number[][],
+      crowd: [[-0.5, -0.4, -0.3, -0.2, -0.1, -0.1, 0], [-0.5, -0.25, -0.15, -0.1, 0, 0, 0]] as number[][],
+      shooters: [[-0.6, -0.6, -0.5, -0.35, -0.2, -0.1, 0], [-0.4, -0.25, -0.15, -0.1, 0, 0, 0]] as number[][],
+      heal: [0.3, 0.15] as number[],
+    },
     /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */
     waveOffsetPerDepth: 50,
     /** Elity w węźle elity pojawiają się co eliteEvery × ten mnożnik. */
@@ -622,6 +645,12 @@ export const BAL = {
   enemyBulletSoftCap: 320,
   /** Twardy limit (salwy w toku obcinane; walka z bossem bez limitu). */
   enemyBulletHardCap: 400,
+  /**
+   * Limit pocisków na niskich poziomach map Ekspedycji (0.62, playtest: 60-140 pocisków na 2.-3. mapie aktu 1 przy Zwykłej):
+   * `base` + `perDepth` × (głębokość - 1), × `tiers[poziom MAP_RARITY]`, najwyżej enemyBulletSoftCap (twardy limit w tej
+   * samej proporcji). Rzadka i wyżej, Udręka, Endless i bossowie aktów: bez zmian.
+   */
+  bulletRamp: { base: 40, perDepth: 35, tiers: [1, 1.5] as number[] },
   /** R4 (0.45): drugie ultimate — liczby (parametry z poziomu ulta: damage, radius, duration, count, blast, dist). */
   altUlt: {
     falconLen: 300, falconW: 10, falconFocus: 0.02,

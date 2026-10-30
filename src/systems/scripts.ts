@@ -90,16 +90,20 @@ function fireBeat(run: Run, beat: Beat): void {
     }
     case 'rush': {
       // Szarża z `sides` stron (kąty losowe, odstęp co najmniej 60°).
-      const k = beat.sides ?? 2, per = Math.round(6 * size), id = rng.pick(foes('rush'));
+      // Rampa aktu 1 (LevelDef.dmgCap): bez całych grup kamikaze (wybuch ×2.5 obrażeń), co szósty zamiast co trzeciego.
+      const ramp = run.levelInfo.dmgCap !== undefined, every = ramp ? 6 : 3;
+      const pool = foes('rush').filter((f) => !ramp || f !== 'kamikaze');
+      const k = beat.sides ?? 2, per = Math.round(6 * size), id = rng.pick(pool.length ? pool : foes('rush'));
       for (let s = 0; s < k; s++) {
         const a = a0 + (s / k) * Math.PI * 2 + rng.range(-0.3, 0.3);
-        for (let i = 0; i < per; i++) { const [dx, dy] = at(a + rng.range(-0.15, 0.15), 185 + i * 8); spots.push({ id: i % 3 === 2 ? 'kamikaze' : id, dx, dy }); }
+        for (let i = 0; i < per; i++) { const [dx, dy] = at(a + rng.range(-0.15, 0.15), 185 + i * 8); spots.push({ id: i % every === every - 1 ? 'kamikaze' : id, dx, dy }); }
       }
       break;
     }
     case 'shoot': {
       // Linia strzelców z jednej strony, prostopadle do kierunku na gracza: trzeba podejść albo obejść.
-      const m = Math.max(3, Math.round(6 * size)), id = rng.pick(foes('shoot'));
+      // Rampa aktu 1 (flaga shooters): krótsza linia.
+      const m = Math.max(3, Math.round(6 * size * (1 + Math.min(0, run.flag('shooters'))))), id = rng.pick(foes('shoot'));
       const [cx, cy] = at(a0, 150), px = -Math.sin(a0), py = Math.cos(a0);
       for (let i = 0; i < m; i++) { const o = (i - (m - 1) / 2) * 16; spots.push({ id, dx: cx + px * o, dy: cy + py * o, mark: true }); }
       break;

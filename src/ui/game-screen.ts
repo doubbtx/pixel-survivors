@@ -46,7 +46,7 @@ import { PowerPickView } from './powers';
 import { RelicPickView } from './relics';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { Tutorial } from '../game/tutorial';
-import { grantUnlocks, grantDiscovery, discoveryLeft, maxTier, unlocked, type UnlockCtx, type UnlockDef } from '../data/unlocks';
+import { grantUnlocks, grantDiscovery, discoveryCost, discoveryLeft, maxTier, unlocked, type UnlockCtx, type UnlockDef } from '../data/unlocks';
 import { heroSkins } from '../data/pacts';
 import { FEAT_BY_ID } from '../data/feats';
 import { featsOnWin } from '../systems/feats';
@@ -342,6 +342,9 @@ export class GameScreen implements Screen {
       if (ex.blessing && --ex.blessing.maps <= 0) ex.blessing = null;
       if (m.kind !== 'dungeon') ex.camp = null;
       this.updateRecords();
+      // Rampa aktu 1 (BAL.expedition.ramp.heal): na niskich poziomach map część życia po każdej mapie.
+      const heal = ex.act === 1 && !ex.torment && m.kind !== 'boss' ? BAL.expedition.ramp.heal[ex.tier ?? 0] ?? 0 : 0;
+      if (heal) run.heal(run.stats.maxHp * heal);
       if (m.kind === 'boss') {
         featsOnWin(run);
         this.unlock({ boss: true, acts: ex.act });
@@ -1166,7 +1169,7 @@ export class GameScreen implements Screen {
     if (run.flag('revive') > 0) info.push([`${tr('Revives used on this map')}: ${run.revivesUsed}/${run.flag('revive')}`, C.orange]);
     if (this.unlockedRun.length) info.push([`Unlocked: ${this.unlockedRun.map((u) => u.name).join(', ')}`, C.lime]);
     // Odkrycia (0.61): ile punktów do następnej zablokowanej zawartości (data/unlocks.ts grantDiscovery).
-    if (!this.tut && discoveryLeft(this.app.save)) info.push([tr(`Next discovery: ${this.app.save.discovery ?? 0}/${BAL.discovery.every}`), C.cyan]);
+    if (!this.tut && discoveryLeft(this.app.save)) info.push([tr(`Next discovery: ${this.app.save.discovery ?? 0}/${discoveryCost(this.app.save)}`), C.cyan]);
     info.forEach(([t, col], i) => drawText(g, t, W / 2, 69 + i * 10, col, { align: 'center', shadow: C.black }));
     // Panel zakładek zaczyna się tuż pod liniami informacji (bez pustego pasa, gdy ich nie ma).
     this.endY = 88 + info.length * 10;
