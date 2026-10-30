@@ -848,15 +848,19 @@ export function updateEnemies(run: Run, dt: number): void {
         const seen = e.boss || (e.x > run.camX - BAL.shootMargin && e.x < run.camX + VIEW_W + BAL.shootMargin && e.y > run.camY - BAL.shootMargin && e.y < run.camY + VIEW_H + BAL.shootMargin);
         if (e.shootT <= 0 && !seen) e.shootT = 0.3;
         else if (e.shootT <= 0 && run.bullets.count < BAL.enemyBulletSoftCap) {
-          if (sh && dist < sh.range) {
+          const inRange = !!sh && dist < sh.range, ring = e.extraRing && dist < 170;
+          if (sh && inRange) {
             shoot(run, e, sh, dmg);
             if (e.def.behavior === 'keep' && dist < (e.def.keepDist ?? 80) * BAL.press.near) e.pressT = BAL.press.t;
             e.burstLeft = (sh.burst ?? 1) - 1;
             e.burstT = sh.burstGap ?? 0.2;
           }
-          if (e.extraRing && dist < 170) fireVolley(run, e.x, e.y, ELITE_FLOWER, rng.range(0, TAU), dmg);
+          if (ring) fireVolley(run, e.x, e.y, ELITE_FLOWER, rng.range(0, TAU), dmg);
           e.shootT = sh ? sh.cooldown : 2.5;
           if (e.extraRing && sh) e.shootT = Math.max(sh.cooldown, 1.2);
+          // Poza zasięgiem nie zużywa odnowienia (0.60: strzelec żyjący ~1 s czekał pełne 2.6-4.5 s i nie strzelał wcale);
+          // ponowna próba tuż po zapowiedzi, więc miganie przed strzałem trwa całe `windup`.
+          if (!inRange && !ring) e.shootT = (sh?.windup ?? 0) + 0.3;
         }
       }
       if (e.elite && !e.hidden && e.def.behavior !== 'warden' && e.def.behavior !== 'flee') eliteAbility(run, e, dt, nx, ny, dist);

@@ -140,8 +140,10 @@ export const BAL = {
     floor: (level: number) => Math.pow(1.06, Math.max(0, level - 12)),
     chaseExp: 0.5,
     chaseMin: 0.45,
-    chaseMax: 8,
-    max: 300,
+    // 0.60: sufit 300 / pogoń 8 → 1000 / 12 — od aktu 3 mnożnik stał na suficie przy DPS 50-100× wyższym, wrogowie
+    // ginęli na pierścieniu pojawiania (poza kadrem), a akty 3-4 były łatwiejsze niż akt 2.
+    chaseMax: 12,
+    max: 1000,
     dmg: (depth: number, t: number) => Math.min(6.3, Math.pow(2, depth - 1) * (depth <= 1 ? Math.min(1.6, 1 + t / 300) : Math.min(2, 1 + t / 120))),
     levelHp: 0.01,
     levelDmg: 0.012,
@@ -176,9 +178,9 @@ export const BAL = {
     margin: 0.08, perUpg: 0.5,
     melee: { kinds: ['aura', 'orbit', 'cleave', 'lash', 'nova'] as string[], w: { area: 1.4, duration: 0.9 } as Partial<Record<keyof Stats, number>> },
   },
-  /** Limit pojedynczego trafienia gracza jako ułamek maks. HP (0.59): `base`, +`perTorment` na poziom Udręki, do `max`. */
   /** Odrodzenie (Feniks i inne): nietykalność (s) i promień, w którym zwykli wrogowie giną, a pociski znikają. */
   revive: { iframes: 3, r: 130 },
+  /** Limit pojedynczego trafienia gracza jako ułamek maks. HP (0.59): `base`, +`perTorment` na poziom Udręki, do `max`. */
   hitCap: { base: 0.4, perTorment: 0.04, max: 0.8 },
   trance: { min: 3, taken: 0.15, killHeal: 0.002 },
   /** Zasięg wyboru celu broni naprowadzanych (było 200 / 170): strzelają do wrogów bliżej, nie z drugiego końca ekranu. */
@@ -199,6 +201,8 @@ export const BAL = {
   /** Bronie 0.43: Kości (szansa szóstki: baza + Szczęście × sixLuck, maks. sixMax) i budżet leczenia Sierpa krwi (ułamek maks. HP na sekundę). */
   dice: { six: 1 / 6, sixLuck: 1 / 8, sixMax: 0.5, low: 0.5, high: 1.6, blast: 0.5, blastR: 20, coinEvery: 1 },
   drainPerSec: 0.015,
+  /** Kradzież życia (0.60): osobny budżet, ułamek maks. HP na sekundę; wcześniej 2% za każde trafienie = kilka pasków HP na s. */
+  lifestealPerSec: 0.04,
   /** Piętno Aurela (0.43): leczenie za trafienie napiętnowanego (ułamek maks. HP, w budżecie drainPerSec; do Wiary liczy się `faith` leczenia), maks. czas, przedłużanie w Uświęconej ziemi (s/s), tarcza Opiekuna za napiętnowanego w `guardR`, wybuch Włóczni świtu. */
   brand: { heal: 0.004, faith: 0.5, max: 12, shieldCap: 0.1, sanct: 1.5, guardR: 120, shieldPer: 0.02, boom: 0.6, boomR: 24, speed: 260, life: 0.6, width: 9 },
   relics: { max: 3, offer: 3, prismWeak: 2.25, prismResist: 0.25, huntElite: 0.4, huntRegular: 0.1, cloakTime: 1, cloakCd: 8, cloakHp: 0.75, maceTime: 6, maceDmgLoss: 0.15, turncoatHp: 1.5, turncoatAura: 0.5, hornWindow: 15, chaliceHeal: 0.15, bossDmg: 1.25, shopMarkup: 1.25 },

@@ -95,7 +95,7 @@ const nth = (st: Record<string, number>, key: string, n: number) => (st[key] = (
 export const AWAKENINGS: Record<ItemKind, AwakenDef> = {
   weapon: {
     name: 'Przebudzony cios', desc: (v) => `co 10. trafienie zadaje dodatkowo ${v * 100}% obrażeń`,
-    hooks: { onHit: (run, e, dmg, _c, v) => { if (nth(run.cardState, 'awk.weapon', 10)) run.damageEnemy(e, dmg * v, 'Przebudzenie'); } },
+    hooks: { onHit: (run, e, dmg, _c, v) => { if (nth(run.cardState, 'awk.weapon', 10)) run.damageEnemy(e, dmg * v, 'Przebudzenie', { proc: true }); } },
   },
   helmet: { name: 'Czujność', desc: (v) => `co ${30 / v} s pierwsze trafienie w ciebie jest blokowane`, flags: (v) => ({ aegis: 30 / v }) },
   armor: {

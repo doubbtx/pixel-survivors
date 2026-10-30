@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.59.0)
+## Stan (wersja 0.60.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -790,6 +790,17 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   w hurtPlayer; `BAL.revive` (3 s, promień 130: zwykli wrogowie giną, pociski znikają); automat nie zdejmuje super/unikatów;
   karty ultów h_k_rain/h_i_inferno/h_v_dance/h_a_judge `ult: 'base'`; ekran końca: karty w rzędzie broni przy niskim panelu,
   sekrety tłumaczone, wiersze Obrażeń wg wysokości, linia odrodzeń.
+- 0.60.0 (gracz: Ekspedycja Takezo „prawie bez ruchu”; agenci: pomiar zagrożenia przy bezruchu, skalowanie obrażeń, UI):
+  w `damageEnemy` trafienia `secondary` (PCT_SOURCES, reakcje z REACTION_COL, `DamageOpts.proc`: Krytyczna masa, Echo ciosu,
+  Gniew burzy, Przebudzenie) bez krytyka i bez onHit; `Run.chainKill()` — zabity źródłem procentowym nie wybucha ponownie
+  (Wybuchowe zgony, Ognista dusza, Synergia: Ogień); usunięte `pctDepth`. Sym: Wybuchowe zgony 290-530 → ~3 zabójstw/s,
+  do pogoni 5% → 85-94%. `BAL.lifestealPerSec` 0.04 (`Run.stealLeft`, bez DoT). Strzelec poza zasięgiem: ponowna próba po
+  `windup + 0.3` zamiast pełnego odnowienia. `BAL.power` max 300 → 1000, chaseMax 8 → 12. Odrodzenie nie zabija elit ani
+  minibossów ('warden'). UI: ekran końca i pauza (Build) bez „+N” — pełne listy z `Scroll`, opis pod kursorem/dotykiem
+  (`drawTip`/`Tip` w widgets.ts, `itemTip` w items.ts), wykres DPS w skali log. Zasada: zamiast ucinać do „+N” przewijanie
+  i podpowiedź. Pomiar (bot stojący od aktu 2, nieśmiertelny): śmierci w akcie 2 0-12 → ~155; akt 3 przeciętnego buildu
+  już nie bez trafień; bardzo mocne buildy dalej czyszczą poza kadrem (dalej: presja niezależna od tempa zabijania).
+  Test w worktree: `node_modules` musi być prawdziwy (junction → Vite 403 na czcionce).
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula
