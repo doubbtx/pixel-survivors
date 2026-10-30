@@ -813,6 +813,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   pokazują warunek, ekran końca „Next discovery x/3”. Zapis v12 (migracja 11 → 12: kto grał, dostaje wszystko).
 - 0.61.1: menu główne — wariant kafelka łąki liczony z kolumny przesuniętego świata (`menuBackdrop`, `col`); wcześniej co TILE
   pikseli wszystkie kafelki wracały do poprzedniego wzoru i trawa przeskakiwała.
+  Salwy `fan` / `shotgun` przy zagęszczaniu (`patternDensity`, `bulletDensity`) zachowują parzystość `count` (fireVolley): wachlarz
+  Oka z 3 robił się 4 pociskami bez środkowego i stojący gracz nie dostawał trafień od ok. 6. minuty mapy i na Udręce.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`

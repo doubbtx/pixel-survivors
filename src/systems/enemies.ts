@@ -20,7 +20,10 @@ const RELOCATE_DIST = 330;
  */
 export function fireVolley(run: Run, x: number, y: number, v: Volley, base: number, damage: number): void {
   // W późnej grze salwy są gęstsze (BAL.patternDensity); pierścień z luką zachowuje lukę.
-  const n = Math.round(v.count * (BAL.patternDensity(run.waveTime()) + run.flag('bulletDensity')));
+  let n = Math.round(v.count * (BAL.patternDensity(run.waveTime()) + run.flag('bulletDensity')));
+  // Wachlarz i strzał śrutem zachowują parzystość z definicji (0.61.1): z 3 robiło się 4 pociski, środkowy znikał i w gracza
+  // leciała luka — stojący gracz nie dostawał od Oka ani jednego trafienia.
+  if ((v.shape === 'fan' || v.shape === 'shotgun') && n % 2 !== v.count % 2) n++;
   const gap = v.shape === 'gapRing' ? v.gap ?? 3 : 0;
   for (let i = 0; i < n; i++) {
     // Pierścień z luką: pomijamy pociski najbliżej kąta bazowego (po obu stronach).
