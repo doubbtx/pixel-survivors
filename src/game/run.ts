@@ -101,6 +101,8 @@ export interface DamageOpts {
 }
 
 const ELEMENT_LIST: Element[] = ['fire', 'ice', 'lightning', 'poison'];
+/** Ile sekund trafień w gracza pamięta `Run.hitLog` (ochrona przed wybuchem obrażeń i podsumowanie śmierci). */
+export const HIT_LOG = 3;
 /** Kolory liczb obrażeń reakcji żywiołów (po nazwie źródła). */
 const REACTION_COL: Record<string, number> = { 'Para': C.lgray, 'Wybuch toksyn': C.lime, 'Przeciążenie': C.orange };
 
@@ -159,6 +161,8 @@ export interface RunSnapshot {
   bonus: Partial<Stats>;
   basicWeaponId: string;
   dmgBySource: [string, number][];
+  /** Obrażenia otrzymane wg źródła (od 0.62). */
+  taken?: [string, number][];
   cardState: Record<string, number>;
   /** Ekwipunek (od wersji 0.4; starsze zapisy go nie mają). */
   equipment?: Record<SlotId, Item | null>;
@@ -261,8 +265,8 @@ export class Run {
   levelEvent: { id: LevelEventId; t: number } | null = null;
   levelEventT: number = BAL.levelEvents.every * 0.6;
   /** Uderzenia w zaznaczone kręgi: pioruny burzy (ranią wszystkich) i deszcz żaru bossa (`foe` = obrażenia tylko dla gracza). */
-  /** Zaznaczone kręgi uderzeń: piorun burzy, ogień bossa (`foe`), nasiona Cierniaka (`seed`: mniejszy, zielony wybuch). */
-  strikes: { x: number; y: number; t: number; foe?: number; seed?: boolean; r?: number }[] = [];
+  /** Zaznaczone kręgi uderzeń: piorun burzy, ogień bossa (`foe`), nasiona Cierniaka (`seed`: mniejszy, zielony wybuch); `src` = kto rzucił (ekran końca). */
+  strikes: { x: number; y: number; t: number; foe?: number; seed?: boolean; r?: number; src?: string }[] = [];
   stormT = 0;
   combo = 0;
   /** Wyróżnienia runu (0.33, ekran końca): najdłuższe kombo, najlepsza seria zabójstw, najmocniejsze trafienie. */
@@ -270,6 +274,12 @@ export class Run {
   bestStreak = 0;
   maxHit = 0;
   maxHitSrc = '';
+  /** Obrażenia otrzymane wg źródła (0.62, ekran końca): wróg jak w bestiariuszu, boss po nazwie, „Kolce”, „Burza”... */
+  takenBySource = new Map<string, number>();
+  /** Trafienia z ostatnich HIT_LOG s (czas runu, źródło, obrażenia): ochrona przed wybuchem (BAL.burst) i podsumowanie śmierci. */
+  private hitLog: { t: number; src: string; dmg: number }[] = [];
+  /** Śmiertelny cios (ekran końca): źródło, jego obrażenia, liczba trafień i suma obrażeń z ostatnich HIT_LOG s. */
+  killedBy: { src: string; dmg: number; hits: number; recent: number } | null = null;
   /** Seria zabójstw: liczba i czas ostatniego zabójstwa; krok ostatniego efektu krytyka (limit efektów w tłumie). */
   streakN = 0;
   streakT = -9;
@@ -352,6 +362,8 @@ export class Run {
   featsNew: FeatId[] = [];
   featsLevel: FeatId[] = [];
   lastHurtAt = -999;
+  /** Czas runu, do którego pierścień ochrony przed wybuchem obrażeń się nie powtarza (jeden na okno BAL.burst.window). */
+  private burstFxAt = 0;
   lore: Record<string, number> = {};
   killsById: Record<string, number> = {};
   /** Leczenie: suma w runie, zebrane od ostatniej liczby nad postacią, poświata paska HP. */
@@ -1966,7 +1978,11 @@ export class Run {
     return n >= BAL.trance.min;
   }
 
-  hurtPlayer(base: number, bullet?: { x: number; y: number; vx: number; vy: number }): boolean {
+  /**
+   * Trafienie gracza. `src` = źródło do podsumowania na ekranie końca (wróg jak w bestiariuszu, boss po nazwie poziomu,
+   * „Kolce”, „Burza”...); `bullet` = pocisk wroga (Mikiri może go odbić).
+   */
+  hurtPlayer(base: number, src: string, bullet?: { x: number; y: number; vx: number; vy: number }): boolean {
     const p = this.player;
     if (this.outcome !== 'none' || p.iframes > 0) return false;
     if (this.tryParry(bullet)) return false;
@@ -1992,10 +2008,27 @@ export class Run {
     let dmg = trance * base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this) * (this.inBanner && !this.relic('turncoat') ? 1 + BAL.eliteTraits.bannerTaken : 1);
     // Limit jednego trafienia (0.59, gracz: boss aktu 1 zabił na hita szklany build): najwyżej ułamek maks. HP,
     // na Udręce wyżej (BAL.hitCap). Kara za szklany build zostaje (2–3 trafienia), bez śmierci w jednej klatce.
-    const H = BAL.hitCap, cap = Math.min(H.max, H.base + H.perTorment * (this.expedition?.torment ?? 0));
+    const torment = this.expedition?.torment ?? 0, H = BAL.hitCap, cap = Math.min(H.max, H.base + H.perTorment * torment);
     dmg = Math.min(dmg, this.stats.maxHp * cap);
+    // Ochrona przed wybuchem obrażeń (BAL.burst, 0.62): ponad próg z ostatniego okna wchodzi tylko część nadwyżki.
+    // Pierścień wokół bohatera mówi „uciekaj”, zanim seria dobije.
+    const now = this.totalTime, B = BAL.burst, lim = this.stats.maxHp * Math.min(B.max, B.frac + B.perTorment * torment);
+    while (this.hitLog.length && this.hitLog[0].t < now - HIT_LOG) this.hitLog.shift();
+    let recent = 0;
+    for (const h of this.hitLog) if (h.t > now - B.window) recent += h.dmg;
+    if (recent + dmg > lim) {
+      const free = Math.max(0, lim - recent);
+      dmg = free + (dmg - free) * B.over;
+      if (now >= this.burstFxAt) {
+        this.burstFxAt = now + B.window;
+        const f = this.addFx('ring', p.x, p.y, C.white, 0.3);
+        if (f) f.r = 16;
+      }
+    }
     const total = dmg;
     this.takenTotal += total;
+    this.takenBySource.set(src, (this.takenBySource.get(src) ?? 0) + total);
+    this.hitLog.push({ t: now, src, dmg: total });
     const absorbed = Math.min(p.shield, dmg);
     p.shield -= absorbed;
     dmg -= absorbed;
@@ -2042,6 +2075,7 @@ export class Run {
         return true;
       }
       p.hp = 0;
+      this.killedBy = { src, dmg: total, hits: this.hitLog.length, recent: this.hitLog.reduce((a, h) => a + h.dmg, 0) };
       this.outcome = 'dead';
       this.outcomeT = 1.8;
       this.burst(p.x, p.y, C.red, 50, 80);
@@ -2260,7 +2294,7 @@ export class Run {
       rerolls: this.rerolls, skips: this.skips, banishes: this.banishes, cardRerolls: this.cardRerolls,
       banished: [...this.banished], ultCharge: this.ultCharge, ultUses: this.ultUses,
       bonus: { ...this.bonus }, basicWeaponId: this.basicWeaponId,
-      dmgBySource: [...this.dmgBySource.entries()], cardState: { ...this.cardState },
+      dmgBySource: [...this.dmgBySource.entries()], taken: [...this.takenBySource.entries()], cardState: { ...this.cardState },
       equipment: { ...this.equipment }, bag: [...this.bag],
       shop: this.shop, elixirsBought: this.elixirsBought, shards: this.shards, healed: this.healed, shopLevel: this.shopLevel, anvilLevel: this.anvilLevel,
       abilityEvo: (Object.keys(ab) as AbilitySlot[]).filter((k) => ab[k].def.evolved),
@@ -2311,6 +2345,7 @@ export class Run {
     run.bonus = { ...s.bonus };
     run.basicWeaponId = s.basicWeaponId;
     run.dmgBySource = new Map(s.dmgBySource);
+    run.takenBySource = new Map(s.taken ?? []);
     run.cardState = { ...s.cardState };
     run.pacts = { ...s.pacts };
     run.mats = { ...run.mats, ...s.mats };
@@ -2392,7 +2427,7 @@ function newProjectile(): Projectile {
 }
 
 function newBullet(): EnemyBullet {
-  return { _i: -1, x: 0, y: 0, vx: 0, vy: 0, life: 0, damage: 0, radius: 2, sprite: 'eb_red', acc: 0, minV: 0, turn: 0, wave: 0, t: 0 };
+  return { _i: -1, x: 0, y: 0, vx: 0, vy: 0, life: 0, damage: 0, radius: 2, sprite: 'eb_red', acc: 0, minV: 0, turn: 0, wave: 0, t: 0, src: '' };
 }
 
 function newZone(): Zone {

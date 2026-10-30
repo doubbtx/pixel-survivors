@@ -9,7 +9,7 @@ import { drawSprite } from '../gfx/sprites';
 import { passiveIcon, PASSIVE_BY_ID } from '../data/passives';
 import { CARD_BY_ID } from '../data/cards';
 import { BAL } from '../data/balance';
-import { Run, type Mode, type RunSnapshot } from '../game/run';
+import { Run, HIT_LOG, type Mode, type RunSnapshot } from '../game/run';
 import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
@@ -769,10 +769,15 @@ export class GameScreen implements Screen {
         const owed = run.pendingLevels + run.pendingCards.length + run.pendingPowers + run.pendingLoot.length + run.pendingRelics;
         if (run.outcome === 'none' && run.step % 300 === 0 && !owed) this.saveSlot(true);
         if (run.outcome === 'dead') {
+          // Gracz zwykle jeszcze wciska unik / ult: ekran końca nie przyjmuje ich jako potwierdzenia (Input.guardCombat).
+          inp.guardCombat(END_GUARD);
           if (run.outcomeT <= 0) this.onRunOver();
         } else if (run.outcome === 'victory' && run.outcomeT > 0) {
           // chwila na "Boss pokonany!" zanim pojawią się nagrody
-        } else if (!this.openPending() && run.outcome === 'victory') {
+        } else if (this.openPending()) {
+          // Nagroda w środku walki: unik (Spacja / A) i ult (R) nie wybierają karty ani nie zużywają losowania.
+          inp.guardCombat(REWARD_GUARD);
+        } else if (run.outcome === 'victory') {
           this.onLevelCleared();
         }
         break;
@@ -1124,7 +1129,7 @@ export class GameScreen implements Screen {
 
   /** Przewijany obszar zakładki ekranu końca (Obrażenia: pod nagłówkiem kolumn, który stoi w miejscu). */
   private endArea(): [number, number, number, number] {
-    const top = this.endPage === 1 ? 17 : 2;
+    const top = this.endPage === 1 || this.endPage === 2 ? 17 : 2;
     return [END_X + 2, this.endY + top, END_W - 4, this.endH - top - 2];
   }
 
@@ -1161,6 +1166,12 @@ export class GameScreen implements Screen {
     const feats = [...new Set(run.featsRun)].map((id) => FEAT_BY_ID[id].name).join(', ');
     const essence = `+${fmt(this.essence)} esencji dla: ${run.hero.name} (Rozwój w menu głównym)`;
     const info: [string, number][] = [[modeLine, C.lgray], [essence, C.cyan]];
+    // Przyczyna śmierci (0.62, playtest: „nie wiem, co mnie zabiło”): śmiertelny cios i seria trafień z ostatnich HIT_LOG s.
+    const k = run.outcome === 'dead' ? run.killedBy : null;
+    if (k) {
+      const pct = Math.round((100 * k.dmg) / Math.max(1, run.stats.maxHp));
+      info.unshift([tr(`Killed by: ${tr(k.src)}, last hit -${fmt(Math.ceil(k.dmg))} HP (${pct}% of max HP), last ${HIT_LOG} s: ${k.hits} hits, -${fmt(Math.ceil(k.recent))} HP`), C.salmon]);
+    }
     if (feats) info.push([`Wyczyny: ${feats}`, C.gold]);
     // Odrodzenia (Feniks, Niezłomny, Popiół feniksa): ile zużyto na tej mapie — 0.59, gracz nie zauważył, że Feniks zadziałał wcześniej.
     if (run.flag('revive') > 0) info.push([`${tr('Revives used on this map')}: ${run.revivesUsed}/${run.flag('revive')}`, C.orange]);
@@ -1179,10 +1190,11 @@ export class GameScreen implements Screen {
     panel(r, END_X, this.endY, END_W, this.endH);
     if (this.endPage === 0) this.renderHighlights();
     else if (this.endPage === 1) this.renderDamage();
-    else if (this.endPage === 2) this.renderDpsGraph();
+    else if (this.endPage === 2) this.renderTaken();
+    else if (this.endPage === 3) this.renderDpsGraph();
     else this.renderBuild();
     this.endMenu.render(r);
-    if (this.endPage === 3 && this.endTip) drawTip(r, ...this.endTip);
+    if (this.endPage === 4 && this.endTip) drawTip(r, ...this.endTip);
   }
 
   /**
@@ -1256,6 +1268,27 @@ export class GameScreen implements Screen {
       drawText(g, fmt(dmg), x1 - 110, y, C.gold, { align: 'right' });
       drawText(g, `${Math.round((100 * dmg) / total)}%`, x1 - 55, y, C.lgray, { align: 'right' });
       drawText(g, fmt(dmg / Math.max(1, run.totalTime)), x1, y, C.lgray, { align: 'right' });
+    });
+    this.endScroll.end(r, all.length * 11 + 4, ...area);
+  }
+
+  /** Ekran końca (0.62): obrażenia otrzymane wg źródła (po pancerzu, z tarczą), udział i pasek; źródło śmiertelnego ciosu na czerwono. */
+  private renderTaken(): void {
+    const r = this.app.r, g = r.g, run = this.run, x0 = END_X + 12, x1 = END_X + END_W - 12;
+    drawText(g, 'Źródło obrażeń', x0, this.endY + 6, C.lavender);
+    drawText(g, 'Suma', x1 - 55, this.endY + 6, C.lavender, { align: 'right' });
+    drawText(g, 'Udział', x1, this.endY + 6, C.lavender, { align: 'right' });
+    const all = [...run.takenBySource.entries()].sort((a, b) => b[1] - a[1]);
+    const area = this.endArea();
+    if (!all.length) { drawText(g, 'No damage taken', W / 2, area[1] + 16, C.lavender, { align: 'center' }); return; }
+    const total = all.reduce((sum, x) => sum + x[1], 0) || 1, best = all[0][1] || 1, killer = run.outcome === 'dead' ? run.killedBy?.src : undefined;
+    const oy = this.endScroll.begin(r, ...area);
+    all.forEach(([name, dmg], i) => {
+      const y = area[1] + 2 + i * 11 - oy;
+      bar(r, x0 + 150, y + 2, 160, 5, dmg / best, RAMP.red);
+      drawText(g, name, x0, y, name === killer ? C.salmon : C.white);
+      drawText(g, fmt(Math.ceil(dmg)), x1 - 55, y, C.salmon, { align: 'right' });
+      drawText(g, `${Math.round((100 * dmg) / total)}%`, x1, y, C.lgray, { align: 'right' });
     });
     this.endScroll.end(r, all.length * 11 + 4, ...area);
   }
@@ -1386,10 +1419,16 @@ const HINT_BOX: Partial<Record<string, HintBox>> = {
 };
 
 /** Zakładki ekranu końca runu i panel pod nimi. */
-const END_TABS = ['Highlights', 'Obrażenia', 'Wykres DPS', 'Build'];
+const END_TABS = ['Highlights', 'Obrażenia', 'Damage taken', 'Wykres DPS', 'Build'];
 const END_X = 12, END_W = W - 24, END_BOTTOM = 210;
 /** Ekran końca przyjmuje wejście po chwili: gracz zwykle jeszcze wciska unik (Spacja / A = też potwierdzenie). */
 const END_DELAY = 0.6;
+/**
+ * Blokada klawiszy wspólnych z walką (s, core/input.ts guardCombat) na ekranach otwieranych z walki: koniec runu (liczona
+ * od ostatniej klatki animacji śmierci, więc obejmuje END_DELAY) i nagrody (obejmuje OVERLAY_DELAY). Spam ją przedłuża.
+ */
+const END_GUARD = 1.5;
+const REWARD_GUARD = 0.6;
 /** Bufor naciśnięć umiejętności w zatrzymaniu klatki i opóźnieniu nakładki (s). */
 const CAST_BUFFER = 0.15;
 const CAST_KEYS: Action[] = ['q', 'e', 'dash', 'ult'];

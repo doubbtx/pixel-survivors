@@ -879,6 +879,11 @@ export const PL: Record<string, string> = {
   "Locked ({}/{}): {}": "Zablokowane ({}/{}): {}",
   "Locked: evolve this weapon once (its first evolution) to unlock the variants.": "Zablokowane: zewoluuj tę broń raz (pierwsza ewolucja), by odblokować warianty.",
   "Next discovery: {}/{}": "Następne odkrycie: {}/{}",
+  "Damage taken": "Otrzymane",
+  "No damage taken": "Bez otrzymanych obrażeń",
+  "Killed by: {}, last hit -{} HP ({}% of max HP), last {} s: {} hits, -{} HP": "Zabił cię: {}, ostatni cios -{} HP ({}% maks. HP), ostatnie {} s: {} trafień, -{} HP",
+  "Bullets": "Pociski",
+  "Bombardment": "Ostrzał",
   "Weapons now have roles: single target (great on bosses and elites, aims at them first), crowd (clears hordes, weak on bosses) and hybrid. Go all in on one and suffer on the other side, or mix. The role is shown on level-up cards and in the weapon details.": "Bronie mają teraz role: pojedynczy cel (świetne na bossy i elity, celują w nie najpierw), tłum (czyszczą hordy, słabe na bossach) i hybryda. Idź w jedno i męcz się z drugim albo mieszaj. Rolę widać na kartach awansu i w opisie broni.",
   "New players start with part of the weapons, passives and cards; the rest unlocks through play (defeat a boss, reach a level, trigger reactions...). Every finished run also brings you closer to the next discovery. Locked things show how to get them in the Codex and the Collection. If you already played, everything stays unlocked.": "Nowi gracze zaczynają z częścią broni, pasywek i kart; reszta odblokowuje się w trakcie gry (pokonaj bossa, osiągnij poziom, wywołaj reakcje...). Każdy ukończony run przybliża też następne odkrycie. Zablokowane rzeczy w Księdze i Kolekcji pokazują, jak je zdobyć. Kto ma już postęp z wcześniejszych wersji, zachowuje wszystko odblokowane.",
 };

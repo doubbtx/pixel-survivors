@@ -202,6 +202,12 @@ export const BAL = {
   revive: { iframes: 3, r: 130 },
   /** Limit pojedynczego trafienia gracza jako ułamek maks. HP (0.59): `base`, +`perTorment` na poziom Udręki, do `max`. */
   hitCap: { base: 0.4, perTorment: 0.04, max: 0.8 },
+  /**
+   * Ochrona przed wybuchem obrażeń (0.62, playtest: pełne HP → 0 w 0,5–2 s): obrażenia z ostatnich `window` s powyżej
+   * `frac` maks. HP (+`perTorment` na poziom Udręki, do `max`) wchodzą tylko w `over` części. Funkcja rosnąca: więcej
+   * trafień dalej znaczy więcej obrażeń, więc stanie w ogniu nadal zabija szybciej niż ruch — tylko wolniej niż w ułamek sekundy.
+   */
+  burst: { window: 1, frac: 0.3, over: 0.35, perTorment: 0.03, max: 0.6 },
   trance: { min: 3, taken: 0.15, killHeal: 0.002 },
   /** Zasięg wyboru celu broni naprowadzanych (było 200 / 170): strzelają do wrogów bliżej, nie z drugiego końca ekranu. */
   homing: { bolt: 160, chain: 130 },

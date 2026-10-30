@@ -14,6 +14,17 @@ const TAU = Math.PI * 2;
 /** Wrogowie dalej niż to od gracza są przenoszeni przed niego (jak w Vampire Survivors). */
 const RELOCATE_DIST = 330;
 
+/** Nazwa wroga jako źródła obrażeń gracza (ekran końca): boss jak na pasku bossa, reszta jak w bestiariuszu. */
+export function foeName(run: Run, e: Enemy): string {
+  return e.boss ? run.bossTitle ?? run.levelInfo.bossName : e.def.name;
+}
+
+/**
+ * Kto teraz strzela (źródło obrażeń): ustawiane w pętli wrogów (updateEnemies) i w seriach (`sequence`), czytane przez
+ * fireVolley i zaznaczone uderzenia — bez przekazywania wroga przez kilkadziesiąt wywołań salw.
+ */
+let firing = '';
+
 /**
  * Wystrzeliwuje salwę (data/enemies.ts Volley). `base` = kąt bazowy: środek wachlarza
  * albo obrót pierścienia (dla pierścienia z luką — środek luki).
@@ -47,13 +58,14 @@ export function fireVolley(run: Run, x: number, y: number, v: Volley, base: numb
     b.turn = (v.turn ?? 0) * (v.altTurn && i % 2 ? -1 : 1);
     b.wave = v.wave ?? 0;
     b.t = 0;
+    b.src = firing;
   }
 }
 
 /** Kilka salw jedna po drugiej (w czasie gry); przerwane, gdy strzelec zginie. */
 function sequence(run: Run, e: Enemy, times: number, gap: number, fire: (k: number) => void): void {
   const uid = e.uid;
-  for (let k = 0; k < times; k++) run.schedule(k * gap, () => { if (!e.dead && e.uid === uid) fire(k); });
+  for (let k = 0; k < times; k++) run.schedule(k * gap, () => { if (!e.dead && e.uid === uid) { firing = foeName(run, e); fire(k); firing = ''; } });
 }
 
 // ---------------- boss ----------------
@@ -174,7 +186,7 @@ function markStrikes(run: Run, n: number, dmg: number): void {
   const p = run.player;
   for (let i = 0; i < n; i++) {
     const a = rng.range(0, TAU), d = i === 0 ? 0 : rng.range(30, 110);
-    run.strikes.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d, t: 0.9 + i * 0.12, foe: dmg });
+    run.strikes.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d, t: 0.9 + i * 0.12, foe: dmg, src: firing });
   }
 }
 
@@ -229,7 +241,7 @@ const BOSS_STYLES: BossAttack[] = [
     if (phase === 1) {
       if (alt === 2) {
         const p = run.player, M = BAL.biomeEnemies;
-        for (let i = 0; i < 7; i++) { const a = rng.range(0, TAU), d = i ? rng.range(20, 80) : 0; run.strikes.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d, t: 0.9 + i * 0.12, foe: dmg * 1.4, seed: true, r: M.mortarR }); }
+        for (let i = 0; i < 7; i++) { const a = rng.range(0, TAU), d = i ? rng.range(20, 80) : 0; run.strikes.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d, t: 0.9 + i * 0.12, foe: dmg * 1.4, seed: true, r: M.mortarR, src: firing }); }
         return 2.5;
       }
       if (alt === 0) sequence(run, e, 3, 0.35, (k) => fireVolley(run, e.x, e.y, { ...B_FLOWER, count: 14 }, k * 0.25, dmg));
@@ -264,8 +276,8 @@ const BOSS_STYLES: BossAttack[] = [
     if (phase === 1) {
       if (alt === 2) {
         const p = run.player;
-        for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; run.strikes.push({ x: p.x + Math.cos(a) * 55, y: p.y + Math.sin(a) * 55, t: 0.9, foe: dmg * 1.5 }); }
-        run.strikes.push({ x: p.x, y: p.y, t: 1.6, foe: dmg * 1.5 });
+        for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; run.strikes.push({ x: p.x + Math.cos(a) * 55, y: p.y + Math.sin(a) * 55, t: 0.9, foe: dmg * 1.5, src: firing }); }
+        run.strikes.push({ x: p.x, y: p.y, t: 1.6, foe: dmg * 1.5, src: firing });
         return 3;
       }
       if (alt === 0) markStrikes(run, 6, dmg * 1.5);
@@ -364,7 +376,7 @@ const MINIBOSS_ATTACKS: Record<string, WardenAttack[]> = {
     (run, e) => wardenLeap(run, e),
     (run, _e, dmg) => {
       const p = run.player, B = BAL.biomeEnemies;
-      for (let i = 0; i < 6; i++) { const a = rng.range(0, TAU), d = i ? rng.range(20, 70) : 0; run.strikes.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d, t: 0.9 + i * 0.12, foe: dmg * B.mortarDmg, seed: true, r: B.mortarR }); }
+      for (let i = 0; i < 6; i++) { const a = rng.range(0, TAU), d = i ? rng.range(20, 70) : 0; run.strikes.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d, t: 0.9 + i * 0.12, foe: dmg * B.mortarDmg, seed: true, r: B.mortarR, src: firing }); }
     },
     (run, e, dmg, spr) => sequence(run, e, 2, 0.35, () => fireVolley(run, e.x, e.y, { ...B_WAVE, count: 7, sprite: spr }, aimAt(run, e), dmg)),
     (run) => callAdds(run, 'toad', 3),
@@ -486,7 +498,7 @@ function updateBiomeEnemy(run: Run, e: Enemy, dt: number, dist: number, nx: numb
       e.actT = B.mortarEvery * rng.range(0.85, 1.2);
       for (let i = 0; i < B.mortarCount; i++) {
         const lead = i === 0 ? B.mortarDelay * 0.6 : 0, a = rng.range(0, TAU), d = i === 0 ? 0 : rng.range(B.mortarSpread * 0.4, B.mortarSpread);
-        run.strikes.push({ x: p.x + p.vx * lead + Math.cos(a) * d, y: p.y + p.vy * lead + Math.sin(a) * d, t: B.mortarDelay + i * 0.15, foe: dmg * B.mortarDmg, seed: true, r: B.mortarR });
+        run.strikes.push({ x: p.x + p.vx * lead + Math.cos(a) * d, y: p.y + p.vy * lead + Math.sin(a) * d, t: B.mortarDelay + i * 0.15, foe: dmg * B.mortarDmg, seed: true, r: B.mortarR, src: firing });
       }
       run.burst(e.x, e.y - 6, C.lime, 4, 40);
       break;
@@ -529,7 +541,7 @@ function updateBiomeEnemy(run: Run, e: Enemy, dt: number, dist: number, nx: numb
         e.x = e.tx; e.y = e.ty;
         if (e.actT <= 0) {
           e.phase = 0; e.hidden = false; e.actT = B.burrowUp;
-          if ((p.x - e.x) ** 2 + (p.y - e.y) ** 2 < (B.burrowR + p.r) ** 2) run.hurtPlayer(e.damage * 1.3);
+          if ((p.x - e.x) ** 2 + (p.y - e.y) ** 2 < (B.burrowR + p.r) ** 2) run.hurtPlayer(e.damage * 1.3, firing);
           run.burst(e.x, e.y, C.teal, 14, 70, true);
           run.burst(e.x, e.y, C.cyan, 6, 90, true);
           sfx.play('hit');
@@ -680,10 +692,12 @@ const ELITE_FLOWER: Volley = { shape: 'ring', count: 8, speed: 45, turn: 0.8, al
  * Bez salwy, gdy cel mapy został już wykonany (ekran zwycięstwa) albo boss mapy już padł (jak kopie Rozszczepiacza).
  */
 export function eliteDeathBurst(run: Run, e: Enemy): void {
-  const x = e.x, y = e.y, dmg = e.damage * BAL.bulletDmg;
+  const x = e.x, y = e.y, dmg = e.damage * BAL.bulletDmg, name = foeName(run, e);
   run.schedule(0.2, () => {
     if (run.outcome !== 'none' || (run.bossSpawned && !run.boss && run.mode !== 'endless')) return;
+    firing = name;
     fireVolley(run, x, y, { ...ELITE_FLOWER, count: 12 }, rng.range(0, TAU), dmg);
+    firing = '';
     const f = run.addFx('ring', x, y, C.orange, 0.25);
     if (f) f.r = 22;
   });
@@ -700,6 +714,7 @@ export function updateEnemies(run: Run, dt: number): void {
   for (let i = items.length - 1; i >= 0; i--) {
     const e = items[i];
     if (e.dead) { run.enemies.release(e); continue; }
+    firing = foeName(run, e);
     e.age += dt;
     if (e.flash > 0) e.flash--;
     if (e.regen > 0) e.hp = Math.min(e.maxHp, e.hp + e.maxHp * e.regen * dt);
@@ -776,7 +791,7 @@ export function updateEnemies(run: Run, dt: number): void {
             e.dashT -= dt;
             if (run.blink(4, 2)) e.flash = 2;
             if (e.dashT <= 0) {
-              if (dist < N.kamikazeR + p.r) run.hurtPlayer(e.damage * N.kamikazeDmg);
+              if (dist < N.kamikazeR + p.r) run.hurtPlayer(e.damage * N.kamikazeDmg, firing);
               run.boomFx(e.x, e.y, N.kamikazeR, true);
               run.burst(e.x, e.y, C.orange, 16, 80, true);
               sfx.play('explode');
@@ -896,6 +911,7 @@ export function updateEnemies(run: Run, dt: number): void {
     // Uderzenie wręcz: każdy wróg osobno co BAL.contactCooldown (tłum jest groźny, leczenie go nie przebije).
     if (e.touchCd > 0) e.touchCd -= dt;
     if (e.reactT > 0) e.reactT -= dt;
-    if (e.touchCd <= 0 && e.damage > 0 && !e.hidden && e.z < 4 && dist < e.radius + p.r && run.hurtPlayer(e.damage * (e.buffT > 0 ? 1 + BAL.eliteTraits.dmg : 1))) e.touchCd = BAL.contactCooldown;
+    if (e.touchCd <= 0 && e.damage > 0 && !e.hidden && e.z < 4 && dist < e.radius + p.r && run.hurtPlayer(e.damage * (e.buffT > 0 ? 1 + BAL.eliteTraits.dmg : 1), firing)) e.touchCd = BAL.contactCooldown;
   }
+  firing = '';
 }

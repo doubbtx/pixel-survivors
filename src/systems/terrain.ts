@@ -182,7 +182,7 @@ export function updateTerrain(run: Run, dt: number): void {
         t.t = (t.t + dt) % T.spikeCycle;
         if (t.t > T.spikeUp || run.step % 15) break;
         run.enemiesInCircle(t.x, t.y, t.r, (e) => run.damageEnemy(e, run.cardDamage(T.spikeDmg), 'Kolce'));
-        if (near) run.hurtPlayer(run.stats.maxHp * T.spikeHurt);
+        if (near) run.hurtPlayer(run.stats.maxHp * T.spikeHurt, 'Kolce');
         break;
       }
       case 'swamp':
