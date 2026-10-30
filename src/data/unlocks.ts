@@ -109,13 +109,19 @@ export const isOpen = (open: ReadonlySet<string>, id: string): boolean =>
 export function grantDiscovery(s: SaveData, points: number): UnlockDef[] {
   s.discovery = (s.discovery ?? 0) + points;
   const out: UnlockDef[] = [];
-  while (s.discovery >= BAL.discovery.every) {
+  for (let cost = discoveryCost(s); s.discovery >= cost; cost = discoveryCost(s)) {
     const next = CONTENT.find((u) => !s.unlocks.includes(u.id));
     if (!next) { s.discovery = 0; break; }
-    s.discovery -= BAL.discovery.every;
+    s.discovery -= cost;
     out.push(...give(s, [next]));
   }
   return out;
+}
+
+/** Punkty potrzebne do następnego odkrycia: pierwsze tańsze (BAL.discovery.first, wg odblokowanej już zawartości), potem `every`. */
+export function discoveryCost(s: SaveData): number {
+  const D = BAL.discovery;
+  return D.first[CONTENT.filter((u) => s.unlocks.includes(u.id)).length] ?? D.every;
 }
 
 /** Zapisuje odblokowania razem z `grants`. */

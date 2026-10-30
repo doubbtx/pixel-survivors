@@ -235,6 +235,8 @@ export function chooseTier(ex: ExpeditionState, tier: number): boolean {
   return true;
 }
 
+const SECOND_ROW_OUT = new Set<NodeKind>(['hunt', 'ambush', 'dungeon', 'vault']);
+
 /** Losuje mapę aktu: pierwszy rząd to walki, w środku mieszanka, ostatni rząd przed bossem gwarantuje obóz lub sklep w zasięgu. */
 export function rollActMap(act: number, tier: number, noForge = false): (MapNode | null)[][] {
   const X = BAL.expedition;
@@ -246,7 +248,9 @@ export function rollActMap(act: number, tier: number, noForge = false): (MapNode
     for (let lane = 0; lane < X.lanes; lane++) {
       // Środkowe kolumny zawsze istnieją (spójność ścieżek), skrajne czasem znikają.
       if ((lane === 0 || lane === X.lanes - 1) && rng.chance(X.emptyChance)) { kinds.push(null); continue; }
-      const k: NodeKind = row === 0 ? 'fight' : rng.weighted(X.weights);
+      // Akt 1, drugi rząd: bez Polowania, Zasadzki i aren (playtest 0.62: miniboss z eskortą, pierścienie albo ciasna arena
+      // z falami na 2. mapie to ściana) — zwykła walka zamiast nich.
+      const r = row === 0 ? 'fight' : rng.weighted(X.weights), k: NodeKind = act === 1 && row === 1 && SECOND_ROW_OUT.has(r) ? 'fight' : r;
       // Kowadło jeszcze niezdobyte (pierwszy boss): zamiast niego obóz.
       kinds.push(noForge && k === 'anvil' ? 'rest' : k);
     }
@@ -357,6 +361,16 @@ export function levelAt(act: number, row: number, m: MapNode, torment = 0): Leve
   // Udręka: zasady dodane do flag każdej mapy (łagodny start wyprawy tylko bez Udręki).
   const f: Record<string, number> = { ...f0 };
   for (const [k, v] of Object.entries(tormentFlags(torment))) f[k] = (f[k] ?? 0) + v;
+  // Łagodzenie aktu 1: rampa na niskich poziomach map (BAL.expedition.ramp), wyżej tylko łagodny start i połowa ulgi w 2. rzędzie.
+  const second = act === 1 && row === 1 && !boss && !torment && m.kind !== 'hunt';
+  const rampCap = act === 1 && !torment ? X.ramp.cap[m.rarity ?? 0] : undefined, rampCrowd = act === 1 && !torment ? X.ramp.crowd[m.rarity ?? 0] : undefined;
+  const ri = Math.min(row, X.ramp.cap[0].length - 1);
+  const ease = (v: number) => (gentle ? v : second ? v * X.gentle.second : 0);
+  const dmg = ease(X.gentle.dmg), crowd = Math.min(ease(X.gentle.crowd), rampCrowd?.[ri] ?? 0) + (m.kind === 'hunt' ? X.huntCrowd : 0);
+  if (dmg) f.enemyDmg = (f.enemyDmg ?? 0) + dmg;
+  if (crowd) f.enemyCount = (f.enemyCount ?? 0) + crowd;
+  const shooters = act === 1 && !torment ? X.ramp.shooters[m.rarity ?? 0]?.[ri] ?? 0 : 0;
+  if (shooters) f.shooters = (f.shooters ?? 0) + shooters;
   return {
     depth,
     name: m.name ?? `${b.name}, akt ${act}`,
@@ -372,11 +386,10 @@ export function levelAt(act: number, row: number, m: MapNode, torment = 0): Leve
     weak: m.affinity?.kind === 'weak' ? m.affinity.el : undefined,
     resist: m.affinity?.kind === 'resist' ? m.affinity.el : undefined,
     eliteMods: m.eliteMods,
-    // Polowanie: rzadsze zwykłe fale (pojedynek z minibossem).
-    // Drugi węzeł aktu 1 (playtest 4: skok trudności po łagodnym starcie): połowa ulgi z łagodnego startu.
-    flags: crowded(m.kind === 'hunt' ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.huntCrowd } : gentle ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.gentle.crowd, enemyDmg: (f.enemyDmg ?? 0) + X.gentle.dmg }
-      : act === 1 && row === 1 && !boss && !torment ? { ...f, enemyCount: (f.enemyCount ?? 0) + X.gentle.crowd * X.gentle.second, enemyDmg: (f.enemyDmg ?? 0) + X.gentle.dmg * X.gentle.second } : f, act),
+    // Polowanie: rzadsze zwykłe fale (pojedynek z minibossem). Łagodny start i rampa aktu 1: wyżej (ease).
+    flags: crowded(f, act),
     gentle,
+    dmgCap: rampCap?.[ri],
     script: m.script,
   };
 }

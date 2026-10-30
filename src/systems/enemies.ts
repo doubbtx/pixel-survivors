@@ -30,6 +30,7 @@ let firing = '';
  * albo obrót pierścienia (dla pierścienia z luką — środek luki).
  */
 export function fireVolley(run: Run, x: number, y: number, v: Volley, base: number, damage: number): void {
+  const hard = bulletCap(run) * (BAL.enemyBulletHardCap / BAL.enemyBulletSoftCap);
   // W późnej grze salwy są gęstsze (BAL.patternDensity); pierścień z luką zachowuje lukę.
   let n = Math.round(v.count * (BAL.patternDensity(run.waveTime()) + run.flag('bulletDensity')));
   // Wachlarz i strzał śrutem zachowują parzystość z definicji (0.61.1): z 3 robiło się 4 pociski, środkowy znikał i w gracza
@@ -41,7 +42,7 @@ export function fireVolley(run: Run, x: number, y: number, v: Volley, base: numb
     if (gap && (i < Math.ceil(gap / 2) || n - i <= Math.floor(gap / 2))) continue;
     const a = v.shape === 'fan' || v.shape === 'shotgun' ? base + (i - (n - 1) / 2) * (v.spread ?? 0.2) : base + (i * TAU) / n;
     // Twardy limit pocisków poza walką z bossem (playtest 3: 665-746 w Endless od 10. minuty przy pełnej mapie).
-    if (!run.boss && run.bullets.count >= BAL.enemyBulletHardCap) return;
+    if (!run.boss && run.bullets.count >= hard) return;
     const b = run.bullets.obtain();
     if (!b) return;
     const var_ = v.speedVar ?? 0.35;
@@ -60,6 +61,15 @@ export function fireVolley(run: Run, x: number, y: number, v: Volley, base: numb
     b.t = 0;
     b.src = firing;
   }
+}
+
+/**
+ * Limit pocisków zwykłych wrogów (powyżej przestają strzelać): na niskich poziomach map Ekspedycji rośnie z głębokością
+ * (BAL.bulletRamp), inaczej enemyBulletSoftCap.
+ */
+function bulletCap(run: Run): number {
+  const R = BAL.bulletRamp, ex = run.expedition, k = ex && !ex.torment ? R.tiers[ex.tier ?? 0] ?? 0 : 0;
+  return k ? Math.min(BAL.enemyBulletSoftCap, (R.base + R.perDepth * (run.depth - 1)) * k) : BAL.enemyBulletSoftCap;
 }
 
 /** Kilka salw jedna po drugiej (w czasie gry); przerwane, gdy strzelec zginie. */
@@ -706,7 +716,7 @@ export function eliteDeathBurst(run: Run, e: Enemy): void {
 /** Ruch, strzelanie, separacja, odrzut, obrażenia kontaktowe i usuwanie martwych. */
 export function updateEnemies(run: Run, dt: number): void {
   const items = run.enemies.items;
-  const p = run.player, N = BAL.newEnemies;
+  const p = run.player, N = BAL.newEnemies, cap = bulletCap(run);
   // Sieci Pajęczarzy: wygasają, gracz w sieci jest spowolniony (systems/player.ts).
   run.webbed = false;
   for (const w of run.webs) { w.t -= dt; if ((w.x - p.x) ** 2 + (w.y - p.y) ** 2 < w.r * w.r) run.webbed = true; }
@@ -865,7 +875,7 @@ export function updateEnemies(run: Run, dt: number): void {
         // Strzelają tylko wrogowie widoczni na ekranie (playtest 2: pociski spoza kadru z góry i z dołu); boss zawsze.
         const seen = e.boss || (e.x > run.camX - BAL.shootMargin && e.x < run.camX + VIEW_W + BAL.shootMargin && e.y > run.camY - BAL.shootMargin && e.y < run.camY + VIEW_H + BAL.shootMargin);
         if (e.shootT <= 0 && !seen) e.shootT = 0.3;
-        else if (e.shootT <= 0 && run.bullets.count < BAL.enemyBulletSoftCap) {
+        else if (e.shootT <= 0 && run.bullets.count < cap) {
           const inRange = !!sh && dist < sh.range, ring = e.extraRing && dist < 170;
           if (sh && inRange) {
             shoot(run, e, sh, dmg);
