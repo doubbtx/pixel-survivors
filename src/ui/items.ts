@@ -13,7 +13,7 @@ import {
 } from '../data/items';
 import type { Run } from '../game/run';
 import type { Stats } from '../entities/types';
-import { button, backButton, backHit, Menu, dim, panel, slot, inside, Scroll } from './widgets';
+import { button, backButton, backHit, Menu, dim, panel, slot, inside, Scroll, type Tip } from './widgets';
 import { itemTags } from '../data/synergies';
 import { AWAKENINGS } from '../data/forge';
 import { drawTagIcons } from './synergies';
@@ -50,6 +50,19 @@ export function drawItemSlot(r: Renderer, it: Item | null, x: number, y: number,
     r.rect(x - 1, y, 1, s, C.yellow);
     r.rect(x + s, y, 1, s, C.yellow);
   }
+}
+
+/** Krótki opis przedmiotu do okienka podpowiedzi (`drawTip`): rzadkość i poziom, bonus bazowy, afiksy, super-bonus, unikat. */
+export function itemTip(it: Item): Tip {
+  const base = BASE_BY_ID[it.base], uniq = it.unique ? UNIQUE_BY_ID[it.unique] : null, k = forgeMul(it);
+  const lines: [string, number][] = [
+    [`${uniq ? 'Unikat:' : RARITIES[it.rarity].name[base.gender]} ${base.name.toLowerCase()}, poz. ${it.ilvl}${it.upg ? `, +${it.upg}` : ''}`, C.lavender],
+    [implicitLine(it), C.white],
+    ...it.affixes.map((a): [string, number] => [statLine(a.stat, a.value * (a.stat === 'amount' ? 1 : k)), C.cyan]),
+  ];
+  if (it.super) lines.push([superLine(it), C.yellow]);
+  if (uniq) lines.push([uniq.desc, UNIQUE_COLOR]);
+  return { title: it.name, col: itemColor(it), lines };
 }
 
 /**

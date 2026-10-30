@@ -1,7 +1,7 @@
-import { W, SW, OX, type Renderer } from '../core/renderer';
+import { W, H, SW, OX, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C, PAL, type Ramp } from '../core/palette';
-import { drawText, textWidth, LINE_H, smallS } from '../core/font';
+import { drawText, wrapText, textWidth, LINE_H, smallS, DESC, descS, descLH } from '../core/font';
 import { sfx } from '../core/audio';
 import { UI, tile } from './theme';
 import { drawSprite } from '../gfx/sprites';
@@ -60,6 +60,34 @@ export class Scroll {
     r.withAlpha(0.35, () => r.rect(x + w - 2, y, 1.5, h, C.slate));
     r.rect(x + w - 2, ty, 1.5, th, C.lavender);
   }
+}
+
+/** Treść okienka podpowiedzi (`drawTip`): tytuł w kolorze, drobny dopisek po prawej i linie opisu. */
+export interface Tip {
+  title: string;
+  col: number;
+  tag?: string;
+  lines?: [string, number][];
+}
+
+/**
+ * Okienko z opisem rzeczy wskazanej myszą albo dotknięciem (ikona karty, przedmiotu, broni): nad prostokątem
+ * kotwicy, a gdy brak miejsca — pod nim; zawsze w granicach ekranu. Linie opisu w rozmiarze tekstu opisów (DESC).
+ */
+export function drawTip(r: Renderer, t: Tip, ax: number, ay: number, aw: number, ah: number, w = 200): void {
+  const tagW = t.tag ? textWidth(t.tag) * smallS() + 10 : 0;
+  w = Math.min(W - 8, Math.max(w, textWidth(t.title) + tagW + 12));
+  const tw = (w - 12) / descS(), lh = descLH();
+  const rows: [string, number][] = [];
+  for (const [text, col] of t.lines ?? []) for (const l of wrapText(text, tw)) rows.push([l, col]);
+  const h = 17 + rows.length * lh + (rows.length ? 3 : 0);
+  let y = ay - h - 3;
+  if (y < 4) y = Math.min(H - h - 4, ay + ah + 3);
+  const x = Math.max(4, Math.min(W - w - 4, ax + aw / 2 - w / 2));
+  panel(r, x, y, w, h);
+  drawText(r.g, t.title, x + 6, y + 4, t.col, { shadow: C.black });
+  if (t.tag) drawText(r.g, t.tag, x + w - 6, y + 5, C.lavender, { align: 'right', scale: smallS() });
+  rows.forEach(([l, col], i) => drawText(r.g, l, x + 6, y + 17 + i * lh, col, DESC));
 }
 
 export function inside(px: number, py: number, x: number, y: number, w: number, h: number): boolean {
