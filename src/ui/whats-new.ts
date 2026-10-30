@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.51',
+    lines: [
+      "New defaults for readability: your own attacks are dimmed and the camera is set to far (if you never changed these settings). In the late game you can hide your attacks completely in Settings > Readability: they still work.",
+    ],
+  },
+  {
     version: '0.50',
     lines: [
       "Takezo: getting hit no longer drains Rhythm while it builds. Only a hit during Flow (full bar) breaks it, then it drains to zero.",

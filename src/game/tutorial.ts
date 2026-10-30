@@ -105,7 +105,7 @@ export class Tutorial {
 
   /** Bieżący krok: tytuł i opis dla urządzenia gracza. */
   text(input: Input): { title: string; body: string } {
-    if (this.finished) return { title: 'Tutorial complete', body: 'You are ready. Your first Expedition is next: three acts, each with a boss at the end.' };
+    if (this.finished) return { title: 'Tutorial complete', body: 'You are ready. Your first Expedition is next: three acts, each with a boss at the end. Tip: your own attacks are dimmed by default. In the late game, when the screen gets crowded, set Settings > Readability > Player attacks to hidden: they still work, and enemy bullets are much easier to see.' };
     const s = STEPS[Math.max(0, this.step)];
     // Klawisze z przypisań gracza (Ustawienia → Sterowanie).
     const keys: Record<string, string> = { move: ['up', 'left', 'down', 'right'].map((a) => actionKey(a as Action)).join(''), q: actionKey('q'), e: actionKey('e'), dash: actionKey('dash'), ult: actionKey('ult') };

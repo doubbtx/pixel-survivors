@@ -9,7 +9,7 @@ import { ALL_UNLOCKS } from '../data/unlocks';
  * która przekształca dane do wersji o 1 wyższej. Ładowanie aplikuje migracje po kolei.
  */
 const KEY = 'pixel-survivors-save';
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 export interface HeroRecord {
   bestTime: number;
@@ -205,6 +205,14 @@ const MIGRATIONS: Record<number, Migration> = {
   },
   // 9 → 10 (0.34.3): opisy w pełnym rozmiarze dla wszystkich (mniejszy tekst bywał nieczytelny); można wrócić w Ustawieniach.
   9: (old) => ({ ...old, version: 10, settings: { ...(old.settings as object), textLarge: true } }),
+  // 10 → 11 (0.51): nowe domyślne pod widoczność (prośba gracza) — ataki gracza przygaszone, widok daleko; tylko tam, gdzie
+  // zostały stare domyślne (automatyczne / normalne przybliżenie), żeby nie nadpisać świadomego wyboru.
+  10: (old) => {
+    const s = { ...(old.settings as Record<string, unknown>) };
+    if (s.playerFx === undefined || s.playerFx === 'auto') s.playerFx = 'dim';
+    if (s.zoom === undefined || s.zoom === 1.25) s.zoom = 1;
+    return { ...old, version: 11, settings: s };
+  },
 };
 
 function defaults(): SaveData {
@@ -213,7 +221,7 @@ function defaults(): SaveData {
     settings: { volume: 0.5, music: 0.4, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
-      playerFx: 'auto', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1.25, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en',
+      playerFx: 'dim', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en',
       textLarge: true, reduceFlash: false, flashWarned: false, keys: {} },
     records: {},
     slots: { endless: null, expedition: null },
