@@ -186,12 +186,13 @@ export const BAL = {
    * `near` × keepDist). Trans bitewny: przy ≥ `min` wrogach w pierścieniu bliskiego dystansu −`taken` obrażeń, zabójstwo z bliska
    * leczy `killHeal` maks. HP (wspólny budżet drainHeal). */
   press: { keepMul: 0.75, step: 30, t: 1.5, near: 1.5 },
-  /** Automatyczny ekwipunek po łupie: zamiana przy przewadze oceny o `margin` i `perUpg` pkt za każde ulepszenie założonego. */
   /** Scenariusze map (0.56): bezpieczniki rytmu, oddech, gęstość zwykłych fal w trakcie uderzenia, czas „trwania” uderzenia. */
   scripts: { first: 20, gap: 12, last: 0.9, breath: 5, beatDensity: 0.85, beatDur: 10, tierSize: 0.1, size: 1.3 },
   /**
+   * Automatyczny ekwipunek po łupie: zamiana przy przewadze oceny o `margin` i `perUpg` pkt za każde ulepszenie założonego.
    * `melee`: profil wag oceny (itemScore) dla buildu z przewagą broni bliskiego zasięgu (`kinds`); reszta wag bez zmian.
-   * Ilość (`amount`) zostaje przy domyślnej wadze: orbita, fala, smagnięcie i cięcie rosną z nią liniowo (systems/weapons.ts).
+   * Ilość (`amount`) zostaje przy domyślnej wadze: orbita, fala, smagnięcie i cięcie rosną z nią liniowo
+   * (systems/weapons.ts; cięcia poziome katany tylko do `BAL.lash.rows` rzędów).
    */
   autoEquip: {
     margin: 0.08, perUpg: 0.5,
