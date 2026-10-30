@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.53',
+    lines: [
+      "Best gear: after every loot your best items are equipped automatically (Settings > General, on by default), and the Best gear [R] button in the backpack does it on demand. Uniques and super bonuses count extra, so they are not swapped out for small gains.",
+    ],
+  },
+  {
     version: '0.51',
     lines: [
       "New defaults for readability: your own attacks are dimmed and the camera is set to far (if you never changed these settings). In the late game you can hide your attacks completely in Settings > Readability: they still work.",

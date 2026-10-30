@@ -260,6 +260,13 @@ export class InventoryView {
     this.noteT = 2.5;
   }
 
+  /** Najlepszy ekwipunek (przycisk / R): Run.autoEquip. */
+  private best(): void {
+    const n = this.run.autoEquip();
+    this.say(n ? `${tr('Best gear equipped')} (${n})` : tr('You already wear the best items'));
+    sfx.play(n ? 'pickup' : 'select');
+  }
+
   private activate(c: Cell): void {
     const run = this.run, it = this.itemAt(c);
     if (!it) return;
@@ -290,6 +297,7 @@ export class InventoryView {
     if (input.pressed('right')) this.cx = (this.cx + 1) % 8;
     if (input.pressed('confirm')) this.activate(this.cellAt(this.cx, this.cy));
     if (input.pressed('skip')) this.salvage(this.cellAt(this.cx, this.cy));
+    if (input.pressed('reroll')) this.best();
     const m = input.mouse;
     for (let cy = 0; cy < 4; cy++) {
       for (let cx = 0; cx < 8; cx++) {
@@ -305,6 +313,7 @@ export class InventoryView {
       if (inside(m.x, m.y, DET_X, 236, BTN_W, 16)) this.activate(this.cellAt(this.cx, this.cy));
       if (inside(m.x, m.y, DET_X + BTN_W + 6, 236, BTN_W, 16)) this.salvage(this.cellAt(this.cx, this.cy));
       if (inside(m.x, m.y, 14, 236, 60, 16)) return this.close();
+      if (inside(m.x, m.y, 80, 236, 104, 16)) this.best();
     }
     this.lastMouse = m.lastMove;
     return false;
@@ -358,6 +367,7 @@ export class InventoryView {
       button(r, x, 236, w, 16, label, { col });
     };
     btn(14, 60, 'Wstecz [Esc]', C.lgray);
+    btn(80, 104, 'Best gear [R]', C.lime);
     if (it) {
       btn(DET_X, BTN_W, sel.kind === 'eq' ? 'Zdejmij' : 'Załóż', C.white);
       btn(DET_X + BTN_W + 6, BTN_W, `Rozłóż +${fmt(salvageGold(it, run.stats.greed))}`, C.gold);

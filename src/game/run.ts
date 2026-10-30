@@ -21,7 +21,7 @@ import { SRC_ELEMENT, ELEM, damageElement, type Element } from '../data/elements
 import type { MetaBonus } from '../data/meta';
 import { CARD_BY_ID, type CardSource, type HookName, type CardHooks, type Tag } from '../data/cards';
 import { SYNERGIES, VERSATILITY, tagPoints, tierOf, type SynergyTier } from '../data/synergies';
-import { equippedSupers, equippedUniques, implicitOf, forgeMul, salvageGold, salvageShards, slotKind, rollItem, rollUnique, BASE_BY_ID, RARITIES, type Item, type SlotId, type LootSource } from '../data/items';
+import { equippedSupers, equippedUniques, itemScore, SLOTS, implicitOf, forgeMul, salvageGold, salvageShards, slotKind, rollItem, rollUnique, BASE_BY_ID, RARITIES, type Item, type SlotId, type LootSource } from '../data/items';
 import {
   SLOT, SLOT_COUNT, type Stats, type Player, type Enemy, type Projectile, type EnemyBullet, type Gem, type Pickup,
   type Particle, type DmgNum, type Zone, type Fx, type WeaponInst, type PassiveInst, type AbilityInst, type PickupKind,
@@ -1042,6 +1042,34 @@ export class Run {
     else if (old) { gold = salvageGold(old, this.stats.greed); this.gold += gold; this.shards += salvageShards(old); }
     this.onBuildChanged();
     return gold;
+  }
+
+  /**
+   * Najlepszy ekwipunek (0.52): w każdym slocie przedmiot z najwyższą oceną (`itemScore`) spośród założonych i plecaka;
+   * pierścienie: dwa najlepsze. Zdjęte trafiają do plecaka (zamiana miejsc, więc plecak się nie przepełnia). Zwraca liczbę zmian.
+   */
+  autoEquip(): number {
+    let n = 0;
+    const kindOf = (it: Item) => BASE_BY_ID[it.base].kind;
+    for (const s of SLOTS) {
+      if (s.id === 'ring2') continue;
+      const ids: SlotId[] = s.id === 'ring1' ? ['ring1', 'ring2'] : [s.id];
+      const pool = [...ids.map((id) => this.equipment[id]), ...this.bag.filter((b) => kindOf(b) === s.kind)].filter((x): x is Item => !!x);
+      const best = [...pool].sort((a, b) => itemScore(b) - itemScore(a)).slice(0, ids.length);
+      // Najlepsze już założone zostają na swoich miejscach; pozostałe sloty dostają resztę najlepszych.
+      const free = ids.filter((id) => !best.includes(this.equipment[id]!));
+      const place = best.filter((it) => !ids.some((id) => this.equipment[id] === it));
+      free.forEach((id, i) => {
+        const next = place[i], cur = this.equipment[id];
+        if (!next) return;
+        this.bag = this.bag.filter((x) => x !== next);
+        this.equipment[id] = next;
+        if (cur) this.bag.push(cur);
+        n++;
+      });
+    }
+    if (n) this.onBuildChanged();
+    return n;
   }
 
   /** Nowy przedmiot do plecaka (oznaczony jako nowy w ekwipunku). */

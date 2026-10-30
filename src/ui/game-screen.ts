@@ -704,7 +704,9 @@ export class GameScreen implements Screen {
         if (this.peekFromPick()) break;
         const res = this.loot!.update(inp);
         if (res.done) {
-          if (res.note) this.showToast(res.note);
+          // Najlepszy ekwipunek po łupie (Ustawienia, domyślnie włączone).
+          const swapped = this.app.save.settings.autoEquip ? this.run.autoEquip() : 0;
+          if (res.note || swapped) this.showToast([res.note, swapped ? `${tr('Best gear equipped')} (${swapped})` : ''].filter(Boolean).join('. '));
           this.state = this.overlayReturn;
           this.openPending();
         }

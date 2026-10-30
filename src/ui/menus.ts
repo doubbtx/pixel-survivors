@@ -678,7 +678,7 @@ export class SettingsScreen implements Screen {
   private build(): void {
     const app = this.app, s = app.save.settings;
     const step = (k: 'volume' | 'music', d: number) => () => { s[k] = Math.round(Math.max(0, Math.min(1, s[k] + d)) * 10) / 10; app.persist(); };
-    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'minimap' | 'healNumbers' | 'lowFx' | 'hints' | 'hitstop' | 'easy' | 'elemShapes' | 'scaleFill' | 'bulletOutline' | 'playerMarker') => () => {
+    const toggle = (k: 'shake' | 'debug' | 'damageNumbers' | 'autoPause' | 'autoEquip' | 'minimap' | 'healNumbers' | 'lowFx' | 'hints' | 'hitstop' | 'easy' | 'elemShapes' | 'scaleFill' | 'bulletOutline' | 'playerMarker') => () => {
       s[k] = !s[k];
       app.persist();
       if (k === 'scaleFill') app.r.setFill(s.scaleFill);
@@ -704,6 +704,7 @@ export class SettingsScreen implements Screen {
         opt('Język', () => (s.lang === 'en' ? 'English' : 'Polski'), lang, () => 'Language / Język: English, Polski.'),
         sw('Trudność', () => (s.easy ? 'łatwa' : 'normalna'), toggle('easy'), `Łatwa: wrogowie zadają ${Math.round(BAL.easy.dmg * 100)}% mniej obrażeń i mają ${Math.round(BAL.easy.hp * 100)}% mniej HP. Bez odznak Paktu.`),
         opt('Celowanie', () => AIM_LABEL[s.aim] ?? AIM_LABEL.mixed, aim, () => AIM_HINT[s.aim] ?? AIM_HINT.mixed),
+        sw('Auto-equip best items', () => yes(s.autoEquip), toggle('autoEquip'), 'After every loot the best items from your backpack are equipped by themselves (uniques and super bonuses count extra). The Best gear button in the backpack does the same on demand.'),
         sw('Pauza po wyjściu z okna', () => yes(s.autoPause), toggle('autoPause'), 'Gra pauzuje się sama, gdy przełączysz okno lub kartę.'),
         sw('Podpowiedzi', () => yes(s.hints), toggle('hints'), 'Krótkie wskazówki przy pierwszym spotkaniu z mechaniką (awans, skrzynie, elity, reakcje...).'),
         [{ label: () => (app.save.seenHints.length ? 'Pokaż podpowiedzi od nowa' : 'Podpowiedzi: wszystkie przed tobą'), act: () => { app.save.seenHints = []; app.persist(); } }, () => 'Kolejna gra pokaże wszystkie podpowiedzi jeszcze raz.'],

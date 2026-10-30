@@ -730,6 +730,25 @@ export function compareItems(next: Item, cur: Item | null): StatDiff[] {
   return out;
 }
 
+/**
+ * Ocena przedmiotu do „Najlepszego ekwipunku” (0.52): mnożnik broni (log, ~1.5 maks. afiksu Siły za +10%), statystyki
+ * znormalizowane do maksymalnego rzutu afiksu i ważone (obrażenia > przetrwanie > wygoda), zapas dla unikatów, super-bonusów
+ * i Przebudzenia z kuźni (+9), żeby automat ich nie zdejmował dla drobnej różnicy.
+ */
+const SCORE_W: Partial<Record<keyof Stats, number>> = {
+  might: 1.2, atkSpeed: 1.2, amount: 2, crit: 1, critMult: 0.8, area: 0.7, duration: 0.5, cdr: 0.7, elemPower: 0.7,
+  maxHp: 0.8, armor: 0.8, regen: 0.6, lifesteal: 0.8, speedBonus: 0.5, magnet: 0.2, growth: 0.3, greed: 0.2,
+};
+export function itemScore(it: Item | null): number {
+  if (!it) return -1;
+  let s = it.implicit.mode === 'mul' ? Math.log(implicitOf(it)) * 16 : 0;
+  for (const [k, v] of Object.entries(itemStats(it)) as [keyof Stats, number][]) s += (v / (AFFIX_BY_STAT[k]?.max ?? 1)) * (SCORE_W[k] ?? 0.4);
+  if (it.unique) s += 6;
+  if (it.super) s += 3;
+  if ((it.upg ?? 0) >= 9 && !it.cracked) s += 2;
+  return s;
+}
+
 /** Wpływ super-bonusów założonych przedmiotów na Run: flagi i hooki (jak karty). */
 export function equippedSupers(run: Run): { def: SuperDef; value: number }[] {
   const out: { def: SuperDef; value: number }[] = [];

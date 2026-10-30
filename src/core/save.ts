@@ -48,6 +48,8 @@ export interface Settings {
   damageNumbers: boolean;
   /** Pauza, gdy okno gry traci fokus. */
   autoPause: boolean;
+  /** 0.52: po każdym łupie automatycznie najlepszy ekwipunek (Run.autoEquip). */
+  autoEquip: boolean;
   minimap: boolean;
   /** Zielone liczby leczenia nad postacią. */
   healNumbers: boolean;
@@ -218,7 +220,7 @@ const MIGRATIONS: Record<number, Migration> = {
 function defaults(): SaveData {
   return {
     version: SAVE_VERSION,
-    settings: { volume: 0.5, music: 0.4, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, minimap: true, healNumbers: true,
+    settings: { volume: 0.5, music: 0.4, shake: true, debug: false, aim: 'mixed', damageNumbers: true, autoPause: true, autoEquip: true, minimap: true, healNumbers: true,
       // Telefon / tablet (dotyk jako główne wejście): domyślnie oszczędne efekty.
       lowFx: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
       playerFx: 'dim', hints: true, hitstop: true, easy: false, elemShapes: false, scaleFill: true, zoom: 1, bgDim: 0.2, bulletOutline: true, playerMarker: true, lang: 'en',
