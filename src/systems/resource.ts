@@ -124,10 +124,11 @@ export function resourceOnHurt(run: Run, dmg: number): void {
     run.flowT = run.flowMax = Math.max(0, grace);
     if (grace > 0) run.popText(run.player.x, run.player.y - 16, `Flow ${grace}s`, C.cyan);
     else breakRhythm(run);
-  } else if (k === 'rhythm' && run.flowT <= 0 && run.res > 0 && !run.rhythmDrain) breakRhythm(run);
+  }
+  // Rytm w trakcie budowania nie spada od trafień (0.50, prośba gracza): łamie go dopiero trafienie w Przepływie.
 }
 
-/** Rytm (0.43.3): trzyma się, dopóki nie oberwiesz — wtedy opada do zera (BAL.resource.rhythm.drain na sekundę), bez przyrostu. */
+/** Rytm: pełny pasek (Przepływ) trzyma się, dopóki nie oberwiesz — wtedy opada do zera (BAL.resource.rhythm.drain na sekundę), bez przyrostu. */
 function breakRhythm(run: Run): void {
   run.flowT = 0;
   run.rhythmDrain = true;

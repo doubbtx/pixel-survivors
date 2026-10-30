@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.49.3)
+## Stan (wersja 0.50.1)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -750,6 +750,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   Pomiar (kit 4 bronie, 300 s, 5 runów): bez mierzalnej poprawy wręcz (54 s vs 62 s) i dystansu stojącego (101 vs 103 s) —
   test kończy się przed 2. minutą, zanim działają fale; 7 bohaterów × 6: mediany −10…+5 s (szum). Cele Agenta 2 niespełnione,
   do potwierdzenia playtestem człowieka.
+- 0.50.0 (prośba gracza): Rytm Takezo w trakcie budowania nie spada od trafień (resourceOnHurt bez gałęzi breakRhythm
+  poza Przepływem); łamie go tylko trafienie w Przepływie (jak dotąd: flaga rhythm.flow daje sekundy łaski, potem opadanie).
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula
@@ -821,7 +823,7 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - 0.49.2: przerysowani ostatni starsi wrogowie (gfx/actors.ts): jeleń (stawy nóg, pierś, grzywa, ucho, poroże z jarzącymi się
   końcami, smugi ducha), ognik (oczy z żarem, paszcza, iskry, języki u dołu), wirujący (pięć osobnych ostrzy z krawędzią tnącą,
   pierścień z nitami, czerwone oko; `starPts` usunięte), mimik (deski ze słojami, żelazne okucia z nitami, pazury, oczy w szparze).
-- 0.49.3 (zrzut z telefonu): HP jako `hpText()` (util/format.ts: obie liczby w górę, bieżące ≤ maks.; było „107 / 106”)
+- 0.50.1 (zrzut z telefonu): HP jako `hpText()` (util/format.ts: obie liczby w górę, bieżące ≤ maks.; było „107 / 106”)
   w HUD, sklepie i na mapie. Na dotyku gniazda umiejętności bez plakietek klawiszy. Szeroki ekran: HUD przy krawędziach okna —
   `shifted()` w hud.ts (lewy blok −OX: karta bohatera, statusy, synergie, bronie; prawy +OX: liczniki, minimapa, zadanie),
   pasek XP i czerwona ramka niskiego HP na całą szerokość; `abilitySlotPos` i `TOUCH_PAUSE.x` (core/input.ts) z +OX, więc

@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.50',
+    lines: [
+      "Takezo: getting hit no longer drains Rhythm while it builds. Only a hit during Flow (full bar) breaks it, then it drains to zero.",
+    ],
+  },
+  {
     version: '0.49',
     lines: [
       "Melee and pressure: Holy Aura and Orbit Blades reach further, shooters keep a shorter distance and step closer after a volley, and from minute 3 more kamikazes, blinkers and weavers come for you (plus rings of fast enemies every minute after 4:30). Standing still with ranged weapons is riskier now.",
