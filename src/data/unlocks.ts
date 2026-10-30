@@ -2,6 +2,8 @@ import type { SaveData } from '../core/save';
 import type { Run } from '../game/run';
 import type { Tag } from './cards';
 import { BAL } from './balance';
+import { WEAPON_BY_ID } from './weapons';
+import { PASSIVE_BY_ID } from './passives';
 
 /**
  * Stopniowe odblokowania (faza 2): nowy gracz zaczyna od Ekspedycji i dwóch bohaterów, reszta przychodzi z postępem.
@@ -30,6 +32,8 @@ export interface UnlockDef {
   check: (save: SaveData, c: UnlockCtx) => boolean;
   /** Postęp warunku w runie [obecnie, cel] (najlepszy wynik trzyma `save.unlockBest`). */
   progress?: (run: Run) => [number, number];
+  /** Cel warunku „w jednym runie” (do opisu postępu bez runu). */
+  goal?: number;
   /** Dodatkowe id odblokowane razem z tym (np. pasywka potrzebna do ewolucji odblokowanej broni). */
   grants?: string[];
 }
@@ -51,6 +55,7 @@ export const UNLOCKS: UnlockDef[] = [
 ];
 /** Warunek „w jednym runie”: licznik runu ≥ cel (z postępem). */
 const inRun = (get: (r: Run) => number, n: number) => ({
+  goal: n,
   check: (_s: SaveData, c: UnlockCtx) => !!c.run && get(c.run) >= n,
   progress: (r: Run): [number, number] => [Math.min(n, Math.floor(get(r))), n],
 });
@@ -65,16 +70,16 @@ const inRun = (get: (r: Run) => number, n: number) => ({
 const CARD_TAGS: Tag[] = ['Ogień', 'Krytyk', 'Pociski', 'Obszar', 'Tarcze', 'Życie', 'Szybkość', 'Umiejętności', 'Przywołania', 'Klątwa'];
 const PRISM_GROUPS = 3;
 export const CONTENT: UnlockDef[] = [
-  { id: 'w:meteor', name: 'Meteor', how: 'Defeat a boss.', hint: 'A new weapon can now show up on level-up.', check: (_s, c) => c.boss },
+  { id: 'w:meteor', name: WEAPON_BY_ID.meteor.name, how: 'Defeat a boss.', hint: 'A new weapon can now show up on level-up.', check: (_s, c) => c.boss },
   { id: 'fusions', name: 'Weapon fusions', how: 'Defeat a boss.', hint: 'Two maxed weapons can now fuse into a hybrid (Codex: Fusions).', check: (_s, c) => c.boss },
-  { id: 'p:magnet', name: 'Lodestone', how: 'Reach level 20 in a run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.level, 20) },
-  { id: 'w:mines', name: 'Mines', how: 'Complete act 1 of an Expedition or survive 10 minutes in Endless.', hint: 'A new weapon can now show up on level-up.', check: (_s, c) => c.acts >= 1 || (!!c.run && c.run.mode === 'endless' && c.run.totalTime >= 600) },
-  { id: 'p:ember', name: 'Phoenix Ember', how: 'Trigger 100 elemental reactions in one run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.reactions, 100) },
-  { id: 'w:laser', name: 'Laser', how: 'Reach level 30 in a run.', hint: 'A new weapon can now show up on level-up.', ...inRun((r) => r.level, 30) },
-  { id: 'p:whetstone', name: 'Diamond Edge', how: 'Land 1000 critical hits in one run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.critHits, 1000) },
-  { id: 'w:sickle', name: 'Blood Sickle', how: 'Heal 1000 HP in one run.', hint: 'A new weapon can now show up on level-up.', ...inRun((r) => r.healed, 1000) },
-  { id: 'p:clover', name: 'Four-Leaf Crown', how: 'Kill 1500 enemies in one run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.kills, 1500) },
-  { id: 'w:dice', name: 'Dice', how: 'Get a Lucky find.', hint: 'A new weapon and the Golden Horseshoe can now show up on level-up.', grants: ['p:horseshoe'], ...inRun((r) => r.jackpots, 1) },
+  { id: 'p:magnet', name: PASSIVE_BY_ID.magnet.name, how: 'Reach level 20 in a run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.level, 20) },
+  { id: 'w:mines', name: WEAPON_BY_ID.mines.name, how: 'Complete act 1 of an Expedition or survive 10 minutes in Endless.', hint: 'A new weapon can now show up on level-up.', check: (_s, c) => c.acts >= 1 || (!!c.run && c.run.mode === 'endless' && c.run.totalTime >= 600) },
+  { id: 'p:ember', name: PASSIVE_BY_ID.ember.name, how: 'Trigger 100 elemental reactions in one run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.reactions, 100) },
+  { id: 'w:laser', name: WEAPON_BY_ID.laser.name, how: 'Reach level 30 in a run.', hint: 'A new weapon can now show up on level-up.', ...inRun((r) => r.level, 30) },
+  { id: 'p:whetstone', name: PASSIVE_BY_ID.whetstone.name, how: 'Land 1000 critical hits in one run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.critHits, 1000) },
+  { id: 'w:sickle', name: WEAPON_BY_ID.sickle.name, how: 'Heal 1000 HP in one run.', hint: 'A new weapon can now show up on level-up.', ...inRun((r) => r.healed, 1000) },
+  { id: 'p:clover', name: PASSIVE_BY_ID.clover.name, how: 'Kill 1500 enemies in one run.', hint: 'A new passive can now show up on level-up.', ...inRun((r) => r.kills, 1500) },
+  { id: 'w:dice', name: WEAPON_BY_ID.dice.name, how: 'Get a Lucky find.', hint: 'A new weapon and a new passive can now show up on level-up.', grants: ['p:horseshoe'], ...inRun((r) => r.jackpots, 1) },
   ...CARD_TAGS.map((t): UnlockDef => ({
     id: `cards:${t}`, name: `${t}: gold cards`, how: `Activate the ${t} synergy in a run (3 points).`, hint: 'More gold cards can now show up.',
     check: (_s, c) => (c.run?.synTiers[t] ?? 0) >= 1,
@@ -116,6 +121,19 @@ export function grantDiscovery(s: SaveData, points: number): UnlockDef[] {
 function give(s: SaveData, defs: UnlockDef[]): UnlockDef[] {
   for (const u of defs) for (const id of [u.id, ...(u.grants ?? [])]) if (!s.unlocks.includes(id)) s.unlocks.push(id);
   return defs;
+}
+
+/**
+ * Opis brakującego odblokowania zawartości dla Księgi ewolucji, Arsenału i Kolekcji: pierwszy niespełniony z `ids`
+ * (warunek i najlepszy postęp); '' gdy wszystko otwarte.
+ */
+export function lockText(s: SaveData, ids: string[]): string {
+  const open = new Set(s.unlocks), id = ids.find((x) => !isOpen(open, x));
+  if (!id) return '';
+  if (id.startsWith('evo:')) return 'Locked: evolve this weapon once (its first evolution) to unlock the variants.';
+  const u = UNLOCK_BY_ID[id] ?? CONTENT.find((c) => c.grants?.includes(id));
+  if (!u) return '';
+  return u.goal ? `Locked (${Math.floor(s.unlockBest?.[u.id] ?? 0)}/${u.goal}): ${u.how}` : `Locked: ${u.how}`;
 }
 
 /** Czy zostało coś do odkrycia (ekran końca: pasek odkryć). */

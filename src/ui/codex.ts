@@ -13,6 +13,7 @@ import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { passiveEvolves } from '../systems/levelup';
 import type { App, Screen } from './app';
 import { button, backButton, backHit, panel, slot, inside, Scroll, titleBar } from './widgets';
+import { lockText } from '../data/unlocks';
 
 /** Wpis księgi: przepis z ikon (składniki → wynik), tytuł, sposób zdobycia i opis. */
 interface Entry {
@@ -22,6 +23,8 @@ interface Entry {
   color: number;
   how: string;
   desc: string;
+  /** Wymagane odblokowania zawartości (data/unlocks.ts); zablokowany wpis pokazuje warunek. */
+  lock?: string[];
 }
 
 /** Strona księgi: tytuł zakładki, wstęp i wpisy. */
@@ -37,14 +40,15 @@ function weaponPage(): Page {
   const entries: Entry[] = [];
   for (const w of WEAPONS) {
     if (w.evolved) continue;
-    for (const e of evolvesOf(w)) {
+    evolvesOf(w).forEach((e, i) => {
       const into = WEAPON_BY_ID[e.into], pa = PASSIVE_BY_ID[e.passive], el = WEAPON_ELEMENT[into.id];
       entries.push({
+        lock: [`w:${w.id}`, `p:${e.passive}`, ...(i ? [`evo:${w.id}`] : [])],
         parts: [w.icon, pa.icon], result: into.icon, title: into.name, color: into.color,
         how: `${w.name} at level ${maxLevel(w)} + passive ${pa.name}, then level up.${heroNote(w.hero)}`,
         desc: `${into.desc}${el ? ` Element: ${ELEMENTS[el].name}.` : ''}`,
       });
-    }
+    });
   }
   return { title: 'Weapons', intro: 'Every weapon evolves with several passives, each into a different weapon. You choose one evolution; the weapon level resets and quality bonuses stay.', entries };
 }
@@ -53,6 +57,7 @@ function passivePage(): Page {
   const entries = PASSIVES.map((p): Entry => {
     const ws = passiveEvolves(p.id);
     return {
+      lock: [`p:${p.id}`],
       parts: [p.icon, ...(ws[0] ? [ws[0].into.icon] : [])], result: `${p.icon}_evo`, title: p.evo.name, color: C.gold,
       how: `${p.name} at level ${p.maxLevel} + one weapon evolved with it (${ws.map((x) => x.into.name).join(', ')}), then level up.`,
       desc: `${p.desc} per level. Evolution: ${p.evo.desc}.`,
@@ -65,6 +70,7 @@ function fusionPage(): Page {
   const entries = FUSIONS.map((f): Entry => {
     const a = WEAPON_BY_ID[f.a], b = WEAPON_BY_ID[f.b], into = WEAPON_BY_ID[f.into];
     return {
+      lock: ['fusions', `w:${f.a}`, `w:${f.b}`],
       parts: [a.icon, b.icon], result: into.icon, title: into.name, color: into.color,
       how: `${a.name} + ${b.name}, both at max level or evolved, then level up.${heroNote(a.hero ?? b.hero)}`,
       desc: into.desc,
@@ -166,11 +172,13 @@ export class CodexScreen implements Screen {
     y += 6;
     for (const e of pg.entries) {
       // Rysuje tylko widoczne wpisy (długie strony), ale zawsze liczy wysokość.
-      const how = wrapText(e.how, tw), desc = wrapText(e.desc, tw), h = Math.max(S + 4, 11 + (how.length + desc.length) * lh + 4);
+      const lock = wrapText(e.lock ? lockText(this.app.save, e.lock) : '', tw).filter(Boolean);
+      const how = wrapText(e.how, tw), desc = wrapText(e.desc, tw), h = Math.max(S + 4, 11 + (lock.length + how.length + desc.length) * lh + 4);
       if (y + h > AREA[1] - 4 && y < AREA[1] + AREA[3] + 4) {
         this.recipe(r, e, x, y);
-        drawText(g, e.title, tx, y, e.color, { shadow: C.black });
+        drawText(g, e.title, tx, y, lock.length ? C.lavender : e.color, { shadow: C.black });
         let ly = y + 11;
+        for (const l of lock) { drawText(g, l, tx, ly, C.hotpink, DESC); ly += lh; }
         for (const l of how) { drawText(g, l, tx, ly, C.lime, DESC); ly += lh; }
         for (const l of desc) { drawText(g, l, tx, ly, C.lgray, DESC); ly += lh; }
         r.withAlpha(0.3, () => r.rect(x, y + h - 2, W - 44, 1, C.slate));

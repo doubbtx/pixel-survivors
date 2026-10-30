@@ -4,11 +4,12 @@ import { drawText, wrapText, textWidth, DESC, descS, descLH } from '../core/font
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
-import { CARDS, type CardDef } from '../data/cards';
+import { CARDS, cardLock, type CardDef } from '../data/cards';
 import { HERO_BY_ID } from '../data/heroes';
 import type { App, Screen } from './app';
 import { drawCard, rarityColor } from './cards';
 import { button, backButton, backHit, panel, slot, inside, Scroll } from './widgets';
+import { lockText } from '../data/unlocks';
 import { UNIQUES, UNIQUE_COLOR, BASE_BY_ID, rollUnique, type Item } from '../data/items';
 import { drawItemCard } from './items';
 import { SECRETS } from '../data/secrets';
@@ -198,7 +199,9 @@ export class CollectionScreen implements Screen {
     for (let i = 0; i < ARS_N; i++) {
       const [x, y] = arsPos(i), w = ARS_WEAPONS[i], p = PASSIVES[i - ARS_WEAPONS.length];
       slot(r, x, y, A_TILE, w ? (w.hero ? HERO_BY_ID[w.hero].color : C.blue) : C.lime);
-      drawSprite(g, w ? w.icon : p.icon, x + A_TILE / 2, y + A_TILE / 2);
+      // Zablokowana zawartość (data/unlocks.ts): przygaszona ikona.
+      const locked = !!lockText(this.app.save, [w ? `w:${w.id}` : `p:${p.id}`]);
+      r.withAlpha(locked ? 0.3 : 1, () => drawSprite(g, w ? w.icon : p.icon, x + A_TILE / 2, y + A_TILE / 2));
       if (i === this.wSel) r.frame(x - 2, y - 2, A_TILE + 4, A_TILE + 4, C.white);
     }
     const X = 228, PW = W - X - 6;
@@ -221,6 +224,8 @@ export class CollectionScreen implements Screen {
       const el = WEAPON_ELEMENT[w.id];
       drawText(g, `${w.hero ? `only ${HERO_BY_ID[w.hero].name}, ` : ''}max lv. ${maxLevel(w)}${el ? `, ${ELEMENTS[el].name.toLowerCase()}` : ''}`, X + 40, y + 12, C.lavender);
       y += 26;
+      const lock = lockText(this.app.save, [`w:${w.id}`]);
+      if (lock) text(lock, C.hotpink);
       text(el ? `${w.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : w.desc, C.white);
       for (const e of evolvesOf(w)) {
         const ev = WEAPON_BY_ID[e.into], pa = PASSIVE_BY_ID[e.passive];
@@ -250,6 +255,8 @@ export class CollectionScreen implements Screen {
     drawText(g, p.name, X + 40, y + 1, C.lime, { shadow: C.black });
     drawText(g, `Pasywka, poz. maks. ${p.maxLevel}`, X + 40, y + 12, C.lavender);
     y += 26;
+    const lock = lockText(this.app.save, [`p:${p.id}`]);
+    if (lock) text(lock, C.hotpink);
     text(`${p.desc} na każdy poziom.`, C.white);
     const evo = passiveEvolves(p.id);
     if (evo.length) {
@@ -449,6 +456,7 @@ export class CollectionScreen implements Screen {
       known ? `Wybrana ${col.picks[c.id] ?? 0} razy` : '',
       c.hero ? `Karta bohatera: ${HERO_BY_ID[c.hero].name}` : '',
       c.unlock && !this.app.save.achievements.includes(c.unlock) ? `Zablokowana: osiągnięcie ${ACHIEVEMENTS.find((x) => x.id === c.unlock)!.name}` : '',
+      cardLock(c.id) ? lockText(this.app.save, [cardLock(c.id)]) : '',
       banned ? 'Zbanowana: nie pojawia się w ofertach' : '',
     ].filter(Boolean);
     info.forEach((l, i) => drawText(g, l, GRID_X, 213 + i * 10, banned && i === info.length - 1 ? C.salmon : C.lgray));
