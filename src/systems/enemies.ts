@@ -527,8 +527,8 @@ function updateBiomeEnemy(run: Run, e: Enemy, dt: number, dist: number, nx: numb
         if (e.actT <= 0) {
           e.phase = 0; e.hidden = false; e.actT = B.burrowUp;
           if ((p.x - e.x) ** 2 + (p.y - e.y) ** 2 < (B.burrowR + p.r) ** 2) run.hurtPlayer(e.damage * 1.3);
-          run.burst(e.x, e.y, C.teal, 14, 70);
-          run.burst(e.x, e.y, C.cyan, 6, 90);
+          run.burst(e.x, e.y, C.teal, 14, 70, true);
+          run.burst(e.x, e.y, C.cyan, 6, 90, true);
           sfx.play('hit');
         }
       }
@@ -542,7 +542,7 @@ function updateBiomeEnemy(run: Run, e: Enemy, dt: number, dist: number, nx: numb
         if (e.dashT <= 0) {
           const n = B.flameCount;
           fireVolley(run, e.x, e.y, { shape: 'fan', count: n, speed: 105, spread: (B.flameCone * 2) / (n - 1), acc: -110, minV: 18, life: 0.75, sprite: 'eb_orange' }, e.shootA, dmg);
-          run.burst(e.x + Math.cos(e.shootA) * 8, e.y + Math.sin(e.shootA) * 8, C.orange, 8, 70);
+          run.burst(e.x + Math.cos(e.shootA) * 8, e.y + Math.sin(e.shootA) * 8, C.orange, 8, 70, true);
         }
         break;
       }
@@ -760,10 +760,12 @@ export function updateEnemies(run: Run, dt: number): void {
             if (run.blink(4, 2)) e.flash = 2;
             if (e.dashT <= 0) {
               if (dist < N.kamikazeR + p.r) run.hurtPlayer(e.damage * N.kamikazeDmg);
-              run.boomFx(e.x, e.y, N.kamikazeR);
-              run.burst(e.x, e.y, C.orange, 16, 80);
+              run.boomFx(e.x, e.y, N.kamikazeR, true);
+              run.burst(e.x, e.y, C.orange, 16, 80, true);
               sfx.play('explode');
-              run.killEnemy(e);
+              // Samowybuch to nie zabójstwo gracza: bez XP, combo, transu, zadań i rozbicia sytuacji
+              // (formacja bez żywych członków kończy się w updateSituations jako „lost”).
+              e.dead = true;
               continue;
             }
           } else if (dist < N.kamikazeFuseAt) e.dashT = N.kamikazeFuse;

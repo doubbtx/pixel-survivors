@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.57.0)
+## Stan (wersja 0.58.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -773,6 +773,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   uderzenia zwykłe fale ×0.85. Na mapach ze scenariuszem bez losowych sytuacji i EVENTS. Podgląd węzła: „Plan: …”.
   A/B (bot, 7 bohaterów × 4, mediana map): mieszane, w szumie (Borgun 1.5→2.5, Morwen 1.5→3.5, Kestra 1→0.5, reszta =);
   buildy kit bez różnicy. Do oceny playtestem człowieka; dalej: akty 2–3, więcej szablonów (Oblężenie, Łowy).
+- 0.58.0 (ultracode: przegląd 8 specjalistów → 3 weryfikatorów na zgłoszenie → fixery): 78 zgłoszeń, 69 potwierdzonych, 9
+  odrzuconych; naprawione wszystkie high/medium (43) w 34 plikach, m.in. updateEnemyBullets po bullets.clear(), portale w walce
+  z bossem (events.ts), wznowienie mapy ze scenariuszem, e.plague zerowane, beat nie nadpisuje sitActive, kamikaze bez kill,
+  łup węzła skarbu przed zapisem, revivesLeft po wczytaniu, mysz w spoczynku nie kradnie wyboru (levelup/cards/power/relic),
+  dotyk (peek mapy, plecak/sklep/Rozwój pierwsze dotknięcie, podwójne potwierdzenia, relikwie z opóźnieniem, opisy ustawień),
+  i18n banerów ultów i uderzeń, Iskra bez wykładniczych stref ognia, ellipse/minimapa/miniony/strefy (wydajność), c_fever
+  drenuje HP, karty ultów działają z alt-ultem, Mushin czas od poziomu, telegrafy wrogów nie znikają z cullingiem.
+  26 drobnych (low) zostawionych — lista w raporcie przeglądu.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

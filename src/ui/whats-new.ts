@@ -18,6 +18,12 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.58',
+    lines: [
+      "Big bug-fix pass (code review by a team of agents): a crash when a boss died from your own hit chain, portals during a boss fight, Plague and Mushin fixes, lost loot and revives after resuming, many touch fixes (backpack, shop, map preview, relic swap, double-tap confirmations), keyboard selection no longer stolen by a resting mouse, translations, fire zones from Spark no longer multiply endlessly, and smoother frames with many enemies.",
+    ],
+  },
+  {
     version: '0.57',
     lines: [
       "Scripted maps (prototype, Expedition act 1): every fight has a plan shown on the map (Prologue, Charge, Barrage). Instead of random situations you get planned moments: swarms, charges from several sides, a tough elite, a firing line, fire raining on the ground and a short moment of calm. Tell us how it plays!",

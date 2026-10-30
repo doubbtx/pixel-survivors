@@ -91,6 +91,8 @@ export interface DamageOpts {
   stun?: number;
   /** Obrażenia od stanu (podpalenie, trucizna): bez krytyka, bez nakładania żywiołu i bez hooków onHit. */
   dot?: boolean;
+  /** Bez hooków onHit (płomienie z hooków trafienia, data/cards.ts PROC_FIRES) — żywioły i zasób działają. */
+  noHooks?: boolean;
 }
 
 const ELEMENT_LIST: Element[] = ['fire', 'ice', 'lightning', 'poison'];
@@ -168,7 +170,7 @@ export interface RunSnapshot {
   /** Umiejętności po ewolucji. */
   abilityEvo?: AbilitySlot[];
   /** Postęp przerwanego poziomu (zapis w trakcie): czas, zabójstwa, elity, zdarzenia, HP bossa (ułamek). */
-  stage?: { time: number; kills: number; eliteT: number; nextEvent: number; bossHpFrac: number; nextBossAt?: number };
+  stage?: { time: number; kills: number; eliteT: number; nextEvent: number; bossHpFrac: number; nextBossAt?: number; revivesUsed?: number };
   /** Mapa i pozycja Ekspedycji. */
   expedition?: ExpeditionState;
   /** Średni DPS (siła buildu, BAL.power) — żeby po wczytaniu wrogowie nie byli na chwilę za słabi. */
@@ -287,7 +289,7 @@ export class Run {
   readonly zones = new Pool<Zone>(newZone, 500);
   readonly fx = new Pool<Fx>(newFx, 400);
   readonly turrets = new Pool<Turret>(() => ({ _i: -1, x: 0, y: 0, life: 0, timer: 0 }), 24);
-  readonly minions = new Pool<Minion>(() => ({ _i: -1, x: 0, y: 0, life: 0, damage: 0, hitT: 0, big: false, burst: false, holy: false, src: '' }), BAL.minions.cap);
+  readonly minions = new Pool<Minion>(() => ({ _i: -1, x: 0, y: 0, life: 0, damage: 0, hitT: 0, big: false, burst: false, holy: false, src: '', tgt: null, tgtUid: 0 }), BAL.minions.cap);
   readonly hash = new SpatialHash<Enemy>(16, 8, 2048);
   /** Wspólne bufory zapytań (żeby nie alokować tablic co klatkę). */
   readonly qa: Enemy[] = [];
@@ -430,7 +432,9 @@ export class Run {
   /** Czas od startu poziomu (napędza fale i cel "przetrwaj"). */
   time = 0;
   levelKills = 0;
-  revivesLeft = 0;
+  /** Wskrzeszenia zużyte na poziomie; pozostałe liczone z bieżących flag (meta, karty i przedmioty działają od razu). */
+  revivesUsed = 0;
+  get revivesLeft(): number { return Math.max(0, this.flag('revive') - this.revivesUsed); }
   /** Zdarzenia mapy (systems/events.ts): obiekty, błogosławieństwa, loch i liczniki. */
   mapObjects: MapObject[] = [];
   buffs: Buff[] = [];
@@ -667,7 +671,7 @@ export class Run {
     if (camp) this.buffs.push({ name: camp.name, stats: camp.stats, t: Infinity });
     this.indexEffects();
     this.recomputeStats();
-    this.revivesLeft = this.flag('revive');
+    this.revivesUsed = 0;
     this.showBanner(this.expedition ? this.levelInfo.name : `Poziom ${depth}: ${this.levelInfo.name}`);
     if (this.levelInfo.biome === VOID_BIOME && !this.expedition) this.showBanner('Sekretny biom: Pustka! Bez leczenia, podwójny łup');
     if (this.levelInfo.dungeon) enterDungeon(this, this.levelInfo.dungeonKind ?? 'portal');
@@ -788,6 +792,8 @@ export class Run {
   update(dt: number, input: Input): void {
     if (this.outcome !== 'none') {
       this.outcomeT -= dt;
+      // Trzęsienie wygasa też po zwycięstwie i śmierci (inaczej shake = 10 z zebrania łupu trzęsie światem do końca nagród).
+      this.shake = Math.max(0, this.shake - dt * 20);
       updateEffects(this, dt);
       return;
     }
@@ -1272,8 +1278,8 @@ export class Run {
   }
 
   /** Animacja eksplozji dobrana skalą (całkowitą, żeby piksele zostały ostre) do promienia w jednostkach świata. */
-  boomFx(x: number, y: number, r: number): void {
-    const f = this.addFx('boom', x, y, C.orange, 0.42);
+  boomFx(x: number, y: number, r: number, foe = false): void {
+    const f = this.addFx('boom', x, y, C.orange, 0.42, foe);
     if (f) f.r = Math.max(1, Math.min(4, Math.round((r * 1.5 * 2) / 30)));
   }
 
@@ -1573,7 +1579,7 @@ export class Run {
     if (cull > 0 && !e.boss && e.hp > 0 && e.hp < e.maxHp * cull) e.hp = 0;
     sfx.play('hit');
     if (pct) this.pctDepth++;
-    this.emit('onHit', e, dmg, crit);
+    if (!o.noHooks) this.emit('onHit', e, dmg, crit);
     if (pct) this.pctDepth--;
     if (e.hp <= 0 && !e.dead) this.killEnemy(e);
   }
@@ -1865,7 +1871,7 @@ export class Run {
     this.pickups.clear();
     for (const b of this.bullets.items) this.burst(b.x, b.y, C.pink, 1, 20);
     this.bullets.clear();
-    this.shake = 10;
+    if (this.shakeEnabled) this.shake = Math.max(this.shake, 10);
   }
 
   /** Obrażenia dla gracza: nietykalność (unik), pancerz (diminishing returns), karty, tarcza, odrodzenie, śmierć. Zwraca true, gdy trafiło. */
@@ -1973,7 +1979,7 @@ export class Run {
     }
     if (p.hp <= 0) {
       if (this.revivesLeft > 0) {
-        this.revivesLeft--;
+        this.revivesUsed++;
         p.hp = this.stats.maxHp * 0.5;
         p.iframes = 2;
         this.explode(p.x, p.y, 60, this.cardDamage(40), 'Feniks', C.orange, 6);
@@ -2143,7 +2149,8 @@ export class Run {
     p.mimic = source === 'drop' && !l.item.unique && rng.chance(BAL.secretsMap.mimicChance);
   }
 
-  burst(x: number, y: number, col: number, n: number, speed: number): void {
+  /** foe: efekt wroga (rysowany poza ustawieniem „Ataki gracza”). */
+  burst(x: number, y: number, col: number, n: number, speed: number, foe = false): void {
     if (this.lowFx) n = Math.ceil(n / 3);
     n = Math.min(n, BAL.fx.particlesPerStep - this.particlesThisStep);
     this.particlesThisStep += Math.max(0, n);
@@ -2153,15 +2160,15 @@ export class Run {
       const a = rng.range(0, Math.PI * 2), s = rng.range(0.3, 1) * speed;
       p.x = x; p.y = y; p.vx = Math.cos(a) * s; p.vy = Math.sin(a) * s;
       p.max = p.life = rng.range(0.2, 0.5);
-      p.col = col; p.size = rng.chance(0.3) ? 2 : 1;
+      p.col = col; p.size = rng.chance(0.3) ? 2 : 1; p.foe = foe;
     }
   }
 
-  addFx(kind: Fx['kind'], x: number, y: number, col: number, life: number): Fx | null {
+  addFx(kind: Fx['kind'], x: number, y: number, col: number, life: number, foe = false): Fx | null {
     const f = this.fx.obtain();
     if (!f) return null;
     f.kind = kind; f.x = x; f.y = y; f.x2 = x; f.y2 = y; f.r = 0; f.a0 = 0; f.a1 = 0;
-    f.col = col; f.life = f.max = life; f.w = 1; f.sprite = '';
+    f.col = col; f.life = f.max = life; f.w = 1; f.sprite = ''; f.foe = foe;
     return f;
   }
 
@@ -2169,7 +2176,7 @@ export class Run {
     const z = this.zones.obtain();
     if (!z) return null;
     z.kind = kind; z.x = x; z.y = y; z.r = r; z.damage = damage; z.life = life; z.slot = slot; z.src = src;
-    z.t = 0; z.delay = 0; z.angle = 0; z.len = 0; z.tick = 6; z.slow = 0; z.knock = 0;
+    z.t = 0; z.delay = 0; z.angle = 0; z.len = 0; z.tick = 6; z.slow = 0; z.knock = 0; z.phase = this.step;
     return z;
   }
 
@@ -2204,6 +2211,7 @@ export class Run {
       stage: inProgress ? {
         time: this.time, kills: this.levelKills, eliteT: this.eliteT, nextEvent: this.nextEvent,
         bossHpFrac: this.boss ? this.boss.hp / this.boss.maxHp : 1, nextBossAt: this.nextBossAt,
+        revivesUsed: this.revivesUsed,
       } : undefined,
       expedition: this.expedition ? structuredClone(this.expedition) : undefined,
       dpsEma: this.dpsEma,
@@ -2292,6 +2300,9 @@ export class Run {
       run.nextEvent = s.stage.nextEvent;
       run.bossHpFrac = s.stage.bossHpFrac;
       run.nextBossAt = s.stage.nextBossAt ?? BAL.endlessBossEvery;
+      run.revivesUsed = s.stage.revivesUsed ?? 0;
+      // startLevel ustawił scenariusz przy zerowym postępie — po przywróceniu postępu jeszcze raz (bez serii uderzeń).
+      resetScript(run);
       run.showBanner(`Wznowiono poziom ${s.depth}`);
     }
     // Sklep przed poziomem, który dopiero się zacznie (zapis między poziomami).
@@ -2324,7 +2335,7 @@ function newBullet(): EnemyBullet {
 
 function newZone(): Zone {
   return {
-    _i: -1, kind: 'meteor', x: 0, y: 0, r: 0, angle: 0, len: 0, t: 0, life: 0, delay: 0, damage: 0, tick: 6,
+    _i: -1, kind: 'meteor', x: 0, y: 0, r: 0, angle: 0, len: 0, t: 0, life: 0, delay: 0, damage: 0, tick: 6, phase: 0,
     slot: 0, src: '', slow: 0, knock: 0,
   };
 }

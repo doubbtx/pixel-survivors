@@ -20,6 +20,8 @@ export function spawnMinion(run: Run, x: number, y: number, damage: number, life
   m.burst = burst;
   m.holy = holy;
   m.src = src;
+  m.tgt = null;
+  m.tgtUid = 0;
   run.burst(m.x, m.y, holy ? C.yellow : C.pink, 6, 30);
 }
 
@@ -38,7 +40,16 @@ export function updateMinions(run: Run, dt: number): void {
     }
     m.hitT -= dt;
     const r = m.big ? M.bigRadius : M.radius;
-    const t = run.nearestEnemy(m.x, m.y, M.range);
+    // Cel trzymany między krokami; ponowne szukanie tylko gdy nieważny albo co 8 kroków (rozłożone po indeksie).
+    let t = m.tgt;
+    if (t && (t.dead || t.hidden || t.uid !== m.tgtUid || (run.step + i) % 8 === 0
+      || (t.x - m.x) ** 2 + (t.y - m.y) ** 2 > M.range * M.range)) t = null;
+    if (!t) {
+      // Najpierw mały promień (gęsty tłum: kilkadziesiąt komórek zamiast ~600), potem pełny zasięg.
+      t = run.nearestEnemy(m.x, m.y, 48) ?? run.nearestEnemy(m.x, m.y, M.range);
+      m.tgt = t;
+      m.tgtUid = t ? t.uid : 0;
+    }
     // Bez celu: wraca w pobliże gracza.
     const tx = t ? t.x : p.x, ty = t ? t.y : p.y;
     const dx = tx - m.x, dy = ty - m.y, d = Math.hypot(dx, dy) || 1;

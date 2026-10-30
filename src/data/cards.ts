@@ -104,11 +104,19 @@ export interface CardDef {
   cursed?: boolean;
   /** Można ją wybrać wielokrotnie (efekty się kumulują). */
   stackable?: boolean;
+  /** Karta tylko dla podstawowego ('base') albo drugiego ('alt') ultimate bohatera (Run.altUlt). */
+  ult?: 'base' | 'alt';
   stats?: Partial<Stats>;
   mul?: Partial<Stats>;
   flags?: Record<string, number>;
   hooks?: CardHooks;
 }
+
+/**
+ * Źródła płomieni z hooków onHit (Iskra, Synergia: Ogień): ich trafienia nie odpalają hooków onHit
+ * (systems/zones.ts), inaczej płomienie rodziłyby kolejne płomienie aż do zapełnienia puli stref.
+ */
+export const PROC_FIRES = new Set(['Iskra', 'Synergia: Ogień']);
 
 export const RARITY: Record<Rarity, { name: string; color: number }> = {
   silver: { name: 'Srebrna', color: C.lgray },
@@ -252,13 +260,13 @@ export const CARDS: CardDef[] = [
   { id: 'g_quiver', name: 'Kołczan', rarity: 'gold', tags: ['Pociski'], desc: '+1 pocisk dla każdej broni.', stats: { amount: 1 } },
   { id: 'g_momentum', name: 'Pęd', rarity: 'gold', tags: ['Szybkość'], desc: '+10% szybkości. Każdy % bonusu szybkości to też % obrażeń.', flags: { momentum: 1 }, stats: { speedBonus: 0.1 } },
   { id: 'c_glass', name: 'Szklana armata', rarity: 'gold', tags: ['Klątwa', 'Pociski'], cursed: true, desc: '+80% obrażeń, ale -40% maks. HP.', stats: { might: 0.8 }, mul: { maxHp: 0.6 } },
-  { id: 'c_fever', name: 'Gorączka', rarity: 'gold', tags: ['Klątwa', 'Szybkość'], cursed: true, desc: '-35% czasu odnowienia, ale tracisz 1 HP/s.', stats: { cdr: 0.35, regen: -1 } },
+  { id: 'c_fever', name: 'Gorączka', rarity: 'gold', tags: ['Klątwa', 'Szybkość'], cursed: true, desc: '-35% czasu odnowienia, ale tracisz 1 HP/s.', stats: { cdr: 0.35 }, flags: { hpDrain: 1 } },
   { id: 'c_greed', name: 'Przeklęte złoto', rarity: 'gold', tags: ['Klątwa'], cursed: true, desc: '+100% złota, +50% XP, ale wrogowie mają +25% HP.', stats: { greed: 1, growth: 0.5 }, flags: { enemyHp: 0.25 } },
   { id: 'h_k_volley', name: 'Grad z nieba', rarity: 'gold', tags: ['Pociski', 'Umiejętności'], hero: 'kestra', desc: 'Salwa: +4 strzały, każda przebija 2 wrogów więcej.', stackable: true, flags: { 'k_volley.count': 4, 'k_volley.pierce': 2 } },
   { id: 'h_k_rain', name: 'Ulewa', rarity: 'gold', tags: ['Obszar', 'Umiejętności'], hero: 'kestra', desc: 'Deszcz strzał: +2 s, +20 promienia.', stackable: true, flags: { 'k_rain.duration': 2, 'k_rain.radius': 20 } },
   { id: 'h_b_ram', name: 'Taran', rarity: 'gold', tags: ['Umiejętności'], hero: 'borgun', desc: 'Szarża: +40 dystansu, +20 obrażeń, +0.6 s ogłuszenia.', stackable: true, flags: { 'b_charge.dist': 40, 'b_charge.damage': 20, 'b_charge.stun': 0.6 } },
   {
-    id: 'h_b_wrath', name: 'Wieczny gniew', rarity: 'gold', tags: ['Życie', 'Umiejętności'], hero: 'borgun', desc: 'Gniew tytana trwa 4 s dłużej, a zabójstwa w jego trakcie leczą 1 HP.',
+    id: 'h_b_wrath', name: 'Wieczny gniew', rarity: 'gold', tags: ['Życie', 'Umiejętności'], hero: 'borgun', ult: 'base', desc: 'Gniew tytana trwa 4 s dłużej, a zabójstwa w jego trakcie leczą 1 HP.',
     flags: { 'b_titan.duration': 4 },
     hooks: { onKill: (run) => { if (run.abilities.ult.activeT > 0) run.heal(1); } },
   },
@@ -436,7 +444,7 @@ export const CARDS: CardDef[] = [
   { id: 'h_t_rhythm', name: 'Steady Breath', rarity: 'silver', tags: ['Szybkość'], hero: 'takezo', desc: 'Rhythm builds 40% faster and gives 30% more attack speed.', stackable: true, flags: { 'res.gain': 0.4, 'res.power': 0.3 } },
   { id: 'h_t_step', name: 'Open Guard', rarity: 'silver', tags: ['Szybkość', 'Krytyk'], hero: 'takezo', desc: 'Mikiri: +5% parry chance, and Footwork recharges 10% faster.', flags: { 'passive.parry': 0.05, 'cd.dash': 0.1 } },
   { id: 'h_t_flurry', name: 'Flowing Water', rarity: 'gold', tags: ['Szybkość', 'Umiejętności'], hero: 'takezo', desc: 'Thousand Cuts: +2 slashes, +6 damage per slash.', stackable: true, flags: { 't_flurry.slashes': 2, 't_flurry.damage': 6 } },
-  { id: 'h_t_iai', name: 'Single Stroke', rarity: 'gold', tags: ['Krytyk', 'Umiejętności'], hero: 'takezo', desc: 'Iai: +60 damage, +30 dash length.', stackable: true, flags: { 't_iai.damage': 60, 't_iai.dist': 30 } },
+  { id: 'h_t_iai', name: 'Single Stroke', rarity: 'gold', tags: ['Krytyk', 'Umiejętności'], hero: 'takezo', desc: 'Iai: +60 damage, +30 dash length (Mushin: +1 s).', stackable: true, flags: { 't_iai.damage': 60, 't_iai.dist': 30 } },
   { id: 'h_t_max', name: 'Deep Focus', rarity: 'gold', tags: ['Szybkość'], hero: 'takezo', desc: 'After a hit, Flow lasts 1.5 s more.', stackable: true, flags: { 'rhythm.flow': 1.5 } },
   { id: 'h_t_niten', name: 'Niten Ichi', rarity: 'prism', tags: ['Krytyk', 'Szybkość'], hero: 'takezo', desc: 'Helm Splitter strikes a second time a moment later, and Mikiri gets +10% parry chance.', flags: { 'echo.q': 1, 'passive.parry': 0.1 } },
   // Karty z osiągnięć (data/achievements.ts): w ofertach dopiero po zdobyciu osiągnięcia.
@@ -519,13 +527,14 @@ export function rollRarity(depth: number, lvl: number, source: CardSource, luck 
   return 'silver';
 }
 
-/** Karty, które można teraz wylosować (pasujący bohater; unikalne tylko raz; bez kart zbanowanych w kolekcji). */
+/** Karty, które można teraz wylosować (pasujący bohater i ultimate; unikalne tylko raz; bez kart zbanowanych w kolekcji). */
 export function cardPool(run: Run, rarity: Rarity, exclude: string[] = []): CardDef[] {
   return CARDS.filter((c) =>
     c.rarity === rarity &&
     !run.cardBans.has(c.id) &&
     (!c.unlock || run.unlocked.has(c.unlock)) &&
     (!c.hero || c.hero === run.hero.id) &&
+    (!c.ult || (c.ult === 'alt') === run.altUlt) &&
     (c.stackable || !run.cards.some((x) => x.id === c.id)) &&
     !exclude.includes(c.id));
 }

@@ -19,7 +19,8 @@ export function updateScript(run: Run, dt: number): void {
   const sc = run.levelInfo.script ? SCRIPT_BY_ID[run.levelInfo.script] : null;
   if (!sc || run.bossSpawned || run.dungeon) return;
   const S = BAL.scripts, beat = sc.beats[run.beatIdx];
-  if (!beat || run.situation) return;
+  // Poprzednia formacja jeszcze żyje (rozbita/utracona/wygasła najpóźniej po expire): dwie naraz to chaos.
+  if (!beat || run.situation || run.sitActive) return;
   const p = run.objectiveProgress(), t = run.time;
   if (p >= S.last) { run.beatIdx = sc.beats.length; return; }
   if (p < beat.at || t < S.first || t - run.lastBeatT < S.gap) return;

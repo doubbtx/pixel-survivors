@@ -2,6 +2,7 @@ import { tr } from '../core/i18n';
 import { W, H, type Renderer } from '../core/renderer';
 import { C, RAMP } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
+import type { Action } from '../core/input';
 import { sfx } from '../core/audio';
 import { heroRecord, type HeroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
@@ -13,7 +14,7 @@ import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
-import { button, Menu, dim, panel, inside, slot, bar, Scroll } from './widgets';
+import { button, Menu, dim, panel, inside, slot, bar, Scroll, Confirm } from './widgets';
 import { renderHud } from './hud';
 import { drawSkills } from './skills';
 import type { AbilitySlot } from '../data/heroes';
@@ -111,7 +112,11 @@ export class GameScreen implements Screen {
   private toast = '';
   private toastT = 0;
   private delay = 0;
-  private confirmQuit = false;
+  /** Zegar ekranu (s) i bufor naciśnięć umiejętności: akcja → termin ważności. */
+  private clock = 0;
+  private castBuf = new Map<Action, number>();
+  /** Poddanie: drugie naciśnięcie po chwili (nie podwójne dotknięcie), uzbrojenie wygasa. */
+  private confirmQuit = new Confirm();
   private hints: Hints;
   /** Czy ultimate był gotowy w poprzedniej klatce (komunikat „R gotowe!” przy zmianie). */
   private ultReady = false;
@@ -164,13 +169,18 @@ export class GameScreen implements Screen {
       { label: () => 'Zapisz i wyjdź', act: () => { this.saveSlot(this.overlayReturn === 'play'); app.go(new MainMenu(app)); } },
       {
         // Poddanie z potwierdzeniem: przepada cały run.
-        label: () => (this.confirmQuit ? 'Na pewno? Run przepadnie' : 'Poddaj run'),
+        label: () => (this.confirmQuit.armed ? 'Na pewno? Run przepadnie' : 'Poddaj run'),
         act: () => {
-          if (!this.confirmQuit) { this.confirmQuit = true; return; }
+          if (!this.confirmQuit.press()) return;
           this.onRunOver();
         },
       },
     ], PL + PLW / 2, 52, PLW - 16, 17);
+    // Każda inna pozycja pauzy (też „Wznów”) rozbraja potwierdzenie poddania.
+    for (const it of this.pauseMenu.items.slice(0, -1)) {
+      const act = it.act;
+      it.act = () => { this.confirmQuit.reset(); act?.(); };
+    }
     this.endMenu = new Menu([
       { label: () => `Rozwój: ${HERO_BY_ID[heroId].name}`, act: () => app.go(new MetaScreen(app, new MainMenu(app), heroId)) },
       { label: () => (mode === 'expedition' ? 'Nowa ekspedycja' : 'New Endless run'), act: () => app.go(new HeroSelect(app, mode)) },
@@ -280,6 +290,7 @@ export class GameScreen implements Screen {
     this.endSlot();
     this.app.persist();
     this.state = 'end';
+    this.delay = END_DELAY;
   }
 
   /** Wczesne porażki pod rząd (playtest): po dwóch ekran końca proponuje tryb łatwy jednym przyciskiem. */
@@ -301,6 +312,8 @@ export class GameScreen implements Screen {
       },
     });
     this.endMenu.y -= this.endMenu.lineH;
+    // Na górze, ale nie domyślnie: jedno przypadkowe potwierdzenie nie zmienia trwale ustawień.
+    this.endMenu.sel = 1;
   }
 
   private endSlot(): void {
@@ -327,11 +340,11 @@ export class GameScreen implements Screen {
         run.heal(run.stats.maxHp * BAL.levelClearHeal);
         this.showToast(`${ex.act > BAL.expedition.acts ? 'Sekretny akt 4: Pustka' : `Akt ${ex.act}`}! +${Math.round(BAL.levelClearHeal * 100)}% HP`);
       }
-      this.openMap();
-      // Bonus mapy po ukończeniu: skrzynia, karta albo leczenie (nakładki wracają na mapę).
+      // Bonus mapy po ukończeniu: skrzynia, karta albo leczenie (nakładki wracają na mapę). Przed openMap, żeby leczenie weszło do zapisu.
       if (m.bonus === 'chest') run.pendingLoot.push(run.rollLoot('boss'));
       if (m.bonus === 'card') run.pendingCards.push('elite');
       if (m.bonus === 'heal') run.heal(run.stats.maxHp * 0.4);
+      this.openMap();
       this.openPending();
       return;
     }
@@ -357,6 +370,7 @@ export class GameScreen implements Screen {
     this.endSlot();
     this.app.persist();
     this.state = 'end';
+    this.delay = END_DELAY;
   }
 
   private showToast(text: string, t = 2.5): void {
@@ -531,7 +545,7 @@ export class GameScreen implements Screen {
     this.state = 'pause';
     this.pauseCard = -1;
     this.pauseMenu.sel = 0;
-    this.confirmQuit = false;
+    this.confirmQuit.reset();
   }
 
   private openInventory(from: State): void {
@@ -574,7 +588,12 @@ export class GameScreen implements Screen {
   private openPending(): boolean {
     const run = this.run;
     const left = run.pendingLoot.length + run.pendingLevels + run.pendingCards.length + run.pendingPowers + run.pendingRelics;
-    if (!left) { this.rewardTotal = 0; this.rewardDone = 0; this.lastPick = null; return false; }
+    if (!left) {
+      this.rewardTotal = 0; this.rewardDone = 0; this.lastPick = null;
+      // Koniec serii nagród na mapie (skarb, bonus mapy, auto-ekwipunek): zapis — łup w kolejce nie wchodzi do zapisu slotu.
+      if (this.overlayReturn === 'map' && this.state === 'map') this.saveSlot(false);
+      return false;
+    }
     if (!this.rewardTotal) { this.rewardDone = 0; this.rewardTotal = left >= 3 ? left : 0; }
     else this.rewardDone++;
     if (run.pendingRelics > 0) {
@@ -608,6 +627,12 @@ export class GameScreen implements Screen {
     return true;
   }
 
+  /** Zapamiętuje naciśnięcia Q/E/uniku/R, które inaczej zginęłyby w endStep (symulacja stoi). */
+  private bufferCasts(): void {
+    const inp = this.app.input;
+    for (const k of CAST_KEYS) if (inp.pressed(k)) this.castBuf.set(k, this.clock + CAST_BUFFER);
+  }
+
   /** Licznik serii nagród nad nakładką („Rewards 4/14”). */
   private renderRewardCounter(r: Renderer): void {
     if (!this.rewardTotal) return;
@@ -621,7 +646,8 @@ export class GameScreen implements Screen {
     const set = this.app.save.settings;
     this.syncCollection();
     // Dotyk: joystick i przyciski tylko w trakcie rozgrywki (w nakładkach dotyk = klik).
-    inp.touchControls = this.state === 'play';
+    // Koniec samouczka: dotyk wszędzie = klik („Tap to continue” także w lewej połowie ekranu).
+    inp.touchControls = this.state === 'play' && !this.tut?.finished;
     if (!inp.touchControls) inp.stick = null;
     run.shakeEnabled = set.shake;
     run.aimMode = set.aim;
@@ -643,7 +669,8 @@ export class GameScreen implements Screen {
     const fight = this.state === 'play' && run.outcome === 'none';
     const crowd = Math.min(1, run.enemies.count / BAL.musicCrowd) * 0.8 + (run.dungeon || run.levelEvent ? 0.2 : 0);
     music.setMood({ intensity: fight ? crowd : 0.08, biome: run.levelInfo.biome, boss: fight && !!run.boss });
-    if (this.delay > 0) { this.delay -= dt; return; }
+    this.clock += dt;
+    if (this.delay > 0) { this.delay -= dt; if (this.state === 'play') this.bufferCasts(); return; }
 
     switch (this.state) {
       case 'play':
@@ -653,7 +680,7 @@ export class GameScreen implements Screen {
         this.toastT = Math.max(0, this.toastT - dt);
         // Zatrzymanie klatki po mocnym trafieniu / zabiciu elity: symulacja stoi przez chwilę (można wyłączyć w Ustawieniach).
         if (run.hitstop > 0 && !set.hitstop) run.hitstop = 0;
-        if (run.hitstop > 0) { run.hitstop -= dt; break; }
+        if (run.hitstop > 0) { run.hitstop -= dt; this.bufferCasts(); break; }
         this.gameplayHints();
         if (this.tut) this.updateTutorial(dt);
         if (run.bossKills > this.bossSeen) { this.bossSeen = run.bossKills; this.unlock({ boss: true }); }
@@ -663,6 +690,9 @@ export class GameScreen implements Screen {
           if (inp.pressed('debugLevel')) run.addXp(run.xpNext - run.xp);
           if (inp.pressed('debugLoot')) run.pendingLoot.push(run.rollLoot('boss'));
         }
+        // Naciśnięcia z zatrzymania klatki / opóźnienia działają w pierwszym kroku symulacji (jeśli świeże).
+        for (const [k, until] of this.castBuf) if (until >= this.clock) inp.botPress(k);
+        this.castBuf.clear();
         run.update(dt, inp);
         // Co ~5 s zapis trwającego poziomu — po zamknięciu gry poziom wznowi się z tego miejsca.
         if (run.outcome === 'none' && run.step % 300 === 0) this.saveSlot(true);
@@ -711,7 +741,7 @@ export class GameScreen implements Screen {
           // Tylko nowy łup z tego okna (bez przedmiotów zdjętych ręcznie i unikatów, z zapasem dla założonych).
           const fresh = this.run.bag.filter((x) => !this.lootBefore.has(x));
           const sw = this.app.save.settings.autoEquip && fresh.length ? this.run.autoEquip(fresh) : [];
-          const swap = sw.length ? `${tr('Equipped')}: ${sw[0].item.name}${sw[0].old ? ` (${tr('instead of')} ${sw[0].old.name})` : ''}${sw.length > 1 ? ` +${sw.length - 1}` : ''}` : '';
+          const swap = sw.length ? `${tr('Equipped')}: ${tr(sw[0].item.name)}${sw[0].old ? ` (${tr('instead of')} ${tr(sw[0].old.name)})` : ''}${sw.length > 1 ? ` +${sw.length - 1}` : ''}` : '';
           if (sw.length) this.hints.show('gear');
           if (res.note || swap) this.showToast([res.note, swap].filter(Boolean).join('. '));
           this.state = this.overlayReturn;
@@ -723,7 +753,9 @@ export class GameScreen implements Screen {
         if (this.inventory!.update(inp, dt)) {
           this.state = this.invReturn;
           this.delay = 0.1;
-          if (this.invReturn !== 'play' && this.invReturn !== 'pause') this.saveSlot(false);
+          // Zapis według miejsca runu (jak „Zapisz i wyjdź”): nagroda w trakcie walki = trwający poziom; po wygranej / śmierci
+          // zostaje ostatni autozapis (poziom nie jest jeszcze zaliczony).
+          if (this.invReturn !== 'play' && this.invReturn !== 'pause' && (this.overlayReturn !== 'play' || this.run.outcome === 'none')) this.saveSlot(this.overlayReturn === 'play');
         }
         break;
       case 'anvil':
@@ -781,7 +813,7 @@ export class GameScreen implements Screen {
   render(): void {
     const r = this.app.r;
     const run = this.run;
-    renderWorld(run, r);
+    renderWorld(run, r, this.state === 'play');
     const between = this.state === 'shop' || this.state === 'anvil' || this.state === 'map' || this.overlayReturn === 'map'
       || (this.state === 'inventory' && (this.invReturn === 'shop' || this.invReturn === 'map'));
     // HUD tylko w trakcie gry: nakładki (pauza, awans, łup, ekwipunek...) zasłaniają go w całości.
@@ -1046,7 +1078,8 @@ export class GameScreen implements Screen {
     info.forEach(([t, col], i) => drawText(g, t, W / 2, 69 + i * 10, col, { align: 'center', shadow: C.black }));
     // Panel zakładek zaczyna się tuż pod liniami informacji (bez pustego pasa, gdy ich nie ma).
     this.endY = 88 + info.length * 10;
-    this.endH = END_BOTTOM - this.endY;
+    // Panel kończy się nad menu (propozycja trybu łatwego przesuwa menu w górę).
+    this.endH = Math.min(END_BOTTOM, this.endMenu.y - 4) - this.endY;
     // Zakładki: obrażenia, wykres DPS, karta buildu (Tab / strzałki / klik).
     END_TABS.forEach((t, i) => {
       button(r, ...this.endTab(i), t, { active: i === this.endPage, accent: C.gold });
@@ -1206,3 +1239,8 @@ const HINT_BOX: Partial<Record<string, HintBox>> = {
 /** Zakładki ekranu końca runu i panel pod nimi. */
 const END_TABS = ['Highlights', 'Obrażenia', 'Wykres DPS', 'Build'];
 const END_X = 12, END_W = W - 24, END_BOTTOM = 210;
+/** Ekran końca przyjmuje wejście po chwili: gracz zwykle jeszcze wciska unik (Spacja / A = też potwierdzenie). */
+const END_DELAY = 0.6;
+/** Bufor naciśnięć umiejętności w zatrzymaniu klatki i opóźnieniu nakładki (s). */
+const CAST_BUFFER = 0.15;
+const CAST_KEYS: Action[] = ['q', 'e', 'dash', 'ult'];

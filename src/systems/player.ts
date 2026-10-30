@@ -34,6 +34,9 @@ export function updatePlayer(run: Run, input: Input, dt: number): void {
   if (p.hurtCd > 0) p.hurtCd -= dt;
   if (p.flash > 0) p.flash--;
   if (run.stats.regen > 0) run.heal(run.stats.regen * dt);
+  // Gorączka (klątwa): stała utrata HP, która nie zabija (jak Rytuał) i nie zależy od mnożników regeneracji.
+  const drain = run.flag('hpDrain');
+  if (drain > 0 && p.hp > 1) p.hp = Math.max(1, p.hp - drain * dt);
 
   // Punkt celowania wg ustawienia (core/save.ts AimMode):
   // prawa gałka pada > mysz (poza trybem 'auto') > najbliższy wróg (poza trybem 'manual') > kierunek patrzenia.

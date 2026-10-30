@@ -24,6 +24,7 @@ export function updateProjectiles(run: Run, dt: number): void {
   const items = run.projectiles.items;
   const p = run.player;
   for (let i = items.length - 1; i >= 0; i--) {
+    if (i >= items.length) continue; // pula skurczyła się w trakcie pętli (np. zwolnienie kilku pocisków w jednym trafieniu)
     const pr = items[i];
     pr.life -= dt;
     pr.t += dt;
@@ -116,6 +117,8 @@ export function updateEnemyBullets(run: Run, dt: number): void {
   const items = run.bullets.items;
   const p = run.player;
   for (let i = items.length - 1; i >= 0; i--) {
+    // hurtPlayer może zabić bossa (riposta, Ciernie, kontra, Feniks) -> collectAll() czyści run.bullets w trakcie pętli.
+    if (i >= items.length) continue;
     const b = items[i];
     b.t += dt;
     if (b.acc !== 0 || b.turn !== 0 || b.wave !== 0) {

@@ -238,6 +238,8 @@ export class InventoryView {
   private note = '';
   private noteT = 0;
   private lastMouse = 0;
+  /** Dotyk: komórka (cy*8+cx) zaznaczona pierwszym dotknięciem; drugie dotknięcie w nią działa. -1: brak. */
+  private armed = -1;
 
   constructor(private readonly run: Run) {}
 
@@ -262,6 +264,7 @@ export class InventoryView {
 
   /** Najlepszy ekwipunek (przycisk / R): Run.autoEquip. */
   private best(): void {
+    this.armed = -1;
     const n = this.run.autoEquip().length;
     this.say(n ? `${tr('Best gear equipped')} (${n})` : tr('You already wear the best items'));
     sfx.play(n ? 'pickup' : 'select');
@@ -269,6 +272,8 @@ export class InventoryView {
 
   private activate(c: Cell): void {
     const run = this.run, it = this.itemAt(c);
+    // Plecak się zmienia (przedmioty się przesuwają): następny dotyk znów tylko zaznacza.
+    this.armed = -1;
     if (!it) return;
     if (c.kind === 'eq') {
       if (!run.unequip(c.slot)) this.say('Plecak pełny');
@@ -281,6 +286,7 @@ export class InventoryView {
 
   private salvage(c: Cell): void {
     const it = this.itemAt(c);
+    this.armed = -1;
     if (!it) return;
     this.say(`Rozłożono: +${this.run.salvage(it)} zł`);
     sfx.play('pickup');
@@ -305,7 +311,13 @@ export class InventoryView {
         if (!inside(m.x, m.y, x, y, CELL, CELL)) continue;
         if (m.lastMove !== this.lastMouse) { this.cx = cx; this.cy = cy; }
         // Dotyk: pierwsze dotknięcie zaznacza (opis i przycisk Rozłóż), drugie zakłada / zdejmuje.
-        if (input.pressed('click')) { const again = this.cx === cx && this.cy === cy; this.cx = cx; this.cy = cy; if (again || input.lastDevice !== 'touch') this.activate(this.cellAt(cx, cy)); }
+        // Liczy się komórka uzbrojona poprzednim dotknięciem, nie samo zaznaczenie (nowy widok startuje na broni).
+        if (input.pressed('click')) {
+          const key = cy * 8 + cx;
+          this.cx = cx; this.cy = cy;
+          if (input.lastDevice !== 'touch' || this.armed === key) this.activate(this.cellAt(cx, cy));
+          else this.armed = key;
+        }
       }
     }
     // Przyciski pod szczegółami (mysz / dotyk).

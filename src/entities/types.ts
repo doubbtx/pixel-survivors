@@ -237,6 +237,8 @@ export interface Particle extends Poolable {
   max: number;
   col: number;
   size: number;
+  /** Efekt wroga (uderzenie, wybuch): rysowany poza ustawieniem „Ataki gracza”. */
+  foe?: boolean;
 }
 
 export interface DmgNum extends Poolable {
@@ -264,6 +266,8 @@ export interface Zone extends Poolable {
   delay: number;
   damage: number;
   tick: number;
+  /** Krok utworzenia — przesuwa fazę ticków, by strefy nie tykały w tej samej klatce. */
+  phase: number;
   slot: number;
   src: string;
   slow: number;
@@ -288,6 +292,8 @@ export interface Fx extends Poolable {
   w: number;
   /** 'fade': klatka sprite'a znikającego wroga (a0 = 1, gdy odbity w poziomie). */
   sprite: string;
+  /** Efekt wroga (uderzenie, wybuch): rysowany poza ustawieniem „Ataki gracza”. */
+  foe?: boolean;
 }
 
 export interface WeaponInst {
@@ -339,6 +345,9 @@ export interface Minion extends Poolable {
   holy: boolean;
   /** Źródło obrażeń (nazwa umiejętności albo pasywki). */
   src: string;
+  /** Bieżący cel i jego uid (pula wrogów używa obiektów ponownie, więc ważny tylko przy zgodnym uid). */
+  tgt: Enemy | null;
+  tgtUid: number;
 }
 
 /** Karta (augment) zebrana w runie; karty statystyczne mogą mieć kilka stosów. */

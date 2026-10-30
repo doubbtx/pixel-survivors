@@ -22,6 +22,8 @@ export class PowerPickView {
   private readonly options: BossPowerDef[];
   private sel = 0;
   private readonly born = performance.now();
+  /** Ostatni ruch myszy (null przed pierwszą klatką): kursor odpoczywający nad kartą nie nadpisuje wyboru klawiaturą/padem. */
+  private lastMouse: number | null = null;
 
   constructor(private readonly run: Run) {
     this.options = rollPowerOffer(run);
@@ -44,6 +46,8 @@ export class PowerPickView {
 
   /** Zwraca true, gdy wybór jest zakończony (wybrana moc albo pominięcie). */
   update(input: Input): boolean {
+    const moved = this.lastMouse !== null && input.mouse.lastMove !== this.lastMouse;
+    this.lastMouse = input.mouse.lastMove;
     const n = this.options.length;
     if (n === 0 || input.pressed('skip')) return true;
     // Pomiń: przycisk pod kartami (dotyk: wcześniej tylko klawisz X).
@@ -56,7 +60,7 @@ export class PowerPickView {
     const m = input.mouse;
     for (let i = 0; i < n; i++) {
       if (!inside(m.x, m.y, this.cardX(i), CARD_Y, CARD_W, CARD_H)) continue;
-      this.sel = i;
+      if (moved || input.pressed('click')) this.sel = i;
       if (input.pressed('click')) return this.choose(i);
     }
     return false;

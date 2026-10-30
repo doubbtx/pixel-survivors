@@ -141,15 +141,12 @@ function drawMinimap(r: Renderer, run: Run, x: number, y: number, w: number, h: 
   tile(r, x, y, w, h, undefined, 0.88);
   const sx = (w / 2 - 2) / MAP_RX, sy = (h / 2 - 2) / MAP_RY;
   const cx = x + w / 2, cy = y + h / 2;
-  const pos = (wx: number, wy: number): [number, number] | null => {
-    const mx = cx + (wx - p.x) * sx, my = cy + (wy - p.y) * sy;
-    return mx < x + 2 || my < y + 2 || mx > x + w - 2 || my > y + h - 2 ? null : [mx, my];
-  };
+  // Granice wnętrza minimapy (rzutowanie świat → mapa liczone w miejscu, bez krotek na klatkę).
+  const x0 = x + 2, y0 = y + 2, x1 = x + w - 2, y1 = y + h - 2;
   // Kształty znaczników (nie tylko kolor): kwadrat, romb, kółko; ciemna obwódka na jasnym tle.
   const mark = (wx: number, wy: number, s: number, col: number, shape: 'sq' | 'dia' | 'dot') => {
-    const q = pos(wx, wy);
-    if (!q) return;
-    const [mx, my] = q;
+    const mx = cx + (wx - p.x) * sx, my = cy + (wy - p.y) * sy;
+    if (mx < x0 || my < y0 || mx > x1 || my > y1) return;
     if (shape === 'sq') { r.rect(mx - s / 2 - 0.5, my - s / 2 - 0.5, s + 1, s + 1, C.black); r.rect(mx - s / 2, my - s / 2, s, s, col); return; }
     g.beginPath();
     if (shape === 'dia') { const k = s / 2 + 0.6; g.moveTo(mx, my - k); g.lineTo(mx + k, my); g.lineTo(mx, my + k); g.lineTo(mx - k, my); g.closePath(); }
@@ -165,7 +162,18 @@ function drawMinimap(r: Renderer, run: Run, x: number, y: number, w: number, h: 
       r.rect(ox - (dx > 0 ? 0 : UI.line), dy > 0 ? oy : oy - L, UI.line, L, C.lavender);
     }
   });
-  r.withAlpha(0.7, () => { for (const e of run.enemies.items) if (!e.dead && !e.boss && !e.elite) { const q = pos(e.x, e.y); if (q) r.rect(q[0] - 0.5, q[1] - 0.5, 1, 1, C.red); } });
+  // Zwykli wrogowie: jedna ścieżka i jedno fill na klatkę (do ~1000 kropek), zaokrąglenie jak Renderer.rect w UI.
+  r.withAlpha(0.7, () => {
+    g.fillStyle = PAL[C.red];
+    g.beginPath();
+    for (const e of run.enemies.items) {
+      if (e.dead || e.boss || e.elite) continue;
+      const mx = cx + (e.x - p.x) * sx, my = cy + (e.y - p.y) * sy;
+      if (mx < x0 || my < y0 || mx > x1 || my > y1) continue;
+      g.rect(Math.round(mx - 0.5), Math.round(my - 0.5), 1, 1);
+    }
+    g.fill();
+  });
   for (const e of run.enemies.items) if (!e.dead && e.elite && !e.boss) mark(e.x, e.y, 2, C.orange, 'sq');
   for (const it of run.pickups.items) if (it.item) mark(it.x, it.y, 2, itemColor(it.item), 'sq');
   // Obiekty mapy: kapliczki, portale; miecz w kamieniu dopiero z bliska (to sekret).

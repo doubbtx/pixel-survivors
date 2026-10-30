@@ -52,9 +52,10 @@ export class ControlsScreen implements Screen {
   }
 
   update(): void {
-    // Czekanie na klawisz: dotknięcie / klik anuluje (na telefonie bez klawiatury ekran był zablokowany).
+    // Czekanie na klawisz: dotknięcie / klik anuluje (na telefonie bez klawiatury ekran był zablokowany),
+    // B na padzie też ('back' z pada nie przechodzi przez input.capture, więc inaczej pad utykał).
     if (this.waiting) {
-      if (this.app.input.pressed('click')) { this.waiting = null; this.app.input.capture = null; sfx.play('select'); }
+      if (this.app.input.pressed('click') || this.app.input.pressed('back')) { this.waiting = null; this.app.input.capture = null; sfx.play('select'); }
       return;
     }
     if (this.app.input.pressed('back')) { this.app.go(this.back); return; }
@@ -67,7 +68,7 @@ export class ControlsScreen implements Screen {
     titleBar(r, 'Controls', 8);
     panel(r, W / 2 - 160, 32, 320, (REBIND.length + 2) * 12.5 + 8);
     this.menu.render(r);
-    const tip = this.waiting ? 'Press a new key (Esc or tap: cancel)' : 'Enter: change key. Arrows, Enter, Esc, Tab and 1-4 always work in menus.';
+    const tip = this.waiting ? 'Press a new key (Esc, B or tap: cancel)' : 'Enter: change key. Arrows, Enter, Esc, Tab and 1-4 always work in menus.';
     drawText(g, tip, W / 2, H - 12, this.waiting ? C.yellow : C.lavender, { align: 'center', scale: smallS() });
   }
 }

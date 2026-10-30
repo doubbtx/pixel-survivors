@@ -5,7 +5,7 @@ import { BAL } from '../data/balance';
 import { rollUnique } from '../data/items';
 import type { Enemy } from '../entities/types';
 import type { Run } from '../game/run';
-import { BLESSINGS, enterDungeon, type MapObject, type MapObjectKind } from './events';
+import { BLESSINGS, bossLocked, enterDungeon, type MapObject, type MapObjectKind } from './events';
 import { spawnEnemy, currentMix } from './spawner';
 import { grantMat, grantScroll } from './forge';
 
@@ -109,10 +109,14 @@ export function touchSecret(run: Run, o: MapObject, dt: number): boolean {
       o.life = 0;
       return false;
     case 'stairs':
+      // Boss na mapie: schody czekają, aż walka się skończy.
+      if (bossLocked(run)) return false;
       o.life = 0;
       enterDungeon(run, 'vault');
       return true;
     case 'barrow':
+      // Boss na mapie: kurhan czeka (wejście podmieniłoby run.boss na Króla i zablokowało poziom).
+      if (bossLocked(run)) return false;
       o.life = 0;
       run.cardState['keys'] = 0;
       enterDungeon(run, 'barrow');

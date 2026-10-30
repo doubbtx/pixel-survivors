@@ -499,7 +499,9 @@ const CASTS: Record<AbilityKind, Cast> = {
     // Rozbłysk słońca (Ignara): zużywa cały żar; po chwili ogromny wybuch wokół bohatera, bez przegrzania.
     const p = run.player, U = BAL.altUlt, heat = run.hero.resource.kind === 'heat' ? resFrac(run) : 0;
     if (heat > 0) run.res = 0;
-    const r = (P('radius') + P('blast')) * (1 + U.flareHeatR * heat) * run.stats.area, dmg = P('damage') * U.flareDmg * (1 + U.flareHeat * heat) * run.stats.might;
+    // Premia do czasu z kart i Rozwoju (flaga `i_inferno.duration`) zamienia się w obrażenia — Rozbłysk nie trwa.
+    const durBonus = 1 + U.flareDur * run.flag(`${a.def.id}.duration`);
+    const r = (P('radius') + P('blast')) * (1 + U.flareHeatR * heat) * run.stats.area, dmg = P('damage') * U.flareDmg * (1 + U.flareHeat * heat) * durBonus * run.stats.might;
     const f = run.addFx('ring', p.x, p.y, C.gold, U.flareDelay);
     if (f) f.r = r;
     // Ładowanie: złoty krąg zbiera się wokół bohatera; wybuch: jasny dysk na cały promień (półprzezroczysty, G2).
@@ -533,6 +535,8 @@ const CASTS: Record<AbilityKind, Cast> = {
     run.plagueSpread = Math.max(1, Math.floor(P('count') / 2.5)) + (a.def.evolved ? 1 : 0);
     run.plagueLeft = U.plagueBudget + souls.extra * 10;
     run.plagueSlow = !!a.def.evolved;
+    // Flaga `plague` = zarażony bieżącym rzuceniem (bez tego wrogowie z poprzedniej Zarazy, np. boss, byli pomijani).
+    for (const e of run.enemies.items) e.plague = false;
     for (const e of run.enemies.items) if (onScreen(run, e)) run.plagueInfect(e, run.plagueSlow);
     run.burst(run.player.x, run.player.y, C.lime, 24, 120);
     run.showBanner(a.def.name + '!');
@@ -564,7 +568,8 @@ const CASTS: Record<AbilityKind, Cast> = {
   mushin(run, a, P) {
     // Mushin (Takezo): kilka sekund pewnego odbicia (Mikiri), kontry z limitem na sekundę; Rytm od razu pełny.
     const U = BAL.altUlt;
-    run.mushinT = Math.min(U.mushinMax, P('dist') / 30) * run.stats.duration;
+    // 3 s na 1. poziomie; każde +30 'dist' (poziomy, karta Jeden ruch) to +1 s, aż do limitu.
+    run.mushinT = Math.min(U.mushinMax, 3 + (P('dist') - 150) / 30) * run.stats.duration;
     run.mushinDmg = P('damage') * U.mushinDmg * run.stats.might;
     run.mushinSrc = a.def.name;
     run.mushinEvo = !!a.def.evolved;

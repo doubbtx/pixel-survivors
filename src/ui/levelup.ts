@@ -126,6 +126,8 @@ export class LevelUpView {
   banishMode = false;
   /** Chwila wylosowania oferty (animacja wjazdu kart). */
   private born = 0;
+  /** Ostatni ruch myszy (null przed pierwszą klatką): kursor odpoczywający nad kartą nie nadpisuje wyboru klawiaturą/padem. */
+  private lastMouse: number | null = null;
 
   constructor(private readonly run: Run) {
     this.roll();
@@ -198,6 +200,8 @@ export class LevelUpView {
   }
 
   update(input: Input): boolean {
+    const moved = this.lastMouse !== null && input.mouse.lastMove !== this.lastMouse;
+    this.lastMouse = input.mouse.lastMove;
     const n = this.options.length;
     if (input.pressed('left')) this.sel = (this.sel - 1 + n) % n;
     if (input.pressed('right')) this.sel = (this.sel + 1) % n;
@@ -211,7 +215,7 @@ export class LevelUpView {
     const m = input.mouse;
     for (let i = 0; i < this.options.length; i++) {
       if (!inside(m.x, m.y, this.cardX(i), CARD_Y, CARD_W, CARD_H)) continue;
-      this.sel = i;
+      if (moved || input.pressed('click')) this.sel = i;
       if (input.pressed('click')) return this.choose(i);
     }
     if (input.pressed('click')) {

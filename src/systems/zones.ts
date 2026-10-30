@@ -1,9 +1,12 @@
 import { sfx } from '../core/audio';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
+import { PROC_FIRES } from '../data/cards';
 import type { Zone } from '../entities/types';
 import type { Run } from '../game/run';
 import { shardProjectile } from './weapons';
+
+const NO_HOOKS = { noHooks: true };
 
 /** Wybuch obszarowy: obrażenia z odrzutem od środka + efekty. */
 function explode(run: Run, z: Zone, col: number): void {
@@ -27,7 +30,8 @@ export function updateZones(run: Run, dt: number): void {
   for (let i = items.length - 1; i >= 0; i--) {
     const z = items[i];
     z.t += dt;
-    const tick = run.step % z.tick === 0;
+    // Faza od kroku utworzenia: rozkłada ticki stref na różne klatki (bez skoków co 20/30 kroków); pierwszy tick od razu.
+    const tick = (run.step - z.phase) % z.tick === 0;
     switch (z.kind) {
       case 'meteor':
         if (z.t >= z.delay) {
@@ -63,8 +67,10 @@ export function updateZones(run: Run, dt: number): void {
       case 'fire':
       case 'curse':
         if (tick) {
+          // Płomienie z hooków trafienia (Iskra, Synergia: Ogień) bez hooków onHit — bez lawiny płomieni.
+          const o = z.kind === 'fire' && PROC_FIRES.has(z.src) ? NO_HOOKS : undefined;
           run.enemiesInCircle(z.x, z.y, z.r, (e) => {
-            run.damageEnemy(e, z.damage, z.src);
+            run.damageEnemy(e, z.damage, z.src, o);
             if (z.slow > 0) { e.slowT = 0.5; e.slowF = Math.max(e.slowF, z.slow); }
           });
         }

@@ -51,6 +51,8 @@ export class ShopView {
   private noteT = 0;
   private noteBad = false;
   private lastMouse = 0;
+  /** Dotyk: komórka (`cx,cy`) po pierwszym dotknięciu — dopiero drugie dotknięcie tej samej kupuje. */
+  private armed: string | null = null;
   private cardPick: CardPickView | null = null;
 
   /** `onChange` — po każdym zakupie (zapis runu); `exitLabel` — podpis przycisku wyjścia. */
@@ -95,6 +97,7 @@ export class ShopView {
   }
 
   private buy(e: Entry): void {
+    this.armed = null;
     const run = this.run;
     const res = e.kind === 'item' ? buyItem(run, e.i) : e.kind === 'upgrade' ? buyShopUpgrade(run) : e.kind === 'service' ? buyService(run, e.id) : buyElixir(run, e.id);
     // Karta: zapis dopiero po wyborze (przerwanie wyboru nie zabiera złota).
@@ -116,6 +119,8 @@ export class ShopView {
       return null;
     }
     this.noteT = Math.max(0, this.noteT - dt);
+    // Klawiatura, pad albo mysz rozbrajają dotykowe „pierwsze dotknięcie”.
+    if (input.lastDevice !== 'touch') this.armed = null;
     if (input.pressed('back') || input.pressed('pause')) return 'close';
     if (input.pressed('inventory')) return 'inventory';
     if (input.pressed('anvil')) return 'anvil';
@@ -136,7 +141,13 @@ export class ShopView {
         if (!inside(m.x, m.y, x, y, CELL, CELL)) continue;
         if (m.lastMove !== this.lastMouse) { this.cx = cx; this.cy = cy; }
         // Dotyk: pierwsze dotknięcie pokazuje opis, drugie kupuje.
-        if (input.pressed('click')) { const again = this.cx === cx && this.cy === cy; this.cx = cx; this.cy = cy; if (again || input.lastDevice !== 'touch') this.buy(row[cx]); }
+        // Domyślnie zaznaczona komórka też wymaga pierwszego dotknięcia (armed), inaczej kupowałaby od razu.
+        if (input.pressed('click')) {
+          const key = `${cx},${cy}`, again = this.armed === key;
+          this.cx = cx; this.cy = cy;
+          if (again || input.lastDevice !== 'touch') this.buy(row[cx]);
+          else this.armed = key;
+        }
       }
     }
     if (input.pressed('click')) {

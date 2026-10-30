@@ -190,6 +190,34 @@ export function cursor(r: Renderer, x: number, y: number): void {
   });
 }
 
+/**
+ * Dwuetapowe potwierdzenie nieodwracalnej akcji (prestiż, porzucenie / poddanie runu).
+ * Pierwsze naciśnięcie uzbraja; drugie wykonuje dopiero po `minMs` (podwójne dotknięcie / drgnięcie palca
+ * nie przechodzi — za szybkie naciśnięcie tylko odnawia uzbrojenie), a uzbrojenie wygasa po `ttlMs`.
+ */
+export class Confirm {
+  private at = -1;
+
+  constructor(private readonly minMs = 350, private readonly ttlMs = 3000) {}
+
+  /** Czy uzbrojone (etykieta „Na pewno?”); po wygaśnięciu wraca do zwykłej. */
+  get armed(): boolean {
+    return this.at >= 0 && performance.now() - this.at < this.ttlMs;
+  }
+
+  /** Naciśnięcie: `true` = wykonaj akcję. */
+  press(): boolean {
+    const now = performance.now();
+    if (this.armed && now - this.at > this.minMs) { this.at = -1; return true; }
+    this.at = now;
+    return false;
+  }
+
+  reset(): void {
+    this.at = -1;
+  }
+}
+
 export interface MenuItem {
   label: () => string;
   act?: () => void;
@@ -206,6 +234,9 @@ export interface MenuItem {
  */
 export class Menu {
   sel = 0;
+  /** Dotyk: pierwsze dotknięcie niezaznaczonej pozycji tylko ją zaznacza (podgląd opisu), drugie wykonuje.
+   *  Lewa/prawa część suwaka działa od razu. Włączane tylko tam, gdzie pod listą jest opis (Ustawienia). */
+  previewOnTouch = false;
   private lastMouse = 0;
 
   /** `gaps`: dodatkowy odstęp (px) przed pozycją o danym indeksie (grupy w menu głównym). */
@@ -237,8 +268,14 @@ export class Menu {
       if (!inside(m.x, m.y, x, y, w, h)) continue;
       if (m.lastMove !== this.lastMouse && this.sel !== i) { this.sel = i; sfx.play('hover'); }
       if (input.pressed('click')) {
-        this.sel = i;
         const item = this.items[i];
+        const slider = (item.left && m.x < x + w / 3) || (item.right && m.x > x + (w * 2) / 3);
+        if (this.previewOnTouch && input.lastDevice === 'touch' && this.sel !== i && !slider) {
+          this.sel = i;
+          sfx.play('hover');
+          continue;
+        }
+        this.sel = i;
         if (item.left && m.x < x + w / 3) item.left();
         else if (item.right && m.x > x + (w * 2) / 3) item.right();
         else (item.act ?? item.right)?.();

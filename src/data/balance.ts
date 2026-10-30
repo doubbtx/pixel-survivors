@@ -582,6 +582,8 @@ export const BAL = {
     falconLen: 300, falconW: 10, falconFocus: 0.02,
     quakeWaves: 3, quakeWavesEvo: 5, quakeGap: 0.45, quakeStun: 0.5, quakeFuryStun: 0.6, quakeDmg: 1.6,
     flareDelay: 0.8, flareDmg: 4, flareHeat: 1.5, flareHeatR: 0.5,
+    /** Premia do czasu Inferno (karty, węzeł Rozwoju i_inferno) wzmacnia Rozbłysk: +obrażeń na sekundę premii. */
+    flareDur: 0.12,
     plagueDmg: 1.2, plagueBudget: 60, plagueR: 60, plagueStacks: 4, plagueSlowT: 5,
     markDelay: 1.5, markDmg: 2.5, markExec: 0.15, markStreak: 0.1,
     bastionTime: 3, bastionPerCount: 0.125, bastionHeal: 0.002,

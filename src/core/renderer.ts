@@ -231,18 +231,34 @@ export class Renderer {
     this.g.drawImage(c, Math.round(x * d) / d - R / d, Math.round(y * d) / d - R / d, (R * 2 + 1) / d, (R * 2 + 1) / d);
   }
 
-  /** Obwódka elipsy grubości jednej podziałki siatki prymitywów (w świecie: drobny piksel, bez wygładzania wektorowego). */
+  /** Obwódka elipsy grubości jednej podziałki siatki prymitywów (w świecie: drobny piksel, bez wygładzania wektorowego).
+   *  Rasteryzowana raz i trzymana w tej samej pamięci podręcznej co okręgi: półosie zaokrąglone do podziałki siatki
+   *  (znaczniki skoku Ropuchy / zmarszczki Topielca rysowane per wróg co klatkę kosztowały tysiące hypot i fillRect). */
   ellipse(x: number, y: number, rx: number, ry: number, col: number): void {
-    this.g.fillStyle = PAL[col];
-    const d = this.dens, cx = this.snap(x) * d, cy = this.snap(y) * d, RX = rx * d, RY = ry * d;
-    for (let yy = Math.floor(-RY) - 1; yy <= Math.ceil(RY) + 1; yy++) {
-      for (let xx = Math.floor(-RX) - 1; xx <= Math.ceil(RX) + 1; xx++) {
-        // Odległość od brzegu w pikselach siatki (przybliżenie przez gradient funkcji elipsy).
-        const f = (xx / RX) ** 2 + (yy / RY) ** 2 - 1;
-        const gl = 2 * Math.hypot(xx / (RX * RX), yy / (RY * RY)) || 1;
-        if (Math.abs(f / gl) <= 0.5) this.g.fillRect((cx + xx) / d, (cy + yy) / d, 1 / d, 1 / d);
+    const d = this.dens, RX = Math.max(1, Math.round(rx * d)), RY = Math.max(1, Math.round(ry * d));
+    const key = `e${RX}|${RY}|${d}|${col}`;
+    let c = this.circleCache.get(key);
+    if (!c) {
+      const nx = RX * 2 + 3, ny = RY * 2 + 3, img = new ImageData(nx, ny), px = img.data, hex = parseInt(PAL[col].slice(1), 16);
+      const cr = (hex >> 16) & 255, cgr = (hex >> 8) & 255, cb = hex & 255;
+      for (let yy = -RY - 1; yy <= RY + 1; yy++) {
+        for (let xx = -RX - 1; xx <= RX + 1; xx++) {
+          // Odległość od brzegu w pikselach siatki (przybliżenie przez gradient funkcji elipsy).
+          const f = (xx / RX) ** 2 + (yy / RY) ** 2 - 1;
+          const gl = 2 * Math.hypot(xx / (RX * RX), yy / (RY * RY)) || 1;
+          if (Math.abs(f / gl) > 0.5) continue;
+          const o = ((yy + RY + 1) * nx + xx + RX + 1) * 4;
+          px[o] = cr; px[o + 1] = cgr; px[o + 2] = cb; px[o + 3] = 255;
+        }
       }
+      c = document.createElement('canvas');
+      c.width = nx;
+      c.height = ny;
+      c.getContext('2d')!.putImageData(img, 0, 0);
+      this.circleCache.set(key, c);
+      if (this.circleCache.size > CIRCLE_CACHE_MAX) this.circleCache.delete(this.circleCache.keys().next().value!);
     }
+    this.g.drawImage(c, this.snap(x) - (RX + 1) / d, this.snap(y) - (RY + 1) / d, c.width / d, c.height / d);
   }
 
   /** Linia Bresenhama o grubości `w` pikseli logicznych, krokowana co podziałkę siatki prymitywów (gładkie skosy w świecie). */

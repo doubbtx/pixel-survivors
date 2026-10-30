@@ -1,4 +1,5 @@
 import { C } from '../core/palette';
+import { getLang } from '../core/i18n';
 import { BAL } from './balance';
 import type { Stats } from '../entities/types';
 import type { Tag } from './cards';
@@ -393,6 +394,8 @@ export const HEROES: HeroDef[] = [
 
 /** Procent z ułamka (do opisów). */
 const pc = (v: number) => `${Math.round(v * 100)}%`;
+/** Liczba z najwyżej dwoma miejscami po przecinku (separator wg języka). */
+const dec = (v: number) => { const t = String(Math.round(v * 100) / 100); return getLang() === 'pl' ? t.replace('.', ',') : t; };
 
 /** Szczegóły zasobu z liczbami z BAL.resource (ekran wyboru bohatera). */
 export function resourceDetails(kind: ResourceKind): string[] {
@@ -435,7 +438,8 @@ export function resourceDetails(kind: ResourceKind): string[] {
     ];
     case 'rhythm': return [
       `Max ${R.rhythm.max}. Every hit: +${R.rhythm.hit} (at most every ${R.rhythm.gap} s), a parry: +${R.parry.rhythm}.`,
-      `While it builds: +${pc(R.rhythm.atk)} attack speed per point. Getting hit does not lower it.`,
+      // Za punkt poniżej 1%: miejsca po przecinku (pc() zaokrąglałby 0,75% do 1%), w PL przecinek dziesiętny.
+      `While it builds: +${dec(R.rhythm.atk * 100)}% attack speed per point (full bar: +${pc(R.rhythm.atk * R.rhythm.max)}). Getting hit does not lower it.`,
       `Full: Flow until you take damage: +${pc(R.rhythm.flowAtk)} attack speed, +${pc(R.rhythm.flowDmg)} damage, Thousand Cuts ready. A hit ends it and the bar drains to zero (${R.rhythm.drain} per second).`,
       `Iai (R): outside Flow spends it all (+${pc(R.rhythm.iai)} damage per point), in Flow deals x${R.rhythm.flowIai} and Flow goes on.`,
     ];

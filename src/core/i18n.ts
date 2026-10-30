@@ -165,6 +165,12 @@ function translate(s: string, depth: number): string {
 const PL_SEPS = [/(\s{2,})/, /(: )/, /(?<=[.!?])( )(?=[A-Z])/, /(; | \/ )/, /(, )/, /( \(|\))/];
 function toPolish(s: string, depth: number): string {
   if (depth > 6 || !LETTER.test(s)) return s;
+  // Angielska nazwa z końcową interpunkcją (banery „Falcon Shot!”): tłumaczy się sama nazwa.
+  const m = /^(.*?)([.!?:]+)$/.exec(s);
+  if (m) {
+    const h = english(m[1]);
+    if (h !== undefined) return h + m[2];
+  }
   for (const sep of PL_SEPS) {
     const parts = s.split(sep);
     if (parts.length < 2) continue;

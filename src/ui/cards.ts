@@ -63,6 +63,12 @@ export class CardPickView {
   private step = 0;
   /** Chwila otwarcia (animacja wjazdu kart). */
   private readonly born = performance.now();
+  /** Ostatni ruch myszy (null przed pierwszą klatką): kursor odpoczywający nad kartą nie nadpisuje wyboru klawiaturą/padem. */
+  private lastMouse: number | null = null;
+  /** Dotyk: przycisk losowania uzbraja tryb, w którym następne dotknięcie karty losuje ją ponownie zamiast wybrać (zaznaczenie na dotyku nie istnieje). */
+  private rerollArmed = false;
+  /** Ostatnie urządzenie to dotyk (z update; render nie dostaje Input). */
+  private touch = false;
 
   constructor(private readonly run: Run, private readonly source: CardSource) {
     const offer = rollOffer(run, source);
@@ -98,9 +104,13 @@ export class CardPickView {
 
   /** Zwraca true, gdy karta została wybrana. */
   update(input: Input): boolean {
+    const moved = this.lastMouse !== null && input.mouse.lastMove !== this.lastMouse;
+    this.lastMouse = input.mouse.lastMove;
     this.step++;
     const n = this.cards.length;
     if (n === 0) return true;
+    this.touch = input.lastDevice === 'touch';
+    if (!this.touch || this.run.cardRerolls <= 0) this.rerollArmed = false;
     if (input.pressed('left')) this.sel = (this.sel - 1 + n) % n;
     if (input.pressed('right')) this.sel = (this.sel + 1) % n;
     if (input.pressed('confirm')) return this.choose(this.sel);
@@ -113,11 +123,16 @@ export class CardPickView {
       const x = this.cardX(i);
       if (inside(m.x, m.y, x, CARD_Y, CARD_W, CARD_H)) {
         // Jedno kliknięcie / dotknięcie wybiera (0.50.1: podwójne dotknięcie z 0.48 przeszkadzało graczowi).
-        if (input.lastDevice !== 'touch' || input.pressed('click')) this.sel = i;
+        if ((input.lastDevice !== 'touch' && moved) || input.pressed('click')) this.sel = i;
+        if (input.pressed('click') && this.rerollArmed) { this.rerollArmed = false; this.reroll(i); return false; }
         if (input.pressed('click')) return this.choose(i);
       }
     }
-    if (input.pressed('click') && inside(m.x, m.y, W / 2 - BTN_W / 2, BTN_Y, BTN_W, 20)) this.reroll(this.sel);
+    if (input.pressed('click') && inside(m.x, m.y, W / 2 - BTN_W / 2, BTN_Y, BTN_W, 20)) {
+      // Na dotyku przycisk uzbraja/rozbraja losowanie (tap w kartę wybiera ją od razu, więc „zaznaczona” to zawsze 1.).
+      if (this.touch) this.rerollArmed = !this.rerollArmed && this.run.cardRerolls > 0;
+      else this.reroll(this.sel);
+    }
     return false;
   }
 
@@ -145,7 +160,10 @@ export class CardPickView {
     });
     // Jedno losowanie dla zaznaczonej karty (jak przyciski pod kartami awansu).
     const can = this.run.cardRerolls > 0;
-    button(r, W / 2 - BTN_W / 2, BTN_Y, BTN_W, 20, `Reroll selected (${this.run.cardRerolls}) [R]`, { col: can ? undefined : C.dgray });
-    if (!hintShowing()) drawText(r.g, '1-3 / click: choose', W / 2, 238, C.lavender, { align: 'center', shadow: C.black });
+    // Dotyk: zamiast „zaznaczonej” przycisk uzbraja losowanie, a następne dotknięcie karty ją podmienia.
+    const label = !this.touch ? `Reroll selected (${this.run.cardRerolls}) [R]` : this.rerollArmed ? 'Tap a card to reroll' : `Reroll a card (${this.run.cardRerolls})`;
+    button(r, W / 2 - BTN_W / 2, BTN_Y, BTN_W, 20, label, { col: can ? undefined : C.dgray, active: this.rerollArmed });
+    const hint = !this.touch ? '1-3 / click: choose' : this.rerollArmed ? 'Tap the button again to cancel' : 'Tap a card: choose';
+    if (!hintShowing()) drawText(r.g, hint, W / 2, 238, C.lavender, { align: 'center', shadow: C.black });
   }
 }

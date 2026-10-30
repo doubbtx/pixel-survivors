@@ -22,6 +22,8 @@ export interface Sprite {
   img: HTMLCanvasElement;
   flash: HTMLCanvasElement;
   flip?: HTMLCanvasElement;
+  /** Odbita w poziomie biała sylwetka (błysk postaci zwróconej w lewo), budowana leniwie. */
+  flashFlip?: HTMLCanvasElement;
   w: number;
   h: number;
 }
@@ -367,19 +369,23 @@ export function blit(g: CanvasRenderingContext2D, name: string, x: number, y: nu
 export function drawSprite(g: CanvasRenderingContext2D, name: string, x: number, y: number, o: DrawOpts = {}): void {
   const s = getSprite(name);
   const sc = o.scale ?? 1;
-  let img = o.flash ? s.flash : s.img;
-  if (o.flipX && !o.flash) {
-    if (!s.flip) {
-      const c = document.createElement('canvas');
-      c.width = s.img.width;
-      c.height = s.img.height;
+  const base = o.flash ? s.flash : s.img;
+  let img = base;
+  if (o.flipX) {
+    // Odbicie z osobną pamięcią dla obrazu i błysku — błysk nie może odwracać postaci
+    let c = o.flash ? s.flashFlip : s.flip;
+    if (!c) {
+      c = document.createElement('canvas');
+      c.width = base.width;
+      c.height = base.height;
       const cg = c.getContext('2d')!;
-      cg.translate(s.img.width, 0);
+      cg.translate(base.width, 0);
       cg.scale(-1, 1);
-      cg.drawImage(s.img, 0, 0);
-      s.flip = c;
+      cg.drawImage(base, 0, 0);
+      if (o.flash) s.flashFlip = c;
+      else s.flip = c;
     }
-    img = s.flip;
+    img = c;
   }
   if (o.squash) {
     const [kx, ky] = o.squash, w = s.w * sc * kx, h = s.h * sc * ky;

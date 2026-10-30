@@ -116,17 +116,20 @@ function queueBiomeWarm(run: Run, biome: number): void {
   queueWarm(names);
 }
 
-export function renderWorld(run: Run, r: Renderer): void {
+/** live: symulacja biegnie (stan gry 'play'); pod oknami (awans, pauza, łup...) świat stoi bez trzęsienia. */
+export function renderWorld(run: Run, r: Renderer, live = true): void {
   r.beginWorld();
-  drawWorld(run, r);
+  drawWorld(run, r, live);
   r.endWorld();
 }
 
 /** Świat w pikselach logicznych świata (VW × VH, renderer powiększa je o przybliżenie). */
-function drawWorld(run: Run, r: Renderer): void {
+function drawWorld(run: Run, r: Renderer, live: boolean): void {
   const g = r.g;
-  const shx = run.shake > 0 ? rng.range(-run.shake, run.shake) * ZOOM : 0;
-  const shy = run.shake > 0 ? rng.range(-run.shake, run.shake) * ZOOM : 0;
+  // Trzęsienie tylko, gdy symulacja biegnie (wygasa w Run.update; pod oknem zamarłoby i drgało bez końca).
+  const shake = live ? run.shake : 0;
+  const shx = shake > 0 ? rng.range(-shake, shake) * ZOOM : 0;
+  const shy = shake > 0 ? rng.range(-shake, shake) * ZOOM : 0;
   const ox = Math.round(run.camX * ZOOM + shx), oy = Math.round(run.camY * ZOOM + shy);
   const X = (x: number) => Math.round(x * ZOOM) - ox;
   const Y = (y: number) => Math.round(y * ZOOM) - oy;
@@ -469,7 +472,10 @@ function drawWorld(run: Run, r: Renderer): void {
 
   // Wrogowie.
   for (const e of run.enemies.items) {
-    if (e.dead || !vis(e.x, e.y)) continue;
+    // Wróg poza ekranem z trwającą zapowiedzią ataku (linia celownika, szarży, zapowiedź bossa) też przechodzi dalej:
+    // zapowiedź sięga na ekran, a sprite po prostu przytnie płótno (naraz zapowiada niewielu wrogów).
+    const tell = e.dashT > 0 || (e.boss && e.actT > 0 && e.actT < BOSS_TELL);
+    if (e.dead || (!vis(e.x, e.y) && !tell)) continue;
     const ex = X(e.x), ey = Y(e.y);
     if (e.elite) r.circle(ex, ey + e.radius * ZOOM, e.radius * ZOOM * 1.2, run.blink(30, 15) ? C.yellow : C.orange);
     // Dowódca (R3): złoty pierścień aury.
@@ -597,12 +603,12 @@ function drawWorld(run: Run, r: Renderer): void {
   // Ograniczenie błysków: zamiast migania stałe półprzezroczyste.
   const blink = (p.hurtCd > 0 || p.iframes > 0) && !run.reduceFlash && run.step % 6 < 3;
   const ghost = (p.hurtCd > 0 || p.iframes > 0) && run.reduceFlash;
-  const anim = heroAnim(run, px, py);
-  // Powidoki uniku i kurz spod stóp (pod bohaterem).
-  for (const t of anim.trail) r.withAlpha(0.32 * (t.life / TRAIL_LIFE), () => drawSprite(g, `${run.heroSprite}@${t.frame}`, t.x, t.y, { flipX: t.flip }));
+  const anim = heroAnim(run);
+  // Powidoki uniku i kurz spod stóp (pod bohaterem; pozycje w świecie, więc zostają na ziemi za bohaterem).
+  for (const t of anim.trail) r.withAlpha(0.32 * (t.life / TRAIL_LIFE), () => drawSprite(g, `${run.heroSprite}@${t.frame}`, X(t.x), Y(t.y), { flipX: t.flip }));
   for (const d of anim.dust) {
     const k = d.life / DUST_LIFE;
-    r.withAlpha(0.55 * k, () => r.circle(d.x, d.y - (1 - k) * 2, 1.5 + (1 - k) * 2.5, C.lgray, true));
+    r.withAlpha(0.55 * k, () => r.circle(X(d.x), Y(d.y) - (1 - k) * 2, 1.5 + (1 - k) * 2.5, C.lgray, true));
   }
   const drawHero = (a: number) => {
     if (blink || run.outcome === 'dead') return;
@@ -619,30 +625,12 @@ function drawWorld(run: Run, r: Renderer): void {
   // Trans bitewny (0.49): turkusowy pierścień, dopóki ≥ 3 wrogów jest przy bohaterze (−15% obrażeń).
   if (run.tranceOn()) r.withAlpha(0.45, () => r.circle(px, py, BAL.close.r * ZOOM, C.cyan));
   else if (ck > 0 && run.closeAt >= 0) r.withAlpha(0.4 * ck, () => r.circle(px, py, BAL.close.r * ZOOM, C.white));
-  drawHero(ghost ? 0.55 : 1);
   // Bastion światła (R4): złota kopuła wokół bohatera (pociski wrogów w niej znikają).
   if (run.bastionT > 0) {
     const rr = run.bastionR * ZOOM;
     r.withAlpha(0.12, () => r.circle(px, py, rr, C.yellow, true));
     r.withAlpha(0.6 + 0.2 * Math.sin(run.time * 8), () => r.circle(px, py, rr, C.gold));
   }
-  if (p.shield > 0) {
-    // Tarcza: jeden czytelny pierścień (bez nakładających się poświat).
-    r.withAlpha(0.6, () => r.circle(px, py + 1, 13, C.cyan));
-  }
-  // Rdzeń trafienia (BAL.playerBulletR) widoczny tylko, gdy pocisk jest blisko — wiadomo, jak blisko można go minąć.
-  if (run.outcome !== 'dead' && run.bullets.items.some((b) => (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < CORE_SHOW * CORE_SHOW)) {
-    r.withAlpha(0.85, () => { r.rect(px - 1.5, py - 1.5, 3, 3, C.black); r.rect(px - 0.5, py - 0.5, 1, 1, C.white); });
-  }
-  // Mały pasek HP pod graczem: przez chwilę po trafieniu (wygasa) i stale przy niskim życiu.
-  if (p.hp < hpSeen.hp - 0.5 || hpSeen.run !== run) hpSeen.at = run.totalTime;
-  hpSeen.hp = p.hp; hpSeen.run = run;
-  const frac = Math.max(0, p.hp / run.stats.maxHp), since = run.totalTime - hpSeen.at;
-  const barA = frac < 0.3 ? 0.85 : since < HP_BAR_SHOW ? Math.min(0.85, (HP_BAR_SHOW - since) * 2) : 0;
-  if (barA > 0 && p.hp < run.stats.maxHp && run.outcome !== 'dead') r.withAlpha(barA, () => {
-    r.rect(px - 8, py + 13, 16, 2, C.black);
-    r.rect(px - 8, py + 13, 16 * frac, 1.5, since < 0.15 ? C.white : C.red);
-  });
 
   // Ostrza orbity i pociski gracza.
   atk(() => {
@@ -700,13 +688,17 @@ function drawWorld(run: Run, r: Renderer): void {
     }
   });
 
-  // Cząsteczki i efekty (trafienia, wybuchy, błyski) — też ataki gracza.
-  atk(() => {
+  // Cząsteczki i efekty (trafienia, wybuchy, błyski) — też ataki gracza. Efekty wrogów (foe) i wszystko po śmierci
+  // gracza rysowane osobno, poza ustawieniem „Ataki gracza” (uderzenie wroga ani śmierć nie mogą zniknąć).
+  const mine = (o: { foe?: boolean }) => !o.foe && run.outcome !== 'dead';
+  const fxPass = (own: boolean, glow: boolean) => {
     for (const pt of run.particles.items) {
+      if (mine(pt) !== own) continue;
       // Cząsteczki w drobnych pikselach (2/3 piksela logicznego na stopień rozmiaru), jak detale sprite'ów.
       if (vis(pt.x, pt.y)) r.rect(X(pt.x), Y(pt.y), (pt.size + 1) * 0.67, (pt.size + 1) * 0.67, pt.col);
     }
     for (const f of run.fx.items) {
+      if (mine(f) !== own) continue;
       const k = f.life / f.max;
       switch (f.kind) {
         case 'line':
@@ -727,7 +719,7 @@ function drawWorld(run: Run, r: Renderer): void {
           const fr = Math.min(n - 1, Math.floor((1 - k) * n));
           const sc = Math.max(1, Math.round(f.r));
           // Duże wybuchy gracza półprzezroczyste (0.44, playtest 2: wybuch zasłaniał środek ekranu).
-          if (f.kind === 'boom' && sc >= 3) r.withAlpha(0.5, () => drawSprite(g, `${f.kind}@${fr}`, X(f.x), Y(f.y), { scale: sc }));
+          if (f.kind === 'boom' && sc >= 3 && own) r.withAlpha(0.5, () => drawSprite(g, `${f.kind}@${fr}`, X(f.x), Y(f.y), { scale: sc }));
           else drawSprite(g, `${f.kind}@${fr}`, X(f.x), Y(f.y), { scale: sc });
           break;
         }
@@ -791,10 +783,30 @@ function drawWorld(run: Run, r: Renderer): void {
           break;
       }
     }
-  });
+  };
+  atk(() => fxPass(true, glow));
+  fxPass(false, true);
 
-  // Bohater jeszcze raz nad efektami ataków (0.44): własne wybuchy i pociski nie zasłaniają postaci (pod pociskami wrogów).
+  // Bohater nad efektami ataków (0.44): własne wybuchy i pociski nie zasłaniają postaci (pod pociskami wrogów).
+  // Rysowany raz (półprzezroczystość przy ograniczeniu błysków się nie sumuje); tarcza, rdzeń trafienia i pasek HP nad nim.
   drawHero(ghost ? 0.55 : 1);
+  if (p.shield > 0) {
+    // Tarcza: jeden czytelny pierścień (bez nakładających się poświat).
+    r.withAlpha(0.6, () => r.circle(px, py + 1, 13, C.cyan));
+  }
+  // Rdzeń trafienia (BAL.playerBulletR) widoczny tylko, gdy pocisk jest blisko — wiadomo, jak blisko można go minąć.
+  if (run.outcome !== 'dead' && run.bullets.items.some((b) => (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < CORE_SHOW * CORE_SHOW)) {
+    r.withAlpha(0.85, () => { r.rect(px - 1.5, py - 1.5, 3, 3, C.black); r.rect(px - 0.5, py - 0.5, 1, 1, C.white); });
+  }
+  // Mały pasek HP pod graczem: przez chwilę po trafieniu (wygasa) i stale przy niskim życiu.
+  if (p.hp < hpSeen.hp - 0.5 || hpSeen.run !== run) hpSeen.at = run.totalTime;
+  hpSeen.hp = p.hp; hpSeen.run = run;
+  const frac = Math.max(0, p.hp / run.stats.maxHp), since = run.totalTime - hpSeen.at;
+  const barA = frac < 0.3 ? 0.85 : since < HP_BAR_SHOW ? Math.min(0.85, (HP_BAR_SHOW - since) * 2) : 0;
+  if (barA > 0 && p.hp < run.stats.maxHp && run.outcome !== 'dead') r.withAlpha(barA, () => {
+    r.rect(px - 8, py + 13, 16, 2, C.black);
+    r.rect(px - 8, py + 13, 16 * frac, 1.5, since < 0.15 ? C.white : C.red);
+  });
 
   // Pociski wrogów (0.40: nad efektami ataków gracza, żeby nie ginęły w trafieniach i wybuchach): najpierw poświaty (jedna zmiana przezroczystości dla wszystkich), potem kule.
   // Przy bardzo dużej liczbie pocisków poświaty są pomijane (wydajność).
@@ -1038,7 +1050,7 @@ interface HeroAnim {
 const heroAnims = new WeakMap<Run, HeroAnim>();
 const TRAIL_LIFE = 0.22, DUST_LIFE = 0.4, CAST_T = 0.22;
 
-function heroAnim(run: Run, px: number, py: number): HeroAnim {
+function heroAnim(run: Run): HeroAnim {
   let a = heroAnims.get(run);
   if (!a) { a = { t: run.time, cast: 9, cds: {}, ultT: 0, trail: [], dust: [], trailAcc: 0, dustAcc: 0 }; heroAnims.set(run, a); }
   const dt = Math.max(0, Math.min(0.1, run.time - a.t));
@@ -1060,11 +1072,11 @@ function heroAnim(run: Run, px: number, py: number): HeroAnim {
   a.dust = a.dust.filter((d) => d.life > 0);
   if (dt > 0 && p.dashT > 0) {
     a.trailAcc += dt;
-    if (a.trailAcc >= 0.035) { a.trailAcc = 0; a.trail.push({ x: px, y: py, frame: animFrame(run.heroSprite, run.step, 0), flip: p.fx < 0, life: TRAIL_LIFE }); }
+    if (a.trailAcc >= 0.035) { a.trailAcc = 0; a.trail.push({ x: p.x, y: p.y, frame: animFrame(run.heroSprite, run.step, 0), flip: p.fx < 0, life: TRAIL_LIFE }); }
   }
   if (dt > 0 && p.moving && p.dashT <= 0) {
     a.dustAcc += dt;
-    if (a.dustAcc >= 0.2) { a.dustAcc = 0; a.dust.push({ x: px + (p.fx < 0 ? 3 : -3), y: py + 9, life: DUST_LIFE }); }
+    if (a.dustAcc >= 0.2) { a.dustAcc = 0; a.dust.push({ x: p.x + (p.fx < 0 ? 3 : -3) / ZOOM, y: p.y + 9 / ZOOM, life: DUST_LIFE }); }
   }
   return a;
 }

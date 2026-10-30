@@ -56,13 +56,13 @@ function updateStrikes(run: Run, dt: number): void {
     if (s.foe && s.seed) {
       // Nasiono Cierniaka: kłujący wybuch zieleni, bez ognistej eksplozji.
       if (hit) run.hurtPlayer(s.foe);
-      run.burst(s.x, s.y, C.green, 10, 60);
-      run.burst(s.x, s.y, C.lime, 6, 90);
+      run.burst(s.x, s.y, C.green, 10, 60, true);
+      run.burst(s.x, s.y, C.lime, 6, 90, true);
       sfx.play('hit');
     } else if (s.foe) {
       if (hit) run.hurtPlayer(s.foe);
-      run.boomFx(s.x, s.y, E.stormR);
-      run.burst(s.x, s.y, C.orange, 12, 70);
+      run.boomFx(s.x, s.y, E.stormR, true);
+      run.burst(s.x, s.y, C.orange, 12, 70, true);
       sfx.play('explode');
     } else {
       run.enemiesInCircle(s.x, s.y, E.stormR, (e) => run.damageEnemy(e, run.cardDamage(E.stormDmg), 'Burza'));

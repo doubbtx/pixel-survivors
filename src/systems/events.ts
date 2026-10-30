@@ -82,6 +82,9 @@ function place(run: Run, kind: MapObjectKind, minR: number, maxR: number, life: 
   return o;
 }
 
+/** Walka z bossem trwa (albo boss poziomu już się pojawił): wejścia do lochu (portal, schody, kurhan) są zamknięte. */
+export const bossLocked = (run: Run): boolean => !!run.boss || (run.bossSpawned && run.mode !== 'endless');
+
 /** Loch jako cały poziom (węzeł Ekspedycji): arena od razu, po oczyszczeniu poziom jest ukończony (bez portalu powrotnego). */
 export function startDungeon(run: Run): void {
   enterDungeon(run, 'portal');
@@ -245,6 +248,8 @@ export function updateEvents(run: Run, dt: number): void {
       sfx.play('chest');
       o.life = 0;
     } else if (near && o.kind === 'portal') {
+      // W trakcie walki z bossem portal nie działa (wejście czyściłoby bossa z puli i blokowało poziom).
+      if (bossLocked(run)) continue;
       o.life = 0;
       enterDungeon(run, 'portal');
       return;

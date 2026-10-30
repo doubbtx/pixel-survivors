@@ -22,6 +22,10 @@ export class RelicPickView {
   /** Wybrana nowa relikwia, gdy trzeba oddać jedną z posiadanych. */
   private pending: RelicDef | null = null;
   private sel = 0;
+  /** Ostatni ruch myszy (null przed pierwszą klatką): kursor odpoczywający nad kartą nie nadpisuje wyboru klawiaturą/padem. */
+  private lastMouse: number | null = null;
+  /** Do kiedy (performance.now) krok wymiany ignoruje wejście — podwójny tap nie oddaje od razu relikwii spod palca. */
+  private lockUntil = 0;
 
   constructor(private readonly run: Run) {
     const pool = RELICS.filter((r) => !run.relic(r.id) && (!r.mode || r.mode === run.mode));
@@ -57,14 +61,17 @@ export class RelicPickView {
       this.take(this.pending);
       return true;
     }
-    if (this.run.relics.length >= BAL.relics.max) { this.pending = r; this.sel = 0; sfx.play('select'); return false; }
+    if (this.run.relics.length >= BAL.relics.max) { this.pending = r; this.sel = 0; this.lockUntil = performance.now() + 300; sfx.play('select'); return false; }
     this.take(r);
     return true;
   }
 
   update(input: Input): boolean {
+    const moved = this.lastMouse !== null && input.mouse.lastMove !== this.lastMouse;
+    this.lastMouse = input.mouse.lastMove;
     const n = this.list.length;
     if (n === 0) return true;
+    if (this.pending && performance.now() < this.lockUntil) return false;
     this.sel = Math.min(this.sel, n - 1);
     if (input.pressed('left')) { this.sel = (this.sel + n - 1) % n; sfx.play('select'); }
     if (input.pressed('right')) { this.sel = (this.sel + 1) % n; sfx.play('select'); }
@@ -74,7 +81,7 @@ export class RelicPickView {
     const m = input.mouse;
     for (let i = 0; i < n; i++) {
       if (!inside(m.x, m.y, this.cardX(i), CARD_Y, CARD_W, CARD_H)) continue;
-      this.sel = i;
+      if (moved || input.pressed('click')) this.sel = i;
       if (input.pressed('click')) return this.choose(i);
     }
     // Przy wymianie: zostaw obecne (nowa relikwia przepada).

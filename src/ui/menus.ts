@@ -13,7 +13,7 @@ import { endSlotRun } from '../game/campaign';
 import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { Menu, panel, inside, slot, button, hovered, Scroll, type MenuItem, titleBar, ember } from './widgets';
+import { Menu, panel, inside, slot, button, hovered, Scroll, type MenuItem, titleBar, ember, Confirm } from './widgets';
 import { UI } from './theme';
 import { drawSkills } from './skills';
 import { setLang, type Lang } from '../core/i18n';
@@ -288,22 +288,23 @@ const SLOT_RULES: Record<SlotMode, string> = {
 /** Slot trybu (Ekspedycja, Endless): kontynuacja zapisanego runu, porzucenie albo nowy run + rekordy. */
 export class SlotScreen implements Screen {
   private menu: Menu;
-  private confirmAbandon = false;
+  /** Porzucenie: drugie naciśnięcie po chwili (nie podwójne dotknięcie), uzbrojenie wygasa. */
+  private confirmAbandon = new Confirm();
 
   constructor(private readonly app: App, private readonly mode: SlotMode) {
     const run = app.save.slots[mode];
     this.menu = new Menu(run ? [
-      { label: () => 'Kontynuuj', act: () => app.go(new GameScreen(app, run.hero, mode, run)) },
+      { label: () => 'Kontynuuj', act: () => { this.confirmAbandon.reset(); app.go(new GameScreen(app, run.hero, mode, run)); } },
       {
-        label: () => (this.confirmAbandon ? 'Na pewno? Run przepadnie' : 'Porzuć run'),
+        label: () => (this.confirmAbandon.armed ? 'Na pewno? Run przepadnie' : 'Porzuć run'),
         act: () => {
-          if (!this.confirmAbandon) { this.confirmAbandon = true; return; }
+          if (!this.confirmAbandon.press()) return;
           endSlotRun(app.save, mode, run);
           app.persist();
           app.go(new SlotScreen(app, mode));
         },
       },
-      { label: () => 'Wstecz', act: () => app.go(new MainMenu(app)) },
+      { label: () => 'Wstecz', act: () => { this.confirmAbandon.reset(); app.go(new MainMenu(app)); } },
     ] : [
       { label: () => SLOT_NEW[mode], act: () => app.go(new HeroSelect(app, mode)) },
       { label: () => 'Wstecz', act: () => app.go(new MainMenu(app)) },
@@ -741,6 +742,7 @@ export class SettingsScreen implements Screen {
     ];
     const list = [...rows[this.tab], [{ label: () => 'Wróć', act: () => app.go(this.back) }, () => ''] as [MenuItem, () => string]];
     this.menu = new Menu(list.map(([it]) => it), W / 2, SET_LIST_Y, 340, SET_ROW);
+    this.menu.previewOnTouch = true;
     this.hints = list.map(([, h]) => h);
   }
 

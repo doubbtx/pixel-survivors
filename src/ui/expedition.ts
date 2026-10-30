@@ -164,10 +164,12 @@ export class ExpeditionMapView {
       this.peek = later.find(([r, l]) => { const [x, y] = nodePos(r, l); return inside(m.x, m.y, x - NODE / 2, y - NODE / 2, NODE, NODE); }) ?? null;
     }
     if ((['up', 'down', 'left', 'right', 'confirm', 'n1', 'n2', 'n3', 'n4'] as Action[]).some((a) => input.pressed(a))) this.peek = null;
-    // Dotyk (bez najechania): dotknięcie dalszego węzła pokazuje jego podgląd, ponowne dotknięcie go zdejmuje.
+    // Dotyk (bez najechania): dotknięcie dalszego węzła pokazuje jego podgląd, ponowne dotknięcie go zdejmuje;
+    // dotknięcie pustego miejsca mapy też go zdejmuje (węzeł następnego rzędu zdejmuje go niżej, przy zaznaczeniu).
     if (input.pressed('click') && input.lastDevice === 'touch') {
       const hit = later.find(([r, l]) => { const [x, y] = nodePos(r, l); return inside(m.x, m.y, x - NODE / 2, y - NODE / 2, NODE, NODE); });
       if (hit) this.peek = this.peek && this.peek[0] === hit[0] && this.peek[1] === hit[1] ? null : hit;
+      else if (inside(m.x, m.y, MAP_X, MAP_Y, MAP_W, MAP_H)) this.peek = null;
     }
     const pstep = !tierOpen(this.run.expedition!) ? (input.pressed('skip') ? 1 : input.pressed('reroll') ? -1 : 0) : 0;
     if (pstep && later.length) {
@@ -180,8 +182,9 @@ export class ExpeditionMapView {
       if (!inside(m.x, m.y, x - NODE / 2, y - NODE / 2, NODE, NODE)) continue;
       if (m.lastMove !== this.lastMouse) this.sel = i;
       // Klik tylko zaznacza węzeł; wejście przyciskiem Wyrusz albo Enterem (bez przypadkowego startu walki).
-      if (input.pressed('click') && this.sel !== i) { this.sel = i; sfx.play('select'); }
-      else if (input.pressed('click')) this.sel = i;
+      // Klik zdejmuje też podgląd, żeby panel pokazywał zaznaczony węzeł (dotyk nie ma najechania).
+      if (input.pressed('click') && this.sel !== i) { this.sel = i; this.peek = null; sfx.play('select'); }
+      else if (input.pressed('click')) { this.sel = i; this.peek = null; }
     }
     this.lastMouse = m.lastMove;
     // Poziom trudności wyprawy: klawisze 1-4, LB/RB na padzie (R/X) albo klik w przycisk (gdy zaznaczona mapa ma poziomy).
@@ -212,6 +215,7 @@ export class ExpeditionMapView {
       for (let i = 0; i < BTNS.length; i++) {
         if (!inside(m.x, m.y, btnX(i), BTN_Y, BTNS[i].w, BTN_H)) continue;
         const act = BTNS[i].act;
+        if (act === 'go') this.peek = null; // gracz zawsze widzi węzeł, w który wchodzi
         return act === 'go' ? { pick: lanes[this.sel] } : act;
       }
     }

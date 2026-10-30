@@ -128,6 +128,9 @@ export function updateSpawner(run: Run, dt: number): void {
   // W lochu wrogów wystawia systems/events.ts (fale), zwykła mapa czeka.
   if (run.dungeon && run.levelInfo.objective.kind === 'hunt') run.huntPaused += dt;
   if (run.dungeon || run.scripted) return;
+  // Zabezpieczenie: boss poziomu zgubiony bez zabicia (np. wejście do lochu w trakcie walki, Król z kurhanu zamiast bossa)
+  // — bossSpawned bez bossa i bez końca poziomu zablokowałby poziom na zawsze (także w Endless: bez kolejnych głębokości).
+  if (run.bossSpawned && !run.boss && run.levelInfo.boss && run.outcome === 'none') run.bossSpawned = false;
   const t = run.time;
   const waveT = t + run.levelInfo.waveOffset;
 

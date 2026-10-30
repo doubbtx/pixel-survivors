@@ -11,7 +11,7 @@ import {
 } from '../data/meta';
 import { fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { button, panel, inside, titleBar } from './widgets';
+import { button, panel, inside, titleBar, Confirm } from './widgets';
 
 const COL_W = 90, COL_X = 6, COL_STEP = 94;
 const NODE_Y = 66, NODE_H = 28, NODE_STEP = 30;
@@ -31,7 +31,10 @@ export class MetaScreen implements Screen {
   private lastMouse = 0;
   private note = '';
   private noteT = 0;
-  private confirmPrestige = false;
+  /** Prestiż: drugie naciśnięcie po chwili (nie podwójne dotknięcie), uzbrojenie wygasa. */
+  private confirmPrestige = new Confirm();
+  /** Dotyk: węzeł (`kol,rząd`) po pierwszym dotknięciu — dopiero drugie dotknięcie tego samego kupuje. */
+  private armed: string | null = null;
 
   /** `heroId`: otwarta zakładka bohatera (domyślnie ostatnio grany). */
   constructor(private readonly app: App, private readonly back: Screen, heroId = app.save.lastHero) {
@@ -62,6 +65,8 @@ export class MetaScreen implements Screen {
   }
 
   private buy(n: MetaNode): void {
+    this.armed = null;
+    this.confirmPrestige.reset();
     const h = this.hm, lvl = h.nodes[n.id] ?? 0;
     if (lvl >= n.max) return this.say('Maksymalny poziom', false);
     if (!nodeUnlocked(h, this.tree, n)) {
@@ -79,6 +84,7 @@ export class MetaScreen implements Screen {
   /** Przenosi całą pulę esencji (zwrot z dawnego wspólnego drzewka) do wybranego bohatera. */
   private assign(): void {
     const m = this.app.save.meta;
+    this.confirmPrestige.reset();
     if (m.unassigned <= 0) return this.say('Brak esencji do rozdania', false);
     const h = this.hm;
     h.essence += m.unassigned;
@@ -92,11 +98,15 @@ export class MetaScreen implements Screen {
   private prestige(): void {
     const h = this.hm;
     if (spentEssence(h, this.tree) < BAL.meta.prestigeCost) return this.say(`Prestiż od ${fmt(BAL.meta.prestigeCost)} wydanej esencji`, false);
-    if (!this.confirmPrestige) { this.confirmPrestige = true; return this.say('Wciśnij jeszcze raz: drzewko i esencja bohatera się wyzerują', false); }
+    const was = this.confirmPrestige.armed;
+    if (!this.confirmPrestige.press()) {
+      // Za szybkie ponowne naciśnięcie (podwójne dotknięcie) tylko odnawia uzbrojenie, bez ponownego komunikatu.
+      if (!was) this.say('Wciśnij jeszcze raz: drzewko i esencja bohatera się wyzerują', false);
+      return;
+    }
     h.prestige++;
     h.nodes = {};
     h.essence = 0;
-    this.confirmPrestige = false;
     this.app.persist();
     this.say(`Prestiż ${h.prestige}!`, true);
   }
@@ -107,13 +117,16 @@ export class MetaScreen implements Screen {
 
   private switchHero(d: number): void {
     this.hero = (this.hero + d + HEROES.length) % HEROES.length;
-    this.confirmPrestige = false;
+    this.confirmPrestige.reset();
+    this.armed = null;
     sfx.play('select');
   }
 
   update(dt: number): void {
     this.noteT = Math.max(0, this.noteT - dt);
     const inp = this.app.input;
+    // Klawiatura, pad albo mysz rozbrajają dotykowe „pierwsze dotknięcie”.
+    if (inp.lastDevice !== 'touch') this.armed = null;
     if (inp.pressed('back')) { this.app.go(this.back); return; }
     if (inp.pressed('q')) this.switchHero(-1);
     if (inp.pressed('e')) this.switchHero(1);
@@ -134,9 +147,17 @@ export class MetaScreen implements Screen {
       if (!inside(m.x, m.y, x, y, COL_W, NODE_H)) return;
       if (m.lastMove !== this.lastMouse) { this.col = c; this.row = r; }
       // Dotyk: pierwsze dotknięcie pokazuje opis węzła, drugie kupuje.
-      if (inp.pressed('click')) { const again = this.col === c && this.row === r; this.col = c; this.row = r; if (again || inp.lastDevice !== 'touch') this.buy(n); }
+      // Domyślnie zaznaczony węzeł też wymaga pierwszego dotknięcia (armed), inaczej kupowałby od razu.
+      if (inp.pressed('click')) {
+        const key = `${c},${r}`, again = this.armed === key;
+        this.col = c; this.row = r;
+        if (again || inp.lastDevice !== 'touch') this.buy(n);
+        else this.armed = key;
+      }
     }));
     if (inp.pressed('click')) {
+      // Klik poza przyciskiem prestiżu rozbraja jego potwierdzenie.
+      if (!inside(m.x, m.y, W - 128, BTN_Y, 120, 16)) this.confirmPrestige.reset();
       HEROES.forEach((_, i) => { if (inside(m.x, m.y, 8 + i * (TAB_W + 4), TAB_Y, TAB_W, 14) && i !== this.hero) this.switchHero(i - this.hero); });
       if (inside(m.x, m.y, W - 128, BTN_Y, 120, 16)) this.prestige();
       if (inside(m.x, m.y, 8, BTN_Y, 70, 16)) this.app.go(this.back);
@@ -197,7 +218,7 @@ export class MetaScreen implements Screen {
       drawText(g, 'Essence: end of every Expedition and Endless run', W / 2, BTN_Y + 2, C.lavender, { align: 'center' });
     }
     const canPrestige = spentEssence(h, tree) >= BAL.meta.prestigeCost;
-    button(r, W - 128, BTN_Y, 120, 16, this.confirmPrestige ? 'Na pewno? [X]' : '[X] Prestiż', { active: this.confirmPrestige, accent: this.confirmPrestige ? C.red : C.pink, col: canPrestige ? undefined : C.dgray });
+    button(r, W - 128, BTN_Y, 120, 16, this.confirmPrestige.armed ? 'Na pewno? [X]' : '[X] Prestiż', { active: this.confirmPrestige.armed, accent: this.confirmPrestige.armed ? C.red : C.pink, col: canPrestige ? undefined : C.dgray });
     if (this.noteT > 0) drawText(g, this.note, W / 2, H - 12, C.yellow, { align: 'center', outline: C.black });
   }
 }
