@@ -140,8 +140,10 @@ export const BAL = {
     floor: (level: number) => Math.pow(1.06, Math.max(0, level - 12)),
     chaseExp: 0.5,
     chaseMin: 0.45,
-    chaseMax: 8,
-    max: 300,
+    // 0.60: sufit 300 / pogoń 8 → 1000 / 12 — od aktu 3 mnożnik stał na suficie przy DPS 50-100× wyższym, wrogowie
+    // ginęli na pierścieniu pojawiania (poza kadrem), a akty 3-4 były łatwiejsze niż akt 2.
+    chaseMax: 12,
+    max: 1000,
     dmg: (depth: number, t: number) => Math.min(6.3, Math.pow(2, depth - 1) * (depth <= 1 ? Math.min(1.6, 1 + t / 300) : Math.min(2, 1 + t / 120))),
     levelHp: 0.01,
     levelDmg: 0.012,
