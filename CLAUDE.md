@@ -752,6 +752,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   do potwierdzenia playtestem człowieka.
 - 0.50.0 (prośba gracza): Rytm Takezo w trakcie budowania nie spada od trafień (resourceOnHurt bez gałęzi breakRhythm
   poza Przepływem); łamie go tylko trafienie w Przepływie (jak dotąd: flaga rhythm.flow daje sekundy łaski, potem opadanie).
+- 0.50.1: karty (cards.ts) znów wybierane jednym kliknięciem/dotknięciem (gracz: „czasem trzeba dwa razy kliknąć”);
+  podwójne dotknięcie zostaje w sklepie, plecaku i Rozwoju (zakup).
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula

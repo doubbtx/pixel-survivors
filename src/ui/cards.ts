@@ -112,10 +112,9 @@ export class CardPickView {
     for (let i = 0; i < n; i++) {
       const x = this.cardX(i);
       if (inside(m.x, m.y, x, CARD_Y, CARD_W, CARD_H)) {
-        // Dotyk: pierwsze dotknięcie zaznacza (przerzut tej karty), drugie wybiera.
-        const again = this.sel === i;
+        // Jedno kliknięcie / dotknięcie wybiera (0.50.1: podwójne dotknięcie z 0.48 przeszkadzało graczowi).
         if (input.lastDevice !== 'touch' || input.pressed('click')) this.sel = i;
-        if (input.pressed('click') && (again || input.lastDevice !== 'touch')) return this.choose(i);
+        if (input.pressed('click')) return this.choose(i);
       }
     }
     if (input.pressed('click') && inside(m.x, m.y, W / 2 - BTN_W / 2, BTN_Y, BTN_W, 20)) this.reroll(this.sel);
