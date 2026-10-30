@@ -820,6 +820,9 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   main.ts). `npm run store` (out=/tmp/store): zrzuty 1920×1080 (menu, bohaterowie, mapa, walka w biomach z bossem, awans),
   kapsuły Steam z tła menu (`menuBackdrop` eksportowane) i nagranie webm bota (video=sekundy).
   Przy podpowiedzi w grze etykiety celów zadań chowają się (zostaje strzałka), podpowiedź ruchu ma wersję dotykową (`TOUCH_TEXT`).
+- 0.49.2: przerysowani ostatni starsi wrogowie (gfx/actors.ts): jeleń (stawy nóg, pierś, grzywa, ucho, poroże z jarzącymi się
+  końcami, smugi ducha), ognik (oczy z żarem, paszcza, iskry, języki u dołu), wirujący (pięć osobnych ostrzy z krawędzią tnącą,
+  pierścień z nitami, czerwone oko; `starPts` usunięte), mimik (deski ze słojami, żelazne okucia z nitami, pazury, oczy w szparze).
 - Zablokowane: kenney.nl, opengameart.org, freesound.org (polityka sieci środowiska, 403). Po odblokowaniu: nagrania CC0,
   plik licencji, mp3/m4a obok ogg.
 - Mieszanka nagrań CC0 (Kenney.nl, OpenGameArt, Freesound z filtrem CC0: uderzenia, wybuchy, interfejs, ambient biomów, motywy bossów) i ulepszonego dźwięku generowanego (bronie i efekty reagujące na grę: warianty wysokości, warstwy; muzyka narastająca z walką).

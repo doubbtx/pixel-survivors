@@ -71,15 +71,6 @@ export function animFrame(base: string, step: number, seed: number): number {
   return a.seq[Math.floor((step + seed) / a.speed) % a.seq.length];
 }
 
-function starPts(cx: number, cy: number, n: number, ro: number, ri: number, rot: number): [number, number][] {
-  const pts: [number, number][] = [];
-  for (let i = 0; i < n * 2; i++) {
-    const r = i % 2 ? ri : ro, a = rot + (i * Math.PI) / n;
-    pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
-  }
-  return pts;
-}
-
 /** Nogi w cyklu chodu: [x lewej, wysokość lewej, x prawej, wysokość prawej] dla klatek 0-3. */
 const STRIDE = [[0, 3, 0, 3], [-1, 3, 1, 2], [0, 3, 0, 3], [1, 2, -1, 3]];
 
@@ -478,7 +469,7 @@ function eye(f: number): Painter {
   return p.outline(C.plum);
 }
 
-/** Ognik: warstwowy płomień (zewnętrzny, środkowy, gorący rdzeń) z oczami i iskrami. */
+/** Ognik: płomień w trzech warstwach (zewnętrzna, środkowa, rdzeń), ramiona-języki, żarzące się oczy z ciemną paszczą i iskry unoszące się w górę (3 klatki migotania). */
 function wisp(f: number): Painter {
   const p = new Painter(17, 19, HI);
   const tip = [0, -1.5, 1.5][f];
@@ -487,20 +478,36 @@ function wisp(f: number): Painter {
   p.polyShade([[8.5 + tip / 2, 3], [5.2, 11], [11.8, 11]], [C.orange, C.gold, C.gold, C.yellow]);
   p.sphere(8.5, 12, 5, 5, RAMP.fire);
   p.sphere(8.5, 12.6, 2.8, 2.6, [C.gold, C.yellow, C.yellow, C.white]);
-  for (const ex of [6.3, 10.3]) p.rect(ex, 11.5, 1, 1.5, C.ddbrown).dot(ex, 11.5, C.dred);
-  p.dot(8.5 + tip, 1.5 - f * 0.3, C.yellow).dot(3 - tip / 2, 3 + f, C.gold).dot(14 + tip / 2, 2 + f, C.orange); // iskry
+  // Oczy-szparki z żarem i ciemna, migocząca paszcza.
+  for (const ex of [6.3, 10.3]) p.rect(ex, 11.2, 1.2, 1.6, C.ddbrown).dot(ex + 0.2, 11.4, f === 1 ? C.white : C.yellow);
+  p.rect(7.6, 14.2, 1.8, f === 2 ? 1.4 : 0.8, C.dred);
+  // Iskry unoszące się w górę i drobne języki u dołu.
+  for (let k = 0; k < 3; k++) p.dot(4 + k * 4 + tip * 0.3, 2.6 + ((k * 3 + f * 2) % 5), k % 2 ? C.yellow : C.gold);
+  p.dot(8.5 + tip, 0.6, C.white);
+  for (const x of [5.4, 8.5, 11.6]) p.polyShade([[x - 0.8, 16], [x + 0.8, 16], [x + (f - 1) * 0.4, 18.4]], [C.dred, C.rust, C.orange, C.orange]);
   return p.outline(C.dred);
 }
 
-/** Wirujący: kolczasta gwiazda z gradientem i okiem w środku, obraca się. */
+/** Wirujący: demoniczny shuriken — pięć ostrzy z jasną krawędzią tnącą i ciemną bruzdą, pierścień z nitami, czerwone oko w środku (obrót w klatkach). */
 function spinner(f: number): Painter {
   const p = new Painter(21, 21, HI);
-  const rot = -Math.PI / 2 + f * (Math.PI / 20);
-  p.polyShade(starPts(10.5, 10.5, 5, 9.5, 4, rot), [C.navy, C.plum, C.plum, C.pink]);
-  p.polyShade(starPts(10.5, 10.5, 5, 6.8, 3, rot), [C.plum, C.pink, C.pink, C.salmon]);
-  for (let k = 0; k < 5; k++) { const a = rot + (k * 2 * Math.PI) / 5; p.thin(10.5 + Math.cos(a) * 4, 10.5 + Math.sin(a) * 4, 10.5 + Math.cos(a) * 8.5, 10.5 + Math.sin(a) * 8.5, C.salmon); }
-  p.sphere(10.5, 10.5, 3.6, 3.6, RAMP.purple);
-  p.disc(10.8, 10.8, 1.4, C.black).dot(10, 9.8, C.white).dot(10.5, 9.8, C.white);
+  const rot = -Math.PI / 2 + f * (Math.PI / 20), c = 10.5;
+  const at = (a: number, r: number): [number, number] => [c + Math.cos(a) * r, c + Math.sin(a) * r];
+  // Ostrza: każde osobno (jasna strona wiodąca, ciemna spływowa), zakrzywione w kierunku obrotu.
+  for (let k = 0; k < 5; k++) {
+    const a = rot + (k * 2 * Math.PI) / 5;
+    p.polyShade([at(a - 0.55, 3.6), at(a + 0.18, 9.8), at(a, 6)], [C.navy, C.plum, C.pink, C.salmon]);
+    p.polyShade([at(a + 0.55, 3.6), at(a + 0.18, 9.8), at(a, 6)], [C.black, C.navy, C.plum, C.plum]);
+    const [x0, y0] = at(a - 0.3, 4.4), [x1, y1] = at(a + 0.18, 9.4);
+    p.thin(x0, y0, x1, y1, C.white);
+    const [gx, gy] = at(a + 0.12, 5.6), [hx, hy] = at(a + 0.16, 7.6);
+    p.thin(gx, gy, hx, hy, C.black);
+  }
+  // Pierścień z nitami i oko.
+  p.sphere(c, c, 4, 4, [C.slate, C.dgray, C.lavender, C.lgray]);
+  for (let k = 0; k < 5; k++) { const [x, y] = at(rot + 0.6 + (k * 2 * Math.PI) / 5, 3.2); p.dot(x, y, C.white); }
+  p.sphere(c, c, 2.6, 2.6, [C.dred, C.red, C.red, C.salmon]);
+  p.rect(c - 0.4, c - 1.6, 0.9, 3.2, C.black).dot(c - 1, c - 1, C.white);
   return p.outline();
 }
 
@@ -553,38 +560,63 @@ function sentinel(f: number, deco?: Deco): Painter {
   return p.outline(C.navy);
 }
 
-/** Mimik: skrzynia z okuciami i zamkiem, kłapie zębami (klatka 1 = otwarta paszcza z językiem). */
+/** Mimik: skrzynia z desek ze słojami i żelaznymi okuciami z nitami, zamek, świecące oczy w szparze; w klatce 1 otwarta paszcza z kłami i językiem. */
 function mimic(f: number): Painter {
   const p = new Painter(20, 18, HI);
   const open = f === 1 ? 3 : 0;
+  // Dolna część: deski ze słojami, żelazne okucia z nitami, nóżki-pazury.
   p.block(2, 9, 16, 8, RAMP.wood);
-  for (const y of [11, 14]) p.thin(2.5, y, 17.5, y, C.dbrown); // słoje desek
-  p.rect(2, 12, 16, 1, C.gold).rect(4, 9, 1, 8, C.gold).rect(15, 9, 1, 8, C.gold);
-  p.block(2, 3 - open, 16, 6, RAMP.wood).rect(2, 3 - open, 16, 1, C.clay).rect(4, 3 - open, 1, 6, C.gold).rect(15, 3 - open, 1, 6, C.gold);
-  p.rect(9, 7 - open, 2, 2.5, C.gold).dot(9.5, 8 - open, C.black).dot(9, 7 - open, C.yellow); // zamek
+  for (const y of [11, 14]) p.thin(2.5, y, 17.5, y, C.dbrown);
+  for (const x of [5.6, 9, 12.4]) p.dot(x, 12.4, C.ddbrown).dot(x + 0.5, 15.4, C.ddbrown);
+  p.rect(2, 12, 16, 1, C.dgray).thin(2, 12, 18, 12, C.lgray);
+  for (const x of [4, 15]) { p.rect(x, 9, 1.2, 8, C.dgray); p.thin(x, 9, x, 17, C.lgray); p.dot(x + 0.6, 10.4, C.white).dot(x + 0.6, 15.4, C.white); }
+  for (const x of [2.4, 16.4]) p.polyShade([[x, 17], [x + 1.4, 17], [x + 0.6, 18]], RAMP.bone);
+  // Wieko.
+  p.block(2, 3 - open, 16, 6, RAMP.wood).rect(2, 3 - open, 16, 1, C.clay);
+  p.thin(2.5, 5.6 - open, 17.5, 5.6 - open, C.dbrown);
+  for (const x of [4, 15]) { p.rect(x, 3 - open, 1.2, 6, C.dgray); p.thin(x, 3 - open, x, 9 - open, C.lgray); p.dot(x + 0.6, 4.4 - open, C.white); }
+  p.rect(8.8, 7 - open, 2.4, 2.6, C.gold).dot(9.6, 8 - open, C.black).dot(9, 7 - open, C.yellow); // zamek
+  // Otwarta paszcza: czerwone wnętrze, język, kły.
   if (open) { p.rect(3, 6, 14, 3, C.dred).polyShade([[7, 7], [13, 7], [12, 9], [8, 9]], [C.red, C.salmon, C.salmon, C.peach]); }
   for (let x = 3; x < 17; x += 2) { p.polyShade([[x, 9 - (open ? 1 : 0)], [x + 1, 9 - (open ? 1 : 0)], [x + 0.5, 10.5 - (open ? 1 : 0)]], RAMP.bone); p.polyShade([[x + 1, 8 + open], [x + 2, 8 + open], [x + 1.5, 6.5 + open]], RAMP.bone); }
-  for (const ex of [6, 13]) p.disc(ex + 0.5, 4.5 - open, 0.8, C.red).dot(ex + 0.2, 4.2 - open, C.yellow);
+  // Oczy: w szparze pod wiekiem (zamknięta) albo na wieku (otwarta).
+  for (const ex of [6, 13]) p.disc(ex + 0.5, open ? 4.5 - open : 8.6, 0.8, C.red).dot(ex + 0.2, open ? 4.2 - open : 8.3, C.yellow);
   return p.outline();
 }
 
-/** Biały jeleń: smukła sylwetka z rozgałęzionym porożem, bieg w 4 klatkach. */
+/** Biały jeleń: duch lasu — smukłe ciało z jaśniejszą piersią, nogi ze stawami i kopytami, szyja z grzywą, pysk i ucho, rozłożyste poroże z jarzącymi się końcami i smugi poświaty za nim (4 klatki biegu). */
 function stag(f: number): Painter {
   const p = new Painter(24, 22, HI);
-  const leg = [0, 1, 0, -1][f];
-  // Nogi z kopytami.
-  for (const [x, d] of [[6, leg], [9, -leg], [14, leg], [16, -leg]]) p.thin(x, 13.5, x + d, 19.5, C.lgray).thin(x + 0.5, 13.5, x + d + 0.5, 19.5, C.lavender).dot(x + d, 20, C.dgray).dot(x + d + 0.5, 20, C.dgray);
-  p.sphere(11, 11, 7, 3.6, RAMP.bone);
-  p.polyShade([[15, 9], [17.5, 5.5], [19.5, 7], [17.5, 11]], RAMP.bone); // szyja
-  p.sphere(18.5, 6.6, 2.6, 2.3, RAMP.bone).sphere(20.6, 7.4, 1.2, 1, RAMP.bone);
-  p.dot(21.4, 7.4, C.dgray).dot(19, 6.2, C.black).dot(18.8, 6, C.cyan);
-  // Rozgałęzione poroże.
-  for (const d of [-1, 1]) {
-    const bx = 18.5 + d * 1;
-    p.thin(bx, 4.5, bx + d * 2, 0.5, C.cream).thin(bx + d * 1, 2.5, bx + d * 3, 2, C.cream).thin(bx + d * 1.5, 1.5, bx + d * 0.5, 0, C.cream);
+  const leg = [0, 1, 0, -1][f], bob = f % 2 ? -0.4 : 0;
+  // Smugi ducha za zadem.
+  for (let k = 0; k < 3; k++) p.dot(2 - k * 0.6 + (f % 2) * 0.4, 9 + k * 1.6 + bob, k % 2 ? C.cyan : C.lgray);
+  // Nogi: udo i goleń ze stawem, ciemne kopyta (tylne ciemniejsze).
+  for (const [x, d, back] of [[6, leg, 1], [8.6, -leg, 0], [14.4, leg, 1], [16.6, -leg, 0]] as const) {
+    const kx = x + d * 0.4, ky = 16.4;
+    p.thin(x, 13 + bob, kx, ky, back ? C.lavender : C.lgray).thin(x + 0.5, 13 + bob, kx + 0.5, ky, back ? C.slate : C.lavender);
+    p.thin(kx, ky, x + d, 19.6, back ? C.lavender : C.lgray).thin(kx + 0.4, ky, x + d + 0.4, 19.6, C.lavender);
+    p.rect(x + d - 0.2, 19.6, 1.2, 0.8, C.dgray);
   }
-  p.dot(4.5, 9.5, C.white).dot(4, 10, C.white); // ogon
-  p.thin(6, 13.6, 16, 13.6, C.lgray);
+  // Tułów z jaśniejszą piersią i cieniem brzucha.
+  p.sphere(11, 11 + bob, 7, 3.8, RAMP.bone);
+  p.sphere(15.6, 11 + bob, 2.6, 2.6, [C.lgray, C.cream, C.white, C.white]);
+  p.thin(6, 13.8 + bob, 15, 13.8 + bob, C.lavender);
+  // Szyja z grzywą, głowa z pyskiem, ucho i świecące oko.
+  p.polyShade([[14.6, 9 + bob], [17, 5 + bob], [19.6, 6.4 + bob], [17.6, 11 + bob]], RAMP.bone);
+  for (const y of [7, 8.4, 9.8]) p.thin(15.6, y + bob, 14.8, y + 1 + bob, C.lgray);
+  p.sphere(18.8, 6 + bob, 2.6, 2.2, RAMP.bone).sphere(21, 7 + bob, 1.4, 1.1, RAMP.bone);
+  p.dot(22, 7 + bob, C.dgray).thin(20, 8 + bob, 21.6, 8 + bob, C.lavender);
+  p.polyShade([[17, 4.6 + bob], [15.4, 3.4 + bob], [17.6, 5.8 + bob]], RAMP.bone).dot(16.4, 4 + bob, C.salmon);
+  p.rect(18.8, 5.4 + bob, 1, 1, C.cyan).dot(19, 5.4 + bob, C.white);
+  // Rozłożyste poroże (dwie gałęzie z odnogami), końce jarzą się na zmianę.
+  for (const d of [-1, 1]) {
+    const bx = 18.4 + d * 0.8, by = 4 + bob;
+    p.stroke(bx, by, bx + d * 1.6, by - 3, C.cream).thin(bx + d * 1.6, by - 3, bx + d * 3.4, by - 4, C.cream);
+    p.thin(bx + d * 0.8, by - 1.5, bx + d * 2.8, by - 1.4, C.cream).thin(bx + d * 1.6, by - 3, bx + d * 1.2, by - 4.4, C.cream);
+    for (const [tx, ty] of [[bx + d * 3.4, by - 4], [bx + d * 2.8, by - 1.4], [bx + d * 1.2, by - 4.4]] as const) p.dot(tx, ty, (f + d) % 2 ? C.cyan : C.white);
+  }
+  // Ogon.
+  p.dot(4.4, 9.6 + bob, C.white).dot(3.9, 10.1 + bob, C.white);
   return p.outline();
 }
 
