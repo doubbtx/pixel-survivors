@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.62',
+    lines: [
+      "When you die, the end screen says what killed you and has a Damage taken tab. Very fast bursts of damage are softened, so you get a moment to react, but standing still is still deadly. Keys you mash in combat (dodge, ultimate) no longer pick cards or skip the end screen.",
+      "Easier start: on Common and Magic the first maps of act 1 ramp up gently (fewer shooters and bullets, some HP back after each map), and your first discoveries come after one or two runs. Enemy bullets are drawn on top with a bright rim, bosses flash less, and level-up cards explain why they are Recommended.",
+      "Nightmare and Torment: strong builds must keep moving. Very strong builds face tougher enemies, and Takezo's katana covers at most 3 rows of cuts.",
+    ],
+  },
+  {
     version: '0.61',
     lines: [
       "Weapons now have roles: single target (great on bosses and elites, aims at them first), crowd (clears hordes, weak on bosses) and hybrid. Go all in on one and suffer on the other side, or mix. The role is shown on level-up cards and in the weapon details.",
