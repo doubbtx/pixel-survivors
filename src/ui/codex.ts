@@ -4,7 +4,7 @@ import { drawText, wrapText, DESC, descS, descLH, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
-import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel, evolvesOf, roleInfo } from '../data/weapons';
+import { WEAPONS, WEAPON_BY_ID, FUSIONS, maxLevel, evolvesOf, roleInfo, type WeaponRole } from '../data/weapons';
 import { PASSIVES, PASSIVE_BY_ID } from '../data/passives';
 import { HEROES, HERO_BY_ID } from '../data/heroes';
 import { AUGMENTS, FUSION_RULES } from '../data/augments';
@@ -25,6 +25,8 @@ interface Entry {
   desc: string;
   /** Wymagane odblokowania zawartości (data/unlocks.ts); zablokowany wpis pokazuje warunek. */
   lock?: string[];
+  /** Rola broni (osobna linia w kolorze roli). */
+  role?: WeaponRole;
 }
 
 /** Strona księgi: tytuł zakładki, wstęp i wpisy. */
@@ -46,7 +48,7 @@ function weaponPage(): Page {
         lock: [`w:${w.id}`, `p:${e.passive}`, ...(i ? [`evo:${w.id}`] : [])],
         parts: [w.icon, pa.icon], result: into.icon, title: into.name, color: into.color,
         how: `${w.name} at level ${maxLevel(w)} + passive ${pa.name}, then level up.${heroNote(w.hero)}`,
-        desc: `${into.desc}${el ? ` Element: ${ELEMENTS[el].name}.` : ''} ${roleInfo(into.role).desc}`,
+        desc: `${into.desc}${el ? ` Element: ${ELEMENTS[el].name}.` : ''}`, role: into.role,
       });
     });
   }
@@ -73,7 +75,7 @@ function fusionPage(): Page {
       lock: ['fusions', `w:${f.a}`, `w:${f.b}`],
       parts: [a.icon, b.icon], result: into.icon, title: into.name, color: into.color,
       how: `${a.name} + ${b.name}, both at max level or evolved, then level up.${heroNote(a.hero ?? b.hero)}`,
-      desc: `${into.desc} ${roleInfo(into.role).desc}`,
+      desc: into.desc, role: into.role,
     };
   });
   return { title: 'Fusions', intro: FUSION_RULES, entries };
@@ -173,7 +175,8 @@ export class CodexScreen implements Screen {
     for (const e of pg.entries) {
       // Rysuje tylko widoczne wpisy (długie strony), ale zawsze liczy wysokość.
       const lock = wrapText(e.lock ? lockText(this.app.save, e.lock) : '', tw).filter(Boolean);
-      const how = wrapText(e.how, tw), desc = wrapText(e.desc, tw), h = Math.max(S + 4, 11 + (lock.length + how.length + desc.length) * lh + 4);
+      const ri = e.role ? roleInfo(e.role) : undefined, role = ri ? wrapText(ri.desc, tw) : [];
+      const how = wrapText(e.how, tw), desc = wrapText(e.desc, tw), h = Math.max(S + 4, 11 + (lock.length + how.length + desc.length + role.length) * lh + 4);
       if (y + h > AREA[1] - 4 && y < AREA[1] + AREA[3] + 4) {
         this.recipe(r, e, x, y);
         drawText(g, e.title, tx, y, lock.length ? C.lavender : e.color, { shadow: C.black });
@@ -181,6 +184,7 @@ export class CodexScreen implements Screen {
         for (const l of lock) { drawText(g, l, tx, ly, C.hotpink, DESC); ly += lh; }
         for (const l of how) { drawText(g, l, tx, ly, C.lime, DESC); ly += lh; }
         for (const l of desc) { drawText(g, l, tx, ly, C.lgray, DESC); ly += lh; }
+        for (const l of role) { drawText(g, l, tx, ly, ri!.color, DESC); ly += lh; }
         r.withAlpha(0.3, () => r.rect(x, y + h - 2, W - 44, 1, C.slate));
       }
       y += h + 2;
