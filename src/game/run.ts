@@ -432,7 +432,8 @@ export class Run {
   pacts: Record<string, number> = {};
   bossKills = 0;
   /** Skrzynie do otwarcia: przedmiot (wylosowany przy upadku) i źródło (tytuł ekranu łupu). */
-  pendingLoot: { source: LootSource; item: Item }[] = [];
+  /** Łup do pokazania; `title`: własny tytuł okna (ui/items.ts LootView), inaczej wg źródła. */
+  pendingLoot: { source: LootSource; item: Item; title?: string }[] = [];
 
   // --- ekwipunek ---
   equipment: Record<SlotId, Item | null> = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, ring1: null, ring2: null, amulet: null };
@@ -597,9 +598,11 @@ export class Run {
   reduceFlash = false;
   /** Ukryte pociski gracza (ustawienie): nadal działają, tylko nie są rysowane. */
   playerFx: PlayerFx = 'auto';
-  /** Tryb 'auto' ataków gracza: przygaszenie 0..1 (wygładzone) i stan z histerezą (BAL.readability). */
+  /** Tryby 'auto' i 'dim' ataków gracza: przygaszenie 0..1 (wygładzone) i stan z histerezą (BAL.readability). */
   fxDim = 0;
   private fxDimOn = false;
+  /** Czas (totalTime) ostatniego błysku trafienia bossa / elity (BAL.readability.bigFlashGap). */
+  private bigFlashAt = new WeakMap<Enemy, number>();
 
   constructor(heroId: string, readonly mode: Mode, depth = 1, fresh = true, readonly altUlt = false) {
     this.hero = HERO_BY_ID[heroId];
@@ -790,13 +793,13 @@ export class Run {
     if (this.inBanner && this.relic('turncoat')) this.cmdBuffT = Math.max(this.cmdBuffT, BAL.eliteTraits.buffT);
   }
 
-  /** Czytelność w tłumie: dużo pocisków wrogów blisko bohatera przygasza jego ataki (tryb 'auto'). */
+  /** Czytelność w tłumie: dużo pocisków wrogów blisko bohatera albo walka z bossem przygasza jego ataki (tryby 'auto' i 'dim'). */
   private updateFxDim(dt: number): void {
-    if (this.playerFx !== 'auto') { this.fxDim = 0; return; }
+    if (this.playerFx !== 'auto' && this.playerFx !== 'dim') { this.fxDim = 0; return; }
     const R = BAL.readability, p = this.player, r2 = R.radius * R.radius;
     let n = 0;
     for (const b of this.bullets.items) if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < r2 && ++n >= R.on) break;
-    this.fxDimOn = this.fxDimOn ? n > R.off : n >= R.on;
+    this.fxDimOn = (this.boss !== null && !this.boss.dead) || (this.fxDimOn ? n > R.off : n >= R.on);
     this.fxDim += ((this.fxDimOn ? 1 : 0) - this.fxDim) * Math.min(1, dt / R.ema);
   }
 
@@ -1570,7 +1573,12 @@ export class Run {
     const dealt = Math.min(dmg, Math.max(0, e.hp));
     e.hp -= dmg;
     // Biały błysk trafienia: bez niego przy bardzo dużym tłumie (playtest 3: sylwetki zakrywały ekran od 10. minuty).
-    if (!this.reduceFlash && this.enemies.count < BAL.readability.flashCrowd) e.flash = 3;
+    // Boss i elity (0.62, playtest: miniboss „świecił na biało” i nie było widać zapowiedzi ataków, które też migają bielą):
+    // krótki błysk najwyżej co BAL.readability.bigFlashGap s.
+    if (!this.reduceFlash && this.enemies.count < BAL.readability.flashCrowd) {
+      if (!e.boss && !e.elite) e.flash = 3;
+      else if (this.totalTime - (this.bigFlashAt.get(e) ?? -99) >= BAL.readability.bigFlashGap) { this.bigFlashAt.set(e, this.totalTime); e.flash = 2; }
+    }
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src);

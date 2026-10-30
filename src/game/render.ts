@@ -41,6 +41,8 @@ const CORE_SHOW = 45;
 const FIRE_COLS = [C.red, C.orange, C.gold, C.yellow, C.orange];
 /** Kolor poświaty pocisku wroga wg sprite'a (domyślnie czerwony). */
 const BULLET_GLOW: Record<string, number> = { eb_orange: C.orange, eb_pink: C.pink, eb_blue: C.blue, eb_cyan: C.cyan };
+/** Kierunek klatki spadającego meteoru (lot z prawej góry, wektor (-45, 135) jak w rysowaniu strefy). */
+const METEOR_DIR = (Math.round((Math.atan2(135, -45) / (Math.PI * 2)) * ARROW_DIRS) + ARROW_DIRS) % ARROW_DIRS;
 
 let vignette: HTMLCanvasElement | null = null;
 
@@ -61,6 +63,32 @@ function glowSprite(col: number, rad: number): HTMLCanvasElement {
   g.fillStyle = grad;
   g.fillRect(0, 0, rad * 2, rad * 2);
   glowCache.set(key, c);
+  return c;
+}
+
+/**
+ * Obwódka pocisku wroga (0.62): jasny pierścień (alfa BAL.readability.ring) i opcjonalnie ciemna tarcza pod kulą (Ustawienia:
+ * Wyraźne pociski) w jednym obrazie na siatce płótna świata — jedno rysowanie na pocisk zamiast dwóch okręgów.
+ * `rad`: promień kuli w pikselach logicznych, `res`: piksele płótna świata na piksel logiczny.
+ */
+const rimCache = new Map<string, HTMLCanvasElement>();
+function bulletRim(rad: number, dark: boolean, res: number): HTMLCanvasElement {
+  const key = `${rad}|${dark}|${res}`;
+  let c = rimCache.get(key);
+  if (c) return c;
+  const R1 = (rad + 1.5) * res, R2 = (rad + 2.5) * res, n = Math.ceil(R2 + res) * 2, mid = n / 2;
+  c = document.createElement('canvas');
+  c.width = c.height = n;
+  const g = c.getContext('2d')!, img = g.createImageData(n, n);
+  const hex = (col: number) => [1, 3, 5].map((i) => parseInt(PAL[col].slice(i, i + 2), 16));
+  const ring = hex(C.cream), dk = hex(C.black), ra = Math.round(255 * BAL.readability.ring);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const d = Math.hypot(x + 0.5 - mid, y + 0.5 - mid), o = (y * n + x) * 4;
+    const px = dark && d <= R1 ? [...dk, 255] : Math.abs(d - R2) <= res * 0.5 ? [...ring, ra] : null;
+    if (px) img.data.set(px, o);
+  }
+  g.putImageData(img, 0, 0);
+  rimCache.set(key, c);
   return c;
 }
 
@@ -91,7 +119,7 @@ function getVignette(): HTMLCanvasElement {
 /**
  * Rysuje świat gry (bez HUD). Logika działa w jednostkach świata, a ekran pokazuje je
  * w powiększeniu ZOOM: sx = x·ZOOM − kamera. Kolejność warstw: podłoże → strefy → cienie →
- * znajdźki → wrogowie → gracz → pociski → cząsteczki/efekty → liczby obrażeń → winieta.
+ * znajdźki → wrogowie → ataki gracza → efekty → bohater → pogoda → liczby obrażeń → pociski wrogów → zapowiedzi → znaczniki.
  */
 /** Buduje z góry klatki efektów wybuchów, żeby pierwszy wybuch w runie nie przycinał gry. */
 
@@ -187,10 +215,15 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
   if (run.bgDim > 0) r.withAlpha(run.bgDim, () => r.rect(0, 0, VW, VH, C.black));
 
   // Ataki gracza (ustawienie): przygaszone = półprzezroczyste i bez poświat, ukryte = pominięte (działają dalej).
-  // 'auto': jak widoczne, ale przygaszane (run.fxDim), gdy blisko bohatera jest dużo pocisków wrogów.
-  const autoA = run.playerFx === 'auto' ? 1 - (1 - BAL.readability.alpha) * run.fxDim : 1;
+  // 'auto': jak widoczne, ale przygaszane (run.fxDim), gdy blisko bohatera jest dużo pocisków wrogów albo trwa walka z bossem;
+  // 'dim' w tych chwilach schodzi jeszcze niżej (0.62, playtest: kości, gwiazdy i lasery zasłaniały pociski bossa).
+  const RD = BAL.readability;
+  const autoA = run.playerFx === 'auto' ? 1 - (1 - RD.alpha) * run.fxDim : 1;
+  const dimA = RD.dim - (RD.dim - RD.dimMin) * run.fxDim;
   const atkOn = run.playerFx !== 'hidden', glow = run.playerFx === 'visible' || (run.playerFx === 'auto' && run.fxDim < 0.5);
-  const atk = (fn: () => void) => { if (atkOn) { if (run.playerFx === 'dim') r.withAlpha(0.35, fn); else if (autoA < 1) r.withAlpha(autoA, fn); else fn(); } };
+  const atk = (fn: () => void) => { if (atkOn) { if (run.playerFx === 'dim') r.withAlpha(dimA, fn); else if (autoA < 1) r.withAlpha(autoA, fn); else fn(); } };
+  // Liczby obrażeń przygaszane razem z atakami w tłumie pocisków (oba tryby automatyczne).
+  const numA = run.playerFx === 'dim' ? 1 - (1 - RD.alpha) * run.fxDim : autoA;
 
   // Aury broni i tytana: półprzezroczyste pole + pulsujący brzeg.
   const ult = run.abilities.ult;
@@ -214,10 +247,11 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
       const zx = X(z.x), zy = Y(z.y), zr = z.r * ZOOM;
       switch (z.kind) {
         case 'meteor': {
-          r.withAlpha(0.25, () => r.circle(zx, zy, zr, C.red, true));
-          if (run.blink(8, 5)) r.circle(zx, zy, zr, C.red);
+          // Miejsce upadku: blada złota plama bez obręczy i migania, skała wydłużona wzdłuż lotu (0.62, playtest: czerwony
+          // migający krąg i okrągła pomarańczowa kula wyglądały jak Ostrzał i pocisk wroga). Zasada: okrągłe = wróg, wydłużone = gracz.
+          r.withAlpha(0.18, () => r.circle(zx, zy, zr, C.gold, true));
           const fall = Math.max(0, 1 - z.t / z.delay);
-          drawSprite(g, 'eb_orange', zx + fall * 45, zy - fall * 135, { scale: 2 });
+          drawSprite(g, `pb_ember@${METEOR_DIR}`, zx + fall * 45, zy - fall * 135, { scale: 2 });
           break;
         }
         case 'mine':
@@ -268,7 +302,8 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
         case 'beam': {
           const ex = zx + Math.cos(z.angle) * z.len * ZOOM, ey = zy + Math.sin(z.angle) * z.len * ZOOM;
           const wdt = Math.max(2, Math.round(z.r * 2 * ZOOM));
-          r.withAlpha(0.35, () => r.line(zx, zy, ex, ey, C.pink, wdt + 4));
+          // Szeroka poświata tylko przy widocznych atakach (0.62, playtest: lasery na pół ekranu zasłaniały pociski bossa).
+          if (glow) r.withAlpha(0.35, () => r.line(zx, zy, ex, ey, C.pink, wdt + 4));
           r.line(zx, zy, ex, ey, C.pink, wdt);
           r.line(zx, zy, ex, ey, C.white, Math.max(1, wdt - 3));
           break;
@@ -658,7 +693,11 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
         glow(X(pr.x), Y(pr.y), 10, C.peach, 0.3);
       }
     });
+    // Bardzo dużo pocisków gracza (późna gra: kości, sierpy, gwiazdy na cały ekran): rysowany co n-ty, do BAL.readability.projDraw.
+    const every = Math.max(1, Math.ceil(run.projectiles.count / RD.projDraw));
+    let pi = 0;
     for (const pr of run.projectiles.items) {
+      if (every > 1 && pr.kind !== 'wave' && pr.brand <= 0 && pi++ % every) continue;
       if (!vis(pr.x, pr.y)) continue;
       const x = X(pr.x), y = Y(pr.y);
       if (pr.kind === 'arrow') {
@@ -800,10 +839,6 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
     // Tarcza: jeden czytelny pierścień (bez nakładających się poświat).
     r.withAlpha(0.6, () => r.circle(px, py + 1, 13, C.cyan));
   }
-  // Rdzeń trafienia (BAL.playerBulletR) widoczny tylko, gdy pocisk jest blisko — wiadomo, jak blisko można go minąć.
-  if (run.outcome !== 'dead' && run.bullets.items.some((b) => (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < CORE_SHOW * CORE_SHOW)) {
-    r.withAlpha(0.85, () => { r.rect(px - 1.5, py - 1.5, 3, 3, C.black); r.rect(px - 0.5, py - 0.5, 1, 1, C.white); });
-  }
   // Mały pasek HP pod graczem: przez chwilę po trafieniu (wygasa) i stale przy niskim życiu.
   if (p.hp < hpSeen.hp - 0.5 || hpSeen.run !== run) hpSeen.at = run.totalTime;
   hpSeen.hp = p.hp; hpSeen.run = run;
@@ -813,30 +848,6 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
     r.rect(px - 8, py + 13, 16, 2, C.black);
     r.rect(px - 8, py + 13, 16 * frac, 1.5, since < 0.15 ? C.white : C.red);
   });
-
-  // Pociski wrogów (0.40: nad efektami ataków gracza, żeby nie ginęły w trafieniach i wybuchach): najpierw poświaty (jedna zmiana przezroczystości dla wszystkich), potem kule.
-  // Przy bardzo dużej liczbie pocisków poświaty są pomijane (wydajność).
-  if (fancy && run.bullets.count < 600) {
-    lit(g, (glow) => {
-      for (const b of run.bullets.items) if (vis(b.x, b.y)) glow(X(b.x), Y(b.y), b.radius * ZOOM + 8, BULLET_GLOW[b.sprite] ?? C.red, 0.55);
-    });
-  }
-  // Wyraźne pociski (Ustawienia): ciemna obwódka pod każdym pociskiem.
-  // Krótki ślad za pociskiem (dwa bledsze odbicia wstecz wzdłuż lotu) i jasny rdzeń: wrogie pociski są okrągłe,
-  // ze śladem i rdzeniem, pociski gracza — wydłużone, bez śladu. Przy bardzo wielu pociskach ślad jest pomijany.
-  const trails = run.bullets.count < 700;
-  for (const b of run.bullets.items) {
-    if (!vis(b.x, b.y)) continue;
-    const bx = X(b.x), by = Y(b.y);
-    if (trails) {
-      const sp = Math.hypot(b.vx, b.vy) || 1, k = Math.min(1, 60 / sp) * 0.045 * ZOOM;
-      r.withAlpha(0.18, () => drawSprite(g, b.sprite, bx - b.vx * k * 2, by - b.vy * k * 2));
-      r.withAlpha(0.38, () => drawSprite(g, b.sprite, bx - b.vx * k, by - b.vy * k));
-    }
-    if (run.bulletOutline) r.circle(bx, by, b.radius * ZOOM + 1.5, C.black, true);
-    drawSprite(g, b.sprite, bx, by);
-    r.rect(bx - 0.67, by - 0.67, 1.34, 1.34, C.white);
-  }
 
   // Wspólne światło sceny (pełne efekty): korekta barwna biomu mnoży całą scenę (ziemia, postacie, pociski razem),
   // potem ciepłe światło bohatera rozjaśnia okolicę. Napisy i znaczniki rysowane później zostają czyste.
@@ -873,8 +884,37 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
   for (const n of run.dmgNums.items) {
     if (!vis(n.x, n.y)) continue;
     const pop = n.big && n.life > 0.55 ? 1.25 : 1;
-    // Tryb 'auto': liczby przygaszane razem z atakami gracza (nie zasłaniają pocisków wrogów w tłumie).
-    r.withAlpha(Math.min(1, n.life * 5) * autoA, () => drawLabel(g, n.text, X(n.x), Y(n.y) - 6, n.col, C.black, n.big ? pop : 0.75));
+    // Tryby 'auto' i 'dim': liczby przygaszane razem z atakami gracza (nie zasłaniają pocisków wrogów w tłumie).
+    r.withAlpha(Math.min(1, n.life * 5) * numA, () => drawLabel(g, n.text, X(n.x), Y(n.y) - 6, n.col, C.black, n.big ? pop : 0.75));
+  }
+
+  // Pociski wrogów: nad wszystkim, co rysuje gracz (ataki, efekty, liczby obrażeń, przyciemnienie ultimate, wydarzenie, pogoda;
+  // 0.62, playtest: ginęły w meteorach, wybuchach i kościach). Najpierw poświaty (pełne efekty, do 600 pocisków), potem
+  // krótki ślad (dwa bledsze odbicia wstecz wzdłuż lotu, do 700), jasna obwódka (widać je na ciemnym tle lochu i Pustki),
+  // ciemna obwódka (Ustawienia: Wyraźne pociski; odcina je od jasnych efektów), kula i biały rdzeń. Wrogie pociski są okrągłe,
+  // pociski gracza wydłużone.
+  if (fancy && run.bullets.count < 600) {
+    lit(g, (glow) => {
+      for (const b of run.bullets.items) if (vis(b.x, b.y)) glow(X(b.x), Y(b.y), b.radius * ZOOM + 8, BULLET_GLOW[b.sprite] ?? C.red, 0.55);
+    });
+  }
+  const trails = run.bullets.count < 700;
+  for (const b of run.bullets.items) {
+    if (!vis(b.x, b.y)) continue;
+    const bx = X(b.x), by = Y(b.y);
+    if (trails) {
+      const sp = Math.hypot(b.vx, b.vy) || 1, k = Math.min(1, 60 / sp) * 0.045 * ZOOM;
+      r.withAlpha(0.18, () => drawSprite(g, b.sprite, bx - b.vx * k * 2, by - b.vy * k * 2));
+      r.withAlpha(0.38, () => drawSprite(g, b.sprite, bx - b.vx * k, by - b.vy * k));
+    }
+    const rim = bulletRim(b.radius * ZOOM, run.bulletOutline, res), rs = rim.width / res;
+    g.drawImage(rim, bx - rs / 2, by - rs / 2, rs, rs);
+    drawSprite(g, b.sprite, bx, by);
+    r.rect(bx - 0.67, by - 0.67, 1.34, 1.34, C.white);
+  }
+  // Rdzeń trafienia (BAL.playerBulletR) nad pociskami, gdy któryś jest blisko — wiadomo, jak blisko można go minąć.
+  if (run.outcome !== 'dead' && run.bullets.items.some((b) => (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < CORE_SHOW * CORE_SHOW)) {
+    r.withAlpha(0.85, () => { r.rect(px - 1.5, py - 1.5, 3, 3, C.black); r.rect(px - 0.5, py - 0.5, 1, 1, C.white); });
   }
 
   // Kręgi ostrzegawcze piorunów burzy.

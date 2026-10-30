@@ -162,8 +162,13 @@ export const BAL = {
    * nagroda za rozbicie: monety, Rytuał: skrzynia elity, gdy obaj przywoływacze zginą w `ritualWindow` s.
    */
   situations: { first: 30, every: [75, 100] as [number, number], everyLate: [60, 80] as [number, number], lateAfter: 600, warn: 2, eventGap: 20, expire: 60, coins: 8, ritualWindow: 20 },
-  /** Czytelność (0.40): tryb 'auto' ataków gracza — przygaszenie przy ≥ `on` pociskach wrogów w promieniu, koniec przy ≤ `off`. */
-  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500 },
+  /**
+   * Czytelność (0.40): tryby 'auto' i 'dim' ataków gracza — przygaszenie przy ≥ `on` pociskach wrogów w promieniu (albo
+   * w walce z bossem), koniec przy ≤ `off`; 'auto' schodzi do `alpha`, 'dim' z `dim` do `dimMin`. 0.62 (playtest: pociski
+   * ginęły w efektach): najwyżej `projDraw` rysowanych pocisków gracza (reszta działa, tylko nie jest rysowana), jasna
+   * obwódka pocisków wrogów z alfą `ring`, błysk trafienia bossa / elity najwyżej co `bigFlashGap` s (nie zakrywa zapowiedzi).
+   */
+  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5 },
   /** 0.47 (gracz: „biorę bronie dystansowe i samo się wygrywa”; pomiar: wręcz ≈ 30% zabójstw pocisków naprowadzanych).
    * Mnożniki obrażeń/obszaru broni wg wzorca (z ewolucjami) i wg id (prefiks), plus bonus za trafienia z bliska. */
   weaponTune: {
