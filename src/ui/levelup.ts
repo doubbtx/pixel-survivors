@@ -5,10 +5,12 @@ import { drawText, wrapText, textWidth, descS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { RARITIES } from '../data/items';
+import { WEAPON_BY_ID, roleInfo } from '../data/weapons';
 import { generateOptions, offerCount, applyOption, canBanish, optionScore, type Option, type Recipe } from '../systems/levelup';
 import type { Run } from '../game/run';
 import { button, dim, inside, slot, cardFrame, cardBadge, cardIcon } from './widgets';
 import { hintShowing } from './hints';
+import { label } from './theme';
 import { drawTagGain } from './synergies';
 
 const CARD_W = 108;
@@ -71,6 +73,9 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   else if (evoRow) drawEvoRow(r, evoRow, cx, y + CARD_H - (o.tags.length ? 38 : 26));
   // Tagi synergii, które wzmacnia ta opcja, z postępem po wyborze.
   if (o.tags.length) drawTagGain(r, run, o.tags, cx, y + CARD_H - 14);
+  // Rola broni (0.61): plakietka na dolnej krawędzi karty (opcje broni mają id broni).
+  const wd = o.kind === 'weaponNew' || o.kind === 'weaponUp' || o.kind === 'evolve' || o.kind === 'fusion' ? WEAPON_BY_ID[o.id] : undefined;
+  if (wd) { const ri = roleInfo(wd.role); label(r, ri.name, cx, y + CARD_H - 4, ri.color); }
 }
 
 /**

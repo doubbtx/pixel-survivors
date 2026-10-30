@@ -801,6 +801,15 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   i podpowiedź. Pomiar (bot stojący od aktu 2, nieśmiertelny): śmierci w akcie 2 0-12 → ~155; akt 3 przeciętnego buildu
   już nie bez trafień; bardzo mocne buildy dalej czyszczą poza kadrem (dalej: presja niezależna od tempa zabijania).
   Test w worktree: `node_modules` musi być prawdziwy (junction → Vite 403 na czcionce).
+- 0.61 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
+  'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
+  `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`
+  (single 1.25, crowd 0.5, hybrid 1.15; stany żywiołów dziedziczą przez bazę), `spread` 0.12 rad dla salwy w jeden cel.
+  Pojedynczy cel celuje najpierw w bossa / elitę (`focusTarget` w systems/weapons.ts: bolt, meteor, boomerang, cleave).
+  Bazowe: single bolt/sickle/dice/arrow/staff/knives, hybrid meteor/boomerang/mines/souls/katana, crowd orbit/aura/chain/
+  laser/axe/light. UI: plakietka roli na karcie awansu (ui/levelup.ts), opis roli i rola każdej ewolucji w ekranie Bronie
+  i pasywki (ui/build.ts). Pomiar (symulacja zestawów 4 broni, Endless głębokość 2): boss single 101→46 s, mixed 131→85 s,
+  crowd 165→243 s (2.9× mixed), hybrid 197→184 s; zabójstwa w 300 s single 3.9k, mixed 7.4k, crowd 9.5k.
 
 - 0.37.1 (grafika obiektów map, praca równoległa z drugą sesją): gfx/objects.ts w stylu 32-bit, te same rozmiary sprite'ów.
   Pomocnik `stone` (blok z fugami, plamki, mech). Kapliczka: dwustopniowy cokół, żłobiony postument, brązowa obejma, kula
