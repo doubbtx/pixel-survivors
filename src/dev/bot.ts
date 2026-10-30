@@ -94,6 +94,8 @@ export class Bot {
     this.style = params.get('style') ?? 'auto';
     // Porównanie broni: `&kit=bolt,orbit` = tylko te bronie na maks. poziomie, bez awansów i kart (`&style=idle`: bez ruchu i umiejętności).
     this.kit = (params.get('kit') ?? '').split(',').filter(Boolean);
+    // Tryb łatwy (`&easy=1`): jak w Ustawieniach.
+    if (params.get('easy') === '1') app.save.settings.easy = true;
     // R4: `&ult=alt` (drugi ultimate), `&ult=mix` (na zmianę w kolejnych runach).
     this.ultMode = params.get('ult') ?? 'base';
     // Udręka (0.46): `&torment=N` — poziom wyprawy (odblokowany na potrzeby testu).
@@ -182,11 +184,12 @@ export class Bot {
             run.weapons.length = 0;
             for (const id of this.kit) { run.addWeapon(id); const w = run.weapons[run.weapons.length - 1]; w.level = w.def.levels.length + 1; }
           }
-          run.pendingLevels = 0; run.pendingCards.length = 0;
+          // Bez awansów (xpNext = ∞: addXp nie przekroczy progu), kart ani nowych broni.
+          run.xpNext = Infinity; run.pendingLevels = 0; run.pendingCards.length = 0;
         }
         if (this.style !== 'idle') this.play(run, dt);
         break;
-      case 'levelup': this.countOffer(gs.levelUp, run.level); press((['n1', 'n2', 'n3'] as const)[rnd(Math.min(3, gs.levelUp?.options?.length ?? 3))]); break;
+      case 'levelup': if (this.kit.length) { press('skip'); break; } this.countOffer(gs.levelUp, run.level); press((['n1', 'n2', 'n3'] as const)[rnd(Math.min(3, gs.levelUp?.options?.length ?? 3))]); break;
       case 'cards': press((['n1', 'n2', 'n3'] as const)[rnd(3)]); break;
       case 'power': press('confirm'); break;
       case 'relic': press('confirm'); break;

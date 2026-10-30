@@ -161,6 +161,11 @@ export const BAL = {
     id: { chain: 0.85 } as Record<string, number>,
   },
   close: { r: 50, bonus: 0.2 },
+  /** 0.49 (runda 2, Agent 2): strzelcy bliżej (keepDist ×0.75) i po salwie naciskają o `step` px przez `t` s (gdy bliżej niż
+   * `near` × keepDist). Trans bitewny: przy ≥ `min` wrogach w pierścieniu bliskiego dystansu −`taken` obrażeń, zabójstwo z bliska
+   * leczy `killHeal` maks. HP (wspólny budżet drainHeal). */
+  press: { keepMul: 0.75, step: 30, t: 1.5, near: 1.5 },
+  trance: { min: 3, taken: 0.15, killHeal: 0.002 },
   /** Zasięg wyboru celu broni naprowadzanych (było 200 / 170): strzelają do wrogów bliżej, nie z drugiego końca ekranu. */
   homing: { bolt: 160, chain: 130 },
   /**
@@ -476,7 +481,7 @@ export const BAL = {
     /** Dodatkowy tłum wrogów na mapach Ekspedycji (flaga enemyCount) w akcie. */
     crowd: (act: number) => 0.5 + 0.25 * act,
     /** Pierwszy węzeł wyprawy (playtest 0.43.2: gracze i boty ginęli tu w 50-100 s): cel zabójstw, mniej wrogów (enemyCount), cisza bez sytuacji, zadań i wydarzeń (s), pierwsza elita (s). */
-    gentle: { kills: 300, crowd: -0.5, dmg: -0.35, quiet: 90, stagger: 20, elite: 60 },
+    gentle: { kills: 300, crowd: -0.5, dmg: -0.35, quiet: 90, stagger: 20, elite: 60, second: 0.5 },
     /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */
     waveOffsetPerDepth: 50,
     /** Elity w węźle elity pojawiają się co eliteEvery × ten mnożnik. */
@@ -515,7 +520,7 @@ export const BAL = {
    */
   /** Serie zabójstw (0.33): zabójstwa w odstępach najwyżej `gap` s; progi napisów i ich nazwy. Ewolucja: zatrzymanie `evolveFreeze` s. */
   streak: { gap: 0.8, tiers: [25, 60, 120, 250], names: ['Rampage', 'Massacre', 'Carnage', 'Annihilation'], evolveFreeze: 0.35, critFxEvery: 4 },
-  juice: { hitstopElite: 0.07, hitstopBoss: 0.3, hitstopHurt: 0.05, hurtBig: 0.15, hitstopGap: 0.4, numbersCritOnly: 350 },
+  juice: { hitstopElite: 0.07, hitstopBoss: 0.3, hitstopHurt: 0.05, hurtBig: 0.15, hitstopGap: 0.4, numbersCritOnly: 350, numbersCrowd: 24 },
   /** Limity efektów (wydajność przy masowych wybuchach): cząsteczki na krok, efekty wybuchów na krok i odległość scalania, obłoczki śmierci. */
   fx: { particlesPerStep: 160, sparksPerStep: 12, boomsPerStep: 6, boomMerge: 24, poofCap: 140 },
   bossBaseHp: 3200,

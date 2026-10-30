@@ -24,6 +24,7 @@ import { REWARD_LABEL } from '../data/tasks';
 import { drawElemMark } from '../gfx/elemmark';
 import { situationName, situationRing } from '../systems/situations';
 import { UI, SMALL, OUT, tile, meter, iconSlot, cornerTag, label, approach } from './theme';
+import { hintShowing } from './hints';
 
 /**
  * HUD (tylko rysowanie; stan gry czyta z `Run`, własny stan animacji trzyma w `HudAnim`; rozmiary i kolory w ui/theme.ts).
@@ -235,6 +236,8 @@ function drawSecretArrows(r: Renderer, run: Run): void {
       r.g.fill();
     };
     tri(8, 6, C.black); tri(6.5, 4.5, t.col ?? C.pink);
+    // Podpowiedź w grze stoi u góry (dotyk) albo nad umiejętnościami: na jej 6 s zostaje sama strzałka celu.
+    if (hintShowing()) continue;
     const text = t.col ? t.label : `${t.label} ${Math.round(Math.sqrt(d2(t.x, t.y)) / 10)}m`, tw = textWidth(text) * smallS() + 6;
     const lx = Math.max(tw / 2 + 2, Math.min(W - tw / 2 - 2, ax - Math.cos(a) * 16)), ly = ay - Math.sin(a) * 12 - 4;
     tile(r, lx - tw / 2, ly - 1, tw, 8, undefined, 0.7);

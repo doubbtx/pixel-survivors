@@ -18,9 +18,23 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.49',
+    lines: [
+      "Melee and pressure: Holy Aura and Orbit Blades reach further, shooters keep a shorter distance and step closer after a volley, and from minute 3 more kamikazes, blinkers and weavers come for you (plus rings of fast enemies every minute after 4:30). Standing still with ranged weapons is riskier now.",
+      "Battle trance: with 3 or more enemies right next to you the ring turns turquoise and you take 15% less damage; close kills heal you a little.",
+    ],
+  },
+  {
+    version: '0.48',
+    lines: [
+      "Phone and touch: the ultimate switch and skin are buttons on the hero screen, boss power has a Skip button, Pacts have Reset, a tap cancels key binding, and in the shop, backpack, Progression and cards the first tap shows the description, the second one buys or picks. Tap later map nodes to preview them.",
+      "Act 1 map 2 is a bit gentler, Torment rules also show when you pick with the keyboard and the essence counter includes the Torment bonus. The close combat ring is white now. Fewer damage numbers and explosions in huge crowds, a brighter Solar Flare.",
+    ],
+  },
+  {
     version: '0.47',
     lines: [
-      "Weapon balance: melee weapons (Holy Aura, Orbit Blades, axe, katana, Holy Light, Mines) hit harder and wider, Chain Lightning is a bit weaker and homing weapons pick targets a little closer. New: hits on enemies right next to you deal +20% damage (a faint orange ring shows it).",
+      "Weapon balance: melee weapons (Holy Aura, Orbit Blades, axe, katana, Holy Light, Mines) hit harder and wider, Chain Lightning is a bit weaker and homing weapons pick targets a little closer. New: hits on enemies right next to you deal +20% damage (a white ring shows it).",
     ],
   },
   {

@@ -296,7 +296,8 @@ export class InventoryView {
         const [x, y] = this.cellRect(cx, cy);
         if (!inside(m.x, m.y, x, y, CELL, CELL)) continue;
         if (m.lastMove !== this.lastMouse) { this.cx = cx; this.cy = cy; }
-        if (input.pressed('click')) { this.cx = cx; this.cy = cy; this.activate(this.cellAt(cx, cy)); }
+        // Dotyk: pierwsze dotknięcie zaznacza (opis i przycisk Rozłóż), drugie zakłada / zdejmuje.
+        if (input.pressed('click')) { const again = this.cx === cx && this.cy === cy; this.cx = cx; this.cy = cy; if (again || input.lastDevice !== 'touch') this.activate(this.cellAt(cx, cy)); }
       }
     }
     // Przyciski pod szczegółami (mysz / dotyk).

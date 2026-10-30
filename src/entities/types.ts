@@ -113,6 +113,8 @@ export interface Enemy extends Poolable {
   /** R4: Zaraza (Morwen) — zarażony przekazuje truciznę przy śmierci; Znak śmierci (Vesper) — czas do cięcia (s, 0 = brak). */
   plague: boolean;
   markT: number;
+  /** Nacisk strzelca po salwie (0.49, BAL.press). */
+  pressT: number;
   tx: number;
   ty: number;
   /** Pozostałe salwy serii i czas do następnej. */

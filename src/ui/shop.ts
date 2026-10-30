@@ -135,7 +135,8 @@ export class ShopView {
         const [x, y] = this.cellPos(cx, cy);
         if (!inside(m.x, m.y, x, y, CELL, CELL)) continue;
         if (m.lastMove !== this.lastMouse) { this.cx = cx; this.cy = cy; }
-        if (input.pressed('click')) { this.cx = cx; this.cy = cy; this.buy(row[cx]); }
+        // Dotyk: pierwsze dotknięcie pokazuje opis, drugie kupuje.
+        if (input.pressed('click')) { const again = this.cx === cx && this.cy === cy; this.cx = cx; this.cy = cy; if (again || input.lastDevice !== 'touch') this.buy(row[cx]); }
       }
     }
     if (input.pressed('click')) {

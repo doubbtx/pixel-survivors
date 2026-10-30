@@ -34,6 +34,7 @@ export const HINTS = {
   secret: 'Sekret! Ten świat skrywa więcej: fontanny, runy, grzyby, pęknięte ściany, kurhany. Szczegóły w Pomocy (Sekrety).',
   resource: 'Pasek pod HP to zasób bohatera. Każdy bohater zdobywa go i używa inaczej, opis w Pomocy (Esc).',
   task: 'Zadanie! Dotknij turkusowego kamienia, żeby je zacząć. Za wykonanie nagroda, za część porażek karna fala.',
+  close: 'Close combat: hits on enemies right next to you deal +20% damage (white ring around you). Melee weapons are built for it.',
   hurt: 'Oberwałeś! Trafia cię tylko mały środek postaci, więc da się przecisnąć między pociskami. Spacja = unik.',
 } as const;
 
@@ -48,6 +49,11 @@ const HINT_SCREEN: Partial<Record<HintId, string>> = {
   power: 'power', map: 'map', shop: 'shop', anvil: 'anvil',
 };
 const screenOf = (id: HintId) => HINT_SCREEN[id] ?? 'play';
+
+/** Wersje podpowiedzi na dotyk (bez klawiszy). */
+const TOUCH_TEXT: Partial<Record<HintId, string>> = {
+  move: 'Drag on the left half of the screen to move. Your weapons fire on their own, you dodge enemies and their shots.',
+};
 
 const SHOW = 6;
 /** Podpowiedź jest teraz na ekranie: nakładki chowają wtedy linię klawiszy i przyciski podglądu, w których miejscu stoi ramka. */
@@ -99,7 +105,7 @@ export class Hints {
     if (!this.cur || !this.save.settings.hints) return;
     const overlay = box !== null;
     const b = box ?? (touch ? { x: (W - 192) / 2, y: 52, w: 192 } : { x: (W - 240) / 2, y: H - UI.edge - UI.ability - 8, w: 240, up: true });
-    const lines = wrapText(HINTS[this.cur], (b.w - 12) / HINT_SCALE);
+    const lines = wrapText((touch && TOUCH_TEXT[this.cur]) || HINTS[this.cur], (b.w - 12) / HINT_SCALE);
     const h = 9 + lines.length * 9, y = b.up ? b.y - h : b.y;
     const a = Math.min(1, this.t * 3, (SHOW - this.t) * 6);
     r.withAlpha(a, () => {
