@@ -156,7 +156,8 @@ export const BAL = {
      * Sufit całego mnożnika (0.62, weteran: Koszmarna, akt 3, DPS 37M — mnożnik stał na 1000, zwykła mapa przechodzona
      * w miejscu, miniboss Polowania w 3 s): `max` × `top[poziom]` + `topPerTorment` na poziom Udręki.
      */
-    tier: { knee: 4, exp: [0, 0, 0.06, 0.12] as number[], max: [1, 1, 1.25, 1.5] as number[], expPerTorment: 0.02, maxPerTorment: 0.05, top: [1, 1, 2, 4] as number[], topPerTorment: 0.4 },
+    // 0.63.1 (gracz: Morwen, Koszmarna w 9 min, ok. 670 obrażeń przez całą wyprawę, średnio 21 mln DPS): pogoń wyżej na Rzadkiej i Koszmarnej.
+    tier: { knee: 4, exp: [0, 0, 0.08, 0.16] as number[], max: [1, 1, 1.5, 2.5] as number[], expPerTorment: 0.02, maxPerTorment: 0.1, top: [1, 1, 2, 4] as number[], topPerTorment: 0.4 },
   },
   /**
    * Sytuacje (systems/situations.ts, 0.39): pierwsza po `first` s czasu poziomu, potem co `every` s (po `lateAfter` s czasu fal
@@ -518,7 +519,8 @@ export const BAL = {
      * Ogień + Trucizna: wybuch (promień) za wszystkie warstwy trucizny × mul (za sekundę trucizny); zużywa truciznę.
      * 0.62: mul 3 → 1, promień 30 → 20 (wybuch obszarowy z 4-5× największego trafienia dawał 54-64% obrażeń buildu).
      */
-    toxic: { r: 20, mul: 1 },
+    // 0.63.1: wrogowie wokół celu dostają `splash` obrażeń wybuchu (Morwen na Koszmarnej: wybuch 38% obrażeń).
+    toxic: { r: 20, mul: 1, splash: 0.3 },
     /** Błyskawica + Trucizna: trucizna przeskakuje na `n` wrogów w promieniu. */
     conduct: { r: 55, n: 3 },
     /** Ogień + Błyskawica: mały wybuch z odrzutem; zużywa porażenie. */
