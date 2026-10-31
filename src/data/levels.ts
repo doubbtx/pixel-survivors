@@ -70,7 +70,7 @@ export interface LevelDef {
   gentle?: boolean;
   /** Scenariusz mapy (data/scripts.ts, 0.56): zaplanowane uderzenia zamiast losowych sytuacji i okrążeń EVENTS. */
   script?: string;
-  /** Sufit mnożnika obrażeń wrogów z czasu i głębokości (rampa aktu 1 Ekspedycji na niskich poziomach map, BAL.expedition.ramp). */
+  /** Sufit mnożnika obrażeń wrogów z czasu i głębokości (rampa aktów 1-2 Ekspedycji na niskich poziomach map, BAL.expedition.ramp). */
   dmgCap?: number;
   flags?: Record<string, number>;
 }

@@ -273,6 +273,13 @@ function updateMiniboss(run: Run, dt: number, waveT: number): void {
   const X = BAL.expedition, ex = run.expedition;
   const huntHp = (X.huntHp[ex?.tier ?? 0] ?? X.huntHp[0]) + X.huntHpPerTorment * (ex?.torment ?? 0);
   e.maxHp = e.hp = e.maxHp * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (1 + Math.max(0, waveT - 300) / 600) * (hunt ? huntHp : 1);
+  // Polowanie: co najmniej `huntTtk` s DPS buildu z końca poprzedniej mapy (większe z: średnia krocząca siły buildu, ostatnie
+  // próbki dpsLog — te liczą też obrażenia procentowe) — mocny build nie kończy łowów w 1-10 s. W dalszych aktach więcej
+  // (×(1 + huntTtkAct × (akt - 1))): wrogowie giną od jednego trafienia, więc DPS bez nadwyżki zaniża siłę buildu.
+  if (hunt) {
+    const log = run.dpsLog.slice(-3), dps = Math.max(run.dpsEma, log.length ? log.reduce((s, v) => s + v, 0) / log.length : 0);
+    e.maxHp = e.hp = Math.max(e.maxHp, dps * X.huntTtk * (1 + X.huntTtkAct * ((ex?.act ?? 1) - 1)) * huntHp / X.huntHp[0]);
+  }
   if (hunt) {
     // Eskorta: elity bez skrzyń (Run.killEnemy); w akcie 1 bez cech zachowania (jak zwykłe elity, R3).
     const mods = Object.keys(ELITE_MODS).filter((k) => (ex?.act ?? 2) >= 2 || !ELITE_MODS[k].kind);
