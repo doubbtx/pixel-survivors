@@ -342,10 +342,11 @@ export const UNIQUES: UniqueDef[] = [
     desc: 'Unik wystrzeliwuje pierścień 12 pocisków (60% obrażeń broni podstawowej).',
     hooks: {
       onDash: (run) => {
+        // Miny nie mają sprite'a lecącego pocisku (0.63.1: „Brak sprite'a: mine”, gdy pierwszą bronią były miny).
         const w = run.weapons[0], p = run.player;
         if (!w) return;
         const dmg = weaponStatsAt(w.def, w.level).damage * run.stats.might * 0.6;
-        for (let i = 0; i < 12; i++) run.spawnProjectile({ x: p.x, y: p.y, angle: (i / 12) * Math.PI * 2, speed: 200, damage: dmg, src: 'Burza strzał', sprite: w.def.proj ?? 'bolt', pierce: 1, life: 0.7 });
+        for (let i = 0; i < 12; i++) run.spawnProjectile({ x: p.x, y: p.y, angle: (i / 12) * Math.PI * 2, speed: 200, damage: dmg, src: 'Burza strzał', sprite: w.def.kind === 'mines' ? 'bolt' : w.def.proj ?? 'bolt', pierce: 1, life: 0.7 });
       },
     },
   },

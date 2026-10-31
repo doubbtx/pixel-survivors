@@ -216,7 +216,7 @@ export const BAL = {
     melee: { kinds: ['aura', 'orbit', 'cleave', 'lash', 'nova'] as string[], w: { area: 1.4, duration: 0.9 } as Partial<Record<keyof Stats, number>> },
   },
   /** Odrodzenie (Feniks i inne): nietykalność (s) i promień, w którym zwykli wrogowie giną, a pociski znikają. */
-  revive: { iframes: 3, r: 130 },
+  revive: { iframes: 3, r: 130, stop: 1 },
   /** Limit pojedynczego trafienia gracza jako ułamek maks. HP (0.59): `base`, +`perTorment` na poziom Udręki, do `max`. */
   hitCap: { base: 0.4, perTorment: 0.04, max: 0.8 },
   /**

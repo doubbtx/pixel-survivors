@@ -787,6 +787,7 @@ export class GameScreen implements Screen {
         if (inp.pressed('build') && run.outcome === 'none') { this.openBuild('play'); return; }
         this.toastT = Math.max(0, this.toastT - dt);
         // Zatrzymanie klatki po mocnym trafieniu / zabiciu elity: symulacja stoi przez chwilę (można wyłączyć w Ustawieniach).
+        if (run.reviveStop > 0) { run.reviveStop -= dt; this.bufferCasts(); break; }
         if (run.hitstop > 0 && !set.hitstop) run.hitstop = 0;
         if (run.hitstop > 0) { run.hitstop -= dt; this.bufferCasts(); break; }
         this.gameplayHints();

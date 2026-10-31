@@ -878,6 +878,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   Bot (god, Koszmarna): Wybuch toksyn Morwen 54% → poza top 5, Ignara 16% → poza top 5.
   Sługi (tester Morwen: 68-82% obrażeń w akcie 1, akt 1 bez ulepszania broni): `minions.cap` 30, Zew dusz co 22. zabójstwo na 6 s,
   `minions.bigMul` 0.5 na bossy i elity. Bot Magiczna: Morwen 2,7 → 1,7 mapy (Kestra 2,7), Zew dusz 15-43% → 12-16%.
+  Wskrzeszenie widoczne: `Run.reviveStop` (gra staje na `BAL.revive.stop` s, także przy wyłączonym zatrzymaniu klatki), baner
+  „Revived! N left”, wstrząs i dźwięk. Naprawa: Buty Burzy Strzał z minami jako pierwszą bronią („Brak sprite'a: mine”).
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`
