@@ -329,5 +329,6 @@ export function writeSave(d: SaveData): void {
 }
 
 export function heroRecord(d: SaveData, heroId: string): HeroRecord {
-  return (d.records[heroId] ??= { bestTime: 0, bestKills: 0, bestLevel: 0, bestEndless: 0, bestExpedition: 0, expeditionWins: 0 });
+  // Niepełny rekord (np. ręcznie zapisany) dostaje brakujące pola (playtest 0.63: „nodes undefined completed undefined”).
+  return (d.records[heroId] = { bestTime: 0, bestKills: 0, bestLevel: 0, bestEndless: 0, bestExpedition: 0, expeditionWins: 0, ...(d.records[heroId] as Partial<HeroRecord> | undefined) });
 }

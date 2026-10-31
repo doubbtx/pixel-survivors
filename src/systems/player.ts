@@ -33,7 +33,7 @@ export function updatePlayer(run: Run, input: Input, dt: number): void {
   if (p.iframes > 0) p.iframes -= dt;
   if (p.hurtCd > 0) p.hurtCd -= dt;
   if (p.flash > 0) p.flash--;
-  if (run.stats.regen > 0) run.heal(run.stats.regen * dt);
+  if (run.stats.regen > 0) run.sustain(run.stats.regen * dt);
   // Gorączka (klątwa): stała utrata HP, która nie zabija (jak Rytuał) i nie zależy od mnożników regeneracji.
   const drain = run.flag('hpDrain');
   if (drain > 0 && p.hp > 1) p.hp = Math.max(1, p.hp - drain * dt);

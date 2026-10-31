@@ -239,7 +239,7 @@ export const SUPERS: SuperDef[] = [
   {
     id: 'vampire', name: 'Pocałunek wampira', min: 0.01, max: 0.02, pct: true,
     desc: '{v} szansy przy trafieniu na uleczenie 5% HP',
-    hooks: { onHit: (run, _e, _d, _c, v) => { if (rng.chance(chance(v))) run.heal(run.stats.maxHp * 0.05); } },
+    hooks: { onHit: (run, _e, _d, _c, v) => { if (rng.chance(chance(v))) run.sustain(run.stats.maxHp * 0.05); } },
   },
   {
     id: 'pyre', name: 'Ognista dusza', min: 0.05, max: 0.1, pct: true,

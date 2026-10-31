@@ -8,7 +8,7 @@ import { RARITIES } from '../data/items';
 import { WEAPON_BY_ID, roleInfo } from '../data/weapons';
 import { generateOptions, offerCount, applyOption, canBanish, optionScore, reachesThreshold, type Option, type Recipe } from '../systems/levelup';
 import type { Run } from '../game/run';
-import { button, dim, inside, slot, cardFrame, cardBadge, cardIcon } from './widgets';
+import { button, dim, inside, slot, cardFrame, cardBadge, cardIcon, REROLL_GUARD } from './widgets';
 import { hintShowing } from './hints';
 import { label } from './theme';
 import { drawTagGain } from './synergies';
@@ -248,7 +248,7 @@ export class LevelUpView {
     if (input.pressed('confirm')) return this.choose(this.sel);
     const nums = ['n1', 'n2', 'n3', 'n4'] as const;
     for (let i = 0; i < nums.length; i++) if (input.pressed(nums[i])) return this.choose(i);
-    if (input.pressed('reroll')) this.reroll();
+    if (input.pressed('reroll') && performance.now() - this.born > REROLL_GUARD) this.reroll();
     if (input.pressed('skip')) return this.skip();
     if (input.pressed('banish')) this.toggleBanish();
 

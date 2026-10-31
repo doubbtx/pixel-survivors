@@ -233,8 +233,11 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
     for (const w of run.weapons) {
       if (w.def.kind !== 'aura') continue;
       const rad = auraRadius(effectiveStats(run, w).area) * ZOOM;
-      if (glow) r.withAlpha(0.16, () => r.circle(px, py, rad, w.def.color, true));
-      r.circle(px, py, rad, run.blink(20, 10) ? w.def.color : C.orange);
+      // Duża aura (0.63, weteran: Gaj i Cytadela kładły płachtę koloru na pół ekranu): bez wypełnienia i z bladym brzegiem.
+      const big = rad > BAL.readability.auraBig * ZOOM;
+      if (glow && !big) r.withAlpha(0.16, () => r.circle(px, py, rad, w.def.color, true));
+      if (big) r.withAlpha(0.4, () => r.circle(px, py, rad, w.def.color));
+      else r.circle(px, py, rad, run.blink(20, 10) ? w.def.color : C.orange);
     }
     if (ult.def.kind === 'titan' && ult.activeT > 0) {
       const rad = ult.def.p.radius * run.stats.area * ZOOM;
@@ -244,6 +247,9 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
   });
 
   // Strefy (wszystkie są atakami gracza).
+  let meteors = 0;
+  for (const z of run.zones.items) if (z.kind === 'meteor') meteors++;
+  const meteorA = 0.18 * Math.min(1, BAL.readability.meteorMany / Math.max(1, meteors));
   atk(() => {
     for (const z of run.zones.items) {
       const zx = X(z.x), zy = Y(z.y), zr = z.r * ZOOM;
@@ -251,7 +257,8 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
         case 'meteor': {
           // Miejsce upadku: blada złota plama bez obręczy i migania, skała wydłużona wzdłuż lotu (0.62, playtest: czerwony
           // migający krąg i okrągła pomarańczowa kula wyglądały jak Ostrzał i pocisk wroga). Zasada: okrągłe = wróg, wydłużone = gracz.
-          r.withAlpha(0.18, () => r.circle(zx, zy, zr, C.gold, true));
+          // Deszcz meteorów (Apokalipsa): przy wielu strefach plamy bledsze, żeby nie składały się w pomarańczową płachtę (0.63).
+          r.withAlpha(meteorA, () => r.circle(zx, zy, zr, C.gold, true));
           const fall = Math.max(0, 1 - z.t / z.delay);
           drawSprite(g, `pb_ember@${METEOR_DIR}`, zx + fall * 45, zy - fall * 135, { scale: 2 });
           break;
@@ -296,7 +303,8 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
           for (let k = 0; k < 4; k++) r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7 - rng.range(0, 6), 1, 2, k % 2 ? C.white : C.yellow);
           break;
         case 'fire':
-          r.withAlpha(0.2, () => r.circle(zx, zy, zr, C.orange, true));
+          // Duże pole ognia bledsze (0.63, weteran: pomarańczowa płachta, w której giną pociski bossa).
+          r.withAlpha(zr > BAL.readability.auraBig * ZOOM ? 0.08 : 0.2, () => r.circle(zx, zy, zr, C.orange, true));
           for (let k = 0; k < 5; k++) {
             r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7 - rng.range(0, 4), 2, 2, rng.pick(FIRE_COLS));
           }
@@ -305,9 +313,13 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
           const ex = zx + Math.cos(z.angle) * z.len * ZOOM, ey = zy + Math.sin(z.angle) * z.len * ZOOM;
           const wdt = Math.max(2, Math.round(z.r * 2 * ZOOM));
           // Szeroka poświata tylko przy widocznych atakach (0.62, playtest: lasery na pół ekranu zasłaniały pociski bossa).
-          if (glow) r.withAlpha(0.35, () => r.line(zx, zy, ex, ey, C.pink, wdt + 4));
-          r.line(zx, zy, ex, ey, C.pink, wdt);
-          r.line(zx, zy, ex, ey, C.white, Math.max(1, wdt - 3));
+          // Bez białej płachty (0.63, weteran: przy dużym obszarze wachlarz Lustrzanego promienia bielił ekran): pełna szerokość
+          // trafienia tylko bladym pasmem, rysowany promień najwyżej BAL.readability.beamMax px.
+          const vis = Math.min(wdt, BAL.readability.beamMax);
+          if (wdt > vis) r.withAlpha(0.12, () => r.line(zx, zy, ex, ey, C.pink, wdt));
+          else if (glow) r.withAlpha(0.3, () => r.line(zx, zy, ex, ey, C.pink, wdt + 4));
+          r.withAlpha(0.55, () => r.line(zx, zy, ex, ey, C.pink, vis));
+          r.line(zx, zy, ex, ey, C.cream, Math.max(1, Math.round(vis * 0.25)));
           break;
         }
       }
@@ -1103,7 +1115,10 @@ function drawTell(r: Renderer, run: Run, e: Enemy, ex: number, ey: number): void
       // Linia celownika grubsza po zablokowaniu kąta (wtedy już tylko zejść z linii).
       if (e.dashT <= 0) return;
       const L = 260 * ZOOM, locked = e.dashT <= B.snipeAim * 0.4;
-      tellLine(r, ex, ey, ex + Math.cos(e.shootA) * L, ey + Math.sin(e.shootA) * L, locked ? C.red : C.salmon, locked ? 2 : 1, locked ? 0.95 : 0.75);
+      tellLine(r, ex, ey, ex + Math.cos(e.shootA) * L, ey + Math.sin(e.shootA) * L, locked ? C.red : C.salmon, locked ? 3 : 2, locked ? 1 : 0.85);
+      // Celownik na linii w odległości gracza (0.63, weteran: zginął od Skorpiona, którego linii nie widział w efektach).
+      const d = Math.hypot(run.player.x - e.x, run.player.y - e.y) * ZOOM;
+      if (locked) tellRing(r, ex + Math.cos(e.shootA) * d, ey + Math.sin(e.shootA) * d, 7, C.red, 0.9);
       return;
     }
   }

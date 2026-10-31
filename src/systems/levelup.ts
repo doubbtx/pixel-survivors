@@ -259,8 +259,11 @@ export function reachesThreshold(run: Run, t: Tag): boolean {
  */
 export function optionScore(run: Run, o: Option): number {
   let s = { evolve: 100, fusion: 98, abilityEvolve: 95, passiveEvolve: 90, augment: 24, weaponUp: 22, weaponNew: 16, ability: 14, passiveNew: 12, passiveUp: 10, stat: 0 }[o.kind];
-  s += (o.quality ?? 0) * 6;
-  if (o.tags.some((t) => reachesThreshold(run, t))) s += 40;
+  // 0.63 (playtest: „Polecane” wybierało nową broń dla progu synergii zamiast Epickiego ulepszenia i pomijało element ewolucji):
+  // jakość waży więcej, próg synergii mniej, element ewolucji (evoPiece) jak brakująca pasywka.
+  s += (o.quality ?? 0) * 10;
+  if (o.tags.some((t) => reachesThreshold(run, t))) s += 25;
+  if (o.evoPiece) s += 30;
   if (o.hint.startsWith('Potrzebna do ewolucji') || o.hint.endsWith('(masz)') || o.hint.startsWith('Fuzja z')) s += 25;
   return s;
 }

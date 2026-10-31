@@ -523,6 +523,8 @@ export class Run {
   drainLeft = 0;
   /** Kradzież życia: pozostały budżet (HP), odnawiany do BAL.lifestealPerSec × maks. HP na sekundę. */
   stealLeft = 0;
+  /** Stałe leczenie (regeneracja, kradzież życia, Sierp krwi, Piętno): pozostały wspólny budżet (HP) z sufitu BAL.sustain. */
+  sustainLeft = 0;
   diceCoinT = -99;
   cloakCd = 0;
   /** Sztandary elit (R3): wrogowie w strefie się leczą, gracz w strefie dostaje więcej obrażeń. */
@@ -547,6 +549,10 @@ export class Run {
   eliteT: number = BAL.eliteEvery;
   /** Średni DPS gracza (średnia krocząca) i wynikający z niego mnożnik siły wrogów (BAL.power). */
   dpsEma = 0;
+  /** DPS w duże cele (elity, minibossy, boss): obrażenia i czas walki z nimi, oba wygaszane (BAL.bossTtk.decay). */
+  bigDmg = 0;
+  bigTime = 0;
+  private bigHitAt = -99;
   powerMul = 1;
   private dmgStep = 0;
   /**
@@ -751,6 +757,10 @@ export class Run {
     const P = BAL.power;
     this.dpsEma += (this.dmgStep / dt - this.dpsEma) * Math.min(1, dt / P.emaSec);
     this.dmgStep = 0;
+    // Czas walki z dużym celem: kroki, w których padło trafienie elity / bossa w ostatnich BAL.bossTtk.engage s.
+    const K = BAL.bossTtk, fade = Math.exp(-dt / K.decay);
+    this.bigDmg *= fade; this.bigTime *= fade;
+    if (this.totalTime - this.bigHitAt < K.engage) this.bigTime += dt;
     const t = this.waveTime();
     const base = P.baseHp * BAL.enemyHpMul(this.time) * BAL.depthHpMul(this.depth);
     // Ekspedycja na wysokim poziomie map / Udręce: powyżej kolana (`P.tier.knee` × podłoga) pogoń stromsza (BAL.power.tier).
@@ -793,6 +803,8 @@ export class Run {
     if (this.cloakCd > 0) this.cloakCd -= dt;
     this.drainLeft = Math.min(this.stats.maxHp * BAL.drainPerSec, this.drainLeft + this.stats.maxHp * BAL.drainPerSec * dt);
     this.stealLeft = Math.min(this.stats.maxHp * BAL.lifestealPerSec, this.stealLeft + this.stats.maxHp * BAL.lifestealPerSec * dt);
+    const sus = this.stats.maxHp * this.sustainRate();
+    this.sustainLeft = Math.min(sus, this.sustainLeft + sus * dt);
     if (!this.banners.length) return;
     const T = BAL.eliteTraits, p = this.player;
     for (const b of this.banners) {
@@ -1270,6 +1282,27 @@ export class Run {
     const h = Math.min(this.drainLeft, this.stats.maxHp * frac);
     if (h <= 0) return;
     this.drainLeft -= h;
+    this.sustain(h, faith);
+  }
+
+  /** Sufit stałego leczenia (ułamek maks. HP na sekundę): niższy na wyższych poziomach map, Udręce i w głębokim Endless. */
+  /** DPS w duże cele (podłoga HP bossa i minibossa, BAL.bossTtk); 0, dopóki gracz nie walczył z elitą. */
+  bigDps(): number {
+    return this.bigTime > BAL.bossTtk.minTime ? this.bigDmg / this.bigTime : 0;
+  }
+
+  sustainRate(): number {
+    const S = BAL.sustain, ex = this.expedition;
+    if (!ex) return Math.max(S.min, S.endless - S.perDepth * Math.max(0, this.depth - S.endlessFrom));
+    return Math.max(S.min, (S.tier[ex.tier ?? 0] ?? S.min) - S.perTorment * (ex.torment ?? 0));
+  }
+
+  /** Stałe leczenie w ramach sekundowego sufitu (0.63, weteran: regeneracja i kradzież życia pozwalały stać w miejscu na wysokich poziomach). */
+  sustain(v: number, faith = 1): void {
+    const p = this.player, toShield = this.flag('overhealShield') > 0 || this.flag('healShield') > 0;
+    const h = Math.min(v, this.sustainLeft, toShield ? v : Math.max(0, this.stats.maxHp - p.hp));
+    if (h <= 0) return;
+    this.sustainLeft -= h;
     this.heal(h, faith);
   }
 
@@ -1395,6 +1428,8 @@ export class Run {
   recomputeStats(): void {
     this.statsDirty = false;
     const s: Stats = { ...DEFAULT_STATS, ...this.hero.base };
+    const ex = this.expedition, T = BAL.heroHpTier;
+    if (ex) s.maxHp *= ex.torment ? T[T.length - 1] : T[Math.min(T.length - 1, ex.tier ?? 0)];
     const add = (o: Partial<Stats>, k = 1) => { for (const key in o) s[key as keyof Stats] += o[key as keyof Stats]! * k; };
     for (const p of this.passives) {
       const def = PASSIVE_BY_ID[p.id];
@@ -1637,6 +1672,7 @@ export class Run {
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src);
+    if ((e.elite || e.boss) && !pct) { this.bigDmg += dealt; this.bigHitAt = this.totalTime; }
     // Siła buildu bez powinowactwa mapy: mapa podatna / odporna działa w pełni, pogoń HP jej nie wyrównuje.
     if (!pct) this.dmgStep += dealt / (resist * weak * soft);
     this.elemDmg[el ?? 'none'] = (this.elemDmg[el ?? 'none'] ?? 0) + dealt / (resist * weak);
@@ -1644,7 +1680,7 @@ export class Run {
     if (st.lifesteal > 0 && !o.dot && this.stealLeft > 0) {
       const h = Math.min(dmg * st.lifesteal, st.maxHp * 0.02, this.stealLeft);
       this.stealLeft -= h;
-      this.heal(h);
+      this.sustain(h);
     }
     if (o.knock) {
       const l = Math.hypot(o.kx ?? 0, o.ky ?? 0) || 1;
@@ -1656,8 +1692,10 @@ export class Run {
     // Czytelność w tłumie: przy wielu wrogach liczby tylko dla krytyków.
     // Zwykłe liczby nie nakładają się: przy świeżej liczbie tuż obok nowa jest pomijana (krytyki zawsze widać).
     // Wielki tłum: także krytyki tylko do `numbersCrowd` liczb naraz i bez nakładania się.
+    // Walka z bossem (0.63, weteran: liczby zasłaniały ataki bossa): tylko liczby na bossie, najwyżej `numbersBoss` naraz.
     const crowdN = this.enemies.count >= BAL.readability.flashCrowd;
-    const n = this.damageNumbers && (crit ? !crowdN || (this.dmgNums.count < BAL.juice.numbersCrowd && !this.numberNear(e.x, e.y - e.radius)) : this.enemies.count < BAL.juice.numbersCritOnly && !this.numberNear(e.x, e.y - e.radius)) ? this.dmgNums.obtain() : null;
+    const bossFight = !!this.boss && !this.boss.dead;
+    const n = this.damageNumbers && (!bossFight || (e === this.boss && this.dmgNums.count < BAL.juice.numbersBoss)) && (crit ? !crowdN || (this.dmgNums.count < BAL.juice.numbersCrowd && !this.numberNear(e.x, e.y - e.radius)) : this.enemies.count < BAL.juice.numbersCritOnly && !this.numberNear(e.x, e.y - e.radius)) ? this.dmgNums.obtain() : null;
     if (n) {
       n.x = e.x + rng.range(-3, 3);
       n.y = e.y - e.radius - 2;

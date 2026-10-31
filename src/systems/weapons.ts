@@ -199,7 +199,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       hits++;
     });
     if (pulse) { const f = run.addFx('ring', p.x, p.y, w.def.color, 0.3); if (f) f.r = R; }
-    if (hits && run.augOn(w, 'aura_drain')) run.heal(run.stats.maxHp * Math.min(0.01, hits * 0.002));
+    if (hits && run.augOn(w, 'aura_drain')) run.sustain(run.stats.maxHp * Math.min(0.01, hits * 0.002));
   },
 
   /** Błyskawica: pierwszy cel najbliższy, potem skoki do najbliższego nietrafionego. */
@@ -248,7 +248,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
               hit.add(e.uid);
               run.damageEnemy(e, s.damage, w.def.name, { kx: e.x - x, ky: e.y - y, knock: s.knock });
               // Kojące światło (augment): leczenie za trafionych (do 1% HP na pierścień).
-              if (mend && healed < 10) { healed++; run.heal(run.stats.maxHp * 0.001); }
+              if (mend && healed < 10) { healed++; run.sustain(run.stats.maxHp * 0.001); }
             });
             const f = run.addFx('ring', x, y, i % 2 ? w.def.color : C.white, 0.12);
             if (f) f.r = rr;
@@ -356,7 +356,7 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
       if (f) { f.r = R; f.a0 = a - 1.05; f.a1 = a + 1.05; }
     }
     // Krwawe cięcie (augment): leczenie za trafionych.
-    if (hits && run.augOn(w, 'axe_blood')) run.heal(Math.min(5, hits * 0.5));
+    if (hits && run.augOn(w, 'axe_blood')) run.sustain(Math.min(5, hits * 0.5));
     sfx.play(weaponSound(w));
   },
 };

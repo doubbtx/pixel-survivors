@@ -82,6 +82,8 @@ export class GameScreen implements Screen {
   /** Seria nagród (0.44): ile było w kolejce na początku, ile już otwartych, rodzaj ostatniego okna. */
   private rewardTotal = 0;
   private rewardDone = 0;
+  /** Koniec ostatniej serii nagród: nagroda tuż po niej (karta za elitę) dołącza do licznika (REWARD_JOIN). */
+  private rewardEnd = { at: -99, total: 0, done: 0 };
   private lastPick: State | null = null;
   /** Plecak przed oknem łupu (nowe przedmioty dla automatycznego ekwipunku). */
   private lootBefore = new Set<Item>();
@@ -203,9 +205,11 @@ export class GameScreen implements Screen {
       { label: () => 'Menu główne', act: () => app.go(new MainMenu(app)) },
     ], W / 2, 216, 200, 15);
     if (mode === 'expedition' && !snapshot) {
-      this.run.expedition = newExpedition(app.save.exTier, maxTier(app.save), !unlocked(app.save, 'forge'));
+      // Pierwsza wyprawa bohatera na Zwykłej, bez Udręki (playtest 0.63: świeży Takezo dostawał Magiczną zapamiętaną z runu Kestry).
+      const seen = heroRecord(app.save, heroId).bestExpedition > 0;
+      this.run.expedition = newExpedition(seen ? app.save.exTier : 0, maxTier(app.save), !unlocked(app.save, 'forge'));
       this.run.expedition.tormentMax = app.save.tormentMax ?? 0;
-      this.run.expedition.torment = Math.min(app.save.exTorment ?? 0, this.run.expedition.tormentMax);
+      this.run.expedition.torment = seen ? Math.min(app.save.exTorment ?? 0, this.run.expedition.tormentMax) : 0;
       this.openMap();
     } else if (mode === 'expedition' && !snapshot!.inProgress) {
       // Zapis z mapy: sklep albo kowadło, przy którym gracz wyszedł, albo mapa.
@@ -642,13 +646,17 @@ export class GameScreen implements Screen {
     this.batchLoot();
     const left = run.pendingLoot.length + run.pendingLevels + run.pendingCards.length + run.pendingPowers + run.pendingRelics;
     if (!left) {
+      if (this.rewardTotal) this.rewardEnd = { at: this.clock, total: this.rewardTotal, done: this.rewardDone };
       this.rewardTotal = 0; this.rewardDone = 0; this.lastPick = null;
       // Koniec serii nagród na mapie (skarb, bonus mapy, auto-ekwipunek): zapis — łup w kolejce nie wchodzi do zapisu slotu.
       if (this.overlayReturn === 'map' && this.state === 'map') this.saveSlot(false);
       return false;
     }
-    if (!this.rewardTotal) { this.rewardDone = 0; this.rewardTotal = left >= 3 ? left : 0; }
-    else this.rewardDone++;
+    const E = this.rewardEnd;
+    if (!this.rewardTotal && this.clock - E.at < REWARD_JOIN) { this.rewardDone = E.done + 1; this.rewardTotal = Math.max(E.total, this.rewardDone + left); }
+    else if (!this.rewardTotal) { this.rewardDone = 0; this.rewardTotal = left >= 3 ? left : 0; }
+    // Nagrody dokładane w trakcie serii (np. karta za elitę) powiększają licznik (0.63, playtest: „Rewards 3/3”, potem jeszcze jedna).
+    else { this.rewardDone++; this.rewardTotal = Math.max(this.rewardTotal, this.rewardDone + left); }
     if (run.pendingRelics > 0) {
       run.pendingRelics--;
       this.relicPick = new RelicPickView(run);
@@ -1516,6 +1524,8 @@ const END_GUARD = 1.5;
 const REWARD_GUARD = 0.6;
 /** Bufor naciśnięć umiejętności w zatrzymaniu klatki i opóźnieniu nakładki (s). */
 const CAST_BUFFER = 0.15;
+/** Nagroda, która przyszła do tylu s po końcu serii, dołącza do licznika „Rewards N/M” (0.63, playtest: „3/3”, potem karta za elitę). */
+const REWARD_JOIN = 2;
 const CAST_KEYS: Action[] = ['q', 'e', 'dash', 'ult'];
 /** Nakładki nagród i klawisze wyboru buforowane w ich opóźnieniu (pickBuf); ostatnie naciśnięcie wygrywa. */
 const PICK_STATES = new Set<State>(['levelup', 'cards', 'power', 'relic', 'loot']);

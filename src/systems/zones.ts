@@ -84,7 +84,7 @@ export function updateZones(run: Run, dt: number): void {
             if (e.brandT > 0) e.brandT = Math.min(BAL.brand.max, e.brandT + BAL.brand.sanct * sec);
             run.damageEnemy(e, z.damage, z.src); e.slowT = 0.5; e.slowF = Math.max(e.slowF, 0.3);
           });
-          if ((p.x - z.x) ** 2 + (p.y - z.y) ** 2 < z.r * z.r) run.heal(run.stats.maxHp * (z.len / 100) * sec);
+          if ((p.x - z.x) ** 2 + (p.y - z.y) ** 2 < z.r * z.r) run.sustain(run.stats.maxHp * (z.len / 100) * sec);
         }
         if (z.t >= z.life) run.zones.release(z);
         break;

@@ -172,8 +172,10 @@ export const BAL = {
    * 0.62 runda 2: zapowiedzi ataków wrogów w warstwie nad efektami gracza z ciemnym podkładem (alfa `tellBack` względem
    * zapowiedzi) i przyciemnionym obszarem uderzeń z ziemi / stożka (`tellShade`); znacznik gracza w tłumie (strzałka nad
    * głową, mocniejsza elipsa) od połowy `markerCrowd` wrogów, pełny przy `markerCrowd` (albo przy przygaszaniu ataków).
+   * 0.63: aura o promieniu ponad `auraBig` px bez wypełnienia, plamy meteorów bledsze ponad `meteorMany` stref naraz,
+   * promień (laser) rysowany najwyżej na `beamMax` px szerokości (reszta trafienia bladym pasmem).
    */
-  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5, tellBack: 0.6, tellShade: 0.28, markerCrowd: 150 },
+  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5, tellBack: 0.6, tellShade: 0.28, markerCrowd: 150, auraBig: 80, meteorMany: 6, beamMax: 10 },
   /** 0.47 (gracz: „biorę bronie dystansowe i samo się wygrywa”; pomiar: wręcz ≈ 30% zabójstw pocisków naprowadzanych).
    * Mnożniki obrażeń/obszaru broni wg wzorca (z ewolucjami) i wg id (prefiks), plus bonus za trafienia z bliska. */
   weaponTune: {
@@ -251,6 +253,18 @@ export const BAL = {
   },
   /** Kradzież życia (0.60): osobny budżet, ułamek maks. HP na sekundę; wcześniej 2% za każde trafienie = kilka pasków HP na s. */
   lifestealPerSec: 0.04,
+  /**
+   * Sufit stałego leczenia (0.63): regeneracja, kradzież życia, Sierp krwi i Piętno razem najwyżej tyle maks. HP na sekundę.
+   * Ekspedycja wg poziomu map (Zwykła, Magiczna, Rzadka, Koszmarna) minus `perTorment` za stopień Udręki; Endless: `endless`
+   * do głębokości `endlessFrom`, potem mniej o `perDepth`. Nigdy poniżej `min`. Mikstury, obóz i Kielich bez limitu.
+   * Weteran 0.62.1: poziom ~170, regeneracja 8,5 HP/s i kradzież życia przykrywały wszystko na Koszmarnej.
+   */
+  /**
+   * Maks. HP bohatera wg poziomu map Ekspedycji (Zwykła, Magiczna, Rzadka, Koszmarna; Udręka jak ostatni). 0.62 podniosło
+   * bazowe HP o 15-45% dla nowicjuszy; od Magicznej wraca mniej więcej dawne HP (testerzy: wyższe poziomy za łatwe).
+   */
+  heroHpTier: [1, 0.85, 0.8, 0.8] as number[],
+  sustain: { tier: [0.05, 0.03, 0.022, 0.016] as number[], perTorment: 0.001, endless: 0.03, endlessFrom: 3, perDepth: 0.002, min: 0.008 },
   /** Piętno Aurela (0.43): leczenie za trafienie napiętnowanego (ułamek maks. HP, w budżecie drainPerSec; do Wiary liczy się `faith` leczenia), maks. czas, przedłużanie w Uświęconej ziemi (s/s), tarcza Opiekuna za napiętnowanego w `guardR`, wybuch Włóczni świtu. */
   brand: { heal: 0.004, faith: 0.5, max: 12, shieldCap: 0.1, sanct: 1.5, guardR: 120, shieldPer: 0.02, boom: 0.6, boomR: 24, speed: 260, life: 0.6, width: 9 },
   relics: { max: 3, offer: 3, prismWeak: 2.25, prismResist: 0.25, huntElite: 0.4, huntRegular: 0.1, cloakTime: 1, cloakCd: 8, cloakHp: 0.75, maceTime: 6, maceDmgLoss: 0.15, turncoatHp: 1.5, turncoatAura: 0.5, hornWindow: 15, chaliceHeal: 0.15, bossDmg: 1.25, shopMarkup: 1.25 },
@@ -573,6 +587,8 @@ export const BAL = {
     objKills: (act: number) => 500 + 400 * act,
     /** Długość celu zwykłej walki i elity względem pełnego poziomu. */
     fightScale: 0.75,
+    /** Długość celu mapy bossa wg aktu (0.63, weteran: w akcie 3 ok. 190 s mielenia przed bossem). */
+    bossScale: [1, 0.85, 0.6] as number[],
     /** Cel czasowy zwykłej walki krótszy niż zabójczy (0.37: mapy „przetrwaj” trwały ~4× dłużej niż „pokonaj”, telemetria). */
     surviveScale: 0.5,
     /** Mapa „przetrwaj” kończy się też po tylu zabójstwach (× liczby z mapy „pokonaj”). */
@@ -605,9 +621,11 @@ export const BAL = {
        * przybywało. Sufit `cap2` jak `cap`, rosnący do mniej więcej wartości bez sufitu w połowie mapy na końcu aktu, i mniejszy
        * tłum `crowd2` oraz mniej strzelców `shooters2` w pierwszych rzędach (akt 3 bez rampy). Rzadka i wyżej: bez zmian.
        */
-      cap2: [[2.6, 3.1, 4, 5, 6.2, 7.6, 2.2], [2.8, 3.6, 5, 7, 9.5, 12, 3.2]] as number[][],
-      crowd2: [[-0.35, -0.25, -0.15, -0.05, 0, 0, 0], [-0.35, -0.25, -0.15, -0.05, 0, 0, 0]] as number[][],
-      shooters2: [[-0.3, -0.2, -0.1, 0, 0, 0, 0], [-0.3, -0.2, -0.1, 0, 0, 0, 0]] as number[][],
+      // 0.63 (testerzy 0.62: akt 2 Magicznej po Rozwoju bez zagrożenia): Magiczna w akcie 2 z wyższym sufitem, pełnym tłumem
+      // i strzelcami od 2. mapy (Zwykła bez zmian).
+      cap2: [[2.6, 3.1, 4, 5, 6.2, 7.6, 2.2], [3.6, 5, 7, 9.5, 12.5, 16, 4.5]] as number[][],
+      crowd2: [[-0.35, -0.25, -0.15, -0.05, 0, 0, 0], [-0.2, 0, 0, 0, 0, 0, 0]] as number[][],
+      shooters2: [[-0.3, -0.2, -0.1, 0, 0, 0, 0], [-0.15, 0, 0, 0, 0, 0, 0]] as number[][],
     },
     /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */
     waveOffsetPerDepth: 50,
@@ -648,12 +666,21 @@ export const BAL = {
    */
   /** Serie zabójstw (0.33): zabójstwa w odstępach najwyżej `gap` s; progi napisów i ich nazwy. Ewolucja: zatrzymanie `evolveFreeze` s. */
   streak: { gap: 0.8, tiers: [25, 60, 120, 250], names: ['Rampage', 'Massacre', 'Carnage', 'Annihilation'], evolveFreeze: 0.35, critFxEvery: 4 },
-  juice: { hitstopElite: 0.07, hitstopBoss: 0.3, hitstopHurt: 0.05, hurtBig: 0.15, hitstopGap: 0.4, numbersCritOnly: 350, numbersCrowd: 24 },
+  juice: { hitstopElite: 0.07, hitstopBoss: 0.3, hitstopHurt: 0.05, hurtBig: 0.15, hitstopGap: 0.4, numbersCritOnly: 350, numbersCrowd: 24, numbersBoss: 10 },
   /** Limity efektów (wydajność przy masowych wybuchach): cząsteczki na krok, efekty wybuchów na krok i odległość scalania, obłoczki śmierci. */
   fx: { particlesPerStep: 160, sparksPerStep: 12, boomsPerStep: 6, boomMerge: 24, poofCap: 140 },
   bossBaseHp: 3200,
   /** Wykładnik mnożnika siły (BAL.power) dla HP bossa: 1 = jak zwykli wrogowie, mniej = krótsze walki. */
   bossPowerExp: 0.5,
+  /**
+   * Podłoga HP bossa (poza lochem) i minibossa mapy elit / Endless (0.63, weteran: boss aktu 1 padał w ~15 s, minibossy w ~5 s,
+   * bez czasu na ich ataki): co najmniej `boss` / `mini` s DPS w duże cele (Run.bigDps: obrażenia elit, minibossów i bossów
+   * przez czas walki z nimi — trafienie w ostatnich `engage` s; oba wygaszane z czasem `decay` s, liczone od `minTime` s walki),
+   * ×(1 + `perAct` × (akt - 1)), w Endless × głębokość. Run.dpsEma się nie nadaje: liczy tłum i wybuchy (bot: 99 mln przy
+   * 0,7 mln w samego bossa). Najwyżej `maxMul` × zwykłe HP (elity zabite jednym trafieniem zawyżają pomiar). Słaby build tej
+   * podłogi nie czuje; ratunkiem jest BAL.bossSoften.
+   */
+  bossTtk: { boss: 30, mini: 12, perAct: 0.15, engage: 0.5, decay: 90, minTime: 5, maxMul: 2 },
 
   // --- gracz: diminishing returns tam, gdzie wartości ≥100% psułyby grę ---
   /** Pancerz → mnożnik otrzymywanych obrażeń. 25 pancerza = -50%. Nigdy 0. */

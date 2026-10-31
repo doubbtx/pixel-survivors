@@ -6,7 +6,7 @@ import { sfx } from '../core/audio';
 import { rng } from '../core/rng';
 import { RARITY, rollOffer, cardPool, type CardDef, type CardSource, type Rarity } from '../data/cards';
 import type { Run } from '../game/run';
-import { button, dim, inside, cardFrame, cardBadge, cardIcon } from './widgets';
+import { button, dim, inside, cardFrame, cardBadge, cardIcon, REROLL_GUARD } from './widgets';
 import { hintShowing } from './hints';
 import { drawTagGain } from './synergies';
 
@@ -25,15 +25,17 @@ export function rarityColor(r: Rarity, step: number): number {
 }
 
 export function drawCard(r: Renderer, c: CardDef, x: number, y: number, selected: boolean, step: number, stacks: number): void {
-  const col = rarityColor(c.rarity, step);
+  // Przeklęta: czerwona ramka i czerwony odcień zamiast koloru rzadkości (0.63, weteran: Pakt krwi wyglądał jak zwykła pryzmatyczna).
+  const col = c.cursed ? C.red : rarityColor(c.rarity, step);
   // Ta sama oprawa co karty awansu (ui/widgets.ts): ramka w kolorze rzadkości, zaznaczenie złotą obwódką.
   cardFrame(r, x, y, CARD_W, CARD_H, col, selected);
+  if (c.cursed) r.withAlpha(0.14, () => r.roundRect(x + 2, y + 2, CARD_W - 4, CARD_H - 4, 3, C.red));
   const g = r.g;
   const cx = x + CARD_W / 2;
-  drawText(g, c.cursed ? 'Przeklęta' : RARITY[c.rarity].name, cx, y + 7, c.cursed ? C.hotpink : col, { align: 'center', shadow: C.black });
+  drawText(g, c.cursed ? (c.flags?.noHeal ? 'Cursed: no healing' : 'Przeklęta') : RARITY[c.rarity].name, cx, y + 7, c.cursed ? C.hotpink : col, { align: 'center', shadow: C.black });
   cardIcon(r, c.icon!, cx, y + 36, c.cursed ? C.hotpink : col, c.cursed ? C.plum : col);
   // Pryzmatyczne: przesuwający się po karcie pas światła.
-  if (c.rarity === 'prism') {
+  if (c.rarity === 'prism' && !c.cursed) {
     const sx = x + ((step * 3) % (CARD_W + 60)) - 30;
     r.withAlpha(0.12, () => { for (let i = 0; i < 10; i++) r.rect(Math.max(x + 3, Math.min(x + CARD_W - 4, sx + i)), y + 3, 1, CARD_H - 6, C.white); });
   }
@@ -118,7 +120,7 @@ export class CardPickView {
     if (input.pressed('confirm')) return this.choose(this.sel);
     const nums = ['n1', 'n2', 'n3'] as const;
     for (let i = 0; i < nums.length; i++) if (input.pressed(nums[i])) return this.choose(i);
-    if (input.pressed('reroll')) this.reroll(this.sel);
+    if (input.pressed('reroll') && performance.now() - this.born > REROLL_GUARD) this.reroll(this.sel);
 
     const m = input.mouse;
     for (let i = 0; i < n; i++) {
