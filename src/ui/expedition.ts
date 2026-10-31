@@ -128,7 +128,9 @@ export class ExpeditionMapView {
     if (offer.kind === 'rest') {
       const c = CAMP_BUFFS.find((b) => b.id === offer.ids[pick])!;
       ex.camp = c.id;
-      this.onChosen(`Camp: +${Math.round(X.restHeal * 100)}% HP, +${X.restMaxHp} max HP. Next map: ${c.name} (${c.desc})`);
+      // Przeklęta karta (noHeal): obóz nie leczy, komunikat tego nie ukrywa (playtest 0.62: „+50% HP” przy 143/570).
+      this.onChosen(this.run.flag('noHeal') > 0 ? `Camp: no healing (cursed), +${X.restMaxHp} max HP. Next map: ${c.name} (${c.desc})`
+        : `Camp: +${Math.round(X.restHeal * 100)}% HP, +${X.restMaxHp} max HP. Next map: ${c.name} (${c.desc})`);
     } else {
       const b = EX_BLESSINGS.find((x) => x.id === offer.ids[pick])!;
       ex.blessing = { id: b.id, maps: X.blessingMaps };

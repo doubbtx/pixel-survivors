@@ -117,6 +117,11 @@ export class GameScreen implements Screen {
   /** Zegar ekranu (s) i bufor naciśnięć umiejętności: akcja → termin ważności. */
   private clock = 0;
   private castBuf = new Map<Action, number>();
+  /**
+   * Wybór nagrody (Enter, cyfry) wciśnięty w opóźnieniu nakładki: działa zaraz po nim, zamiast przepaść (playtest 0.62:
+   * pierwsze „2” na relikwii zignorowane). Klawisze walki odsiewa wcześniej Input.guardCombat.
+   */
+  private pickBuf: Action | null = null;
   /** Poddanie: drugie naciśnięcie po chwili (nie podwójne dotknięcie), uzbrojenie wygasa. */
   private confirmQuit = new Confirm();
   private hints: Hints;
@@ -125,6 +130,8 @@ export class GameScreen implements Screen {
   /** Odblokowania zdobyte w tym runie (banery po kolei, lista na ekranie końca) i licznik bossów do wykrycia nowego. */
   private unlockQueue: UnlockDef[] = [];
   private unlockedRun: UnlockDef[] = [];
+  /** Lista odblokowań nad panelem końca ucięta do END_UNLOCK_LINES linii (pełna w zakładce Highlights). */
+  private unlockedCut = false;
   private bossSeen = 0;
   private pauseScroll = new Scroll();
   /** Przewijanie zakładek ekranu końca (wyróżnienia, obrażenia, build), zerowane przy zmianie zakładki. */
@@ -746,7 +753,8 @@ export class GameScreen implements Screen {
     // Statystyki diagnostyczne (F3 / `): tylko na czas sesji; klawisze testowe nadal wymagają trybu debug w Ustawieniach.
     // Wersja wydawana (__DEV_TOOLS__ = false) nie ma żadnego z nich.
     if (__DEV_TOOLS__ && inp.pressed('debug')) this.diag = !this.diag;
-    this.hints.update(dt, this.state);
+    // Wybór obozu / kapliczki zajmuje panel szczegółów, w którym na mapie stoi ramka podpowiedzi: podpowiedzi czekają.
+    this.hints.update(dt, this.state === 'map' && run.expedition?.offer ? 'map_offer' : this.state);
     // Mapa: ramka podpowiedzi leży na dalszych węzłach, więc gaśnie, gdy gracz zaczyna wybierać (playtest 0.62).
     if (this.state === 'map' && inp.anyPressed()) this.hints.dismiss();
     // Muzyka: intensywność z liczby wrogów, lochu i wydarzenia; boss na pełno; poza walką ciszej.
@@ -754,7 +762,16 @@ export class GameScreen implements Screen {
     const crowd = Math.min(1, run.enemies.count / BAL.musicCrowd) * 0.8 + (run.dungeon || run.levelEvent ? 0.2 : 0);
     music.setMood({ intensity: fight ? crowd : 0.08, biome: run.levelInfo.biome, boss: fight && !!run.boss });
     this.clock += dt;
-    if (this.delay > 0) { this.delay -= dt; if (this.state === 'play') this.bufferCasts(); return; }
+    if (this.delay > 0) {
+      this.delay -= dt;
+      if (this.state === 'play') this.bufferCasts();
+      else if (PICK_STATES.has(this.state)) for (const a of PICK_KEYS) if (inp.pressed(a)) this.pickBuf = a;
+      return;
+    }
+    if (this.pickBuf) {
+      if (PICK_STATES.has(this.state)) inp.botPress(this.pickBuf);
+      this.pickBuf = null;
+    }
 
     switch (this.state) {
       case 'play':
@@ -897,15 +914,17 @@ export class GameScreen implements Screen {
         this.pauseMenu.update(inp);
         break;
       case 'end': {
-        // Gracz zwykle jeszcze trzyma kierunek ruchu (playtest: W/D przestawiały menu na „Menu główne”).
-        if (this.clock - this.endAt < END_GUARD) break;
-        this.endMenu.update(inp);
         const page = this.endPage;
-        if (inp.pressed('inventory') || inp.pressed('left') || inp.pressed('right')) {
-          this.endPage = (this.endPage + (inp.pressed('left') ? END_TABS.length - 1 : 1)) % END_TABS.length;
-          sfx.play('select');
+        // Klik w zakładkę działa od razu (playtest 0.62: klik w blokadzie podświetlał zakładkę pod kursorem bez zmiany treści).
+        END_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.endTab(i)) && this.endPage !== i) { this.endPage = i; sfx.play('select'); } });
+        // Klawisze dopiero po blokadzie: gracz zwykle jeszcze trzyma kierunek ruchu (playtest: W/D przestawiały menu na „Menu główne”).
+        if (this.clock - this.endAt >= END_GUARD) {
+          this.endMenu.update(inp);
+          if (inp.pressed('inventory') || inp.pressed('left') || inp.pressed('right')) {
+            this.endPage = (this.endPage + (inp.pressed('left') ? END_TABS.length - 1 : 1)) % END_TABS.length;
+            sfx.play('select');
+          }
         }
-        END_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.endTab(i))) this.endPage = i; });
         if (this.endPage !== page) this.endScroll.reset();
         // Listy zakładek przewijane (kółko, przeciąganie palcem, PageUp/PageDown, prawa gałka pada).
         this.endScroll.update(inp, ...this.endArea());
@@ -983,15 +1002,15 @@ export class GameScreen implements Screen {
   }
 
   /**
-   * Komunikat na mapie Ekspedycji: płytka na wstędze tytułu, między nazwą biomu a plakietkami (0.62, playtest: nad przyciskami
-   * leżał na opisie węzła). Najwyżej dwie linie, wygasa pod koniec.
+   * Komunikat na mapie Ekspedycji: szeroka płytka tuż pod wstęgą tytułu, na legendzie rodzajów węzłów (playtest 0.62: nad
+   * przyciskami leżał na opisie węzła, na wstędze zasłaniał tytuł aktu). Zwykle jedna linia, najwyżej dwie, wygasa pod koniec.
    */
   private renderMapToast(): void {
-    const r = this.app.r, maxW = 224, lines = wrapText(this.toast, maxW - 12).slice(0, 2);
+    const r = this.app.r, maxW = W - 40, lines = wrapText(this.toast, maxW - 12).slice(0, 2);
     const w = Math.max(...lines.map((l) => textWidth(l))) + 12, h = lines.length * 11 + 3, x = W / 2 - w / 2;
     r.withAlpha(Math.min(1, this.toastT * 3), () => {
-      tile(r, x, 2, w, h, C.lime, 0.95);
-      lines.forEach((l, i) => drawText(r.g, l, W / 2, 3.5 + i * 11, C.lime, { align: 'center', shadow: C.black }));
+      tile(r, x, MAP_TOAST_Y, w, h, C.lime, 0.95);
+      lines.forEach((l, i) => drawText(r.g, l, W / 2, MAP_TOAST_Y + 1.5 + i * 11, C.lime, { align: 'center', shadow: C.black }));
     });
   }
 
@@ -1204,7 +1223,7 @@ export class GameScreen implements Screen {
     if (feats) info.push([`Wyczyny: ${feats}`, C.gold]);
     // Odrodzenia (Feniks, Niezłomny, Popiół feniksa): ile zużyto na tej mapie — 0.59, gracz nie zauważył, że Feniks zadziałał wcześniej.
     if (run.flag('revive') > 0) info.push([`${tr('Revives used on this map')}: ${run.revivesUsed}/${run.flag('revive')}`, C.orange]);
-    if (this.unlockedRun.length) info.push([`Unlocked: ${this.unlockedRun.map((u) => u.name).join(', ')}`, C.lime]);
+    for (const t of this.unlockedLines()) info.push([t, C.lime]);
     // Odkrycia (0.61): ile punktów do następnej zablokowanej zawartości (data/unlocks.ts grantDiscovery).
     if (!this.tut && discoveryLeft(this.app.save)) info.push([tr(`Next discovery: ${this.app.save.discovery ?? 0}/${discoveryCost(this.app.save)}`), C.cyan]);
     info.forEach(([t, col], i) => drawText(g, t, W / 2, 69 + i * 10, col, { align: 'center', shadow: C.black }));
@@ -1224,6 +1243,26 @@ export class GameScreen implements Screen {
     else this.renderBuild();
     this.endMenu.render(r);
     if (this.endPage === 4 && this.endTip) drawTip(r, ...this.endTip);
+  }
+
+  /**
+   * Odblokowania runu na ekranie końca: najwyżej END_UNLOCK_LINES linie po całych nazwach, reszta jako „+N more”
+   * (pełna lista w zakładce Highlights). Wcześniej jedna linia wychodziła poza ekran z obu stron (playtest 0.62).
+   */
+  private unlockedLines(): string[] {
+    if (!this.unlockedRun.length) return [];
+    const names = this.unlockedRun.map((u) => tr(u.name)), maxW = W - 24;
+    const lines = [`${tr('Unlocked')}:`];
+    for (let i = 0; i < names.length; i++) {
+      const last = lines.length === END_UNLOCK_LINES, rest = names.length - i - 1;
+      const cand = `${lines[lines.length - 1]} ${names[i]}${i < names.length - 1 ? ',' : ''}`;
+      // W ostatniej linii zostaje miejsce na „+N more” (chyba że to ostatnia nazwa).
+      const fits = textWidth(cand) + (last && rest ? textWidth(` ${tr(`+${rest} more`)}`) : 0) <= maxW;
+      if (fits) { lines[lines.length - 1] = cand; continue; }
+      if (last) { lines[lines.length - 1] += ` ${tr(`+${names.length - i} more`)}`; this.unlockedCut = true; break; }
+      lines.push(`${names[i]}${i < names.length - 1 ? ',' : ''}`);
+    }
+    return lines;
   }
 
   /**
@@ -1248,17 +1287,18 @@ export class GameScreen implements Screen {
       { title: 'Best kill streak', value: String(run.bestStreak), note: 'quick kills', icon: 'cd_explode', rec: run.bestStreak > (before.bestStreak ?? 0) && run.bestStreak > 0 },
     ];
     const area = this.endArea(), oy = this.endScroll.begin(r, ...area);
-    const cw = (END_W - 24 - 4 * 4) / 5, ch = 48, y = this.endY + 6 - oy;
+    // Niski panel (dużo linii informacji, propozycja trybu łatwego): kafelki bez ikon, żeby podpisy się mieściły (playtest 0.62).
+    const big = this.endH >= END_TILE_FULL, cw = (END_W - 24 - 4 * 4) / 5, ch = big ? 48 : 34, y = this.endY + 6 - oy;
     cards.forEach((c, i) => {
       const x = END_X + 12 + i * (cw + 4);
       r.withAlpha(0.85, () => r.roundRect(x, y, cw, ch, 3, C.navy, C.black));
       r.roundFrame(x + 0.5, y + 0.5, cw - 1, ch - 1, 3, c.rec ? C.gold : C.slate, c.rec ? 1 : 0.75);
       // Dłuższe tytuły (po polsku „Najmocniejszy cios”) zmniejszone do szerokości kafelka.
       drawText(g, c.title, x + cw / 2, y + 3, C.lgray, { align: 'center', scale: Math.min(smallS(), (cw - 6) / textWidth(c.title)) });
-      if (c.icon) drawSprite(g, c.icon, x + cw / 2, y + 18);
-      drawText(g, c.value, x + cw / 2, y + 27, c.rec ? C.yellow : C.white, { align: 'center', shadow: C.black, scale: textWidth(c.value) > cw - 6 ? 0.75 : 1 });
-      drawText(g, c.note, x + cw / 2, y + 38, C.lavender, { align: 'center', scale: Math.min(smallS(), (cw - 6) / Math.max(1, textWidth(c.note))) });
-      if (c.rec && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: smallS() });
+      if (c.icon && big) drawSprite(g, c.icon, x + cw / 2, y + 18);
+      drawText(g, c.value, x + cw / 2, y + (big ? 27 : 13), c.rec ? C.yellow : C.white, { align: 'center', shadow: C.black, scale: textWidth(c.value) > cw - 6 ? 0.75 : 1 });
+      drawText(g, c.note, x + cw / 2, y + (big ? 38 : 24), C.lavender, { align: 'center', scale: Math.min(smallS(), (cw - 6) / Math.max(1, textWidth(c.note))) });
+      if (c.rec && big && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: smallS() });
     });
     // Pobite rekordy bohatera (porównanie z zapisem sprzed runu).
     const broke: string[] = [];
@@ -1280,7 +1320,14 @@ export class GameScreen implements Screen {
       drawText(g, '-', bx, by, C.gold);
       drawText(g, t, bx + 6, by, C.yellow);
     });
-    this.endScroll.end(r, ly + 13 + Math.ceil(broke.length / 2) * 10 + oy - area[1], ...area);
+    let by = ly + 13 + Math.ceil(broke.length / 2) * 10;
+    // Pełna lista odblokowań, gdy nad panelem zmieściła się tylko część.
+    if (this.unlockedCut) {
+      drawText(g, 'Unlocked this run', END_X + 12, by + 2, C.lime);
+      for (const l of wrapText(this.unlockedRun.map((u) => u.name).join(', '), END_W - 32)) { by += 10; drawText(g, l, END_X + 16, by + 2, C.lgray); }
+      by += 14;
+    }
+    this.endScroll.end(r, by + oy - area[1], ...area);
   }
 
   /** Ekran końca: obrażenia per źródło (suma, udział i DPS, pasek udziału). */
@@ -1445,15 +1492,21 @@ const HINT_BOX: Partial<Record<string, HintBox>> = {
   cards: { x: 232, y: 232, w: W - 240 },
   power: { x: 232, y: 222, w: W - 240 },
   loot: { x: 8, y: 207, w: 128 },
-  // Mapa: w prawym dolnym rogu obszaru mapy (dalekie węzły), nie na szczegółach węzła pod spodem.
-  map: { x: W - 14 - 246, y: 164, w: 246, up: true },
+  // Mapa: w prawej części panelu szczegółów, nad przyciskami (playtest 0.62: w rogu obszaru mapy zasłaniała węzły i legendę).
+  map: { x: W - 14 - 206, y: H - 24, w: 206, up: true },
   shop: { x: 6, y: 232, w: 266, up: true },
   anvil: { x: 10, y: 181, w: 208, up: true },
 };
 
+/** Górna krawędź komunikatu na mapie Ekspedycji: pod wstęgą tytułu, na legendzie (ui/expedition.ts MAP_Y + 2). */
+const MAP_TOAST_Y = 30;
+
 /** Zakładki ekranu końca runu i panel pod nimi. */
 const END_TABS = ['Highlights', 'Obrażenia', 'Damage taken', 'Wykres DPS', 'Build'];
 const END_X = 12, END_W = W - 24, END_BOTTOM = 210;
+/** Ekran końca: najwięcej linii listy odblokowań nad panelem i wysokość panelu, od której kafelki Highlights mają ikony. */
+const END_UNLOCK_LINES = 2;
+const END_TILE_FULL = 64;
 /** Ekran końca przyjmuje wejście po chwili: gracz zwykle jeszcze wciska unik (Spacja / A = też potwierdzenie). */
 const END_DELAY = 0.6;
 /**
@@ -1465,3 +1518,6 @@ const REWARD_GUARD = 0.6;
 /** Bufor naciśnięć umiejętności w zatrzymaniu klatki i opóźnieniu nakładki (s). */
 const CAST_BUFFER = 0.15;
 const CAST_KEYS: Action[] = ['q', 'e', 'dash', 'ult'];
+/** Nakładki nagród i klawisze wyboru buforowane w ich opóźnieniu (pickBuf); ostatnie naciśnięcie wygrywa. */
+const PICK_STATES = new Set<State>(['levelup', 'cards', 'power', 'relic', 'loot']);
+const PICK_KEYS: Action[] = ['confirm', 'n1', 'n2', 'n3', 'n4'];

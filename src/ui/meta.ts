@@ -71,7 +71,7 @@ export class MetaScreen implements Screen {
     if (lvl >= n.max) return this.say('Maksymalny poziom', false);
     if (!nodeUnlocked(h, this.tree, n)) {
       const prev = prevNode(this.tree, n)!;
-      return this.say(`Najpierw rozwiń ${prev.name} do ${unlockLevel(prev)}/${prev.max}`, false);
+      return this.say(`First raise ${tr(prev.name)} to level ${unlockLevel(prev)} (now ${h.nodes[prev.id] ?? 0})`, false);
     }
     const cost = nodeCost(n, lvl);
     if (h.essence < cost) return this.say(`Potrzeba ${fmt(cost)} esencji`, false);
@@ -196,9 +196,9 @@ export class MetaScreen implements Screen {
         drawText(g, n.name, x + 22, y + 3, open ? (n.key ? C.pink : C.white) : C.lavender, { scale: fit(n.name, COL_W - 26) });
         const lvlTxt = `${lvl}/${n.max}`;
         if (n.max > 1) drawText(g, lvlTxt, x + COL_W - 5, y + 14, maxed ? C.gold : C.lgray, { align: 'right' });
-        // Zablokowany węzeł: ile poziomów poprzedniego jeszcze potrzeba (połowa jego maksimum).
+        // Zablokowany węzeł: wymagany poziom poprzedniego (połowa jego maksimum) — ta sama liczba co w opisie na dole.
         const prev = prevNode(tree, n);
-        const costTxt = maxed ? 'MAX' : !open && prev ? `wymaga ${unlockLevel(prev)}/${prev.max}` : fmt(cost);
+        const costTxt = maxed ? 'MAX' : !open && prev ? `needs lv ${unlockLevel(prev)}` : fmt(cost);
         const costRoom = COL_W - 22 - (n.max > 1 ? textWidth(lvlTxt) + 9 : 5);
         drawText(g, costTxt, x + 22, y + 14, maxed ? C.gold : !open ? C.lavender : h.essence >= cost ? C.cyan : C.salmon, { scale: fit(costTxt, costRoom) });
       });
@@ -206,7 +206,7 @@ export class MetaScreen implements Screen {
     // Opis zaznaczonego węzła.
     const n = this.columns()[this.col][this.row], lvl = h.nodes[n.id] ?? 0, prev = prevNode(tree, n);
     // Kawałki tłumaczone osobno (nazwy i opisy węzłów bywają po polsku albo po angielsku — 0.32 Takezo).
-    const lock = !nodeUnlocked(h, tree, n) && prev ? `${tr('Odblokowanie')}: ${tr(prev.name)} ${h.nodes[prev.id] ?? 0}/${unlockLevel(prev)}   ` : '';
+    const lock = !nodeUnlocked(h, tree, n) && prev ? `${tr(`Unlock: raise ${tr(prev.name)} to level ${unlockLevel(prev)} (now ${h.nodes[prev.id] ?? 0})`)}   ` : '';
     const now = lock + (n.key ? `${tr(lvl ? 'Aktywny' : 'Klucz')}: ${tr(n.desc)}` : lvl > 0 ? `${tr('Teraz')}: ${tr(nodeLine(n, lvl))}` : tr('Nie kupiony'));
     const next = !n.key && lvl < n.max ? `   ${tr('Następny poziom')}: ${tr(nodeLine(n, lvl + 1))}` : '';
     drawText(g, `${tr(n.name)}. ${now}${next}`, W / 2, 222, C.lgray, { align: 'center' });
