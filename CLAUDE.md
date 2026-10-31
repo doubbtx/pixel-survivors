@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.62.0)
+## Stan (wersja 0.62.1)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -858,6 +858,11 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   na `BAL.reactions.labelGap` s. UI: lista odblokowań na końcu w `END_UNLOCK_LINES` liniach, `pickBuf` (Enter/cyfra z opóźnienia
   nakładki), awans zaznacza Polecane, `Option.evoPiece` (karta „Evolution piece!”: nowa pasywka/broń dopełnia ewolucję posiadanej),
   odbicie Takezo pod kartą bohatera, „Weakened” pod paskiem bossa, w Ekspedycji w rogu HUD tylko złoto, sklep bez Kuźni przy `noForge`.
+- 0.62.1 (hotfix po trzeciej rundzie testerów: 8, 7, 7/10): HP minibossa Polowania z `Run.dpsEma` (bez próbek `dpsLog`, które
+  liczą wybuchy z tłumu — w akcie 3 miał miliardy HP), po lochu wraca z `Run.huntHpFrac`. `WB_LABEL` (bonusy jakości broni)
+  po angielsku: polskie „obszaru” bez diakrytyków przegrywało w `tr` przy liście. Oczyszczony loch: „Dungeon cleared: go to
+  the portal” i strzałka `exit` w `SECRET_LABEL`. `weaponRecipe`: ewolucja z posiadaną pasywką przed fuzją (karta „Evolution
+  piece!” pokazywała przepis fuzji). Ukończony samouczek bez komunikatu w menu (dwa Entery).
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`

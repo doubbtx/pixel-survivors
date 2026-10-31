@@ -68,15 +68,17 @@ const openEvolves = (run: Run, def: WeaponDef) => {
 
 /** Przepis broni: fuzja z posiadaną bronią (gdy jest), inaczej ewolucja (broń + pasywka). */
 function weaponRecipe(run: Run, def: WeaponDef): Recipe | undefined {
+  const evs = openEvolves(run, def), owned = evs.find((e) => run.passives.some((p) => p.id === e.passive));
+  const evo = (e: { passive: string; into: string }): Recipe => ({ parts: [def.icon, PASSIVE_BY_ID[e.passive].icon], result: WEAPON_BY_ID[e.into].icon });
+  // Ewolucja z posiadaną pasywką przed fuzją: karta „Evolution piece!” pokazuje ten sam przepis co jej napis (0.62.1).
+  if (owned) return evo(owned);
   const base = weaponBase(def);
   for (const f of openFusions(run)) {
     const other = f.a === base ? f.b : f.b === base ? f.a : '';
     const w = other ? ownedBase(run, other) : undefined;
     if (w && w.def !== def) return { parts: [def.icon, w.def.icon], result: WEAPON_BY_ID[f.into].icon };
   }
-  // Ewolucja: najpierw ta, do której masz już pasywkę.
-  const evs = openEvolves(run, def), ev = evs.find((e) => run.passives.some((p) => p.id === e.passive)) ?? evs[0];
-  return ev ? { parts: [def.icon, PASSIVE_BY_ID[ev.passive].icon], result: WEAPON_BY_ID[ev.into].icon } : undefined;
+  return evs[0] && evo(evs[0]);
 }
 
 /** Ścieżki ewolucji przez pasywkę `id` dla broni dostępnych temu bohaterowi (broń bazowa → ewolucja). */

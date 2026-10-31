@@ -200,6 +200,8 @@ function drawMinimap(r: Renderer, run: Run, x: number, y: number, w: number, h: 
 /** Nazwy sekretów mapy na strzałkach przy krawędzi ekranu. */
 const SECRET_LABEL: Partial<Record<MapObjectKind, string>> = {
   fountain: 'Fontanna', mural: 'Runy', mushroom: 'Grzyby', stairs: 'Schody', barrow: 'Kurhan', grove: 'Gaj', sword: 'Miecz',
+  // Portal powrotny z oczyszczonego lochu (0.62.1, weteran: ponad 100 s w pustym lochu bez wskazania wyjścia).
+  exit: 'Portal home',
 };
 /** Pęknięta ściana pokazywana strzałką z takiej odległości (jednostki świata). */
 const WALL_HINT_R = 400;
@@ -375,7 +377,7 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim, left: number, right: numb
   } else if (!run.bossSpawned && !run.scripted) {
     const o = run.levelInfo.objective, bw = 92;
     const kills = !run.dungeon && run.mode !== 'endless' && o.kind === 'kills';
-    const text = run.dungeon ? `Loch: fala ${run.dungeon.wave}/${run.dungeon.kind === 'vault' ? BAL.secretsMap.vaultWaves : BAL.events.dungeonWaves}${run.dungeon.cleared ? ', oczyszczony' : ''}`
+    const text = run.dungeon ? (run.dungeon.cleared ? 'Dungeon cleared: go to the portal' : `Loch: fala ${run.dungeon.wave}/${run.dungeon.kind === 'vault' ? BAL.secretsMap.vaultWaves : BAL.events.dungeonWaves}`)
       : run.mode === 'endless' ? `Boss za ${fmtTime(Math.max(0, run.nextBossAt - run.time))}`
       : o.kind === 'hunt' ? `Hunt: escapes in ${fmtTime(Math.max(0, o.time - run.time + run.huntPaused))}`
       : kills ? `${fmt(run.levelKills)} / ${fmt(o.count)}` : o.kind === 'survive' && o.kills ? `Survive to ${fmtTime(o.time)} or ${fmt(run.levelKills)} / ${fmt(o.kills)}` : `Przetrwaj do ${fmtTime(o.kind === 'survive' ? o.time : 0)}`;
