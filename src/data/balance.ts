@@ -169,8 +169,11 @@ export const BAL = {
    * w walce z bossem), koniec przy ≤ `off`; 'auto' schodzi do `alpha`, 'dim' z `dim` do `dimMin`. 0.62 (playtest: pociski
    * ginęły w efektach): najwyżej `projDraw` rysowanych pocisków gracza (reszta działa, tylko nie jest rysowana), jasna
    * obwódka pocisków wrogów z alfą `ring`, błysk trafienia bossa / elity najwyżej co `bigFlashGap` s (nie zakrywa zapowiedzi).
+   * 0.62 runda 2: zapowiedzi ataków wrogów w warstwie nad efektami gracza z ciemnym podkładem (alfa `tellBack` względem
+   * zapowiedzi) i przyciemnionym obszarem uderzeń z ziemi / stożka (`tellShade`); znacznik gracza w tłumie (strzałka nad
+   * głową, mocniejsza elipsa) od połowy `markerCrowd` wrogów, pełny przy `markerCrowd` (albo przy przygaszaniu ataków).
    */
-  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5 },
+  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5, tellBack: 0.6, tellShade: 0.28, markerCrowd: 150 },
   /** 0.47 (gracz: „biorę bronie dystansowe i samo się wygrywa”; pomiar: wręcz ≈ 30% zabójstw pocisków naprowadzanych).
    * Mnożniki obrażeń/obszaru broni wg wzorca (z ewolucjami) i wg id (prefiks), plus bonus za trafienia z bliska. */
   weaponTune: {
@@ -484,6 +487,8 @@ export const BAL = {
   bossResist: { mul: 0.5, biome: ['lightning', 'poison', 'fire', 'ice', null] as const },
   reactions: {
     cd: 0.6,
+    /** Najmniejszy odstęp (s) między napisami (i dźwiękami) tej samej reakcji w całym świecie (0.62 r2); reakcja działa zawsze. */
+    labelGap: 1.2,
     /** Ogień + Lód: ogłuszenie i obrażenia; zużywa oba stany. */
     steam: { mul: 1.2, stun: 1 },
     /** Błyskawica + Lód: następne trafienie × mul; zużywa lód. */

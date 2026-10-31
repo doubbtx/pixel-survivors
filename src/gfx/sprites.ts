@@ -16,7 +16,8 @@ import { landmark } from './landmarks';
  *
  * Grafika powstaje proceduralnie (gfx/painter.ts): kształty cieniowane rampami palety
  * ze światłem z lewej-góry i ciemnym obrysem — spójny wygląd bez ręcznego rysowania każdego piksela.
- * Każdy sprite ma też wersję "flash" (biała sylwetka) do błysku przy trafieniu.
+ * Każdy sprite ma też wersję "flash" (biała sylwetka: kolekcja, kowadło, beczka) i budowaną leniwie "hit" (rozjaśnione
+ * wnętrze z zachowanym obrysem) do błysku trafienia postaci w świecie.
  */
 export interface Sprite {
   img: HTMLCanvasElement;
@@ -24,6 +25,9 @@ export interface Sprite {
   flip?: HTMLCanvasElement;
   /** Odbita w poziomie biała sylwetka (błysk postaci zwróconej w lewo), budowana leniwie. */
   flashFlip?: HTMLCanvasElement;
+  /** Błysk trafienia (hitImage) i jego odbicie, budowane przy pierwszym użyciu. */
+  hit?: HTMLCanvasElement;
+  hitFlip?: HTMLCanvasElement;
   w: number;
   h: number;
 }
@@ -263,6 +267,38 @@ function silhouette(src: HTMLCanvasElement): HTMLCanvasElement {
   return c;
 }
 
+/** Udział bieli we wnętrzu błysku trafienia (reszta: własne kolory i cieniowanie sprite'a). */
+const HIT_WHITE = 0.6;
+
+/**
+ * Błysk trafienia: wnętrze sprite'a rozjaśnione bielą o HIT_WHITE, brzeg (pas ok. 2/3 piksela logicznego) zostaje w kolorach
+ * sprite'a z ciemnym obrysem. Biała sylwetka okrągłego wroga (Oko, szlam) wyglądała w tłumie jak duża wroga kula (playtest
+ * 0.62: „białe kule”); rozjaśniona postać z obrysem dalej czyta się jako ten sam wróg. Same operacje kompozycji (bez
+ * getImageData: odczyt z karty graficznej przy pierwszym trafieniu bossa trwał do 100 ms).
+ */
+function hitImage(src: HTMLCanvasElement): HTMLCanvasElement {
+  const w = src.width, h = src.height, d = Math.max(1, Math.round(canvasRes(src) * 0.67));
+  // Wnętrze = część wspólna sprite'a przesuniętego o d w czterech kierunkach (erozja brzegu), potem rozjaśnione.
+  const inner = document.createElement('canvas');
+  inner.width = w;
+  inner.height = h;
+  const ig = inner.getContext('2d')!;
+  ig.drawImage(src, 0, 0);
+  ig.globalCompositeOperation = 'destination-in';
+  for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) ig.drawImage(src, dx, dy);
+  ig.globalCompositeOperation = 'source-atop';
+  ig.globalAlpha = HIT_WHITE;
+  ig.fillStyle = '#ffffff';
+  ig.fillRect(0, 0, w, h);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d')!;
+  g.drawImage(src, 0, 0);
+  g.drawImage(inner, 0, 0);
+  return c;
+}
+
 /** Rozmiar logiczny sprite'a = obraz / res (postacie 32-bit mają obraz 2× większy, ten sam rozmiar w grze). */
 function register(name: string, img: HTMLCanvasElement): Sprite {
   const res = canvasRes(img);
@@ -353,6 +389,8 @@ export function warmStep(budgetMs: number): void {
 
 export interface DrawOpts {
   flash?: boolean;
+  /** Błysk trafienia (rozjaśnienie z obrysem, hitImage) zamiast białej sylwetki; ma pierwszeństwo przed `flash`. */
+  hit?: boolean;
   scale?: number;
   flipX?: boolean;
   /** Ściśnięcie / rozciągnięcie [szerokość, wysokość] względem stóp (dół sprite'a stoi w miejscu): animacje postaci. */
@@ -369,11 +407,13 @@ export function blit(g: CanvasRenderingContext2D, name: string, x: number, y: nu
 export function drawSprite(g: CanvasRenderingContext2D, name: string, x: number, y: number, o: DrawOpts = {}): void {
   const s = getSprite(name);
   const sc = o.scale ?? 1;
-  const base = o.flash ? s.flash : s.img;
+  if (o.hit && !s.hit) s.hit = hitImage(s.img);
+  const base = o.hit ? s.hit! : o.flash ? s.flash : s.img;
   let img = base;
   if (o.flipX) {
-    // Odbicie z osobną pamięcią dla obrazu i błysku — błysk nie może odwracać postaci
-    let c = o.flash ? s.flashFlip : s.flip;
+    // Odbicie z osobną pamięcią dla obrazu i każdego błysku — błysk nie może odwracać postaci
+    const key = o.hit ? 'hitFlip' : o.flash ? 'flashFlip' : 'flip';
+    let c = s[key];
     if (!c) {
       c = document.createElement('canvas');
       c.width = base.width;
@@ -382,8 +422,7 @@ export function drawSprite(g: CanvasRenderingContext2D, name: string, x: number,
       cg.translate(base.width, 0);
       cg.scale(-1, 1);
       cg.drawImage(base, 0, 0);
-      if (o.flash) s.flashFlip = c;
-      else s.flip = c;
+      s[key] = c;
     }
     img = c;
   }

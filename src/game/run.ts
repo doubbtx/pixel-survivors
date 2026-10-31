@@ -411,6 +411,8 @@ export class Run {
   rhythmDrain = false;
   /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej; odblokowania zawartości). */
   reactions = 0;
+  /** Czas (totalTime) ostatniego napisu każdej reakcji: najwyżej jeden napis danej reakcji na BAL.reactions.labelGap s. */
+  private reactLabelAt = new Map<string, number>();
   /** Odblokowania zawartości (data/unlocks.ts): trafienia krytyczne, szczęśliwe trafy, bronie bazowe po ewolucji. */
   critHits = 0;
   jackpots = 0;
@@ -1690,8 +1692,12 @@ export class Run {
     const label = (text: string, col: number) => {
       e.reactT = R.cd * Math.max(0, 1 - this.flag('reactCd'));
       this.reactions++;
-      this.popText(e.x, e.y - e.radius - 10, text, col);
-      sfx.play('react');
+      // Napis i dźwięk raz na labelGap s na rodzaj reakcji (playtest 0.62: od głębi 3 sześć „Przewodzenie!” naraz zalewało ekran).
+      if (this.totalTime - (this.reactLabelAt.get(text) ?? -99) >= R.labelGap) {
+        this.reactLabelAt.set(text, this.totalTime);
+        this.popText(e.x, e.y - e.radius - 10, text, col);
+        sfx.play('react');
+      }
     };
     if (pair('fire', 'ice')) {
       label('Para!', C.lgray);
