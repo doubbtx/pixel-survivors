@@ -14,6 +14,7 @@ import { AUGMENTS, weaponBase, augmentWorks, fusionAugments } from '../data/augm
 import { rollQuality, rollWeaponBonus, addWeaponBonus, bonusLines, type WeaponBonus } from '../data/upgrades';
 import { RARITIES } from '../data/items';
 import { isOpen } from '../data/unlocks';
+import { tr } from '../core/i18n';
 
 /**
  * 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts); 'augment' = augment broni (data/augments.ts);
@@ -176,7 +177,8 @@ function candidates(run: Run): Option[] {
       // Jakość ulepszenia: dodatkowe bonusy broni (Szczęście podnosi szansę na lepszą).
       const q = rollQuality(run.luck()), bonus = rollWeaponBonus(w.def, q);
       const extra = bonusLines(bonus);
-      const desc = describeLevel(w.def, w.level + 1) + (extra.length ? `. Bonus: ${extra.join(', ')}` : '');
+      // Opis poziomu (po polsku) i każdy bonus jakości (po angielsku) tłumaczone osobno: zdanie mieszane nie tłumaczyło się w całości.
+      const desc = tr(describeLevel(w.def, w.level + 1)) + (extra.length ? `. Bonus: ${extra.map(tr).join(', ')}` : '');
       out.push({ kind: 'weaponUp', id: w.def.id, name: w.def.name, desc, hint: fusionHint(run, w.def) || evolveHint(run, w.def), icon: w.def.icon, tag: `${q ? RARITIES[q].name.pl : 'Poziom'} ${w.level + 1}/${maxLevel(w.def)}`, color: q ? RARITIES[q].color : w.def.color, tags: [], quality: q, bonus, recipe: weaponRecipe(run, w.def) });
     }
   }
