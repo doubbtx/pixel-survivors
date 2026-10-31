@@ -608,6 +608,10 @@ export class Run {
   private fxDimOn = false;
   /** Czas (totalTime) ostatniego błysku trafienia bossa / elity (BAL.readability.bigFlashGap). */
   private bigFlashAt = new WeakMap<Enemy, number>();
+  /** Czas ostatniego wybuchu z zabójstwa, który trafił wroga (`queueExplosion`). */
+  private procHitAt = new WeakMap<Enemy, number>();
+  /** Czas ostatniego trafienia wroga cudzym wybuchem reakcji (Wybuch toksyn, Przeciążenie). */
+  private splashAt = new WeakMap<Enemy, number>();
 
   constructor(heroId: string, readonly mode: Mode, depth = 1, fresh = true, readonly altUlt = false) {
     this.hero = HERO_BY_ID[heroId];
@@ -1316,7 +1320,8 @@ export class Run {
    * Efekty wybuchów blisko już narysowanego w tym kroku (albo ponad limit na krok) są pomijane — obrażenia zawsze działają.
    */
   explode(x: number, y: number, r: number, dmg: number | ((e: Enemy) => number), src: string, col: number, knock = 3): void {
-    this.enemiesInCircle(x, y, r, (e) => this.damageEnemy(e, typeof dmg === 'number' ? dmg : dmg(e), src, { kx: e.x - x, ky: e.y - y, knock }));
+    // Obrażenia liczone per wróg mogą wynosić 0: ten wróg jest pomijany (wybuchy z zabójstw, `queueExplosion`).
+    this.enemiesInCircle(x, y, r, (e) => { const d = typeof dmg === 'number' ? dmg : dmg(e); if (d > 0) this.damageEnemy(e, d, src, { kx: e.x - x, ky: e.y - y, knock }); });
     // Teren: beczki w zasięgu wybuchają łańcuchowo, osłony pękają.
     terrainBlast(this, x, y, r);
     const spots = this.boomSpots, near = BAL.fx.boomMerge * BAL.fx.boomMerge;
@@ -1339,16 +1344,46 @@ export class Run {
     if (f) f.r = Math.max(1, Math.min(4, Math.round((r * 1.5 * 2) / 30)));
   }
 
-  /** Ostatnie zabójstwo zadane źródłem procentowym (wybuch z zabójstwa, Egzekucja): wybuchy z zabójstw go pomijają (łańcuch głębokości 1). */
-  chainKill(): boolean {
-    return PCT_SOURCES.has(this.lastHitSrc);
+  /**
+   * Boss albo miniboss (zachowanie 'warden': minibossowie biomów, Polowania, Strażnicy lochu i skarbca): efekty procentowe
+   * (Supernowa, Egzekucja, Ścinacz) traktują ich jak bossów (0.62: miniboss Polowania w akcie 3 ginął w 3-11 s od Supernowej).
+   */
+  bigFoe(e: Enemy): boolean {
+    return e.boss || e.def.behavior === 'warden';
   }
 
-  /** Wybuch w następnym kroku, z limitem na krok — dla efektów wyzwalanych zabójstwami. */
-  queueExplosion(x: number, y: number, r: number, dmg: number, src: string, col: number): void {
-    if (this.explosionsThisStep >= BAL.explosionBudget) return;
+  /**
+   * Punkt w kadrze (z marginesem `BAL.procs.view`): wybuchy z zabójstw i Supernowa działają tylko tam (0.62, weteran:
+   * 60-85% zabitych poza kadrem przez wybuchy w tłumie, którego broń nie sięga ani gracz nie widzi).
+   */
+  inView(x: number, y: number): boolean {
+    const m = BAL.procs.view;
+    return x > this.camX - m && x < this.camX + VIEW_W + m && y > this.camY - m && y < this.camY + VIEW_H + m;
+  }
+
+  /**
+   * Ostatnie zabójstwo zadane źródłem procentowym (wybuch z zabójstwa, Egzekucja) albo reakcją żywiołów: wybuchy
+   * z zabójstw go pomijają, Supernowa go nie liczy (0.62: zabici przez Wybuch toksyn wybuchali dalej, a zabici przez
+   * Supernowę ładowali następną — weteran: 84% obrażeń z wybuchów i reakcji, broń 2-4%).
+   */
+  chainKill(): boolean {
+    return PCT_SOURCES.has(this.lastHitSrc) || REACTION_COL[this.lastHitSrc] !== undefined;
+  }
+
+  /**
+   * Wybuch zabitego wroga (maks. HP `hp`) w następnym kroku, z limitem na krok: każdy trafiony traci `frac` × mniejsze
+   * z maks. HP zabitego i własnego (0.62). Wcześniej elita (HP ×20) wybuchała za 30% swojego HP i zabijała zwykłych
+   * na pierścieniu pojawiania, a nakładające się wybuchy w zbitym tłumie zabijały same — dlatego też wróg dostaje taki
+   * wybuch najwyżej raz na `BAL.procs.gap` s (weteran: 84% obrażeń z wybuchów i reakcji, broń 2-4%).
+   */
+  queueExplosion(x: number, y: number, r: number, hp: number, frac: number, src: string, col: number): void {
+    if (this.explosionsThisStep >= BAL.explosionBudget || !this.inView(x, y)) return;
     this.explosionsThisStep++;
-    this.schedule(0, () => this.explode(x, y, r, dmg, src, col, 2));
+    this.schedule(0, () => this.explode(x, y, r, (e) => {
+      if (!this.inView(e.x, e.y) || this.totalTime - (this.procHitAt.get(e) ?? -99) < BAL.procs.gap) return 0;
+      this.procHitAt.set(e, this.totalTime);
+      return Math.min(hp, e.maxHp) * frac;
+    }, src, col, 2));
   }
 
   // ================= statystyki i ekwipunek runu =================
@@ -1646,18 +1681,22 @@ export class Run {
     if (o.dot) { if (e.hp <= 0 && !e.dead) this.killEnemy(e); return; }
     // Trafienia procentowe i reakcji nie nakładają żywiołów (inaczej reakcje napędzałyby się same).
     if (!pct) resourceOnHit(this, e);
-    if (!pct && REACTION_COL[src] === undefined) {
+    // Trafienie zabijające też nie (0.62): martwy wróg reagował (Wybuch toksyn z każdego zabójstwa zatrutego wroga).
+    if (!pct && REACTION_COL[src] === undefined && e.hp > 0) {
+      // Stany i reakcje liczone z trafienia bez krytyka (0.62): trucizna brała największe trafienie (z nadkrytykiem ×16),
+      // a Wybuch toksyn i Przeciążenie mnożyły je jeszcze raz na cały obszar — reakcje zjadały broń w buildach krytycznych.
+      const eb = dmg / mult;
       const el = this.augElem.get(src) ?? SRC_ELEMENT[src];
-      if (el) this.applyElement(e, el, dmg * (1 + (this.srcElem.get(src) ?? 0)));
+      if (el) this.applyElement(e, el, eb * (1 + (this.srcElem.get(src) ?? 0)));
       // Karty i super-bonusy: szansa na żywioł przy trafieniu, krytyki porażają.
-      for (const k of ELEMENT_LIST) if (!e.dead && this.flag(`elemChance.${k}`) > 0 && rng.chance(this.flag(`elemChance.${k}`))) this.applyElement(e, k, dmg);
+      for (const k of ELEMENT_LIST) if (!e.dead && this.flag(`elemChance.${k}`) > 0 && rng.chance(this.flag(`elemChance.${k}`))) this.applyElement(e, k, eb);
       const any = this.flag('elemChance.any');
-      if (any > 0 && !e.dead && rng.chance(any)) this.applyElement(e, rng.pick(ELEMENT_LIST), dmg);
-      if (crit && this.flag('critShock') > 0 && !e.dead) this.applyElement(e, 'lightning', dmg);
+      if (any > 0 && !e.dead && rng.chance(any)) this.applyElement(e, rng.pick(ELEMENT_LIST), eb);
+      if (crit && this.flag('critShock') > 0 && !e.dead) this.applyElement(e, 'lightning', eb);
     }
     // Ścinacz: zwykli wrogowie i elity poniżej progu HP giną od razu.
     const cull = this.flag('cull');
-    if (cull > 0 && !e.boss && e.hp > 0 && e.hp < e.maxHp * cull) e.hp = 0;
+    if (cull > 0 && !this.bigFoe(e) && e.hp > 0 && e.hp < e.maxHp * cull) e.hp = 0;
     sfx.play('hit');
     if (!o.noHooks && !secondary) this.emit('onHit', e, dmg, crit);
     if (e.hp <= 0 && !e.dead) this.killEnemy(e);
@@ -1702,9 +1741,21 @@ export class Run {
     if (e.reactT > 0) return false;
     const has = (k: Element) => k !== el && (k === 'fire' ? e.burnT > 0 : k === 'ice' ? e.slowT > 0 : k === 'lightning' ? e.shockT > 0 : e.poisonStacks > 0);
     const pair = (a: Element, b: Element) => (el === a && has(b)) || (el === b && has(a));
-    const R = BAL.reactions, power = 1 + this.flag('reactPower');
+    // Skrócenie odnowienia z kart, Rozwoju i sekretów sumuje się — z dolnym limitem (0.62: Katalizator + klucz Rozwoju dawały 0 s).
+    const R = BAL.reactions, power = 1 + this.flag('reactPower'), cd = R.cd * Math.max(R.cdFloor, 1 - this.flag('reactCd'));
+    // Wybuch reakcji (0.62): trafieni w obszarze dostają odnowienie reakcji, a od cudzych wybuchów reakcji obrywają najwyżej
+    // raz na odnowienie. Inaczej w zbitym tłumie każdy wróg reagował sam i trafiał wszystkich sąsiadów, a jeden wróg obrywał
+    // od kilku wybuchów na sekundę (obrażenia rosły z kwadratem gęstości: Wybuch toksyn 50-87% buildu, broń 1-7%).
+    const splash = (d: number) => (o: Enemy) => {
+      if (o !== e) {
+        if (this.totalTime - (this.splashAt.get(o) ?? -99) < cd) return 0;
+        this.splashAt.set(o, this.totalTime);
+      }
+      o.reactT = Math.max(o.reactT, cd);
+      return d;
+    };
     const label = (text: string, col: number) => {
-      e.reactT = R.cd * Math.max(0, 1 - this.flag('reactCd'));
+      e.reactT = cd;
       this.reactions++;
       // Napis i dźwięk raz na labelGap s na rodzaj reakcji (playtest 0.62: od głębi 3 sześć „Przewodzenie!” naraz zalewało ekran).
       if (this.totalTime - (this.reactLabelAt.get(text) ?? -99) >= R.labelGap) {
@@ -1729,7 +1780,7 @@ export class Run {
       label('Wybuch toksyn!', C.lime);
       const d = e.poisonUnit * e.poisonStacks * R.toxic.mul * power;
       e.poisonStacks = 0; e.poisonUnit = 0; e.poisonT = 0;
-      this.explode(e.x, e.y, R.toxic.r * this.stats.area, d, 'Wybuch toksyn', C.lime, 2);
+      this.explode(e.x, e.y, R.toxic.r * this.stats.area, splash(d), 'Wybuch toksyn', C.lime, 2);
       return true;
     }
     if (pair('lightning', 'poison')) {
@@ -1750,7 +1801,7 @@ export class Run {
     if (pair('fire', 'lightning')) {
       label('Przeciążenie!', C.orange);
       e.shockT = 0;
-      this.explode(e.x, e.y, R.overload.r * this.stats.area, dmg * R.overload.mul * power, 'Przeciążenie', C.orange, R.overload.knock);
+      this.explode(e.x, e.y, R.overload.r * this.stats.area, splash(dmg * R.overload.mul * power), 'Przeciążenie', C.orange, R.overload.knock);
       return true;
     }
     return false;
