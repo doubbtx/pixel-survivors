@@ -1946,7 +1946,7 @@ export const EN: Record<string, string> = {
   "Jeleń": "Stag",
   "Kombo {}  +{}% zł": "Combo {}  +{}% gold",
   "Kurhan": "Barrow",
-  "Loch: fala {}/{}{}": "Dungeon: wave {}/{}{}",
+  "Loch: fala {}/{}": "Dungeon: wave {}/{}",
   "Pakt {}": "Pact {}",
   "Poziom {}": "Level {}",
   "Runy": "Runes",

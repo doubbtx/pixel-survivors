@@ -14,15 +14,16 @@ export type WeaponBonus = Partial<Record<WBonusKey, number>>;
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
-/** Opis bonusu (wartość już zsumowana albo pojedyncza). */
+/** Opis bonusu (wartość już zsumowana albo pojedyncza). Po angielsku (0.62.1: polskie „obszaru” bez znaków diakrytycznych
+ * przegrywało przy tłumaczeniu listy i zostawało w angielskiej grze); polski w core/i18n-pl.ts. */
 export const WB_LABEL: Record<WBonusKey, (v: number) => string> = {
-  dmg: (v) => `+${pct(v)} obrażeń`,
-  atk: (v) => `+${pct(v)} szybkości ataku`,
-  area: (v) => `+${pct(v)} obszaru`,
-  proj: (v) => `+${pct(v)} szybkości pocisków`,
-  amount: (v) => `+${v} pocisk`,
-  crit: (v) => `+${pct(v)} szansy na krytyk`,
-  elem: (v) => `+${pct(v)} siły żywiołu`,
+  dmg: (v) => `+${pct(v)} damage`,
+  atk: (v) => `+${pct(v)} attack speed`,
+  area: (v) => `+${pct(v)} area`,
+  proj: (v) => `+${pct(v)} projectile speed`,
+  amount: (v) => `+${v} projectile`,
+  crit: (v) => `+${pct(v)} crit chance`,
+  elem: (v) => `+${pct(v)} elemental power`,
 };
 
 /** Krótki opis do pauzy (pod bronią). */

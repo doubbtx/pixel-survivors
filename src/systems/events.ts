@@ -3,6 +3,7 @@ import { sfx } from '../core/audio';
 import { C } from '../core/palette';
 import { BAL } from '../data/balance';
 import { rollItem, rollUnique } from '../data/items';
+import { BIOME_MINIBOSS } from '../data/enemies';
 import type { Stats } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnEnemy } from './spawner';
@@ -102,6 +103,8 @@ export function enterDungeon(run: Run, kind: DungeonKind): void {
     if (it.kind === 'chest' && it.item) run.pendingLoot.push({ source: it.source, item: it.item });
   }
   run.pickups.clear();
+  // Polowanie: miniboss wróci po lochu z tym samym ułamkiem HP.
+  if (run.levelInfo.objective.kind === 'hunt') for (const e of run.enemies.items) if (BIOME_MINIBOSS.includes(e.def.id)) run.huntHpFrac = Math.min(run.huntHpFrac, e.hp / e.maxHp);
   run.enemies.clear();
   run.bullets.clear();
   run.mapObjects = [];

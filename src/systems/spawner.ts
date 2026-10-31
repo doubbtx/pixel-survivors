@@ -273,12 +273,12 @@ function updateMiniboss(run: Run, dt: number, waveT: number): void {
   const X = BAL.expedition, ex = run.expedition;
   const huntHp = (X.huntHp[ex?.tier ?? 0] ?? X.huntHp[0]) + X.huntHpPerTorment * (ex?.torment ?? 0);
   e.maxHp = e.hp = e.maxHp * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (1 + Math.max(0, waveT - 300) / 600) * (hunt ? huntHp : 1);
-  // Polowanie: co najmniej `huntTtk` s DPS buildu z końca poprzedniej mapy (większe z: średnia krocząca siły buildu, ostatnie
-  // próbki dpsLog — te liczą też obrażenia procentowe) — mocny build nie kończy łowów w 1-10 s. W dalszych aktach więcej
-  // (×(1 + huntTtkAct × (akt - 1))): wrogowie giną od jednego trafienia, więc DPS bez nadwyżki zaniża siłę buildu.
+  // Polowanie: co najmniej `huntTtk` s DPS buildu (Run.dpsEma, bez obrażeń procentowych) — mocny build nie kończy łowów w 1-10 s;
+  // w dalszych aktach więcej (×(1 + huntTtkAct × (akt - 1))). 0.62.1: bez próbek dpsLog — liczą wybuchy z tłumu, które
+  // minibossa prawie nie ranią (Run.bigFoe), i miniboss aktu 3 miał miliardy HP. Po lochu wraca z ułamkiem HP (huntHpFrac).
   if (hunt) {
-    const log = run.dpsLog.slice(-3), dps = Math.max(run.dpsEma, log.length ? log.reduce((s, v) => s + v, 0) / log.length : 0);
-    e.maxHp = e.hp = Math.max(e.maxHp, dps * X.huntTtk * (1 + X.huntTtkAct * ((ex?.act ?? 1) - 1)) * huntHp / X.huntHp[0]);
+    e.maxHp = Math.max(e.maxHp, run.dpsEma * X.huntTtk * (1 + X.huntTtkAct * ((ex?.act ?? 1) - 1)) * huntHp / X.huntHp[0]);
+    e.hp = e.maxHp * run.huntHpFrac;
   }
   if (hunt) {
     // Eskorta: elity bez skrzyń (Run.killEnemy); w akcie 1 bez cech zachowania (jak zwykłe elity, R3).

@@ -14,6 +14,7 @@ import { AUGMENTS, weaponBase, augmentWorks, fusionAugments } from '../data/augm
 import { rollQuality, rollWeaponBonus, addWeaponBonus, bonusLines, type WeaponBonus } from '../data/upgrades';
 import { RARITIES } from '../data/items';
 import { isOpen } from '../data/unlocks';
+import { tr } from '../core/i18n';
 
 /**
  * 'stat' = mała stała premia statystyki (gdy w puli zabrakło ulepszeń, BAL.statBoosts); 'augment' = augment broni (data/augments.ts);
@@ -68,15 +69,17 @@ const openEvolves = (run: Run, def: WeaponDef) => {
 
 /** Przepis broni: fuzja z posiadaną bronią (gdy jest), inaczej ewolucja (broń + pasywka). */
 function weaponRecipe(run: Run, def: WeaponDef): Recipe | undefined {
+  const evs = openEvolves(run, def), owned = evs.find((e) => run.passives.some((p) => p.id === e.passive));
+  const evo = (e: { passive: string; into: string }): Recipe => ({ parts: [def.icon, PASSIVE_BY_ID[e.passive].icon], result: WEAPON_BY_ID[e.into].icon });
+  // Ewolucja z posiadaną pasywką przed fuzją: karta „Evolution piece!” pokazuje ten sam przepis co jej napis (0.62.1).
+  if (owned) return evo(owned);
   const base = weaponBase(def);
   for (const f of openFusions(run)) {
     const other = f.a === base ? f.b : f.b === base ? f.a : '';
     const w = other ? ownedBase(run, other) : undefined;
     if (w && w.def !== def) return { parts: [def.icon, w.def.icon], result: WEAPON_BY_ID[f.into].icon };
   }
-  // Ewolucja: najpierw ta, do której masz już pasywkę.
-  const evs = openEvolves(run, def), ev = evs.find((e) => run.passives.some((p) => p.id === e.passive)) ?? evs[0];
-  return ev ? { parts: [def.icon, PASSIVE_BY_ID[ev.passive].icon], result: WEAPON_BY_ID[ev.into].icon } : undefined;
+  return evs[0] && evo(evs[0]);
 }
 
 /** Ścieżki ewolucji przez pasywkę `id` dla broni dostępnych temu bohaterowi (broń bazowa → ewolucja). */
@@ -174,7 +177,8 @@ function candidates(run: Run): Option[] {
       // Jakość ulepszenia: dodatkowe bonusy broni (Szczęście podnosi szansę na lepszą).
       const q = rollQuality(run.luck()), bonus = rollWeaponBonus(w.def, q);
       const extra = bonusLines(bonus);
-      const desc = describeLevel(w.def, w.level + 1) + (extra.length ? `. Bonus: ${extra.join(', ')}` : '');
+      // Opis poziomu (po polsku) i każdy bonus jakości (po angielsku) tłumaczone osobno: zdanie mieszane nie tłumaczyło się w całości.
+      const desc = tr(describeLevel(w.def, w.level + 1)) + (extra.length ? `. Bonus: ${extra.map(tr).join(', ')}` : '');
       out.push({ kind: 'weaponUp', id: w.def.id, name: w.def.name, desc, hint: fusionHint(run, w.def) || evolveHint(run, w.def), icon: w.def.icon, tag: `${q ? RARITIES[q].name.pl : 'Poziom'} ${w.level + 1}/${maxLevel(w.def)}`, color: q ? RARITIES[q].color : w.def.color, tags: [], quality: q, bonus, recipe: weaponRecipe(run, w.def) });
     }
   }

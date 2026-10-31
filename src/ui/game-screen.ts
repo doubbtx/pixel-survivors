@@ -464,14 +464,13 @@ export class GameScreen implements Screen {
   }
 
   /**
-   * Koniec albo pominięcie samouczka: zapis i menu główne (Ekspedycja polecana, komunikat o Rozwoju i Kolekcji).
-   * Pominięty (0.62, playtest: gra pisała „Tutorial done!”): inny komunikat, z informacją, gdzie wyłączyć podpowiedzi.
+   * Koniec albo pominięcie samouczka: zapis i menu główne (Ekspedycja polecana). Ukończony: bez komunikatu w menu, bo ostatni
+   * panel samouczka mówi to samo (0.62.1, playtest: koniec samouczka wymagał dwóch Enterów). Pominięty: komunikat z informacją,
+   * gdzie wyłączyć podpowiedzi.
    */
   private endTutorial(skipped = false): void {
     this.app.save.tutorialDone = true;
-    this.app.save.notice ||= skipped
-      ? 'Tutorial skipped. Start an Expedition. Hints for new mechanics can be turned off in Settings > General.'
-      : 'Tutorial done! Start an Expedition. Essence from every run goes to Progress, new cards to Collection.';
+    if (skipped) this.app.save.notice ||= 'Tutorial skipped. Start an Expedition. Hints for new mechanics can be turned off in Settings > General.';
     this.app.persist();
     this.app.go(new MainMenu(this.app));
   }

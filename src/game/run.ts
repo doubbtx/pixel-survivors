@@ -513,6 +513,8 @@ export class Run {
   eliteKills = 0;
   /** Polowanie: czas spędzony w lochu (sekretne schody) nie liczy się do limitu ucieczki. */
   huntPaused = 0;
+  /** Polowanie: ułamek HP minibossa, z którym wróci po lochu (0.62.1: znikał z mapą i wracał z pełnym, przeliczonym HP). */
+  huntHpFrac = 1;
   /** Relikwie (data/relics.ts, R2): posiadane (kolejność zdobycia), oferty do pokazania, wzmocnienie dowódcy gracza, odnowienie Płaszcza. */
   relics: string[] = [];
   pendingRelics = 0;
@@ -646,6 +648,7 @@ export class Run {
     this.ambushRing = 0;
     this.eliteKills = 0;
     this.huntPaused = 0;
+    this.huntHpFrac = 1;
     this.elemDmg = {};
     this.banners = [];
     this.situation = null;
