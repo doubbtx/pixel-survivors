@@ -18,6 +18,16 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.63',
+    lines: [
+      "Healing has a cap per second: regeneration, life steal and other steady healing add up to a few percent of your max HP each second, less on higher map tiers, Torment and deep Endless. Potions, camps and meat still heal fully.",
+      "Bosses and minibosses take longer to kill with strong builds, so you get to see their attacks. The act 3 boss map is shorter.",
+      "Magic is harder from act 2, and the extra hero HP from 0.62 stays only on Common. Act 1 on Magic is unchanged.",
+      "Clearer late game: no white sheet from Mirror Beam, big auras and meteor showers are fainter, the Scorpion aim line is thicker with a marker, and boss fights show only damage numbers on the boss.",
+      "Cursed cards have a red frame and say what they cost. R (reroll) works only a moment after the cards appear, so pressing your ultimate does not waste rerolls. The Rewards counter counts rewards added later, and Recommended values upgrade quality and evolution pieces more.",
+    ],
+  },
+  {
     version: '0.62',
     lines: [
       "When you die, the end screen says what killed you and has a Damage taken tab. Very fast bursts of damage are softened, so you get a moment to react, but standing still is still deadly. Keys you mash in combat (dodge, ultimate) no longer pick cards or skip the end screen.",

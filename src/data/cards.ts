@@ -270,7 +270,7 @@ export const CARDS: CardDef[] = [
   {
     id: 'h_b_wrath', name: 'Wieczny gniew', rarity: 'gold', tags: ['Życie', 'Umiejętności'], hero: 'borgun', ult: 'base', desc: 'Gniew tytana trwa 4 s dłużej, a zabójstwa w jego trakcie leczą 1 HP.',
     flags: { 'b_titan.duration': 4 },
-    hooks: { onKill: (run) => { if (run.abilities.ult.activeT > 0) run.heal(1); } },
+    hooks: { onKill: (run) => { if (run.abilities.ult.activeT > 0) run.sustain(1); } },
   },
   { id: 'h_i_ring', name: 'Wieczny płomień', rarity: 'gold', tags: ['Ogień', 'Umiejętności'], hero: 'ignara', desc: 'Pierścień ognia: +2 s, +8 obrażeń co tick, +10 promienia.', stackable: true, flags: { 'i_ring.duration': 2, 'i_ring.damage': 8, 'i_ring.radius': 10 } },
   { id: 'h_i_inferno', name: 'Ognisty deszcz', rarity: 'gold', tags: ['Ogień', 'Obszar'], hero: 'ignara', ult: 'base', desc: 'Inferno: +2 s, +20 obrażeń, +8 promienia wybuchów.', stackable: true, flags: { 'i_inferno.duration': 2, 'i_inferno.damage': 20, 'i_inferno.blast': 8 } },

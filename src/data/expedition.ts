@@ -348,14 +348,14 @@ export function levelAt(act: number, row: number, m: MapNode, torment = 0): Leve
   const biome = m.kind === 'secret' ? VOID_BIOME : actBiome(act);
   const b = BIOMES[biome];
   const boss = m.kind === 'boss';
-  const short = boss ? 1 : X.fightScale;
+  const short = boss ? X.bossScale[Math.min(act, X.bossScale.length) - 1] : X.fightScale;
   const gentle = act === 1 && row === 0 && m.kind === 'fight' && !torment;
   const objective: Objective = gentle ? { kind: 'kills', count: X.gentle.kills }
     : m.kind === 'hunt' ? { kind: 'hunt', time: X.huntLimit }
     : m.kind === 'ambush' ? { kind: 'survive', time: Math.round(X.objTime(act) * short * X.ambushScale / 10) * 10 }
     : (row + act) % 2 === 0
       // Zwykła walka „przetrwaj”: albo zabij tylu, ilu na mapie „pokonaj” (silny build kończy szybciej, 0.40).
-      ? { kind: 'survive', time: Math.round(X.objTime(act) * (boss ? 1 : X.surviveScale) / 10) * 10, kills: boss ? undefined : Math.round(X.objKills(act) * short * X.surviveKills / 10) * 10 }
+      ? { kind: 'survive', time: Math.round(X.objTime(act) * (boss ? short : X.surviveScale) / 10) * 10, kills: boss ? undefined : Math.round(X.objKills(act) * short * X.surviveKills / 10) * 10 }
       : { kind: 'kills', count: Math.round(X.objKills(act) * short / 10) * 10 };
   const f0 = m.kind === 'secret' ? { enemyHp: 0.5, enemyDmg: 0.3, mapLoot: 1, mapGold: 1 } : mapFlags(m);
   // Udręka: zasady dodane do flag każdej mapy (łagodny start wyprawy tylko bez Udręki).

@@ -77,6 +77,7 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
     run.cardState.bossHit = 0;
     // Boss: mnożnik siły (z obrażeń obszarowych) liczy się słabiej — walka ma trwać około minuty uników, nie kilka.
     e.maxHp = e.hp = e.maxHp * (1 + run.flag('bossHp')) * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (run.expedition && run.levelInfo.boss && !run.dungeon ? BAL.expedition.bossHp : 1);
+    if (!run.dungeon) e.maxHp = e.hp = Math.max(e.maxHp, ttkFloor(run, BAL.bossTtk.boss));
     e.speed = def.speed;
     run.boss = e;
     // Udręka „Bossowie +30% obrażeń” (bossFoeDmg): obrażenia bossa, z nich też jego salwy (systems/enemies.ts).
@@ -91,6 +92,12 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
  * Pełna pula: zwalnia miejsce kosztem zwykłego wroga — nigdy bossa ani elity (zwolniony obiekt bossa zostałby użyty
  * ponownie jako inny wróg, a `run.boss` wskazywałby na niego bez końca i blokował spawner).
  */
+/** Podłoga HP bossa / minibossa: tyle sekund DPS buildu (Run.dpsEma), w dalszych aktach i głębiach więcej (BAL.bossTtk). */
+function ttkFloor(run: Run, sec: number): number {
+  const step = run.expedition ? run.expedition.act - 1 : Math.max(0, run.depth - 1);
+  return run.dpsEma * sec * (1 + BAL.bossTtk.perAct * step);
+}
+
 function freeSlot(run: Run): void {
   if (run.enemies.count < run.enemies.cap) return;
   const e = run.enemies.items.find((x) => !x.boss && !x.elite && !x.dead) ?? run.enemies.items.find((x) => !x.boss);
@@ -279,7 +286,7 @@ function updateMiniboss(run: Run, dt: number, waveT: number): void {
   if (hunt) {
     e.maxHp = Math.max(e.maxHp, run.dpsEma * X.huntTtk * (1 + X.huntTtkAct * ((ex?.act ?? 1) - 1)) * huntHp / X.huntHp[0]);
     e.hp = e.maxHp * run.huntHpFrac;
-  }
+  } else e.maxHp = e.hp = Math.max(e.maxHp, ttkFloor(run, BAL.bossTtk.mini));
   if (hunt) {
     // Eskorta: elity bez skrzyń (Run.killEnemy); w akcie 1 bez cech zachowania (jak zwykłe elity, R3).
     const mods = Object.keys(ELITE_MODS).filter((k) => (ex?.act ?? 2) >= 2 || !ELITE_MODS[k].kind);

@@ -672,7 +672,7 @@ export function updateAbilities(run: Run, input: Input, dt: number): void {
         const f = run.addFx('ring', p.x, p.y, C.red, 0.2);
         if (f) f.r = r;
         // Awatar (ewolucja): leczenie 2% HP na sekundę (tick co pół sekundy).
-        if (a.def.evolved) run.heal(run.stats.maxHp * 0.01);
+        if (a.def.evolved) run.sustain(run.stats.maxHp * 0.01);
       }
       // Inferno: meteor co 0.2 s (Kataklizm: dwa).
       if (a.def.kind === 'inferno' && run.step % 12 === 0) {

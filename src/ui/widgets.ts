@@ -137,6 +137,8 @@ export function button(r: Renderer, x: number, y: number, w: number, h: number, 
  * zawsze w lewym górnym rogu, w tym samym miejscu i rozmiarze. Esc / pad zamykają ekran jak dotąd.
  */
 export const BACK_BTN = [6, 8, 60, 16] as const;
+/** Losowanie klawiszem (R = też ultimate) dopiero po tylu ms od pojawienia się kart (0.63, playtest: R wciśnięte w walce zużywało losowania). */
+export const REROLL_GUARD = 700;
 
 export function backButton(r: Renderer): void {
   button(r, ...BACK_BTN, 'Wstecz [Esc]');

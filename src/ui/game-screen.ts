@@ -648,7 +648,8 @@ export class GameScreen implements Screen {
       return false;
     }
     if (!this.rewardTotal) { this.rewardDone = 0; this.rewardTotal = left >= 3 ? left : 0; }
-    else this.rewardDone++;
+    // Nagrody dokładane w trakcie serii (np. karta za elitę) powiększają licznik (0.63, playtest: „Rewards 3/3”, potem jeszcze jedna).
+    else { this.rewardDone++; this.rewardTotal = Math.max(this.rewardTotal, this.rewardDone + left); }
     if (run.pendingRelics > 0) {
       run.pendingRelics--;
       this.relicPick = new RelicPickView(run);

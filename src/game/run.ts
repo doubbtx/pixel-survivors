@@ -523,6 +523,8 @@ export class Run {
   drainLeft = 0;
   /** Kradzież życia: pozostały budżet (HP), odnawiany do BAL.lifestealPerSec × maks. HP na sekundę. */
   stealLeft = 0;
+  /** Stałe leczenie (regeneracja, kradzież życia, Sierp krwi, Piętno): pozostały wspólny budżet (HP) z sufitu BAL.sustain. */
+  sustainLeft = 0;
   diceCoinT = -99;
   cloakCd = 0;
   /** Sztandary elit (R3): wrogowie w strefie się leczą, gracz w strefie dostaje więcej obrażeń. */
@@ -793,6 +795,8 @@ export class Run {
     if (this.cloakCd > 0) this.cloakCd -= dt;
     this.drainLeft = Math.min(this.stats.maxHp * BAL.drainPerSec, this.drainLeft + this.stats.maxHp * BAL.drainPerSec * dt);
     this.stealLeft = Math.min(this.stats.maxHp * BAL.lifestealPerSec, this.stealLeft + this.stats.maxHp * BAL.lifestealPerSec * dt);
+    const sus = this.stats.maxHp * this.sustainRate();
+    this.sustainLeft = Math.min(sus, this.sustainLeft + sus * dt);
     if (!this.banners.length) return;
     const T = BAL.eliteTraits, p = this.player;
     for (const b of this.banners) {
@@ -1270,6 +1274,22 @@ export class Run {
     const h = Math.min(this.drainLeft, this.stats.maxHp * frac);
     if (h <= 0) return;
     this.drainLeft -= h;
+    this.sustain(h, faith);
+  }
+
+  /** Sufit stałego leczenia (ułamek maks. HP na sekundę): niższy na wyższych poziomach map, Udręce i w głębokim Endless. */
+  sustainRate(): number {
+    const S = BAL.sustain, ex = this.expedition;
+    if (!ex) return Math.max(S.min, S.endless - S.perDepth * Math.max(0, this.depth - S.endlessFrom));
+    return Math.max(S.min, (S.tier[ex.tier ?? 0] ?? S.min) - S.perTorment * (ex.torment ?? 0));
+  }
+
+  /** Stałe leczenie w ramach sekundowego sufitu (0.63, weteran: regeneracja i kradzież życia pozwalały stać w miejscu na wysokich poziomach). */
+  sustain(v: number, faith = 1): void {
+    const p = this.player, toShield = this.flag('overhealShield') > 0 || this.flag('healShield') > 0;
+    const h = Math.min(v, this.sustainLeft, toShield ? v : Math.max(0, this.stats.maxHp - p.hp));
+    if (h <= 0) return;
+    this.sustainLeft -= h;
     this.heal(h, faith);
   }
 
@@ -1395,6 +1415,8 @@ export class Run {
   recomputeStats(): void {
     this.statsDirty = false;
     const s: Stats = { ...DEFAULT_STATS, ...this.hero.base };
+    const ex = this.expedition, T = BAL.heroHpTier;
+    if (ex) s.maxHp *= ex.torment ? T[T.length - 1] : T[Math.min(T.length - 1, ex.tier ?? 0)];
     const add = (o: Partial<Stats>, k = 1) => { for (const key in o) s[key as keyof Stats] += o[key as keyof Stats]! * k; };
     for (const p of this.passives) {
       const def = PASSIVE_BY_ID[p.id];
@@ -1644,7 +1666,7 @@ export class Run {
     if (st.lifesteal > 0 && !o.dot && this.stealLeft > 0) {
       const h = Math.min(dmg * st.lifesteal, st.maxHp * 0.02, this.stealLeft);
       this.stealLeft -= h;
-      this.heal(h);
+      this.sustain(h);
     }
     if (o.knock) {
       const l = Math.hypot(o.kx ?? 0, o.ky ?? 0) || 1;
@@ -1656,8 +1678,10 @@ export class Run {
     // Czytelność w tłumie: przy wielu wrogach liczby tylko dla krytyków.
     // Zwykłe liczby nie nakładają się: przy świeżej liczbie tuż obok nowa jest pomijana (krytyki zawsze widać).
     // Wielki tłum: także krytyki tylko do `numbersCrowd` liczb naraz i bez nakładania się.
+    // Walka z bossem (0.63, weteran: liczby zasłaniały ataki bossa): tylko liczby na bossie, najwyżej `numbersBoss` naraz.
     const crowdN = this.enemies.count >= BAL.readability.flashCrowd;
-    const n = this.damageNumbers && (crit ? !crowdN || (this.dmgNums.count < BAL.juice.numbersCrowd && !this.numberNear(e.x, e.y - e.radius)) : this.enemies.count < BAL.juice.numbersCritOnly && !this.numberNear(e.x, e.y - e.radius)) ? this.dmgNums.obtain() : null;
+    const bossFight = !!this.boss && !this.boss.dead;
+    const n = this.damageNumbers && (!bossFight || (e === this.boss && this.dmgNums.count < BAL.juice.numbersBoss)) && (crit ? !crowdN || (this.dmgNums.count < BAL.juice.numbersCrowd && !this.numberNear(e.x, e.y - e.radius)) : this.enemies.count < BAL.juice.numbersCritOnly && !this.numberNear(e.x, e.y - e.radius)) ? this.dmgNums.obtain() : null;
     if (n) {
       n.x = e.x + rng.range(-3, 3);
       n.y = e.y - e.radius - 2;
