@@ -92,10 +92,10 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
  * Pełna pula: zwalnia miejsce kosztem zwykłego wroga — nigdy bossa ani elity (zwolniony obiekt bossa zostałby użyty
  * ponownie jako inny wróg, a `run.boss` wskazywałby na niego bez końca i blokował spawner).
  */
-/** Podłoga HP bossa / minibossa: tyle sekund DPS buildu (Run.dpsEma), w dalszych aktach i głębiach więcej (BAL.bossTtk). */
+/** Podłoga HP bossa / minibossa: tyle sekund DPS w duże cele (Run.bigDps), w dalszych aktach i głębiach więcej (BAL.bossTtk). */
 function ttkFloor(run: Run, sec: number): number {
   const step = run.expedition ? run.expedition.act - 1 : Math.max(0, run.depth - 1);
-  return run.dpsEma * sec * (1 + BAL.bossTtk.perAct * step);
+  return run.bigDps() * sec * (1 + BAL.bossTtk.perAct * step);
 }
 
 function freeSlot(run: Run): void {

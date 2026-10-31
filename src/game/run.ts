@@ -549,6 +549,10 @@ export class Run {
   eliteT: number = BAL.eliteEvery;
   /** Średni DPS gracza (średnia krocząca) i wynikający z niego mnożnik siły wrogów (BAL.power). */
   dpsEma = 0;
+  /** DPS w duże cele (elity, minibossy, boss): obrażenia i czas walki z nimi, oba wygaszane (BAL.bossTtk.decay). */
+  bigDmg = 0;
+  bigTime = 0;
+  private bigHitAt = -99;
   powerMul = 1;
   private dmgStep = 0;
   /**
@@ -753,6 +757,10 @@ export class Run {
     const P = BAL.power;
     this.dpsEma += (this.dmgStep / dt - this.dpsEma) * Math.min(1, dt / P.emaSec);
     this.dmgStep = 0;
+    // Czas walki z dużym celem: kroki, w których padło trafienie elity / bossa w ostatnich BAL.bossTtk.engage s.
+    const K = BAL.bossTtk, fade = Math.exp(-dt / K.decay);
+    this.bigDmg *= fade; this.bigTime *= fade;
+    if (this.totalTime - this.bigHitAt < K.engage) this.bigTime += dt;
     const t = this.waveTime();
     const base = P.baseHp * BAL.enemyHpMul(this.time) * BAL.depthHpMul(this.depth);
     // Ekspedycja na wysokim poziomie map / Udręce: powyżej kolana (`P.tier.knee` × podłoga) pogoń stromsza (BAL.power.tier).
@@ -1278,6 +1286,11 @@ export class Run {
   }
 
   /** Sufit stałego leczenia (ułamek maks. HP na sekundę): niższy na wyższych poziomach map, Udręce i w głębokim Endless. */
+  /** DPS w duże cele (podłoga HP bossa i minibossa, BAL.bossTtk); 0, dopóki gracz nie walczył z elitą. */
+  bigDps(): number {
+    return this.bigTime > BAL.bossTtk.minTime ? this.bigDmg / this.bigTime : 0;
+  }
+
   sustainRate(): number {
     const S = BAL.sustain, ex = this.expedition;
     if (!ex) return Math.max(S.min, S.endless - S.perDepth * Math.max(0, this.depth - S.endlessFrom));
@@ -1659,6 +1672,7 @@ export class Run {
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src);
+    if ((e.elite || e.boss) && !pct) { this.bigDmg += dealt; this.bigHitAt = this.totalTime; }
     // Siła buildu bez powinowactwa mapy: mapa podatna / odporna działa w pełni, pogoń HP jej nie wyrównuje.
     if (!pct) this.dmgStep += dealt / (resist * weak * soft);
     this.elemDmg[el ?? 'none'] = (this.elemDmg[el ?? 'none'] ?? 0) + dealt / (resist * weak);

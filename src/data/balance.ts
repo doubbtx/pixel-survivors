@@ -673,10 +673,12 @@ export const BAL = {
   bossPowerExp: 0.5,
   /**
    * Podłoga HP bossa (poza lochem) i minibossa mapy elit / Endless (0.63, weteran: boss aktu 1 padał w ~15 s, minibossy w ~5 s,
-   * bez czasu na ich ataki): co najmniej `boss` / `mini` s DPS buildu (Run.dpsEma liczy też tłum, więc walka trwa dłużej),
-   * ×(1 + `perAct` × (akt - 1)), w Endless × głębokość. Słaby build tej podłogi nie czuje; ratunkiem jest BAL.bossSoften.
+   * bez czasu na ich ataki): co najmniej `boss` / `mini` s DPS w duże cele (Run.bigDps: obrażenia elit, minibossów i bossów
+   * przez czas walki z nimi — trafienie w ostatnich `engage` s; oba wygaszane z czasem `decay` s, liczone od `minTime` s walki),
+   * ×(1 + `perAct` × (akt - 1)), w Endless × głębokość. Run.dpsEma się nie nadaje: liczy tłum i wybuchy (bot: 99 mln przy
+   * 0,7 mln w samego bossa). Słaby build tej podłogi nie czuje; ratunkiem jest BAL.bossSoften.
    */
-  bossTtk: { boss: 12, mini: 5, perAct: 0.3 },
+  bossTtk: { boss: 30, mini: 12, perAct: 0.15, engage: 0.5, decay: 90, minTime: 5 },
 
   // --- gracz: diminishing returns tam, gdzie wartości ≥100% psułyby grę ---
   /** Pancerz → mnożnik otrzymywanych obrażeń. 25 pancerza = -50%. Nigdy 0. */

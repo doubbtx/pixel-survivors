@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.62.1)
+## Stan (wersja 0.63.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -863,6 +863,15 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   po angielsku: polskie „obszaru” bez diakrytyków przegrywało w `tr` przy liście. Oczyszczony loch: „Dungeon cleared: go to
   the portal” i strzałka `exit` w `SECRET_LABEL`. `weaponRecipe`: ewolucja z posiadaną pasywką przed fuzją (karta „Evolution
   piece!” pokazywała przepis fuzji). Ukończony samouczek bez komunikatu w menu (dwa Entery).
+- 0.63.0 (runda balansu po testerach 0.62): sufit stałego leczenia `BAL.sustain` (`Run.sustain` / `sustainLeft` / `sustainRate`:
+  regeneracja, kradzież życia, Sierp krwi, Piętno, aury i strefy leczące, strażnicy Aurela — wspólny budżet ułamka maks. HP/s
+  wg poziomu map, Udręki i głębokości Endless; jednorazowe leczenie przez `heal` bez limitu). Podłoga HP bossa (poza lochem)
+  i minibossa mapy elit / Endless `BAL.bossTtk` (`ttkFloor` w spawner.ts: s × `Run.dpsEma`). Magiczna w akcie 2 ostrzej
+  (`ramp.cap2/crowd2/shooters2[1]`), `BAL.heroHpTier` (premia HP z 0.62 tylko na Zwykłej), `expedition.bossScale` (cel mapy
+  bossa wg aktu). Czytelność: aura ponad `readability.auraBig` bez wypełnienia, plamy meteorów bledsze ponad `meteorMany`,
+  promień (`beam`) bez białej płachty, Skorpion grubsza linia i krąg na linii, w walce z bossem liczby tylko na bossie
+  (`juice.numbersBoss`). Przeklęte karty z czerwoną ramką („Cursed: no healing”), `REROLL_GUARD` (ui/widgets.ts) na R w awansie
+  i kartach, licznik „Rewards” rośnie z nagrodami dokładanymi w serii, `optionScore`: jakość ×10, próg synergii +25, `evoPiece` +30.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`
