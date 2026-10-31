@@ -483,18 +483,37 @@ export const BAL = {
    */
   bossResist: { mul: 0.5, biome: ['lightning', 'poison', 'fire', 'ice', null] as const },
   reactions: {
-    cd: 0.6,
+    /**
+     * Odnowienie reakcji na wrogu (s; Katalizator skraca). 0.62: 0.6 → 1 — szybko bijące strefy i aury nakładały truciznę
+     * od nowa co trafienie, więc Wybuch toksyn odpalał na każdym wrogu kilka razy na sekundę (omijał limit 10 warstw).
+     */
+    cd: 1,
+    /** Najkrótsze odnowienie jako ułamek `cd` (suma flag `reactCd` nie zejdzie niżej). */
+    cdFloor: 0.5,
     /** Ogień + Lód: ogłuszenie i obrażenia; zużywa oba stany. */
     steam: { mul: 1.2, stun: 1 },
     /** Błyskawica + Lód: następne trafienie × mul; zużywa lód. */
     shatter: { mul: 2 },
-    /** Ogień + Trucizna: wybuch (promień) za wszystkie warstwy trucizny × mul (za sekundę trucizny); zużywa truciznę. */
-    toxic: { r: 30, mul: 3 },
+    /**
+     * Ogień + Trucizna: wybuch (promień) za wszystkie warstwy trucizny × mul (za sekundę trucizny); zużywa truciznę.
+     * 0.62: mul 3 → 1, promień 30 → 20 (wybuch obszarowy z 4-5× największego trafienia dawał 54-64% obrażeń buildu).
+     */
+    toxic: { r: 20, mul: 1 },
     /** Błyskawica + Trucizna: trucizna przeskakuje na `n` wrogów w promieniu. */
     conduct: { r: 55, n: 3 },
     /** Ogień + Błyskawica: mały wybuch z odrzutem; zużywa porażenie. */
     overload: { r: 22, mul: 0.8, knock: 6 },
   },
+  /**
+   * Wybuchy z zabójstw i Supernowa (0.62): ułamek maks. HP wroga, tylko w kadrze z marginesem `view` (`Run.inView`).
+   * Procent HP nie słabnie, gdy HP wrogów goni DPS gracza (`powerMul`), więc przy dużym tłumie wybuchy zabijały za broń
+   * (weteran: Supernowa 34%, Wybuchowe zgony 20%, broń 2-4%).
+   * `explode` Wybuchowe zgony (promień `explodeR` × obszar), `synFire` drugi próg synergii Ognia (szansa `synFireChance`),
+   * `pyre` super-bonus Ognista dusza (każdy trafiony traci ułamek mniejszego z maks. HP zabitego i własnego, najwyżej raz na
+   * `gap` s, `Run.queueExplosion`), `nova` Supernowa: co `every` zabójstw bronią i umiejętnościami (bez wybuchów i reakcji)
+   * `pct` maks. HP (bossom `boss`) w promieniu `r` × obszar.
+   */
+  procs: { view: 10, gap: 1, explode: 0.15, explodeR: 18, synFire: 0.15, synFireChance: 0.1, pyre: 0.25, nova: { every: 50, pct: 0.1, boss: 0.03, r: 60 } },
   /** Ekspedycja (data/expedition.ts): 3 akty map z węzłami. */
   expedition: {
     acts: 3,
