@@ -246,7 +246,21 @@ function drawSecretArrows(r: Renderer, run: Run, hk: number): void {
     if (sx > -OX && sx < W + OX && sy > 0 && sy < H) continue;
     const cx = W / 2, cy = H / 2, dx = sx - cx, dy = sy - cy;
     const s = Math.min((W / 2 - mx) / Math.max(1e-6, Math.abs(dx)), (H / 2 - my) / Math.max(1e-6, Math.abs(dy)));
-    const ax = cx + dx * s, ay = cy + dy * s, a = Math.atan2(dy, dx);
+    let ax = cx + dx * s, ay = cy + dy * s;
+    const a = Math.atan2(dy, dx);
+    const text = t.col ? t.label : `${t.label} ${Math.round(Math.sqrt(d2(t.x, t.y)) / 10)}m`, tw = textWidth(text) * smallS() + 8;
+    const labelAt = (): [number, number] => [Math.max(tw / 2 + 2, Math.min(W - tw / 2 - 2, ax - Math.cos(a) * 16)), ay - Math.sin(a) * 12 - 4];
+    // Strzałka z napisem omija bloki w górnych rogach (karta bohatera, synergie, liczniki, minimapa) i baner (0.62, playtest:
+    // „Wall 37m” leżało na ikonach synergii): przesunięcie w bok albo w dół, które jest mniejsze.
+    for (let it = 0; it < 3; it++) {
+      const [lx, ly] = labelAt();
+      const x0 = Math.min(ax - 8, lx - tw / 2), x1 = Math.max(ax + 8, lx + tw / 2), y0 = Math.min(ay - 8, ly - 2), y1 = Math.max(ay + 8, ly + 7.5);
+      const R = [...TOP_RECTS, ...BANNER_RECT].find(([a0, b0, c0, d0]) => x0 < c0 && x1 > a0 && y0 < d0 && y1 > b0);
+      if (!R) break;
+      const down = R[3] + 2 - y0, side = ax < W / 2 ? R[2] + 4 - x0 : R[0] - 4 - x1;
+      if (Math.abs(side) < down) ax += side;
+      else ay = Math.min(H - my, ay + down);
+    }
     const tri = (len: number, wid: number, col: number) => {
       r.g.fillStyle = PAL[col];
       r.g.beginPath();
@@ -258,9 +272,9 @@ function drawSecretArrows(r: Renderer, run: Run, hk: number): void {
     tri(8, 6, C.black); tri(6.5, 4.5, t.col ?? C.pink);
     // Podpowiedź w grze stoi u góry (dotyk) albo nad umiejętnościami: na jej 6 s zostaje sama strzałka celu.
     if (hintShowing()) continue;
-    const text = t.col ? t.label : `${t.label} ${Math.round(Math.sqrt(d2(t.x, t.y)) / 10)}m`, tw = textWidth(text) * smallS() + 6;
-    const lx = Math.max(tw / 2 + 2, Math.min(W - tw / 2 - 2, ax - Math.cos(a) * 16)), ly = ay - Math.sin(a) * 12 - 4;
-    tile(r, lx - tw / 2, ly - 1, tw, 8, undefined, 0.7);
+    const [lx, ly] = labelAt();
+    // Płytka o 1 px wyższa: kreska nad Ś (Ściana) wystawała nad nią.
+    tile(r, lx - tw / 2, ly - 2, tw, 9.5, undefined, 0.7);
     drawText(r.g, text, lx, ly - 0.5, t.col ?? C.pink, { align: 'center', ...SMALL });
   }
 }
@@ -299,9 +313,6 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
   if (res.kind === 'heat') r.rect(bx + (bw * BAL.resource.heat.burnFrom) / resMax(run), ry, 0.5, 6, C.yellow);
   if (fr >= 0.99) r.withAlpha(0.25, () => r.roundRect(bx, ry, bw, 6, 1, C.white));
   drawText(g, `${res.name} ${Math.floor(run.res)}`, bx + 2, ry - 1, hot ? C.yellow : C.white, SMALL);
-  // Mikiri (Takezo): bieżąca szansa na odbicie po prawej stronie paska zasobu.
-  const parry = run.parryChance();
-  if (parry > 0) drawText(g, `Parry ${Math.round(parry * 100)}%`, bx + bw - 2, ry - 1, C.cyan, { align: 'right', ...SMALL });
   // Druga linia: akt i głębia (drugorzędnie) i Pakt jako krótki dopisek.
   const ex = run.expedition;
   let lx = bx;
@@ -316,9 +327,12 @@ function drawHeroCard(r: Renderer, run: Run, a: HudAnim): number {
   return y + h;
 }
 
-/** Szał (Borgun) i błogosławieństwa kapliczek: małe wskaźniki z czasem pod kartą bohatera. Zwraca dolną krawędź. */
+/** Odbicie (Takezo), Szał (Borgun), Przepływ i błogosławieństwa kapliczek: małe wskaźniki pod kartą bohatera. Zwraca dolną krawędź. */
 function drawStatusRow(r: Renderer, run: Run, x: number, y: number): [number, number] {
   const chips: { text: string; col: number; frac: number }[] = [];
+  // Mikiri (Takezo): stała szansa na odbicie jako pierwszy wskaźnik (w karcie bohatera nachodziła na nazwę zasobu, playtest 0.62).
+  const parry = run.parryChance();
+  if (parry > 0) chips.push({ text: `Parry ${Math.round(parry * 100)}%`, col: C.cyan, frac: 1 });
   if (run.rageT > 0) chips.push({ text: `Szał ${Math.ceil(run.rageT)}s`, col: UI.threat, frac: Math.min(1, run.rageT / Math.max(run.rageT, run.rageMax)) });
   if (run.inBanner) chips.push({ text: `Banner +${Math.round(BAL.eliteTraits.bannerTaken * 100)}% dmg taken`, col: UI.threat, frac: 1 });
   if (run.flowT > 0) chips.push({ text: run.flowT === Infinity ? 'Flow' : `Flow ${Math.ceil(run.flowT)}s`, col: C.cyan, frac: run.flowT === Infinity ? 1 : run.flowT / run.flowMax });
@@ -351,13 +365,13 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim, left: number, right: numb
     const b = run.boss, bw = Math.min(150, 2 * (right - 2 - cx), 2 * (cx - left - 13));
     drawText(g, run.bossTitle ?? run.levelInfo.bossName, cx, y - 1, C.salmon, { align: 'center', ...SMALL });
     meter(r, cx - bw / 2, y + 7, bw, 5, b.hp / b.maxHp, C.pink);
-    // Boss słabnie (długa walka): napis z mnożnikiem nad paskiem.
-    const soft = run.dungeon ? 1 : run.bossSoftMul(b);
-    if (soft > 1) drawText(g, `Weakened x${soft.toFixed(1)}`, cx + bw / 2, y - 1, C.yellow, { align: 'right', ...SMALL });
     drawSprite(g, 'ui_skull', cx - bw / 2 - 8, y + 9.5);
     y += 15;
+    // Boss słabnie (długa walka): mnożnik w osobnej linii pod paskiem (nad paskiem nachodził na nazwę bossa).
+    const soft = run.dungeon ? 1 : run.bossSoftMul(b);
+    if (soft > 1) { drawText(g, `Weakened x${soft.toFixed(1)}`, cx, y - 1, C.yellow, { align: 'center', ...SMALL }); y += 8; }
     const res = run.resistOf(b);
-    if (res) { drawText(g, `Odporny na: ${ELEMENTS[res].name}`, cx, y - 1, ELEMENTS[res].color, { align: 'center', ...SMALL }); y += 8; }
+    if (res) { drawText(g, `Resists: ${ELEMENTS[res].name}`, cx, y - 1, ELEMENTS[res].color, { align: 'center', ...SMALL }); y += 8; }
   } else if (!run.bossSpawned && !run.scripted) {
     const o = run.levelInfo.objective, bw = 92;
     const kills = !run.dungeon && run.mode !== 'endless' && o.kind === 'kills';
@@ -389,15 +403,20 @@ function drawCenter(r: Renderer, run: Run, a: HudAnim, left: number, right: numb
   return y + (items.length ? 10 : 0);
 }
 
-/** Zabójstwa i złoto w jednym wierszu (prawy górny róg, szerokość minimapy). Zwraca lewą i dolną krawędź. */
+/**
+ * Zabójstwa i złoto w jednym wierszu (prawy górny róg, szerokość minimapy). Zwraca lewą i dolną krawędź. W Ekspedycji bez
+ * zabójstw całego runu: drugi licznik z czaszką obok celu mapy („187 / 680”) mylił (playtest 0.62); suma jest na ekranie końca.
+ */
 function drawCounters(r: Renderer, run: Run, a: HudAnim): [number, number] {
   const g = r.g, y = UI.edge + UI.xpH, right = W - UI.edge;
-  const kills = fmt(run.kills), gold = fmt(Math.floor(a.goldShown));
-  const kw = textWidth(kills) * smallS(), gw = textWidth(gold) * smallS();
+  const kills = run.mode === 'expedition' ? '' : fmt(run.kills), gold = fmt(Math.floor(a.goldShown));
+  const kw = kills ? textWidth(kills) * smallS() : 0, gw = textWidth(gold) * smallS();
   const x = right - Math.max(kw + gw + 34, UI.minimap.w);
   tile(r, x, y, right - x, 11);
-  drawSprite(g, 'ui_skull', x + 7, y + 5.5);
-  drawText(g, kills, x + 13, y + 1.5, UI.text, SMALL);
+  if (kills) {
+    drawSprite(g, 'ui_skull', x + 7, y + 5.5);
+    drawText(g, kills, x + 13, y + 1.5, UI.text, SMALL);
+  }
   const gx = right - 4 - gw;
   if (a.goldFlash > 0) r.withAlpha(a.goldFlash, () => r.roundRect(gx - 1, y + 1.5, gw + 2, 8, 1, C.gold));
   drawSprite(g, 'coin', gx - 6, y + 5.5);
@@ -659,7 +678,6 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
     taskBottom = top + (ry - top) * k;
   });
   const centerBottom = drawCenter(r, run, a, leftX, touch ? Math.min(rightX, btnX) : rightX);
-  drawSecretArrows(r, run, k);
 
   // Baner (zapowiedzi, fazy bossa, elity): wąska wstęga tuż pod środkowym blokiem, wsuwa się i znika. Wysoko, z dala od
   // głowy bohatera, nad którą wylatują napisy serii zabójstw (wcześniej nachodziły na baner).
@@ -679,6 +697,8 @@ export function renderHud(run: Run, r: Renderer, loop: LoopStats, diag: boolean,
     });
   }
 
+  // Po banerze: strzałki sekretów omijają bloki HUD-u i baner.
+  drawSecretArrows(r, run, k);
   drawAbilities(r, run, a, touch, k, -OX + UI.edge + invW * invK);
 
   // Sterowanie dotykowe: przyciski pauzy, buildu i plecaka oraz wirtualny joystick (gdy palec jest na ekranie).

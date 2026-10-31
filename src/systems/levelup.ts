@@ -41,6 +41,8 @@ export interface Option {
   bonus?: WeaponBonus;
   /** Pasywka: ścieżki ewolucji, które otwiera (ikony broni bazowej i ewolucji) — karta rysuje je obrazkami zamiast napisu. */
   evolves?: [string, string][];
+  /** Brakujący składnik ewolucji: nazwa posiadanej broni (nowa pasywka) albo pasywki (nowa broń), z którą ta opcja daje ewolucję. */
+  evoPiece?: string;
 }
 
 /** Nowa pasywka daje punkt tagu swojej statystyki (kolejne poziomy już nie). */
@@ -133,6 +135,15 @@ function fusionHint(run: Run, def: WeaponDef): string {
   return '';
 }
 
+/** Nowa pasywka jako brakujący składnik: posiadana broń przed ewolucją, którą ta pasywka ewoluuje (ścieżka odblokowana). */
+const pieceForPassive = (run: Run, id: string) => run.weapons.find((w) => openEvolves(run, w.def).some((e) => e.passive === id))?.def.name;
+
+/** Nowa broń jako brakujący składnik: posiadana pasywka, która tę broń ewoluuje. */
+function pieceForWeapon(run: Run, def: WeaponDef): string | undefined {
+  const e = openEvolves(run, def).find((x) => run.passives.some((p) => p.id === x.passive));
+  return e && PASSIVE_BY_ID[e.passive].name;
+}
+
 /** Podpowiedź dla pasywki: którą posiadaną broń pozwala rozwinąć w ewolucję. */
 function passiveHint(run: Run, id: string): string {
   const w = run.weapons.find((x) => evolvesOf(x.def).some((e) => e.passive === id));
@@ -200,7 +211,7 @@ function candidates(run: Run): Option[] {
       if (!offerable(d, taken)) continue;
       const el = WEAPON_ELEMENT[d.id];
       const desc = el ? `${d.desc} Żywioł: ${ELEMENTS[el].name} (${ELEMENTS[el].desc}).` : d.desc;
-      out.push({ kind: 'weaponNew', id: d.id, name: d.name, desc, hint: loyalHint || fusionHint(run, d) || evolveHint(run, d), icon: d.icon, tag: 'Nowa broń', color: d.color, tags: weaponTags(d), recipe: weaponRecipe(run, d) });
+      out.push({ kind: 'weaponNew', id: d.id, name: d.name, desc, hint: loyalHint || fusionHint(run, d) || evolveHint(run, d), icon: d.icon, tag: 'Nowa broń', color: d.color, tags: weaponTags(d), recipe: weaponRecipe(run, d), evoPiece: pieceForWeapon(run, d) });
     }
   }
   for (const p of run.passives) {
@@ -214,7 +225,7 @@ function candidates(run: Run): Option[] {
   if (run.passives.length < BAL.passiveSlots) {
     for (const d of PASSIVES) {
       if (ownedP.has(d.id) || run.banished.has(d.id) || !isOpen(run.content, `p:${d.id}`)) continue;
-      out.push({ kind: 'passiveNew', id: d.id, name: d.name, desc: d.desc, hint: passiveHint(run, d.id), icon: d.icon, tag: 'Nowa pasywka', color: C.white, tags: tagsOf(d.stat), recipe: passiveRecipe(run, d.id), evolves: evoIcons(run, d.id) });
+      out.push({ kind: 'passiveNew', id: d.id, name: d.name, desc: d.desc, hint: passiveHint(run, d.id), icon: d.icon, tag: 'Nowa pasywka', color: C.white, tags: tagsOf(d.stat), recipe: passiveRecipe(run, d.id), evolves: evoIcons(run, d.id), evoPiece: pieceForPassive(run, d.id) });
     }
   }
   for (const slot of ['q', 'e', 'ult'] as AbilitySlot[]) {

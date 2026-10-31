@@ -126,7 +126,7 @@ const KIND_ABOUT: Record<ItemKind, string> = {
 export function itemAbout(it: Item): string[] {
   const base = BASE_BY_ID[it.base], R = RARITIES[it.rarity];
   const out = [KIND_ABOUT[base.kind]];
-  if (!it.unique) out.push(`${R.name[base.gender]}: ${R.affixes} losowe bonusy (niebieskie), wartości x${R.power}.`);
+  if (!it.unique) out.push(`${R.name[base.gender]}: ${R.affixes} random bonus${R.affixes === 1 ? '' : 'es'} (blue), values x${R.power}.`);
   else out.push('Unikat: stały efekt specjalny, który zmienia zasady gry.');
   if (it.super) out.push('Gwiazdka: super-bonus (złoty), rzadki efekt specjalny.');
   out.push(`Kowadło ulepsza do +${BAL.anvil.maxUpgrades}. W nawiasie: twoja suma.`);
@@ -201,7 +201,7 @@ export const SUPERS: SuperDef[] = [
     hooks: {
       onHit: (run, e, _d, _c, v) => {
         if (!rng.chance(chance(v))) return;
-        run.damageEnemy(e, e.boss ? e.maxHp * 0.05 : e.hp + 1, 'Egzekucja');
+        run.damageEnemy(e, run.bigFoe(e) ? e.maxHp * 0.05 : e.hp + 1, 'Egzekucja');
         run.popText(e.x, e.y - 10, 'Egzekucja!', C.hotpink);
       },
     },
@@ -243,8 +243,8 @@ export const SUPERS: SuperDef[] = [
   },
   {
     id: 'pyre', name: 'Ognista dusza', min: 0.05, max: 0.1, pct: true,
-    desc: '{v} szansy, że zabity wróg wybuchnie (50% jego maks. HP)',
-    hooks: { onKill: (run, e, v) => { if (!e.boss && !run.chainKill() && rng.chance(chance(v))) run.queueExplosion(e.x, e.y, 20, e.maxHp * 0.5, 'Ognista dusza', C.orange); } },
+    desc: `{v} chance for a killed enemy to explode (${Math.round(BAL.procs.pyre * 100)}% of its max HP)`,
+    hooks: { onKill: (run, e, v) => { if (!e.boss && !run.chainKill() && rng.chance(chance(v))) run.queueExplosion(e.x, e.y, 20, e.maxHp, BAL.procs.pyre, 'Ognista dusza', C.orange); } },
   },
   {
     id: 'midas', name: 'Dotyk Midasa', min: 0.01, max: 0.02, pct: true,
@@ -278,7 +278,7 @@ export const SUPERS: SuperDef[] = [
   {
     id: 'ignite', name: 'Płomienne krytyki', min: 0.3, max: 0.5, pct: true,
     desc: '{v} szansy, że trafienie krytyczne podpali wroga',
-    hooks: { onHit: (run, e, dmg, crit, v) => { if (crit && rng.chance(chance(v))) run.applyElement(e, 'fire', dmg); } },
+    hooks: { onHit: (run, e, dmg, crit, v) => { if (crit && rng.chance(chance(v))) run.applyElement(e, 'fire', dmg / run.stats.critMult); } },
   },
   {
     id: 'frostbite', name: 'Mroźny oddech', min: 0.05, max: 0.1, pct: true,
@@ -353,13 +353,15 @@ export const UNIQUES: UniqueDef[] = [
     id: 'u_prism', name: 'Pryzmat Żywiołów', base: 'band', affixes: ['elemPower', 'crit'],
     desc: 'Co 10. trafienie nakłada na cel dwa różne żywioły naraz (reakcja).',
     hooks: {
-      onHit: (run, e, dmg) => {
+      onHit: (run, e, dmg, crit) => {
         const n = (run.cardState.prism = (run.cardState.prism ?? 0) + 1);
         if (n % 10 || e.dead) return;
         const els = ['fire', 'ice', 'lightning', 'poison'] as const;
         const a = rng.int(0, 3), b = (a + rng.int(1, 3)) % 4;
-        run.applyElement(e, els[a], dmg);
-        run.applyElement(e, els[b], dmg);
+        // Żywioły z trafienia bez krytyka (jak w Run.damageEnemy).
+        const eb = crit ? dmg / run.stats.critMult : dmg;
+        run.applyElement(e, els[a], eb);
+        run.applyElement(e, els[b], eb);
       },
     },
   },

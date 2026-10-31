@@ -9,14 +9,14 @@ import { drawSprite } from '../gfx/sprites';
 import { passiveIcon, PASSIVE_BY_ID } from '../data/passives';
 import { CARD_BY_ID } from '../data/cards';
 import { BAL } from '../data/balance';
-import { Run, type Mode, type RunSnapshot } from '../game/run';
+import { Run, HIT_LOG, type Mode, type RunSnapshot } from '../game/run';
 import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
 import { button, Menu, dim, panel, inside, slot, bar, Scroll, Confirm, drawTip, type Tip } from './widgets';
 import { renderHud, messageY, belowHud, hudGap } from './hud';
-import { UI } from './theme';
+import { UI, tile } from './theme';
 import { drawSkills } from './skills';
 import type { AbilitySlot } from '../data/heroes';
 import { abilityMaxCd } from '../systems/abilities';
@@ -46,13 +46,13 @@ import { PowerPickView } from './powers';
 import { RelicPickView } from './relics';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { Tutorial } from '../game/tutorial';
-import { grantUnlocks, grantDiscovery, discoveryLeft, maxTier, unlocked, type UnlockCtx, type UnlockDef } from '../data/unlocks';
+import { grantUnlocks, grantDiscovery, discoveryCost, discoveryLeft, maxTier, unlocked, type UnlockCtx, type UnlockDef } from '../data/unlocks';
 import { heroSkins } from '../data/pacts';
 import { FEAT_BY_ID } from '../data/feats';
 import { featsOnWin } from '../systems/feats';
 import { BESTIARY_BY_ID, loreBonus, loreMuls } from '../data/bestiary';
 import { BOSS_POWER_BY_ID } from '../data/enemies';
-import { WEAPON_BY_ID, maxLevel } from '../data/weapons';
+import { WEAPON_BY_ID, WEAPONS, ROLE_BY_SRC, maxLevel } from '../data/weapons';
 import { SECRET_BY_ID } from '../data/secrets';
 
 const PEEK_LABELS = ['Build [C]', 'Plecak [I]', 'Synergie [Y]'];
@@ -117,6 +117,11 @@ export class GameScreen implements Screen {
   /** Zegar ekranu (s) i bufor naciśnięć umiejętności: akcja → termin ważności. */
   private clock = 0;
   private castBuf = new Map<Action, number>();
+  /**
+   * Wybór nagrody (Enter, cyfry) wciśnięty w opóźnieniu nakładki: działa zaraz po nim, zamiast przepaść (playtest 0.62:
+   * pierwsze „2” na relikwii zignorowane). Klawisze walki odsiewa wcześniej Input.guardCombat.
+   */
+  private pickBuf: Action | null = null;
   /** Poddanie: drugie naciśnięcie po chwili (nie podwójne dotknięcie), uzbrojenie wygasa. */
   private confirmQuit = new Confirm();
   private hints: Hints;
@@ -125,6 +130,8 @@ export class GameScreen implements Screen {
   /** Odblokowania zdobyte w tym runie (banery po kolei, lista na ekranie końca) i licznik bossów do wykrycia nowego. */
   private unlockQueue: UnlockDef[] = [];
   private unlockedRun: UnlockDef[] = [];
+  /** Lista odblokowań nad panelem końca ucięta do END_UNLOCK_LINES linii (pełna w zakładce Highlights). */
+  private unlockedCut = false;
   private bossSeen = 0;
   private pauseScroll = new Scroll();
   /** Przewijanie zakładek ekranu końca (wyróżnienia, obrażenia, build), zerowane przy zmianie zakładki. */
@@ -135,6 +142,8 @@ export class GameScreen implements Screen {
   private endMenu: Menu;
   /** Zakładka ekranu końca: obrażenia, wykres DPS, karta buildu. */
   private endPage = 0;
+  /** Chwila otwarcia ekranu końca (this.clock): do END_GUARD s strzałki / WASD z walki nie przestawiają menu ani zakładek. */
+  private endAt = 0;
   /** Rekordy bohatera sprzed runu (do „pobitych rekordów” w podsumowaniu). */
   private recStart: HeroRecord;
 
@@ -164,7 +173,7 @@ export class GameScreen implements Screen {
     this.pauseMenu = tutorial ? new Menu([
       { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
       { label: () => 'Ustawienia', act: () => app.go(new SettingsScreen(app, this)) },
-      { label: () => 'Skip tutorial', act: () => this.endTutorial() },
+      { label: () => 'Skip tutorial', act: () => this.endTutorial(true) },
     ], PL + PLW / 2, 60, PLW - 14) : new Menu([
       { label: () => 'Wznów', act: () => (this.state = this.overlayReturn) },
       { label: () => 'Ekwipunek', act: () => this.openInventory('pause') },
@@ -300,6 +309,7 @@ export class GameScreen implements Screen {
     this.app.persist();
     this.state = 'end';
     this.delay = END_DELAY;
+    this.endAt = this.clock;
   }
 
   /** Wczesne porażki pod rząd (playtest): po dwóch ekran końca proponuje tryb łatwy jednym przyciskiem. */
@@ -342,6 +352,9 @@ export class GameScreen implements Screen {
       if (ex.blessing && --ex.blessing.maps <= 0) ex.blessing = null;
       if (m.kind !== 'dungeon') ex.camp = null;
       this.updateRecords();
+      // Rampa aktu 1 (BAL.expedition.ramp.heal): na niskich poziomach map część życia po każdej mapie.
+      const heal = ex.act === 1 && !ex.torment && m.kind !== 'boss' ? BAL.expedition.ramp.heal[ex.tier ?? 0] ?? 0 : 0;
+      if (heal) run.heal(run.stats.maxHp * heal);
       if (m.kind === 'boss') {
         featsOnWin(run);
         this.unlock({ boss: true, acts: ex.act });
@@ -350,7 +363,7 @@ export class GameScreen implements Screen {
         this.showToast(`${ex.act > BAL.expedition.acts ? 'Sekretny akt 4: Pustka' : `Akt ${ex.act}`}! +${Math.round(BAL.levelClearHeal * 100)}% HP`);
       }
       // Bonus mapy po ukończeniu: skrzynia, karta albo leczenie (nakładki wracają na mapę). Przed openMap, żeby leczenie weszło do zapisu.
-      if (m.bonus === 'chest') run.pendingLoot.push(run.rollLoot('boss'));
+      if (m.bonus === 'chest') run.pendingLoot.push({ ...run.rollLoot('boss'), title: 'Map bonus!' });
       if (m.bonus === 'card') run.pendingCards.push('elite');
       if (m.bonus === 'heal') run.heal(run.stats.maxHp * 0.4);
       this.openMap();
@@ -381,6 +394,7 @@ export class GameScreen implements Screen {
     this.app.persist();
     this.state = 'end';
     this.delay = END_DELAY;
+    this.endAt = this.clock;
   }
 
   private showToast(text: string, t = 2.5): void {
@@ -449,10 +463,15 @@ export class GameScreen implements Screen {
     else drawText(g, this.app.input.lastDevice === 'touch' ? 'Pause (top right): skip tutorial' : 'Esc: pause (skip tutorial)', x + w - 8, y + h + 2, C.lavender, { align: 'right', scale: smallS() });
   }
 
-  /** Koniec albo pominięcie samouczka: zapis i menu główne (Ekspedycja polecana, komunikat o Rozwoju i Kolekcji). */
-  private endTutorial(): void {
+  /**
+   * Koniec albo pominięcie samouczka: zapis i menu główne (Ekspedycja polecana, komunikat o Rozwoju i Kolekcji).
+   * Pominięty (0.62, playtest: gra pisała „Tutorial done!”): inny komunikat, z informacją, gdzie wyłączyć podpowiedzi.
+   */
+  private endTutorial(skipped = false): void {
     this.app.save.tutorialDone = true;
-    this.app.save.notice ||= 'Tutorial done! Start an Expedition. Essence from every run goes to Progress, new cards to Collection.';
+    this.app.save.notice ||= skipped
+      ? 'Tutorial skipped. Start an Expedition. Hints for new mechanics can be turned off in Settings > General.'
+      : 'Tutorial done! Start an Expedition. Essence from every run goes to Progress, new cards to Collection.';
     this.app.persist();
     this.app.go(new MainMenu(this.app));
   }
@@ -494,7 +513,7 @@ export class GameScreen implements Screen {
     ex.cleared++;
     switch (kind) {
       case 'treasure':
-        run.pendingLoot.push({ source: 'boss', item: rollItem(run.depth, 'boss', run.luck() + X.treasureLuck) });
+        run.pendingLoot.push({ source: 'boss', item: rollItem(run.depth, 'boss', run.luck() + X.treasureLuck), title: 'Treasure!' });
         this.saveSlot(false);
         this.openPending();
         break;
@@ -734,13 +753,25 @@ export class GameScreen implements Screen {
     // Statystyki diagnostyczne (F3 / `): tylko na czas sesji; klawisze testowe nadal wymagają trybu debug w Ustawieniach.
     // Wersja wydawana (__DEV_TOOLS__ = false) nie ma żadnego z nich.
     if (__DEV_TOOLS__ && inp.pressed('debug')) this.diag = !this.diag;
-    this.hints.update(dt, this.state);
+    // Wybór obozu / kapliczki zajmuje panel szczegółów, w którym na mapie stoi ramka podpowiedzi: podpowiedzi czekają.
+    this.hints.update(dt, this.state === 'map' && run.expedition?.offer ? 'map_offer' : this.state);
+    // Mapa: ramka podpowiedzi leży na dalszych węzłach, więc gaśnie, gdy gracz zaczyna wybierać (playtest 0.62).
+    if (this.state === 'map' && inp.anyPressed()) this.hints.dismiss();
     // Muzyka: intensywność z liczby wrogów, lochu i wydarzenia; boss na pełno; poza walką ciszej.
     const fight = this.state === 'play' && run.outcome === 'none';
     const crowd = Math.min(1, run.enemies.count / BAL.musicCrowd) * 0.8 + (run.dungeon || run.levelEvent ? 0.2 : 0);
     music.setMood({ intensity: fight ? crowd : 0.08, biome: run.levelInfo.biome, boss: fight && !!run.boss });
     this.clock += dt;
-    if (this.delay > 0) { this.delay -= dt; if (this.state === 'play') this.bufferCasts(); return; }
+    if (this.delay > 0) {
+      this.delay -= dt;
+      if (this.state === 'play') this.bufferCasts();
+      else if (PICK_STATES.has(this.state)) for (const a of PICK_KEYS) if (inp.pressed(a)) this.pickBuf = a;
+      return;
+    }
+    if (this.pickBuf) {
+      if (PICK_STATES.has(this.state)) inp.botPress(this.pickBuf);
+      this.pickBuf = null;
+    }
 
     switch (this.state) {
       case 'play':
@@ -769,10 +800,15 @@ export class GameScreen implements Screen {
         const owed = run.pendingLevels + run.pendingCards.length + run.pendingPowers + run.pendingLoot.length + run.pendingRelics;
         if (run.outcome === 'none' && run.step % 300 === 0 && !owed) this.saveSlot(true);
         if (run.outcome === 'dead') {
+          // Gracz zwykle jeszcze wciska unik / ult: ekran końca nie przyjmuje ich jako potwierdzenia (Input.guardCombat).
+          inp.guardCombat(END_GUARD);
           if (run.outcomeT <= 0) this.onRunOver();
         } else if (run.outcome === 'victory' && run.outcomeT > 0) {
           // chwila na "Boss pokonany!" zanim pojawią się nagrody
-        } else if (!this.openPending() && run.outcome === 'victory') {
+        } else if (this.openPending()) {
+          // Nagroda w środku walki: unik (Spacja / A) i ult (R) nie wybierają karty ani nie zużywają losowania.
+          inp.guardCombat(REWARD_GUARD);
+        } else if (run.outcome === 'victory') {
           this.onLevelCleared();
         }
         break;
@@ -878,13 +914,17 @@ export class GameScreen implements Screen {
         this.pauseMenu.update(inp);
         break;
       case 'end': {
-        this.endMenu.update(inp);
         const page = this.endPage;
-        if (inp.pressed('inventory') || inp.pressed('left') || inp.pressed('right')) {
-          this.endPage = (this.endPage + (inp.pressed('left') ? END_TABS.length - 1 : 1)) % END_TABS.length;
-          sfx.play('select');
+        // Klik w zakładkę działa od razu (playtest 0.62: klik w blokadzie podświetlał zakładkę pod kursorem bez zmiany treści).
+        END_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.endTab(i)) && this.endPage !== i) { this.endPage = i; sfx.play('select'); } });
+        // Klawisze dopiero po blokadzie: gracz zwykle jeszcze trzyma kierunek ruchu (playtest: W/D przestawiały menu na „Menu główne”).
+        if (this.clock - this.endAt >= END_GUARD) {
+          this.endMenu.update(inp);
+          if (inp.pressed('inventory') || inp.pressed('left') || inp.pressed('right')) {
+            this.endPage = (this.endPage + (inp.pressed('left') ? END_TABS.length - 1 : 1)) % END_TABS.length;
+            sfx.play('select');
+          }
         }
-        END_TABS.forEach((_, i) => { if (inp.pressed('click') && inside(inp.mouse.x, inp.mouse.y, ...this.endTab(i))) this.endPage = i; });
         if (this.endPage !== page) this.endScroll.reset();
         // Listy zakładek przewijane (kółko, przeciąganie palcem, PageUp/PageDown, prawa gałka pada).
         this.endScroll.update(inp, ...this.endArea());
@@ -949,7 +989,7 @@ export class GameScreen implements Screen {
         break;
       case 'map':
         this.map!.render(r);
-        if (this.toastT > 0) drawText(r.g, this.toast, W / 2, H - 44, C.lime, { align: 'center', outline: C.black }); // nad przyciskami mapy (playtest)
+        if (this.toastT > 0) this.renderMapToast();
         break;
       case 'pause':
         this.renderPause();
@@ -959,6 +999,19 @@ export class GameScreen implements Screen {
         break;
     }
     if (this.state !== 'pause' && this.state !== 'end') this.hints.render(r, HINT_BOX[this.state] ?? null, this.app.input.lastDevice === 'touch');
+  }
+
+  /**
+   * Komunikat na mapie Ekspedycji: szeroka płytka tuż pod wstęgą tytułu, na legendzie rodzajów węzłów (playtest 0.62: nad
+   * przyciskami leżał na opisie węzła, na wstędze zasłaniał tytuł aktu). Zwykle jedna linia, najwyżej dwie, wygasa pod koniec.
+   */
+  private renderMapToast(): void {
+    const r = this.app.r, maxW = W - 40, lines = wrapText(this.toast, maxW - 12).slice(0, 2);
+    const w = Math.max(...lines.map((l) => textWidth(l))) + 12, h = lines.length * 11 + 3, x = W / 2 - w / 2;
+    r.withAlpha(Math.min(1, this.toastT * 3), () => {
+      tile(r, x, MAP_TOAST_Y, w, h, C.lime, 0.95);
+      lines.forEach((l, i) => drawText(r.g, l, W / 2, MAP_TOAST_Y + 1.5 + i * 11, C.lime, { align: 'center', shadow: C.black }));
+    });
   }
 
   /**
@@ -1124,7 +1177,7 @@ export class GameScreen implements Screen {
 
   /** Przewijany obszar zakładki ekranu końca (Obrażenia: pod nagłówkiem kolumn, który stoi w miejscu). */
   private endArea(): [number, number, number, number] {
-    const top = this.endPage === 1 ? 17 : 2;
+    const top = this.endPage === 1 || this.endPage === 2 ? 17 : 2;
     return [END_X + 2, this.endY + top, END_W - 4, this.endH - top - 2];
   }
 
@@ -1161,12 +1214,18 @@ export class GameScreen implements Screen {
     const feats = [...new Set(run.featsRun)].map((id) => FEAT_BY_ID[id].name).join(', ');
     const essence = `+${fmt(this.essence)} esencji dla: ${run.hero.name} (Rozwój w menu głównym)`;
     const info: [string, number][] = [[modeLine, C.lgray], [essence, C.cyan]];
+    // Przyczyna śmierci (0.62, playtest: „nie wiem, co mnie zabiło”): główne źródło z ostatnich HIT_LOG s i śmiertelny cios.
+    const k = run.outcome === 'dead' ? run.killedBy : null;
+    if (k) {
+      const pct = Math.round((100 * k.share) / Math.max(1, k.recent));
+      info.unshift([tr(`Killed by: ${tr(k.src)} (${pct}% of the damage in the last ${HIT_LOG} s, ${k.hits} hits), last hit: ${tr(k.last)} -${fmt(Math.ceil(k.dmg))} HP`), C.salmon]);
+    }
     if (feats) info.push([`Wyczyny: ${feats}`, C.gold]);
     // Odrodzenia (Feniks, Niezłomny, Popiół feniksa): ile zużyto na tej mapie — 0.59, gracz nie zauważył, że Feniks zadziałał wcześniej.
     if (run.flag('revive') > 0) info.push([`${tr('Revives used on this map')}: ${run.revivesUsed}/${run.flag('revive')}`, C.orange]);
-    if (this.unlockedRun.length) info.push([`Unlocked: ${this.unlockedRun.map((u) => u.name).join(', ')}`, C.lime]);
+    for (const t of this.unlockedLines()) info.push([t, C.lime]);
     // Odkrycia (0.61): ile punktów do następnej zablokowanej zawartości (data/unlocks.ts grantDiscovery).
-    if (!this.tut && discoveryLeft(this.app.save)) info.push([tr(`Next discovery: ${this.app.save.discovery ?? 0}/${BAL.discovery.every}`), C.cyan]);
+    if (!this.tut && discoveryLeft(this.app.save)) info.push([tr(`Next discovery: ${this.app.save.discovery ?? 0}/${discoveryCost(this.app.save)}`), C.cyan]);
     info.forEach(([t, col], i) => drawText(g, t, W / 2, 69 + i * 10, col, { align: 'center', shadow: C.black }));
     // Panel zakładek zaczyna się tuż pod liniami informacji (bez pustego pasa, gdy ich nie ma).
     this.endY = 88 + info.length * 10;
@@ -1179,10 +1238,31 @@ export class GameScreen implements Screen {
     panel(r, END_X, this.endY, END_W, this.endH);
     if (this.endPage === 0) this.renderHighlights();
     else if (this.endPage === 1) this.renderDamage();
-    else if (this.endPage === 2) this.renderDpsGraph();
+    else if (this.endPage === 2) this.renderTaken();
+    else if (this.endPage === 3) this.renderDpsGraph();
     else this.renderBuild();
     this.endMenu.render(r);
-    if (this.endPage === 3 && this.endTip) drawTip(r, ...this.endTip);
+    if (this.endPage === 4 && this.endTip) drawTip(r, ...this.endTip);
+  }
+
+  /**
+   * Odblokowania runu na ekranie końca: najwyżej END_UNLOCK_LINES linie po całych nazwach, reszta jako „+N more”
+   * (pełna lista w zakładce Highlights). Wcześniej jedna linia wychodziła poza ekran z obu stron (playtest 0.62).
+   */
+  private unlockedLines(): string[] {
+    if (!this.unlockedRun.length) return [];
+    const names = this.unlockedRun.map((u) => tr(u.name)), maxW = W - 24;
+    const lines = [`${tr('Unlocked')}:`];
+    for (let i = 0; i < names.length; i++) {
+      const last = lines.length === END_UNLOCK_LINES, rest = names.length - i - 1;
+      const cand = `${lines[lines.length - 1]} ${names[i]}${i < names.length - 1 ? ',' : ''}`;
+      // W ostatniej linii zostaje miejsce na „+N more” (chyba że to ostatnia nazwa).
+      const fits = textWidth(cand) + (last && rest ? textWidth(` ${tr(`+${rest} more`)}`) : 0) <= maxW;
+      if (fits) { lines[lines.length - 1] = cand; continue; }
+      if (last) { lines[lines.length - 1] += ` ${tr(`+${names.length - i} more`)}`; this.unlockedCut = true; break; }
+      lines.push(`${names[i]}${i < names.length - 1 ? ',' : ''}`);
+    }
+    return lines;
   }
 
   /**
@@ -1192,29 +1272,33 @@ export class GameScreen implements Screen {
   private renderHighlights(): void {
     const r = this.app.r, g = r.g, run = this.run, before = this.recStart, ex = run.expedition;
     const all = [...run.dmgBySource.entries()].sort((a, b) => b[1] - a[1]);
-    const total = all.reduce((sum, x) => sum + x[1], 0) || 1, top = all[0];
+    const total = all.reduce((sum, x) => sum + x[1], 0) || 1;
+    // Najlepsza broń to broń (0.62, playtest: kafelek pokazywał reakcję „Toxic Blast”); największe źródło spoza broni
+    // (reakcja, synergia, egzekucja) osobnym wierszem pod kafelkami.
+    const top = all.find(([name]) => ROLE_BY_SRC[name]), other = all[0] && !ROLE_BY_SRC[all[0][0]] ? all[0] : undefined;
     const topW = top ? run.weapons.find((w) => w.def.name === top[0]) : undefined;
     // Krótki run bez pomiarów: szczyt co najmniej równy średniej.
     const peak = Math.max(total / Math.max(1, run.totalTime), ...run.dpsLog);
     const cards: { title: string; value: string; note: string; icon?: string; rec: boolean }[] = [
-      { title: 'Best weapon', value: top ? top[0] : '-', note: top ? `${Math.round((100 * top[1]) / total)}% of damage` : '', icon: topW?.def.icon, rec: false },
+      { title: 'Best weapon', value: top ? top[0] : '-', note: top ? `${Math.round((100 * top[1]) / total)}% of damage` : '', icon: topW?.def.icon ?? WEAPONS.find((w) => w.name === top?.[0])?.icon, rec: false },
       { title: 'Peak DPS', value: fmt(Math.round(peak)), note: `average ${fmt(Math.round(total / Math.max(1, run.totalTime)))}`, icon: 'cd_tempest', rec: peak > (before.bestDps ?? 0) && peak > 0 },
       { title: 'Biggest hit', value: fmt(run.maxHit), note: run.maxHitSrc, icon: 'pi_crit', rec: false },
       { title: 'Longest combo', value: String(run.bestCombo), note: 'kills, no hits taken', icon: 'pi_fury', rec: run.bestCombo > (before.bestCombo ?? 0) && run.bestCombo > 0 },
       { title: 'Best kill streak', value: String(run.bestStreak), note: 'quick kills', icon: 'cd_explode', rec: run.bestStreak > (before.bestStreak ?? 0) && run.bestStreak > 0 },
     ];
     const area = this.endArea(), oy = this.endScroll.begin(r, ...area);
-    const cw = (END_W - 24 - 4 * 4) / 5, ch = 48, y = this.endY + 6 - oy;
+    // Niski panel (dużo linii informacji, propozycja trybu łatwego): kafelki bez ikon, żeby podpisy się mieściły (playtest 0.62).
+    const big = this.endH >= END_TILE_FULL, cw = (END_W - 24 - 4 * 4) / 5, ch = big ? 48 : 34, y = this.endY + 6 - oy;
     cards.forEach((c, i) => {
       const x = END_X + 12 + i * (cw + 4);
       r.withAlpha(0.85, () => r.roundRect(x, y, cw, ch, 3, C.navy, C.black));
       r.roundFrame(x + 0.5, y + 0.5, cw - 1, ch - 1, 3, c.rec ? C.gold : C.slate, c.rec ? 1 : 0.75);
       // Dłuższe tytuły (po polsku „Najmocniejszy cios”) zmniejszone do szerokości kafelka.
       drawText(g, c.title, x + cw / 2, y + 3, C.lgray, { align: 'center', scale: Math.min(smallS(), (cw - 6) / textWidth(c.title)) });
-      if (c.icon) drawSprite(g, c.icon, x + cw / 2, y + 18);
-      drawText(g, c.value, x + cw / 2, y + 27, c.rec ? C.yellow : C.white, { align: 'center', shadow: C.black, scale: textWidth(c.value) > cw - 6 ? 0.75 : 1 });
-      drawText(g, c.note, x + cw / 2, y + 38, C.lavender, { align: 'center', scale: Math.min(smallS(), (cw - 6) / Math.max(1, textWidth(c.note))) });
-      if (c.rec && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: smallS() });
+      if (c.icon && big) drawSprite(g, c.icon, x + cw / 2, y + 18);
+      drawText(g, c.value, x + cw / 2, y + (big ? 27 : 13), c.rec ? C.yellow : C.white, { align: 'center', shadow: C.black, scale: textWidth(c.value) > cw - 6 ? 0.75 : 1 });
+      drawText(g, c.note, x + cw / 2, y + (big ? 38 : 24), C.lavender, { align: 'center', scale: Math.min(smallS(), (cw - 6) / Math.max(1, textWidth(c.note))) });
+      if (c.rec && big && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: smallS() });
     });
     // Pobite rekordy bohatera (porównanie z zapisem sprzed runu).
     const broke: string[] = [];
@@ -1224,7 +1308,8 @@ export class GameScreen implements Screen {
     if (this.mode === 'endless' && run.totalTime > before.bestEndless && before.bestEndless > 0) broke.push(`Endless: ${fmtTime(run.totalTime)}`);
     if (ex && ex.cleared > before.bestExpedition && before.bestExpedition > 0) broke.push(`Expedition: ${ex.cleared} maps`);
     for (const c of cards) if (c.rec && (c.title === 'Peak DPS' ? (before.bestDps ?? 0) : c.title === 'Longest combo' ? (before.bestCombo ?? 0) : (before.bestStreak ?? 0)) > 0) broke.push(`${c.title}: ${c.value}`);
-    const ly = y + ch + 5;
+    if (other) drawText(g, `Top source overall: ${other[0]}, ${Math.round((100 * other[1]) / total)}% (not a weapon)`, END_X + 12, y + ch + 5, C.lgray);
+    const ly = y + ch + 5 + (other ? 11 : 0);
     // Pierwszy run bohatera: plakietki „Record!” bez wcześniejszych rekordów — zamiast sprzecznego „bez rekordów” (playtest).
     const first = !broke.length && cards.some((c) => c.rec);
     const title = broke.length ? `${tr('Records broken')}: ${broke.length}` : first ? 'Your first records! Beat them next time.' : 'No records broken this time';
@@ -1235,7 +1320,14 @@ export class GameScreen implements Screen {
       drawText(g, '-', bx, by, C.gold);
       drawText(g, t, bx + 6, by, C.yellow);
     });
-    this.endScroll.end(r, ly + 13 + Math.ceil(broke.length / 2) * 10 + oy - area[1], ...area);
+    let by = ly + 13 + Math.ceil(broke.length / 2) * 10;
+    // Pełna lista odblokowań, gdy nad panelem zmieściła się tylko część.
+    if (this.unlockedCut) {
+      drawText(g, 'Unlocked this run', END_X + 12, by + 2, C.lime);
+      for (const l of wrapText(this.unlockedRun.map((u) => u.name).join(', '), END_W - 32)) { by += 10; drawText(g, l, END_X + 16, by + 2, C.lgray); }
+      by += 14;
+    }
+    this.endScroll.end(r, by + oy - area[1], ...area);
   }
 
   /** Ekran końca: obrażenia per źródło (suma, udział i DPS, pasek udziału). */
@@ -1256,6 +1348,27 @@ export class GameScreen implements Screen {
       drawText(g, fmt(dmg), x1 - 110, y, C.gold, { align: 'right' });
       drawText(g, `${Math.round((100 * dmg) / total)}%`, x1 - 55, y, C.lgray, { align: 'right' });
       drawText(g, fmt(dmg / Math.max(1, run.totalTime)), x1, y, C.lgray, { align: 'right' });
+    });
+    this.endScroll.end(r, all.length * 11 + 4, ...area);
+  }
+
+  /** Ekran końca (0.62): obrażenia otrzymane wg źródła (po pancerzu, z tarczą), udział i pasek; źródło śmiertelnego ciosu na czerwono. */
+  private renderTaken(): void {
+    const r = this.app.r, g = r.g, run = this.run, x0 = END_X + 12, x1 = END_X + END_W - 12;
+    drawText(g, 'Źródło obrażeń', x0, this.endY + 6, C.lavender);
+    drawText(g, 'Suma', x1 - 55, this.endY + 6, C.lavender, { align: 'right' });
+    drawText(g, 'Udział', x1, this.endY + 6, C.lavender, { align: 'right' });
+    const all = [...run.takenBySource.entries()].sort((a, b) => b[1] - a[1]);
+    const area = this.endArea();
+    if (!all.length) { drawText(g, 'No damage taken', W / 2, area[1] + 16, C.lavender, { align: 'center' }); return; }
+    const total = all.reduce((sum, x) => sum + x[1], 0) || 1, best = all[0][1] || 1, killer = run.outcome === 'dead' ? run.killedBy?.src : undefined;
+    const oy = this.endScroll.begin(r, ...area);
+    all.forEach(([name, dmg], i) => {
+      const y = area[1] + 2 + i * 11 - oy;
+      bar(r, x0 + 150, y + 2, 160, 5, dmg / best, RAMP.red);
+      drawText(g, name, x0, y, name === killer ? C.salmon : C.white);
+      drawText(g, fmt(Math.ceil(dmg)), x1 - 55, y, C.salmon, { align: 'right' });
+      drawText(g, `${Math.round((100 * dmg) / total)}%`, x1, y, C.lgray, { align: 'right' });
     });
     this.endScroll.end(r, all.length * 11 + 4, ...area);
   }
@@ -1379,17 +1492,32 @@ const HINT_BOX: Partial<Record<string, HintBox>> = {
   cards: { x: 232, y: 232, w: W - 240 },
   power: { x: 232, y: 222, w: W - 240 },
   loot: { x: 8, y: 207, w: 128 },
-  // Mapa: w prawym dolnym rogu obszaru mapy (dalekie węzły), nie na szczegółach węzła pod spodem.
-  map: { x: W - 14 - 246, y: 164, w: 246, up: true },
+  // Mapa: w prawej części panelu szczegółów, nad przyciskami (playtest 0.62: w rogu obszaru mapy zasłaniała węzły i legendę).
+  map: { x: W - 14 - 206, y: H - 24, w: 206, up: true },
   shop: { x: 6, y: 232, w: 266, up: true },
   anvil: { x: 10, y: 181, w: 208, up: true },
 };
 
+/** Górna krawędź komunikatu na mapie Ekspedycji: pod wstęgą tytułu, na legendzie (ui/expedition.ts MAP_Y + 2). */
+const MAP_TOAST_Y = 30;
+
 /** Zakładki ekranu końca runu i panel pod nimi. */
-const END_TABS = ['Highlights', 'Obrażenia', 'Wykres DPS', 'Build'];
+const END_TABS = ['Highlights', 'Obrażenia', 'Damage taken', 'Wykres DPS', 'Build'];
 const END_X = 12, END_W = W - 24, END_BOTTOM = 210;
+/** Ekran końca: najwięcej linii listy odblokowań nad panelem i wysokość panelu, od której kafelki Highlights mają ikony. */
+const END_UNLOCK_LINES = 2;
+const END_TILE_FULL = 64;
 /** Ekran końca przyjmuje wejście po chwili: gracz zwykle jeszcze wciska unik (Spacja / A = też potwierdzenie). */
 const END_DELAY = 0.6;
+/**
+ * Blokada klawiszy wspólnych z walką (s, core/input.ts guardCombat) na ekranach otwieranych z walki: koniec runu (liczona
+ * od ostatniej klatki animacji śmierci, więc obejmuje END_DELAY) i nagrody (obejmuje OVERLAY_DELAY). Spam ją przedłuża.
+ */
+const END_GUARD = 1.5;
+const REWARD_GUARD = 0.6;
 /** Bufor naciśnięć umiejętności w zatrzymaniu klatki i opóźnieniu nakładki (s). */
 const CAST_BUFFER = 0.15;
 const CAST_KEYS: Action[] = ['q', 'e', 'dash', 'ult'];
+/** Nakładki nagród i klawisze wyboru buforowane w ich opóźnieniu (pickBuf); ostatnie naciśnięcie wygrywa. */
+const PICK_STATES = new Set<State>(['levelup', 'cards', 'power', 'relic', 'loot']);
+const PICK_KEYS: Action[] = ['confirm', 'n1', 'n2', 'n3', 'n4'];

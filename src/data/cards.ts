@@ -212,8 +212,8 @@ export const CARDS: CardDef[] = [
   { id: 'g_bounce', name: 'Rykoszet', rarity: 'gold', tags: ['Pociski'], desc: 'Pociski odbijają się od krawędzi ekranu (do 2 razy).', flags: { bounce: 2 } },
   { id: 'g_overheal', name: 'Nadmiar życia', rarity: 'gold', tags: ['Tarcze', 'Życie'], desc: 'Nadmiarowe leczenie zamienia się w tarczę (maks. 50% HP).', flags: { overhealShield: 0.5 }, stats: { regen: 0.3 } },
   {
-    id: 'g_explode', name: 'Wybuchowe zgony', rarity: 'gold', tags: ['Ogień', 'Obszar'], desc: 'Zabici wrogowie wybuchają (30% ich maks. HP).',
-    hooks: { onKill: (run, e) => { if (!e.boss && !run.chainKill()) run.queueExplosion(e.x, e.y, 18 * run.stats.area, e.maxHp * 0.3, 'Wybuchowe zgony', C.orange); } },
+    id: 'g_explode', name: 'Wybuchowe zgony', rarity: 'gold', tags: ['Ogień', 'Obszar'], desc: `Killed enemies explode for ${Math.round(BAL.procs.explode * 100)}% of their max HP.`,
+    hooks: { onKill: (run, e) => { if (!e.boss && !run.chainKill()) run.queueExplosion(e.x, e.y, BAL.procs.explodeR * run.stats.area, e.maxHp, BAL.procs.explode, 'Wybuchowe zgony', C.orange); } },
   },
   {
     id: 'g_critchain', name: 'Krytyczna masa', rarity: 'gold', tags: ['Krytyk'], desc: 'Trafienie krytyczne: 25% szans na piorun do 2 pobliskich wrogów.',
@@ -341,12 +341,14 @@ export const CARDS: CardDef[] = [
   { id: 'p_twins', name: 'Bliźniacze dusze', rarity: 'prism', tags: ['Pociski', 'Obszar'], desc: '+1 pocisk dla każdej broni i +20% obszaru.', stats: { amount: 1, area: 0.2 } },
   { id: 'p_phoenix', name: 'Feniks', rarity: 'prism', tags: ['Życie', 'Ogień'], desc: 'Raz na poziom po śmierci odradzasz się z 50% HP.', flags: { revive: 1 } },
   {
-    id: 'p_nova', name: 'Supernowa', rarity: 'prism', tags: ['Ogień', 'Obszar'], desc: 'Co 50 zabójstw wybuch wokół ciebie zadaje 50% maks. HP wrogów (bossom 5%).',
+    id: 'p_nova', name: 'Supernowa', rarity: 'prism', tags: ['Ogień', 'Obszar'],
+    desc: `Every ${BAL.procs.nova.every} kills by weapons and skills, a blast around you deals ${Math.round(BAL.procs.nova.pct * 100)}% of enemies' max HP (${Math.round(BAL.procs.nova.boss * 100)}% to bosses).`,
     hooks: {
       onKill: (run) => {
-        if (!every(run, 'p_nova', 1, 50)) return;
+        const N = BAL.procs.nova;
+        if (run.chainKill() || !every(run, 'p_nova', 1, N.every)) return;
         const p = run.player;
-        run.explode(p.x, p.y, 70 * run.stats.area, (e) => e.maxHp * (e.boss ? 0.05 : 0.5), 'Supernowa', C.yellow);
+        run.explode(p.x, p.y, N.r * run.stats.area, (e) => run.inView(e.x, e.y) ? e.maxHp * (run.bigFoe(e) ? N.boss : N.pct) : 0, 'Supernowa', C.yellow);
       },
     },
   },

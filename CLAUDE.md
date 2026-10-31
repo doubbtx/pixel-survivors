@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.61.0)
+## Stan (wersja 0.62.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -811,6 +811,53 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   minuty Endless; co `every` punktów najbliższa zablokowana zawartość z kolejki). `Run.content` (= `save.unlocks`) filtruje
   pulę awansu (systems/levelup.ts `openFusions`, `openEvolves`), `cardPool`. UI: Księga ewolucji, Arsenał i Kolekcja kart
   pokazują warunek, ekran końca „Next discovery x/3”. Zapis v12 (migracja 11 → 12: kto grał, dostaje wszystko).
+- 0.61.1: menu główne — wariant kafelka łąki liczony z kolumny przesuniętego świata (`menuBackdrop`, `col`); wcześniej co TILE
+  pikseli wszystkie kafelki wracały do poprzedniego wzoru i trawa przeskakiwała.
+  Salwy `fan` / `shotgun` przy zagęszczaniu (`patternDensity`, `bulletDensity`) zachowują parzystość `count` (fireVolley): wachlarz
+  Oka z 3 robił się 4 pociskami bez środkowego i stojący gracz nie dostawał trafień od ok. 6. minuty mapy i na Udręce.
+- 0.62.0 (gracz: Koszmarna „bez problemu”, Takezo 61, 680K DPS w akcie 3): symulacja buildu gracza na mapach aktu 3
+  (Run z prawdziwym spawnerem, skrypt agent-tough/tough.cjs w scratchpadzie: stoi / krąży, źródła obrażeń, zabici poza kadrem).
+  Przyczyny: Book of the Void z +10 pociskami robił 12 cięć w 6 rzędach, przy obszarze ×4 cięcie sięgało 235 px — 85% zabójstw
+  poza kadrem, 95% strzelców ginęło przed pierwszą salwą; mapy „pokonaj” kończyły się w ~38 s. Zmiany: `BAL.lash` (rows 3 =
+  najwyżej 6 cięć, len 150 px; systems/weapons.ts `lash`/`lashCut`); `BAL.power.tier` — na Rzadkiej / Koszmarnej / Udręce pogoń
+  HP stromsza powyżej `knee` × podłoga (Run.updatePower), słabsze buildy i Zwykła/Magiczna bez zmian. Pomiar (akt 3, głębokość 5):
+  zabici poza kadrem 77% → 36%, strzelcy bez salwy 87% → 56%, mapa 39 → 44 s, śmierci (bez odrodzeń) stojąc 6.5 → 47 na mapę,
+  krążąc 1.2 → 3.7; boss aktu 3 77-102 → 84-117 s. Bot bez god na Koszmarnej (21 runów) mediana 74 → 80 s, na Zwykłej bez zmian.
+- 0.62.0 (playtest 3 testerów: nowicjusz, szybko się uczy, weteran — wszyscy 6/10; sterownik turowy `scratchpad/pt/driver.cjs`):
+  sprawiedliwa śmierć: `Run.hurtPlayer(base, src, bullet?)`, źródło trafienia to wróg jak w bestiariuszu (`foeName`, zmienna
+  `firing` w systems/enemies.ts dla salw i uderzeń, `EnemyBullet.src`), „Kolce”, „Burza”, „Bombardment”. `Run.takenBySource`
+  (snapshot `taken`), `hitLog` (HIT_LOG 3 s), `killedBy`; ekran końca: linia „Killed by…” i zakładka Damage taken.
+  `BAL.burst`: obrażenia z 1 s ponad 30% maks. HP wchodzą w 35% (funkcja rosnąca, stanie dalej zabija szybciej), biały pierścień.
+  `Input.guardCombat(s)`: na ekranach otwieranych z walki klawisze wspólne z q/e/dash/ult dają tylko akcję walki (nagrody 0.6 s,
+  koniec runu 1.5 s, każde naciśnięcie przedłuża o 0.4 s). Wybór kart nie startuje na przeklętej.
+  Czytelność: pociski wrogów rysowane na końcu świata (nad atakami, efektami, liczbami, pogodą) z obwódką `bulletRim`
+  (`BAL.readability.ring` + ciemna tarcza, jeden obraz z pamięci podręcznej); 'dim' schodzi do `dimMin` przy gęstych pociskach
+  i w walce z bossem (`Run.fxDim` też dla 'dim'); najwyżej `projDraw` rysowanych pocisków gracza; meteor jako `pb_ember`;
+  błysk trafienia bossa / elity co `bigFlashGap` s. UI: `HINT_SCREEN` przyjmuje listę ekranów (gear / reaction / synergy /
+  secret czekają na spokojny ekran), `Hints.dismiss()` na mapie, w walce `SHOW_PLAY` 5 s; strzałki sekretów omijają
+  `TOP_RECTS`/`BANNER_RECT`; toast mapy na wstędze (`renderMapToast`), podpis węzła z boku; `pendingLoot.title` (Treasure!,
+  Map bonus!); „(now X)” raz na statystykę; „Best weapon” tylko z broni (`ROLE_BY_SRC`); awans wyjaśnia zaznaczoną kartę (`explain`, `recommendWhy`).
+  Rampa aktu 1: na Zwykłej/Magicznej bez Udręki `BAL.expedition.ramp` (`LevelDef.dmgCap` = sufit mnożnika obrażeń z czasu
+  i głębokości wg rzędu, także boss aktu; mniejszy tłum; flaga `shooters` w `rampMix` i linii strzelców; `heal` po mapie
+  w `onLevelCleared`). W 2. rzędzie aktu 1 nie ma Polowania, Zasadzki ani aren. Limit pocisków `BAL.bulletRamp` (`bulletCap`)
+  rośnie z głębokością. Sufit `powerMul` = `BAL.power.max × (tier.top[poziom] + topPerTorment × Udręka)`. HP Polowania:
+  `BAL.expedition.huntHp[poziom] + huntHpPerTorment × Udręka`. Odkrycia: `discoveryCost` (`BAL.discovery.first`, potem `every`).
+  Bot: `maps[]` w raporcie ma `node`, `bul`, `hp`, `shot` (udział pocisków) i `dead`.
+  Runda 2 (drugi playtest: wszyscy 7/10; sterownik turowy wymaga `page.clock.pauseAt`, sam `install` nie zatrzymuje czasu):
+  wybuchy z zabójstw `Run.queueExplosion(x, y, r, hpZabitego, frac, …)` biją każdego za `min(HP zabitego, własne) × frac`, najwyżej
+  raz na `BAL.procs.gap` s i tylko w kadrze (`Run.inView`, `BAL.procs.view`); Supernowa liczy tylko zabójstwa bronią i umiejętnościami
+  (`chainKill` obejmuje reakcje); minibossowie (`Run.bigFoe`) jak bossowie dla Supernowej, Egzekucji i Ścinacza. Żywioły i reakcje
+  z trafienia bez krytyka, trafienie zabijające nie nakłada żywiołów, wybuch reakcji (`splash` w `Run.react`) trafia wroga raz na
+  odnowienie; `BAL.reactions` cd 1 z `cdFloor`, toxic r 20 / mul 1 (udział wybuchów i reakcji 84-94% → 52-60%).
+  Bohaterowie poza Borgunem: więcej HP, pancerz 1-3, regeneracja 0.2. Akt 2 na Zwykłej/Magicznej: `ramp.cap2/crowd2/shooters2`.
+  Miniboss Polowania: podłoga HP z DPS (`huntTtk`, `huntTtkAct`). `BAL.levelGap` (`Run.levelGapT`): po serii awansów w walce
+  następny czeka 3 s, 0.5 s nietykalności. Karta co `eliteCardEvery` elitę, Szczęśliwy traf od `loot.jackpotDepth`.
+  Czytelność: zapowiedzi (`drawTell`, `drawBossTell`, `run.strikes`, sytuacje) w warstwie po liczbach, przed pociskami wrogów
+  (`tellQ`, `TELL_KINDS`, `tellLine/tellRing/tellOval`, `BAL.readability.tellBack/tellShade`); błysk trafienia w świecie to
+  `DrawOpts.hit` (`hitImage`), nie biała sylwetka `flash`; znacznik gracza w tłumie (`crowdK`, `markerCrowd`); napisy reakcji raz
+  na `BAL.reactions.labelGap` s. UI: lista odblokowań na końcu w `END_UNLOCK_LINES` liniach, `pickBuf` (Enter/cyfra z opóźnienia
+  nakładki), awans zaznacza Polecane, `Option.evoPiece` (karta „Evolution piece!”: nowa pasywka/broń dopełnia ewolucję posiadanej),
+  odbicie Takezo pod kartą bohatera, „Weakened” pod paskiem bossa, w Ekspedycji w rogu HUD tylko złoto, sklep bez Kuźni przy `noForge`.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`

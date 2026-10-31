@@ -34,7 +34,8 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
   e.x = x; e.y = y; e.kx = 0; e.ky = 0;
   e.maxHp = e.hp = def.hp * hpMul;
   e.speed = def.speed * rng.range(0.9, 1.1) * (1 + run.flag('enemySpeed'));
-  e.damage = def.damage * BAL.enemyDmgMul(run.time) * BAL.depthDmgMul(run.depth) * (run.scripted ? 1 : P.dmg(run.depth, run.depthTime())) * (1 + P.levelDmg * lvl) * (1 + run.flag('enemyDmg'));
+  const grow = BAL.enemyDmgMul(run.time) * BAL.depthDmgMul(run.depth) * (run.scripted ? 1 : P.dmg(run.depth, run.depthTime()));
+  e.damage = def.damage * Math.min(grow, run.levelInfo.dmgCap ?? Infinity) * (1 + P.levelDmg * lvl) * (1 + run.flag('enemyDmg'));
   e.radius = def.radius;
   e.xp = def.xp;
   e.flash = 0; e.slowT = 0; e.slowF = 0; e.stunT = 0;
@@ -223,7 +224,7 @@ export function updateSpawner(run: Run, dt: number): void {
   const deficit = target - run.enemies.count;
   if (deficit <= 0) return;
   run.spawnAcc += Math.min(BAL.spawnRateCap(waveT), deficit * 2) * dt;
-  const mix = currentMix(waveT, run.levelInfo.biome);
+  const mix = rampMix(run, currentMix(waveT, run.levelInfo.biome));
   while (run.spawnAcc >= 1) {
     run.spawnAcc -= 1;
     const [x, y] = ringPos(run, rng.range(0, Math.PI * 2), spawnR() + rng.range(0, 30));
@@ -235,6 +236,14 @@ export function updateSpawner(run: Run, dt: number): void {
     }
     else spawnEnemy(run, rng.weighted(mix), x, y);
   }
+}
+
+/** Wrogowie strzelający (salwy, moździerz, snajper, płomień): rzadziej w rampie aktu 1 (flaga shooters, BAL.expedition.ramp). */
+const RANGED_MOVES = new Set(['mortar', 'sniper', 'flamer']);
+function rampMix(run: Run, mix: [string, number][]): [string, number][] {
+  const k = 1 + run.flag('shooters');
+  if (k >= 1) return mix;
+  return mix.map(([id, w]) => [id, ENEMIES[id].shoot || RANGED_MOVES.has(ENEMIES[id].behavior) ? w * Math.max(0, k) : w]);
 }
 
 /**
@@ -261,11 +270,20 @@ function updateMiniboss(run: Run, dt: number, waveT: number): void {
   if (!e) return;
   run.minibossDone = true;
   const hunt = run.levelInfo.objective.kind === 'hunt';
-  e.maxHp = e.hp = e.maxHp * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (1 + Math.max(0, waveT - 300) / 600) * (hunt ? BAL.expedition.huntHp : 1);
+  const X = BAL.expedition, ex = run.expedition;
+  const huntHp = (X.huntHp[ex?.tier ?? 0] ?? X.huntHp[0]) + X.huntHpPerTorment * (ex?.torment ?? 0);
+  e.maxHp = e.hp = e.maxHp * Math.pow(run.powerMul, BAL.bossPowerExp - 1) * (1 + Math.max(0, waveT - 300) / 600) * (hunt ? huntHp : 1);
+  // Polowanie: co najmniej `huntTtk` s DPS buildu z końca poprzedniej mapy (większe z: średnia krocząca siły buildu, ostatnie
+  // próbki dpsLog — te liczą też obrażenia procentowe) — mocny build nie kończy łowów w 1-10 s. W dalszych aktach więcej
+  // (×(1 + huntTtkAct × (akt - 1))): wrogowie giną od jednego trafienia, więc DPS bez nadwyżki zaniża siłę buildu.
   if (hunt) {
-    // Eskorta: elity bez skrzyń (Run.killEnemy).
-    const mods = Object.keys(ELITE_MODS);
-    for (let i = 0; i < BAL.expedition.huntEscort; i++) spawnEnemy(run, rng.weighted(currentMix(waveT, run.levelInfo.biome).filter(([k]) => k !== 'bat')), x + rng.range(-20, 20), y + rng.range(-20, 20), { elite: [rng.pick(mods)] });
+    const log = run.dpsLog.slice(-3), dps = Math.max(run.dpsEma, log.length ? log.reduce((s, v) => s + v, 0) / log.length : 0);
+    e.maxHp = e.hp = Math.max(e.maxHp, dps * X.huntTtk * (1 + X.huntTtkAct * ((ex?.act ?? 1) - 1)) * huntHp / X.huntHp[0]);
+  }
+  if (hunt) {
+    // Eskorta: elity bez skrzyń (Run.killEnemy); w akcie 1 bez cech zachowania (jak zwykłe elity, R3).
+    const mods = Object.keys(ELITE_MODS).filter((k) => (ex?.act ?? 2) >= 2 || !ELITE_MODS[k].kind);
+    for (let i = 0; i < X.huntEscort; i++) spawnEnemy(run, rng.weighted(currentMix(waveT, run.levelInfo.biome).filter(([k]) => k !== 'bat')), x + rng.range(-20, 20), y + rng.range(-20, 20), { elite: [rng.pick(mods)] });
   }
   run.showBanner(hunt ? `Hunt: ${ENEMIES[id].name}!` : `Miniboss: ${ENEMIES[id].name}!`);
   run.addShake(3);

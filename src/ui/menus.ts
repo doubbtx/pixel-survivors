@@ -93,9 +93,11 @@ export function menuBackdrop(app: App, t: number): void {
     g.lineTo(R + 4, groundY);
     g.fill();
   }
-  const off = Math.floor(t * 30) % TILE;
+  // Łąka przesuwa się w lewo; wariant kafelka z kolumny w przesuniętym świecie (`col`), nie na ekranie — inaczej co TILE
+  // pikseli wszystkie kafelki wracały do poprzedniego wzoru i trawa przeskakiwała.
+  const scrolled = Math.floor(t * 30), off = scrolled % TILE, col = Math.floor(scrolled / TILE);
   const x0 = L - ((L % TILE) + TILE) % TILE - off;
-  for (let x = x0; x < R; x += TILE) for (let y = groundY; y < H; y += TILE) blit(g, `tile0_${(((x + off) / TILE + y) % 10 + 10) % 10}`, x, y);
+  for (let x = x0; x < R; x += TILE) for (let y = groundY; y < H; y += TILE) blit(g, `tile0_${(((x + off) / TILE + col + y) % 10 + 10) % 10}`, x, y);
   r.rect(L, groundY, R - L, 1, C.black);
   const walk = (name: string, x: number, flip: boolean, k: number) => {
     const y = groundY + 22 + Math.round(Math.abs(Math.sin(t * 8 + k)) * -2);

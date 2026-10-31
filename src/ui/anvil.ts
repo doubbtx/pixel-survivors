@@ -412,7 +412,7 @@ export class AnvilView {
     r.rect(cx + 18, hy - 6, 12, 8, C.lgray); r.rect(cx + 18, hy - 6, 12, 2, C.white); r.rect(cx + 28, hy - 2, 14, 3, C.brown);
     for (const sp of this.sparks) r.rect(sp.x, sp.y, 2, 2, sp.t > 0.3 ? C.yellow : C.orange);
     if (this.result) {
-      const col = OUTCOME_COL[this.result.outcome], big = { success: 'SUKCES!', fail: 'Porażka', down: 'Spadek!', crack: 'PĘKNIĘCIE!', destroy: 'ZNISZCZONY!' }[this.result.outcome];
+      const col = OUTCOME_COL[this.result.outcome], big = { success: 'SUCCESS!', fail: 'FAILED', down: 'LEVEL DROPPED!', crack: 'CRACKED!', destroy: 'DESTROYED!' }[this.result.outcome];
       drawText(g, big, cx, 64, col, { align: 'center', scale: 2, outline: C.black });
     }
     if (!s) return;
@@ -422,9 +422,10 @@ export class AnvilView {
     const mat = MAT_BY_ID[s.mat], have = run.mats[s.mat];
     drawSprite(g, mat.icon, x + 15, 120);
     drawText(g, `${tr(mat.name)} ${have}/${s.count}   ${fmt(forgeGold(run, it))} zł`, x + 25, 114, have >= s.count ? C.white : C.salmon);
-    const fail = risks.crack > 0 ? `${this.opts.risk ? 'ZNISZCZENIE' : 'pęknięcie'} ${pct(risks.crack)}` : '';
-    const failText = [risks.down > 0 && `spadek ${pct(risks.down)}`, fail].filter(Boolean).join(', ') || 'nic nie tracisz poza materiałem';
-    drawText(g, `Porażka: ${failText}`, x + 8, 125, this.opts.risk && risks.crack ? C.red : C.lgray);
+    // Skutki porażki tłumaczone po kawałku przed złożeniem listy (wzorzec z całą listą we wstawce łapał nie ten kawałek).
+    const fail = risks.crack > 0 ? tr(`${this.opts.risk ? 'DESTROYED' : 'crack'} ${pct(risks.crack)}`) : '';
+    const failText = [risks.down > 0 && tr(`level drop ${pct(risks.down)}`), fail].filter(Boolean).join(', ') || 'you only lose the material';
+    drawText(g, `On failure: ${failText}`, x + 8, 125, this.opts.risk && risks.crack ? C.red : C.lgray);
     // Zwoje i tryb ryzyka.
     OPT_KEYS.forEach((k, i) => {
       const y = OPT_Y + i * OPT_H, on = this.opts[k];

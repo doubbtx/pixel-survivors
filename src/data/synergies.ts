@@ -1,5 +1,6 @@
 import { C } from '../core/palette';
 import { rng } from '../core/rng';
+import { BAL } from './balance';
 import type { Stats } from '../entities/types';
 import type { Run } from '../game/run';
 import { spawnTurret } from '../systems/turrets';
@@ -94,7 +95,10 @@ export const SYNERGIES: SynergyDef[] = [
   {
     tag: 'Ogień', thresholds: STD, tiers: [
       { desc: 'Trafienia: 4% szans na płomienie pod wrogiem', hooks: { onHit: (run, e) => { if (rng.chance(0.04)) run.addFire(e.x, e.y, 12, run.cardDamage(5), 2, 'Synergia: Ogień'); } } },
-      { desc: 'Zabici: 10% szans na wybuch (30% HP)', hooks: { onKill: (run, e) => { if (!e.boss && !run.chainKill() && rng.chance(0.1)) run.queueExplosion(e.x, e.y, 20 * run.stats.area, e.maxHp * 0.3, 'Synergia: Ogień', C.orange); } } },
+      {
+        desc: `Kills: ${Math.round(BAL.procs.synFireChance * 100)}% chance to explode (${Math.round(BAL.procs.synFire * 100)}% HP)`,
+        hooks: { onKill: (run, e) => { if (!e.boss && !run.chainKill() && rng.chance(BAL.procs.synFireChance)) run.queueExplosion(e.x, e.y, 20 * run.stats.area, e.maxHp, BAL.procs.synFire, 'Synergia: Ogień', C.orange); } },
+      },
       {
         desc: 'Co 6 s pożoga wokół ciebie',
         hooks: { onTick: (run, dt) => { if (every(run, 'syn.fire', dt, 6)) run.explode(run.player.x, run.player.y, 70 * run.stats.area, run.cardDamage(40), 'Synergia: Ogień', C.orange, 4); } },

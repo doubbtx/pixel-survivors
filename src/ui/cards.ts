@@ -74,6 +74,8 @@ export class CardPickView {
     const offer = rollOffer(run, source);
     this.rarity = offer.rarity;
     this.cards = offer.cards;
+    // Zaznaczenie startowe nie na przeklętej karcie (playtest: nowicjusz wziął Pakt krwi Enterem).
+    this.sel = Math.max(0, this.cards.findIndex((c) => !c.cursed));
     run.noteCardsSeen(this.cards.map((c) => c.id));
     sfx.play('chest');
   }

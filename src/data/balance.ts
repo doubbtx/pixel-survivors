@@ -147,6 +147,16 @@ export const BAL = {
     dmg: (depth: number, t: number) => Math.min(6.3, Math.pow(2, depth - 1) * (depth <= 1 ? Math.min(1.6, 1 + t / 300) : Math.min(2, 1 + t / 120))),
     levelHp: 0.01,
     levelDmg: 0.012,
+    /**
+     * Ekspedycja (0.62, gracz: Koszmarna „bez problemu”): pogoń mocniejsza na wyższych poziomach map (indeks = MAP_RARITY)
+     * i na Udręce (`…PerTorment` na poziom), tylko dla buildu ponad `knee` × podłoga: powyżej kolana wykładnik
+     * `chaseExp` + `exp`, sufit pogoni `chaseMax` × `max`. Na Koszmarnej build 13× ponad podłogą (Takezo 61, 680K DPS
+     * w akcie 3) dostaje HP wrogów ×1.15 od razu (w symulacji ×1.3 po ustaleniu się, bo więcej wrogów żyje), 50× ponad
+     * podłogą ×1.35; build do 4× ponad podłogą (przeciętny bot, nowi gracze) bez zmian. Zwykła i Magiczna bez zmian.
+     * Sufit całego mnożnika (0.62, weteran: Koszmarna, akt 3, DPS 37M — mnożnik stał na 1000, zwykła mapa przechodzona
+     * w miejscu, miniboss Polowania w 3 s): `max` × `top[poziom]` + `topPerTorment` na poziom Udręki.
+     */
+    tier: { knee: 4, exp: [0, 0, 0.06, 0.12] as number[], max: [1, 1, 1.25, 1.5] as number[], expPerTorment: 0.02, maxPerTorment: 0.05, top: [1, 1, 2, 4] as number[], topPerTorment: 0.4 },
   },
   /**
    * Sytuacje (systems/situations.ts, 0.39): pierwsza po `first` s czasu poziomu, potem co `every` s (po `lateAfter` s czasu fal
@@ -154,8 +164,16 @@ export const BAL = {
    * nagroda za rozbicie: monety, Rytuał: skrzynia elity, gdy obaj przywoływacze zginą w `ritualWindow` s.
    */
   situations: { first: 30, every: [75, 100] as [number, number], everyLate: [60, 80] as [number, number], lateAfter: 600, warn: 2, eventGap: 20, expire: 60, coins: 8, ritualWindow: 20 },
-  /** Czytelność (0.40): tryb 'auto' ataków gracza — przygaszenie przy ≥ `on` pociskach wrogów w promieniu, koniec przy ≤ `off`. */
-  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500 },
+  /**
+   * Czytelność (0.40): tryby 'auto' i 'dim' ataków gracza — przygaszenie przy ≥ `on` pociskach wrogów w promieniu (albo
+   * w walce z bossem), koniec przy ≤ `off`; 'auto' schodzi do `alpha`, 'dim' z `dim` do `dimMin`. 0.62 (playtest: pociski
+   * ginęły w efektach): najwyżej `projDraw` rysowanych pocisków gracza (reszta działa, tylko nie jest rysowana), jasna
+   * obwódka pocisków wrogów z alfą `ring`, błysk trafienia bossa / elity najwyżej co `bigFlashGap` s (nie zakrywa zapowiedzi).
+   * 0.62 runda 2: zapowiedzi ataków wrogów w warstwie nad efektami gracza z ciemnym podkładem (alfa `tellBack` względem
+   * zapowiedzi) i przyciemnionym obszarem uderzeń z ziemi / stożka (`tellShade`); znacznik gracza w tłumie (strzałka nad
+   * głową, mocniejsza elipsa) od połowy `markerCrowd` wrogów, pełny przy `markerCrowd` (albo przy przygaszaniu ataków).
+   */
+  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5, tellBack: 0.6, tellShade: 0.28, markerCrowd: 150 },
   /** 0.47 (gracz: „biorę bronie dystansowe i samo się wygrywa”; pomiar: wręcz ≈ 30% zabójstw pocisków naprowadzanych).
    * Mnożniki obrażeń/obszaru broni wg wzorca (z ewolucjami) i wg id (prefiks), plus bonus za trafienia z bliska. */
   weaponTune: {
@@ -163,6 +181,9 @@ export const BAL = {
     id: { chain: 0.85 } as Record<string, number>,
   },
   close: { r: 50, bonus: 0.2 },
+  /** Cięcia poziome (wzorzec 'lash', katana Takezo, 0.62): najwyżej `rows` rzędów po 2 cięcia (dalsze pociski nie dokładają
+   * cięć) i długość cięcia najwyżej `len` px (połowa widoku ma 160 px) — wcześniej przy obszarze ×4 cięcie sięgało 235 px. */
+  lash: { rows: 3, len: 150 },
   /** Role broni (0.61, WeaponDef.role): mnożnik obrażeń na bossach, elitach i minibossach (`big`). Pojedynczy cel celuje
    * najpierw w bossa / elitę w zasięgu, a pociski w jeden cel rozchodzą się o `spread` rad zamiast 0.15 (bliżej celu). */
   roles: {
@@ -175,12 +196,13 @@ export const BAL = {
    * `near` × keepDist). Trans bitewny: przy ≥ `min` wrogach w pierścieniu bliskiego dystansu −`taken` obrażeń, zabójstwo z bliska
    * leczy `killHeal` maks. HP (wspólny budżet drainHeal). */
   press: { keepMul: 0.75, step: 30, t: 1.5, near: 1.5 },
-  /** Automatyczny ekwipunek po łupie: zamiana przy przewadze oceny o `margin` i `perUpg` pkt za każde ulepszenie założonego. */
   /** Scenariusze map (0.56): bezpieczniki rytmu, oddech, gęstość zwykłych fal w trakcie uderzenia, czas „trwania” uderzenia. */
   scripts: { first: 20, gap: 12, last: 0.9, breath: 5, beatDensity: 0.85, beatDur: 10, tierSize: 0.1, size: 1.3 },
   /**
+   * Automatyczny ekwipunek po łupie: zamiana przy przewadze oceny o `margin` i `perUpg` pkt za każde ulepszenie założonego.
    * `melee`: profil wag oceny (itemScore) dla buildu z przewagą broni bliskiego zasięgu (`kinds`); reszta wag bez zmian.
-   * Ilość (`amount`) zostaje przy domyślnej wadze: orbita, fala, smagnięcie i cięcie rosną z nią liniowo (systems/weapons.ts).
+   * Ilość (`amount`) zostaje przy domyślnej wadze: orbita, fala, smagnięcie i cięcie rosną z nią liniowo
+   * (systems/weapons.ts; cięcia poziome katany tylko do `BAL.lash.rows` rzędów).
    */
   autoEquip: {
     margin: 0.08, perUpg: 0.5,
@@ -190,6 +212,12 @@ export const BAL = {
   revive: { iframes: 3, r: 130 },
   /** Limit pojedynczego trafienia gracza jako ułamek maks. HP (0.59): `base`, +`perTorment` na poziom Udręki, do `max`. */
   hitCap: { base: 0.4, perTorment: 0.04, max: 0.8 },
+  /**
+   * Ochrona przed wybuchem obrażeń (0.62, playtest: pełne HP → 0 w 0,5–2 s): obrażenia z ostatnich `window` s powyżej
+   * `frac` maks. HP (+`perTorment` na poziom Udręki, do `max`) wchodzą tylko w `over` części. Funkcja rosnąca: więcej
+   * trafień dalej znaczy więcej obrażeń, więc stanie w ogniu nadal zabija szybciej niż ruch — tylko wolniej niż w ułamek sekundy.
+   */
+  burst: { window: 1, frac: 0.3, over: 0.35, perTorment: 0.03, max: 0.6 },
   trance: { min: 3, taken: 0.15, killHeal: 0.002 },
   /** Zasięg wyboru celu broni naprowadzanych (było 200 / 170): strzelają do wrogów bliżej, nie z drugiego końca ekranu. */
   homing: { bolt: 160, chain: 130 },
@@ -212,10 +240,12 @@ export const BAL = {
   /**
    * Odkrycia (0.61, data/unlocks.ts grantDiscovery): punkty za koniec runu (`run`), każdy ukończony akt Ekspedycji
    * (`act`) i co `endlessMin` minut Endless; co `every` punktów otwiera się najbliższa zablokowana zawartość.
+   * Pierwsze odkrycia tańsze (0.62, playtest: 4 przegrane runy bez żadnego odblokowania): n-te kosztuje `first[n]` punktów
+   * (n = ile zawartości już odblokowane, także z warunków), dalej `every` — nowy gracz dostaje coś po 1. i 2. runie.
    * Od startu otwarte: `goldPerTag` pierwszych złotych kart każdego tagu i `prism` pierwszych pryzmatycznych (data/cards.ts `cardLock`).
    */
   discovery: {
-    run: 1, act: 1, endlessMin: 5, every: 3, goldPerTag: 2, prism: 5,
+    run: 1, act: 1, endlessMin: 5, every: 3, first: [1, 1, 2] as number[], goldPerTag: 2, prism: 5,
     /** Progi warunków „w jednym runie” (data/unlocks.ts CONTENT); próg synergii = jej poziom (1 = 3 punkty, 2 = 6). */
     goals: { magnet: 25, laser: 40, reactions: 250, crits: 3000, heal: 2500, kills: 3000, synTier: 2, minesMin: 10 },
   },
@@ -351,9 +381,10 @@ export const BAL = {
    * Jakość łupu (data/items.ts rollRarity): waga rzadkości i rośnie jak boost^i, boost = (1 + `depth` × (głębokość - 1))
    * × (1 + `luck` × szczęście) × źródło (`boss`, `elite`). Boss nie daje Zwykłych.
    * Szczęśliwy traf: każdy łup (także zwykła skrzynia) z szansą `jackpot` × (1 + Fortuna) to Legendarny przedmiot,
-   * a z tego ułamek `jackpotUnique` to unikat — runy, w których los sprzyja, mają być wyraźnie mocniejsze.
+   * a z tego ułamek `jackpotUnique` to unikat — runy, w których los sprzyja, mają być wyraźnie mocniejsze. Od głębokości
+   * `jackpotDepth` (0.62, weteran: Legendarny przedmiot już na 1. mapie).
    */
-  loot: { depth: 0.1, luck: 0.5, boss: 1.8, elite: 1.3, jackpot: 0.03, jackpotUnique: 0.35 },
+  loot: { depth: 0.1, luck: 0.5, boss: 1.8, elite: 1.3, jackpot: 0.03, jackpotUnique: 0.35, jackpotDepth: 2 },
   /** Odświeżenie przedmiotów: cena bazowa, podwaja się przy każdym użyciu w tym samym sklepie. */
   shopRefresh: 10,
   /** Ceny bazowe usług (× shopScale). */
@@ -456,18 +487,39 @@ export const BAL = {
    */
   bossResist: { mul: 0.5, biome: ['lightning', 'poison', 'fire', 'ice', null] as const },
   reactions: {
-    cd: 0.6,
+    /**
+     * Odnowienie reakcji na wrogu (s; Katalizator skraca). 0.62: 0.6 → 1 — szybko bijące strefy i aury nakładały truciznę
+     * od nowa co trafienie, więc Wybuch toksyn odpalał na każdym wrogu kilka razy na sekundę (omijał limit 10 warstw).
+     */
+    cd: 1,
+    /** Najkrótsze odnowienie jako ułamek `cd` (suma flag `reactCd` nie zejdzie niżej). */
+    cdFloor: 0.5,
+    /** Najmniejszy odstęp (s) między napisami (i dźwiękami) tej samej reakcji w całym świecie (0.62 r2); reakcja działa zawsze. */
+    labelGap: 1.2,
     /** Ogień + Lód: ogłuszenie i obrażenia; zużywa oba stany. */
     steam: { mul: 1.2, stun: 1 },
     /** Błyskawica + Lód: następne trafienie × mul; zużywa lód. */
     shatter: { mul: 2 },
-    /** Ogień + Trucizna: wybuch (promień) za wszystkie warstwy trucizny × mul (za sekundę trucizny); zużywa truciznę. */
-    toxic: { r: 30, mul: 3 },
+    /**
+     * Ogień + Trucizna: wybuch (promień) za wszystkie warstwy trucizny × mul (za sekundę trucizny); zużywa truciznę.
+     * 0.62: mul 3 → 1, promień 30 → 20 (wybuch obszarowy z 4-5× największego trafienia dawał 54-64% obrażeń buildu).
+     */
+    toxic: { r: 20, mul: 1 },
     /** Błyskawica + Trucizna: trucizna przeskakuje na `n` wrogów w promieniu. */
     conduct: { r: 55, n: 3 },
     /** Ogień + Błyskawica: mały wybuch z odrzutem; zużywa porażenie. */
     overload: { r: 22, mul: 0.8, knock: 6 },
   },
+  /**
+   * Wybuchy z zabójstw i Supernowa (0.62): ułamek maks. HP wroga, tylko w kadrze z marginesem `view` (`Run.inView`).
+   * Procent HP nie słabnie, gdy HP wrogów goni DPS gracza (`powerMul`), więc przy dużym tłumie wybuchy zabijały za broń
+   * (weteran: Supernowa 34%, Wybuchowe zgony 20%, broń 2-4%).
+   * `explode` Wybuchowe zgony (promień `explodeR` × obszar), `synFire` drugi próg synergii Ognia (szansa `synFireChance`),
+   * `pyre` super-bonus Ognista dusza (każdy trafiony traci ułamek mniejszego z maks. HP zabitego i własnego, najwyżej raz na
+   * `gap` s, `Run.queueExplosion`), `nova` Supernowa: co `every` zabójstw bronią i umiejętnościami (bez wybuchów i reakcji)
+   * `pct` maks. HP (bossom `boss`) w promieniu `r` × obszar.
+   */
+  procs: { view: 10, gap: 1, explode: 0.15, explodeR: 18, synFire: 0.15, synFireChance: 0.1, pyre: 0.25, nova: { every: 50, pct: 0.1, boss: 0.03, r: 60 } },
   /** Ekspedycja (data/expedition.ts): 3 akty map z węzłami. */
   expedition: {
     acts: 3,
@@ -487,7 +539,17 @@ export const BAL = {
     ambushGrow: 6,
     ambushEliteFrom: 4,
     huntLimit: 120,
-    huntHp: 1.5,
+    /** HP minibossa Polowania wg poziomu map (MAP_RARITY), +`huntHpPerTorment` na poziom Udręki (0.62, weteran: na Koszmarnej ginął w 3-7 s). */
+    huntHp: [1.5, 1.5, 2.25, 3] as number[],
+    huntHpPerTorment: 0.15,
+    /**
+     * Podłoga HP minibossa Polowania (0.62, weteran: ginął w 9-12 s w akcie 1 i poniżej 1,5 s w akcie 3, bo HP rośnie z pierwiastkiem
+     * mnożnika siły, a DPS liniowo): `huntTtk` s DPS buildu (większe z Run.dpsEma i ostatnich próbek dpsLog) × huntHp / huntHp[0],
+     * × (1 + `huntTtkAct` × (akt - 1)). Bot (god): akt 1 przed 9-51 s, po 7-40 s, akt 2 przed 6-34 s, po 5-81 s (2 ucieczki
+     * przy ×1.6). Akt 3 dalej 3-11 s: decydują obrażenia procentowe (Supernowa 50% maks. HP elity, wybuchy eskorty).
+     */
+    huntTtk: 8,
+    huntTtkAct: 0.3,
     huntCrowd: -0.3,
     huntEscort: 2,
     arenaReward: 0.5,
@@ -497,6 +559,8 @@ export const BAL = {
     weakMul: 1.5,
     resistReward: 15,
     eliteChestEvery: 2,
+    /** Mapa elit i Zasadzka: karta co N-ta elita (0.62, weteran: ok. 8 ofert kart na jednej mapie elit; plus karta za mapę). */
+    eliteCardEvery: 2,
     /** Szansa, że mapa nie ma bonusu. */
     noBonusChance: 0.35,
     /** Nagroda modyfikatorów: punkt ilości łupu (%) daje tyle szczęścia przedmiotów (× ułamek) i esencji (× ułamek). */
@@ -519,6 +583,32 @@ export const BAL = {
     crowd: (act: number) => 0.5 + 0.25 * act,
     /** Pierwszy węzeł wyprawy (playtest 0.43.2: gracze i boty ginęli tu w 50-100 s): cel zabójstw, mniej wrogów (enemyCount), cisza bez sytuacji, zadań i wydarzeń (s), pierwsza elita (s). */
     gentle: { kills: 300, crowd: -0.5, dmg: -0.35, quiet: 90, stagger: 20, elite: 60, second: 0.5 },
+    /**
+     * Rampa aktu 1 (0.62, playtest: nowicjusz ginie na 1. mapie, mapy 2-3 to ściana). W akcie 1 głębokość rośnie od 1 do 4,
+     * a mnożnik obrażeń wrogów (enemyDmgMul × depthDmgMul × power.dmg) z ok. 0.7 na 1. mapie do ok. 5 na 3. mapie i 28
+     * u bossa — od głębokości 3 prawie każde trafienie zatrzymuje się na limicie BAL.hitCap (40% maks. HP). Na niskich
+     * poziomach map (wiersz = indeks MAP_RARITY, bez Udręki) ten mnożnik ma sufit `cap[poziom][rząd]` (LevelDef.dmgCap;
+     * ostatni = boss aktu, bazowe obrażenia bossa są 5× większe niż Oka) i mniejszy tłum `crowd[poziom][rząd]` (enemyCount,
+     * nigdy słabszy niż łagodny start). Na Zwykłej trafienie Oka to najwyżej ok. 3% HP na 1. mapie, 4% na 2., 8-11% na 3.-4.,
+     * 13-15% na 5.-6., pocisk bossa ok. 18%. Mniej strzelców `shooters[poziom][rząd]` (flaga shooters: waga strzelców w falach
+     * i liczebność linii strzelców scenariusza; boty: 75-100% obrażeń na początku to pociski) i leczenie `heal[poziom]` maks. HP
+     * po każdej ukończonej mapie aktu (bot: wchodził na 2. mapę z 7-50% HP, bez leczenia między mapami). Rzadka i wyżej: bez zmian.
+     */
+    ramp: {
+      cap: [[0.6, 0.7, 1.2, 1.6, 2.1, 2.6, 0.7], [1, 1.6, 3, 4, 5.5, 7, 1.4]] as number[][],
+      crowd: [[-0.5, -0.4, -0.3, -0.2, -0.1, -0.1, 0], [-0.5, -0.25, -0.15, -0.1, 0, 0, 0]] as number[][],
+      shooters: [[-0.6, -0.6, -0.5, -0.35, -0.2, -0.1, 0], [-0.4, -0.25, -0.15, -0.1, 0, 0, 0]] as number[][],
+      heal: [0.3, 0.15] as number[],
+      /**
+       * Akt 2 (0.62, weteran: akt 1 Zwykła bez zagrożenia, 1. mapa aktu 2 na Magicznej zabiła po 35 s, Kultysta 31% HP):
+       * bez sufitu mnożnik skakał z 2.6 na 4-14 w pierwszej mapie (głębokość ta sama, 3), tłum rósł o 0.35 (akt), a strzelców
+       * przybywało. Sufit `cap2` jak `cap`, rosnący do mniej więcej wartości bez sufitu w połowie mapy na końcu aktu, i mniejszy
+       * tłum `crowd2` oraz mniej strzelców `shooters2` w pierwszych rzędach (akt 3 bez rampy). Rzadka i wyżej: bez zmian.
+       */
+      cap2: [[2.6, 3.1, 4, 5, 6.2, 7.6, 2.2], [2.8, 3.6, 5, 7, 9.5, 12, 3.2]] as number[][],
+      crowd2: [[-0.35, -0.25, -0.15, -0.05, 0, 0, 0], [-0.35, -0.25, -0.15, -0.05, 0, 0, 0]] as number[][],
+      shooters2: [[-0.3, -0.2, -0.1, 0, 0, 0, 0], [-0.3, -0.2, -0.1, 0, 0, 0, 0]] as number[][],
+    },
     /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */
     waveOffsetPerDepth: 50,
     /** Elity w węźle elity pojawiają się co eliteEvery × ten mnożnik. */
@@ -548,7 +638,8 @@ export const BAL = {
   cardRerollsStart: 1,
   /** Szansa na złotą/pryzmatyczną ofertę; rośnie z głębokością i poziomem postaci. */
   goldChance: (depth: number, lvl: number) => Math.min(0.5, 0.2 + 0.05 * (depth - 1) + 0.004 * lvl),
-  prismChance: (depth: number, lvl: number) => Math.min(0.3, 0.03 + 0.03 * (depth - 1) + 0.002 * lvl),
+  /** Pryzmatyczne (0.62, weteran: 2 pryzmatyczne na 2. mapie): na 1. głębokości rzadziej, dalej jak dawniej. */
+  prismChance: (depth: number, lvl: number) => Math.min(0.3, 0.01 + 0.035 * (depth - 1) + 0.002 * lvl),
   /** Maks. liczba eksplozji z efektów kart w jednym kroku (chroni przed reakcją łańcuchową). */
   explosionBudget: 12,
   /**
@@ -610,6 +701,12 @@ export const BAL = {
   enemyBulletSoftCap: 320,
   /** Twardy limit (salwy w toku obcinane; walka z bossem bez limitu). */
   enemyBulletHardCap: 400,
+  /**
+   * Limit pocisków na niskich poziomach map Ekspedycji (0.62, playtest: 60-140 pocisków na 2.-3. mapie aktu 1 przy Zwykłej):
+   * `base` + `perDepth` × (głębokość - 1), × `tiers[poziom MAP_RARITY]`, najwyżej enemyBulletSoftCap (twardy limit w tej
+   * samej proporcji). Rzadka i wyżej, Udręka, Endless i bossowie aktów: bez zmian.
+   */
+  bulletRamp: { base: 40, perDepth: 35, tiers: [1, 1.5] as number[] },
   /** R4 (0.45): drugie ultimate — liczby (parametry z poziomu ulta: damage, radius, duration, count, blast, dist). */
   altUlt: {
     falconLen: 300, falconW: 10, falconFocus: 0.02,
@@ -626,6 +723,12 @@ export const BAL = {
   torment: { essence: 0.15, max: 10 },
   /** Maks. awansów z zebrania kryształów całej mapy po bossie / końcu poziomu (0.45, analiza Agenta 2). */
   collectLevels: 3,
+  /**
+   * Odstęp awansów w walce (0.62, playtest 2: 3 okna awansu w 4 s w tłumie 178 wrogów, śmierć w środku serii): po zamknięciu
+   * serii okien awansu następny awans czeka `gap` s czasu walki (XP rośnie dalej, zaległe awanse otwierają się potem jeden po
+   * drugim), a bohater ma `grace` s nietykalności na powrót do uników. Koniec mapy, wejście do lochu i samouczek bez odstępu.
+   */
+  levelGap: { gap: 3, grace: 0.5 },
   shootMargin: 10,
   projectileCap: 2600,
 

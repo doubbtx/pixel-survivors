@@ -108,14 +108,17 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
       ly += 11;
     }
   };
-  line(implicitLine(it) + (totals ? ` (${statTotal(it.implicit.stat, stats)})` : ''), C.white, w - 16, diffOf(it.implicit.mode === 'mul' ? 'mul' : it.implicit.stat));
+  // Suma „(obecnie X)” raz na statystykę, przy jej ostatnim wierszu (0.62, playtest: dwa wiersze krytyka z tym samym „now 17%”).
+  const lastOf = new Map<string, number>([[it.implicit.stat, -1], ...it.affixes.map((a, i): [string, number] => [a.stat, i])]);
+  const total = (stat: keyof Stats, i: number) => (totals && lastOf.get(stat) === i ? ` (${statTotal(stat, stats!)})` : '');
+  line(implicitLine(it) + total(it.implicit.stat, -1), C.white, w - 16, diffOf(it.implicit.mode === 'mul' ? 'mul' : it.implicit.stat));
   r.rect(x + 8, ly + 1, w - 16, 1, C.slate);
   ly += 4;
   const k = forgeMul(it);
-  for (const a of it.affixes) {
+  it.affixes.forEach((a, i) => {
     if (ly <= bottom) affixY.push(ly);
-    line(statLine(a.stat, a.value * (a.stat === 'amount' ? 1 : k)) + (totals ? ` (${statTotal(a.stat, stats)})` : ''), C.cyan, rerollButtons ? w - 34 : w - 16, diffOf(a.stat));
-  }
+    line(statLine(a.stat, a.value * (a.stat === 'amount' ? 1 : k)) + total(a.stat, i), C.cyan, rerollButtons ? w - 34 : w - 16, diffOf(a.stat));
+  });
   if (it.super) {
     ly += 2;
     line(superLine(it), C.yellow);
@@ -168,10 +171,13 @@ export class LootView {
   private note = '';
 
   readonly source: LootSource;
+  /** Własny tytuł okna (np. węzeł Skarbu: łup jakości bossa, ale bez bossa). */
+  private readonly title?: string;
 
-  constructor(private readonly run: Run, loot: { source: LootSource; item: Item }) {
+  constructor(private readonly run: Run, loot: { source: LootSource; item: Item; title?: string }) {
     this.item = loot.item;
     this.source = loot.source;
+    this.title = loot.title;
     const it = this.item;
     this.menu = new Menu([
       { label: () => 'Załóż', act: () => { const g = run.equip(it); this.finish(g ? `Stary przedmiot rozłożony: +${g} zł` : ''); } },
@@ -205,7 +211,7 @@ export class LootView {
   render(r: Renderer): void {
     const it = this.item, run = this.run;
     dim(r);
-    const title = it.unique ? 'Unikat!' : this.source === 'boss' ? 'Łup bossa!' : this.source === 'elite' ? 'Skrzynia elity!' : 'Przedmiot!';
+    const title = it.unique ? 'Unikat!' : this.title ?? (this.source === 'boss' ? 'Łup bossa!' : this.source === 'elite' ? 'Skrzynia elity!' : 'Przedmiot!');
     drawText(r.g, title, W / 2, 10, it.super ? C.yellow : itemColor(it), { align: 'center', scale: 2, outline: C.black });
     const cur = run.equipment[run.slotFor(it)];
     // Przy czwartej opcji („Wszystko do plecaka”) karty niższe, żeby menu ich nie zasłaniało.

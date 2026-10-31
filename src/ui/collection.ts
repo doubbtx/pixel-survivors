@@ -453,7 +453,7 @@ export class CollectionScreen implements Screen {
       drawText(g, 'Jeszcze nie widziana', CARD_X + 68, CARD_Y - 10, C.lavender, { align: 'center' });
     }
     const info = [
-      known ? `Wybrana ${col.picks[c.id] ?? 0} razy` : '',
+      known ? ((col.picks[c.id] ?? 0) === 1 ? 'Picked once' : `Picked ${col.picks[c.id] ?? 0} times`) : '',
       c.hero ? `Karta bohatera: ${HERO_BY_ID[c.hero].name}` : '',
       c.unlock && !this.app.save.achievements.includes(c.unlock) ? `Zablokowana: osiągnięcie ${ACHIEVEMENTS.find((x) => x.id === c.unlock)!.name}` : '',
       cardLock(c.id) ? lockText(this.app.save, [cardLock(c.id)]) : '',

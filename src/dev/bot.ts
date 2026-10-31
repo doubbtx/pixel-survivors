@@ -21,7 +21,10 @@ import { spawnEnemy } from '../systems/spawner';
  * i skrzynie, używa umiejętności, losowo wybiera awanse, karty i węzły mapy. Raport w `window.__bot` (dla Playwright):
  * przebieg runów, błędy, najwolniejsze kroki, odwiedzone stany i brakujące tłumaczenia.
  */
-export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; relics?: string[]; ult?: string; ultUses?: number; close?: number; parries?: number; tl?: TelemetrySample[]; maps?: { t: number; goal: string }[]; bosses?: number[]; statOnly?: number; offers?: number; statOffers?: number; sits?: { id: string; result: string; dur: number; taken: number }[] }
+export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; relics?: string[]; ult?: string; ultUses?: number; close?: number; parries?: number; tl?: TelemetrySample[]; maps?: BotMap[]; bosses?: number[]; statOnly?: number; offers?: number; statOffers?: number; sits?: { id: string; result: string; dur: number; taken: number }[]; dmg?: [string, number][]; wpn?: string[]; elem?: { ep: number; rp: number; rcd: number; any: number; cards: string[] } }
+/** Mapa w raporcie: czas, cel, rodzaj węzła, szczyt wrogich pocisków, najniższe HP (ułamek), udział pocisków w otrzymanych obrażeniach, `dead` = run skończył się na niej;
+ *  akt, przerwy na awans w walce (`lv`, najwięcej w 4 s: `w4`), oferty kart (`prism` = pryzmatyczne), przedmioty Epickie+ w oknie łupu. */
+export interface BotMap { t: number; goal: string; node?: string; bul?: number; hp?: number; shot?: number; dead?: boolean; a?: number; lv?: number; w4?: number; cards?: number; prism?: number; epic?: number }
 export interface BotReport {
   done: boolean;
   runs: BotRun[];
@@ -57,6 +60,7 @@ export class Bot {
   private readonly maxTime: number;
   private readonly tier: number;
   private readonly god: boolean;
+  private readonly godAct: number;
   /** Styl ruchu (`&style=kite|melee|auto`): auto = melee dla bohaterów z bronią wręcz (cięcie), inaczej kite. */
   private readonly style: string;
   private readonly kit: string[];
@@ -69,8 +73,16 @@ export class Bot {
   private dashCd = 0;
   private castT = 0;
   /** Pomiar balansu: czasy ukończonych poziomów (map) i walk z bossem w bieżącym runie (s czasu gry). */
-  private maps: { t: number; goal: string }[] = [];
+  private maps: BotMap[] = [];
   private lastGoal = '';
+  private lastNode = '';
+  private lastAct = 0;
+  private bulMax = 0;
+  private hpMin = 1;
+  /** Obrażenia otrzymane na mapie: od pocisków i wszystkie (przed redukcjami). */
+  private hurtShot = 0;
+  private hurtAll = 0;
+  private hooked: unknown = null;
   /** Pula ulepszeń: pierwszy poziom z samymi premiami ('stat') i liczniki ofert. */
   private statOnly = 0;
   private offers = 0;
@@ -79,6 +91,13 @@ export class Bot {
   private bosses: number[] = [];
   private lastLt = 0;
   private bossT = 0;
+  /** Nagrody na mapie: chwile otwarcia okien awansu (czas runu), liczba ofert kart, pryzmatycznych, przedmiotów Epickich+. */
+  private lvTimes: number[] = [];
+  private cardsN = 0;
+  private prismN = 0;
+  private epicN = 0;
+  private seen: unknown = null;
+  private played = false;
 
   constructor(private readonly app: App, params: URLSearchParams) {
     this.mode = params.get('bot') === 'expedition' ? 'expedition' : 'endless';
@@ -91,6 +110,8 @@ export class Bot {
     this.maxTime = Number(params.get('time') ?? 300);
     this.turbo = Math.max(1, Number(params.get('turbo') ?? 1));
     this.god = params.get('god') === '1';
+    // `&godact=1`: nietykalność tylko do końca podanego aktu Ekspedycji (pomiar dalszych aktów bez przechodzenia wcześniejszych).
+    this.godAct = Number(params.get('godact') ?? 0);
     this.style = params.get('style') ?? 'auto';
     // Porównanie broni: `&kit=bolt,orbit` = tylko te bronie na maks. poziomie, bez awansów i kart (`&style=idle`: bez ruchu i umiejętności).
     this.kit = (params.get('kit') ?? '').split(',').filter(Boolean);
@@ -101,6 +122,8 @@ export class Bot {
     // Udręka (0.46): `&torment=N` — poziom wyprawy (odblokowany na potrzeby testu).
     this.torment = Number(params.get('torment') ?? 0);
     // Pomiar balansu: `&pmax=1e6` zdejmuje sufit mnożnika siły (BAL.power.max), żeby telemetria pokazała prawdziwy zakres.
+    // `&hunts=1`: Polowania zamiast większości zwykłych walk na mapie Ekspedycji (pomiar walki z minibossem).
+    if (params.get('hunts') === '1') (BAL.expedition as { weights: unknown }).weights = BAL.expedition.weights.map(([k, w]) => [k, k === 'hunt' ? 30 : k === 'fight' ? 9 : w]);
     if (params.has('pmax')) (BAL.power as { max: number }).max = Number(params.get('pmax'));
     this.tier = Math.max(1, Math.min(4, Number(params.get('tier') ?? 1)));
     if (params.get('fresh') !== '1') app.save.unlocks = [...ALL_UNLOCKS];
@@ -166,17 +189,32 @@ export class Bot {
       if (this.wait > 0) return;
       this.wait = 0.25;
     }
+    // Licznik nagród mapy: każde okno liczone raz.
+    const view = state === 'levelup' ? gs.levelUp : state === 'cards' ? gs.cardPick : state === 'loot' ? gs.loot : null;
+    if (view && view !== this.seen) {
+      this.seen = view;
+      // Przerwy w walce: okna awansu otwarte jedno po drugim (bez gry pomiędzy) liczą się raz.
+      if (state === 'levelup' && run.outcome === 'none' && this.played) { this.lvTimes.push(run.totalTime); this.played = false; }
+      if (state === 'cards') { this.cardsN++; if (view.rarity === 'prism') this.prismN++; }
+      if (state === 'loot' && view.item.rarity >= 3) this.epicN++;
+    }
     switch (state) {
       case 'play':
+        this.played = true;
         if (gs.tut?.finished) { if (!this.report.runs.length) this.report.runs.push({ hero: 'kestra', mode: this.mode, result: 'tutorial', time: Math.round(run.totalTime), level: run.level, kills: run.kills, depth: run.depth, act: 0 }); press('confirm'); return; }
         if (gs.tut) this.report.states[`tut${gs.tut.step}`] = (this.report.states[`tut${gs.tut.step}`] ?? 0) + 1;
         // Samouczek: co chwilę akcja, o którą prosi krok (unik, umiejętności).
         if (gs.tut && run.step % 90 === 0) press((['q', 'e', 'dash', 'ult'] as const)[rnd(4)]);
         if (!gs.tut && run.totalTime > this.maxTime && run.outcome === 'none') { this.finish(run, 'timeout'); return; }
-        if (this.god) { run.player.hp = run.stats.maxHp; run.player.iframes = Math.max(run.player.iframes, 0.1); }
-        if (run.time < this.lastLt - 1) this.maps.push({ t: Math.round(this.lastLt), goal: this.lastGoal });
+        if (this.god || (run.expedition?.act ?? 99) <= this.godAct) { run.player.hp = run.stats.maxHp; run.player.iframes = Math.max(run.player.iframes, 0.1); }
+        if (run.time < this.lastLt - 1) this.pushMap(false);
         this.lastLt = run.time;
         this.lastGoal = run.levelInfo.dungeon ? 'dungeon' : run.levelInfo.objective.kind;
+        this.lastNode = nodeLabel(run.levelInfo);
+        this.lastAct = run.expedition?.act ?? 0;
+        this.bulMax = Math.max(this.bulMax, run.bullets.count);
+        this.hpMin = Math.min(this.hpMin, run.player.hp / run.stats.maxHp);
+        if (this.hooked !== run) this.hookHurt(run);
         if (run.boss && run.boss.hp > 0) this.bossT += dt;
         else if (this.bossT > 0) { this.bosses.push(Math.round(this.bossT)); this.bossT = 0; }
         if (this.kit.length) {
@@ -267,13 +305,36 @@ export class Bot {
     if (near >= 3 && this.dashCd <= 0) { inp.botPress('dash'); this.dashCd = 1; }
   }
 
+  /** Koniec mapy (albo runu na niej, `dead`): wpis do raportu i zerowanie liczników mapy. */
+  private pushMap(dead: boolean): void {
+    if (this.lastLt > 0) this.maps.push({ t: Math.round(this.lastLt), goal: this.lastGoal, node: this.lastNode, bul: this.bulMax, hp: Math.round(this.hpMin * 100) / 100, shot: Math.round((this.hurtShot / Math.max(1, this.hurtAll)) * 100) / 100, ...(dead ? { dead } : {}), a: this.lastAct, lv: this.lvTimes.length, w4: maxIn(this.lvTimes, 4), cards: this.cardsN, prism: this.prismN, epic: this.epicN });
+    this.lvTimes = []; this.cardsN = this.prismN = this.epicN = 0;
+    this.bulMax = 0; this.hpMin = 1; this.hurtShot = this.hurtAll = 0;
+  }
+
+  /** Licznik źródeł obrażeń: owija run.hurtPlayer (pocisk przekazany = trafienie pociskiem). */
+  private hookHurt(run: any): void { // eslint-disable-line @typescript-eslint/no-explicit-any
+    this.hooked = run;
+    const hurt = run.hurtPlayer.bind(run);
+    run.hurtPlayer = (base: number, bullet?: unknown) => {
+      const hit = hurt(base, bullet);
+      if (hit) { this.hurtAll += base; if (bullet) this.hurtShot += base; }
+      return hit;
+    };
+  }
+
   private finish(run: any, result: string): void { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (result !== 'gallery') this.pushMap(result === 'dead');
     this.report.runs.push({
       hero: run.hero.id, mode: this.mode, result, time: Math.round(run.totalTime), level: run.level, kills: run.kills,
       depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, sits: run.sitLog, maps: this.maps, bosses: this.bosses, statOnly: this.statOnly, offers: this.offers, statOffers: this.statOffers, relics: [...run.relics], ult: run.altUlt ? 'alt' : 'base', ultUses: run.ultUses, close: Math.round((run.closeHits / Math.max(1, run.hitsN)) * 100) / 100, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
+      // Udział źródeł w zadanych obrażeniach i nazwy broni: ile daje broń, a ile wybuchy i reakcje.
+      dmg: [...(run.dmgBySource as Map<string, number>).entries()].sort((a, b) => b[1] - a[1]).map(([k, v]): [string, number] => [k, Math.round((v / Math.max(1, run.dmgTotal)) * 1000) / 1000]).filter((x) => x[1] >= 0.002),
+      wpn: run.weapons.map((w: any) => w.def.name), // eslint-disable-line @typescript-eslint/no-explicit-any
+      elem: { ep: Math.round(run.stats.elemPower * 100) / 100, rp: run.flag('reactPower'), rcd: run.flag('reactCd'), any: run.flag('elemChance.any'), cards: run.cards.map((c: any) => c.id + (c.stacks > 1 ? 'x' + c.stacks : '')) }, // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     this.steps = [];
-    this.maps = []; this.bosses = []; this.lastLt = 0; this.bossT = 0; this.statOnly = this.offers = this.statOffers = 0;
+    this.maps = []; this.bosses = []; this.lastLt = 0; this.bulMax = 0; this.hpMin = 1; this.hurtShot = this.hurtAll = 0; this.bossT = 0; this.statOnly = this.offers = this.statOffers = 0;
     this.app.save.slots[this.mode] = null;
     this.report.unlocks = [...this.app.save.unlocks];
     this.startNext();
@@ -298,4 +359,16 @@ export class Bot {
     this.cur = new GameScreen(this.app, this.tutorial ? 'kestra' : hero, this.mode, undefined, this.tutorial);
     this.app.go(this.cur);
   }
+}
+
+/** Najwięcej chwil (rosnąco) w oknie `w` s. */
+function maxIn(ts: number[], w: number): number {
+  let best = 0;
+  for (let i = 0, j = 0; i < ts.length; i++) { while (ts[i] - ts[j] > w) j++; best = Math.max(best, i - j + 1); }
+  return best;
+}
+
+/** Rodzaj mapy do raportu: łagodny start, loch, boss, zasadzka, polowanie, mapa elit, scenariusz albo cel. */
+function nodeLabel(l: { gentle?: boolean; dungeon?: boolean; ambush?: boolean; boss?: boolean; eliteMul: number; script?: string; objective: { kind: string } }): string {
+  return l.gentle ? 'gentle' : l.dungeon ? 'dungeon' : l.boss ? 'boss' : l.ambush ? 'ambush' : l.objective.kind === 'hunt' ? 'hunt' : l.eliteMul < 1 ? 'elite' : l.script ?? l.objective.kind;
 }

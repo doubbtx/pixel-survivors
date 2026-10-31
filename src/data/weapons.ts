@@ -25,7 +25,8 @@ export type WeaponKind = 'bolt' | 'orbit' | 'aura' | 'chain' | 'meteor' | 'boome
  * Rola broni (0.61, gracz: „nie chcę, żeby wszystko było AoE”): 'single' = pojedynczy cel (mocniejsza na bossach i elitach,
  * celuje najpierw w nie, pociski w jeden cel lecą skupione), 'crowd' = tłum (czyści zwykłych wrogów, słabsza na bossach
  * i elitach), 'hybrid' = pośrodku. Mnożniki w BAL.roles (Run.damageEnemy); ewolucja i warianty mogą mieć inną rolę niż
- * broń bazowa, fuzje są hybrydami.
+ * broń bazowa, fuzje są hybrydami. Bronie trafiające obszarem (cleave, lash, aura, nova, orbit) nigdy nie są 'single':
+ * mnożnik bossa dokładałby się do obrażeń w cały tłum (0.61.1: Księga Pustki i Topór kata z ×2 obrażeniami jako 'single').
  */
 export type WeaponRole = 'single' | 'crowd' | 'hybrid';
 
@@ -364,13 +365,13 @@ export const ALT_EVOS: AltEvo[] = [
   { base: 'laser', passive: 'clock', id: 'laser_clock', role: 'hybrid', name: 'Chrono Beam', desc: 'Beams that fire much more often.', color: C.cyan, ramp: R_ICE, stats: { damage: 14, cooldown: 0.7, amount: 3, duration: 0.6 } },
   { base: 'laser', passive: 'horseshoe', id: 'laser_luck', role: 'crowd', name: 'Fortune Prism', desc: 'A wide fan of six golden beams.', color: C.gold, ramp: R_GOLD, stats: { damage: 12, amount: 6, area: 2 } },
   { base: 'mines', passive: 'magnet', id: 'mines_mag', role: 'crowd', name: 'Magnet Mines', desc: 'Mines with a huge blast radius.', color: C.blue, ramp: R_ICE, stats: { damage: 70, amount: 5, area: 2.4 } },
-  { base: 'axe', passive: 'whetstone', id: 'axe_sharp', role: 'single', name: "Headsman's Axe", desc: 'Slow, huge cuts that hit very hard.', color: C.lgray, ramp: R_STEEL, stats: { damage: 160, cooldown: 0.8, amount: 2, area: 1.9 } },
+  { base: 'axe', passive: 'whetstone', id: 'axe_sharp', role: 'hybrid', name: "Headsman's Axe", desc: 'Slow, huge cuts that hit very hard.', color: C.lgray, ramp: R_STEEL, stats: { damage: 75, cooldown: 0.8, amount: 2, area: 1.9 } },
   { base: 'staff', passive: 'clover', id: 'staff_luck', role: 'single', name: 'Star Staff', desc: 'Suns that home in on enemies.', color: C.lime, ramp: R_LEAF, stats: { damage: 30, amount: 5 }, hybrid: { seek: true } },
   { base: 'staff', passive: 'ember', id: 'staff_ember', role: 'crowd', name: 'Inferno Staff', desc: 'Suns that explode on hit.', color: C.red, ramp: R_BLOOD, stats: { damage: 30, amount: 3 }, hybrid: { blast: 0.8 } },
   { base: 'souls', passive: 'fang', id: 'souls_fang', role: 'single', name: 'Blood Souls', desc: 'Red souls that hunt enemies down.', color: C.red, ramp: R_BLOOD, stats: { damage: 30, amount: 5, pierce: 2 }, hybrid: { seek: true } },
   { base: 'knives', passive: 'dup', id: 'knives_dup', role: 'crowd', name: 'Knife Storm', desc: 'A storm of eight knives at once.', color: C.pink, ramp: R_VOID, stats: { damage: 16, cooldown: 0.3, amount: 8 } },
   { base: 'light', passive: 'heart', id: 'light_heart', role: 'hybrid', name: 'Sun Heart', desc: 'Two wide, strong rings of light.', color: C.salmon, ramp: R_BLOOD, stats: { damage: 40, amount: 2, area: 2.2 } },
-  { base: 'katana', passive: 'whetstone', id: 'katana_sharp', role: 'single', name: 'Book of the Void', desc: 'Few, wide cuts that hit very hard.', color: C.lavender, ramp: R_VOID, stats: { damage: 120, cooldown: 0.65, amount: 2, area: 1.8 } },
+  { base: 'katana', passive: 'whetstone', id: 'katana_sharp', role: 'hybrid', name: 'Book of the Void', desc: 'Few, wide cuts that hit very hard.', color: C.lavender, ramp: R_VOID, stats: { damage: 62, cooldown: 0.65, amount: 2, area: 1.8 } },
   { base: 'sickle', passive: 'crit', id: 'sickle_crit', role: 'hybrid', name: 'Crimson Crescent', desc: 'Fast, sharp crescents that pierce many enemies.', color: C.hotpink, ramp: R_VOID, stats: { damage: 40, amount: 3, cooldown: 0.5, speed: 260, pierce: 4 }, hybrid: { seek: true } },
   { base: 'dice', passive: 'clover', id: 'dice_clover', role: 'hybrid', name: 'Four-Leaf Dice', desc: 'Six dice at once; every six explodes.', color: C.lime, ramp: R_LEAF, stats: { damage: 16, amount: 6 }, hybrid: { dice: 3, sixBlast: true } },
   { base: 'light', passive: 'clover', id: 'light_luck', role: 'crowd', name: 'Blessed Light', desc: 'Five rings of light, one after another.', color: C.lime, ramp: R_LEAF, stats: { damage: 28, cooldown: 0.8, amount: 5 } },

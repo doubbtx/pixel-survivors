@@ -201,7 +201,7 @@ export const HERO_TREES: Record<string, MetaNode[]> = {
     N('t_hp', 'Earth', 'Iron Body', 'pi_heart', 5, 25, { kind: 'mul', stat: 'maxHp', per: 0.05 }, '+{v} max HP', true),
     KEY('t_parry', 'Earth', 'Seeing Through', 'ab_t_step', 600, flag('passive.parry', 0.08), 'Mikiri: +8% parry chance.'),
     N('t_fdmg', 'Water', 'Sharp Water', 'ab_t_flurry', 5, 20, flag('t_flurry.damage', 3), '+{v} damage per Thousand Cuts slash', false),
-    N('t_fcount', 'Water', 'Endless Stream', 'ab_t_flurry', 3, 40, flag('t_flurry.slashes', 1), '+{v} Thousand Cuts slash', false),
+    N('t_fcount', 'Water', 'Endless Stream', 'ab_t_flurry', 3, 40, flag('t_flurry.slashes', 1), 'Thousand Cuts: slashes +{v}', false),
     N('t_fcd', 'Water', 'Current', 'pi_clock', 5, 25, flag('cd.e', 0.06), 'Thousand Cuts recharges {v} faster', true),
     N('t_move', 'Water', 'Footwork', 'pi_wings', 5, 30, stat('speedBonus', 0.04), '+{v} movement speed', true),
     KEY('t_fecho', 'Water', 'Second Wave', 'ab_t_flurry_evo', 600, flag('echo.e', 1), 'Thousand Cuts repeats a moment later.'),

@@ -62,6 +62,11 @@ export class ShopView {
     return this.run.shop!;
   }
 
+  /** Liczba rzędów: rząd kuźni (materiały, zwoje) dopiero po odblokowaniu Kuźni. */
+  private get rows(): number {
+    return this.run.expedition?.noForge ? 2 : 3;
+  }
+
   private row(cy: number): Entry[] {
     // Rząd przedmiotów kończy się rozbudową sklepu.
     if (cy === 0) return [...this.shop.items.map((_, i) => ({ kind: 'item', i }) as Entry), { kind: 'upgrade' }];
@@ -124,8 +129,9 @@ export class ShopView {
     if (input.pressed('back') || input.pressed('pause') || backHit(input)) return 'close';
     if (input.pressed('inventory')) return 'inventory';
     if (input.pressed('anvil')) return 'anvil';
-    if (input.pressed('up')) this.cy = (this.cy + 2) % 3;
-    if (input.pressed('down')) this.cy = (this.cy + 1) % 3;
+    const rows = this.rows;
+    if (input.pressed('up')) this.cy = (this.cy + rows - 1) % rows;
+    if (input.pressed('down')) this.cy = (this.cy + 1) % rows;
     const n = this.row(this.cy).length;
     this.cx = Math.min(this.cx, n - 1);
     if (input.pressed('left')) this.cx = (this.cx - 1 + n) % n;
@@ -134,7 +140,7 @@ export class ShopView {
     if (input.pressed('reroll')) this.refresh();
 
     const m = input.mouse;
-    for (let cy = 0; cy < 3; cy++) {
+    for (let cy = 0; cy < rows; cy++) {
       const row = this.row(cy);
       for (let cx = 0; cx < row.length; cx++) {
         const [x, y] = this.cellPos(cx, cy);
@@ -172,8 +178,9 @@ export class ShopView {
     panel(r, 6, 34, 266, 196);
     drawText(g, `Przedmioty (poz. ${shop.depth})   sklep: poziom ${run.shopLevel}`, 14, 40, C.lavender);
     drawText(g, 'Usługi i eliksiry', 14, 97, C.lavender);
-    drawText(g, `Kuźnia: materiały i zwoje (masz: ${run.mats.stone} kam., ${run.mats.ore} rudy)`, 14, 153, C.lavender);
-    for (let cy = 0; cy < 3; cy++) {
+    if (this.rows > 2) drawText(g, `Forge: materials and scrolls (you have: stone ${run.mats.stone}, ore ${run.mats.ore})`, 14, 153, C.lavender);
+    else drawText(g, 'Forge materials: after you unlock the Forge (defeat a boss)', 14, 153, C.lavender);
+    for (let cy = 0; cy < this.rows; cy++) {
       this.row(cy).forEach((e, cx) => {
         const [x, y] = this.cellPos(cx, cy);
         const on = cx === this.cx && cy === this.cy;
@@ -221,7 +228,7 @@ export class ShopView {
       drawItemCard(r, it, DET_X, 34, DET_W, 196, run.equipment[run.slotFor(it)], false, run.stats);
     } else if (e.kind === 'item') {
       panel(r, DET_X, 34, DET_W, 196, C.slate);
-      drawText(g, 'Sprzedane', DET_X + DET_W / 2, 124, C.lavender, { align: 'center' });
+      drawText(g, 'Bought', DET_X + DET_W / 2, 124, C.lavender, { align: 'center' });
     } else if (e.kind === 'upgrade') {
       // Rozbudowa sklepu: co daje następny poziom.
       const U = BAL.shopUpgrade, lvl = run.shopLevel, cx = DET_X + DET_W / 2;

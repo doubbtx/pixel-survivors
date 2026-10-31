@@ -101,6 +101,8 @@ export interface DamageOpts {
 }
 
 const ELEMENT_LIST: Element[] = ['fire', 'ice', 'lightning', 'poison'];
+/** Ile sekund trafień w gracza pamięta `Run.hitLog` (ochrona przed wybuchem obrażeń i podsumowanie śmierci). */
+export const HIT_LOG = 3;
 /** Kolory liczb obrażeń reakcji żywiołów (po nazwie źródła). */
 const REACTION_COL: Record<string, number> = { 'Para': C.lgray, 'Wybuch toksyn': C.lime, 'Przeciążenie': C.orange };
 
@@ -159,6 +161,8 @@ export interface RunSnapshot {
   bonus: Partial<Stats>;
   basicWeaponId: string;
   dmgBySource: [string, number][];
+  /** Obrażenia otrzymane wg źródła (od 0.62). */
+  taken?: [string, number][];
   cardState: Record<string, number>;
   /** Ekwipunek (od wersji 0.4; starsze zapisy go nie mają). */
   equipment?: Record<SlotId, Item | null>;
@@ -261,8 +265,8 @@ export class Run {
   levelEvent: { id: LevelEventId; t: number } | null = null;
   levelEventT: number = BAL.levelEvents.every * 0.6;
   /** Uderzenia w zaznaczone kręgi: pioruny burzy (ranią wszystkich) i deszcz żaru bossa (`foe` = obrażenia tylko dla gracza). */
-  /** Zaznaczone kręgi uderzeń: piorun burzy, ogień bossa (`foe`), nasiona Cierniaka (`seed`: mniejszy, zielony wybuch). */
-  strikes: { x: number; y: number; t: number; foe?: number; seed?: boolean; r?: number }[] = [];
+  /** Zaznaczone kręgi uderzeń: piorun burzy, ogień bossa (`foe`), nasiona Cierniaka (`seed`: mniejszy, zielony wybuch); `src` = kto rzucił (ekran końca). */
+  strikes: { x: number; y: number; t: number; foe?: number; seed?: boolean; r?: number; src?: string }[] = [];
   stormT = 0;
   combo = 0;
   /** Wyróżnienia runu (0.33, ekran końca): najdłuższe kombo, najlepsza seria zabójstw, najmocniejsze trafienie. */
@@ -270,6 +274,12 @@ export class Run {
   bestStreak = 0;
   maxHit = 0;
   maxHitSrc = '';
+  /** Obrażenia otrzymane wg źródła (0.62, ekran końca): wróg jak w bestiariuszu, boss po nazwie, „Kolce”, „Burza”... */
+  takenBySource = new Map<string, number>();
+  /** Trafienia z ostatnich HIT_LOG s (czas runu, źródło, obrażenia): ochrona przed wybuchem (BAL.burst) i podsumowanie śmierci. */
+  private hitLog: { t: number; src: string; dmg: number }[] = [];
+  /** Śmiertelny cios (ekran końca): źródło, jego obrażenia, liczba trafień i suma obrażeń z ostatnich HIT_LOG s. */
+  killedBy: { src: string; share: number; last: string; dmg: number; hits: number; recent: number } | null = null;
   /** Seria zabójstw: liczba i czas ostatniego zabójstwa; krok ostatniego efektu krytyka (limit efektów w tłumie). */
   streakN = 0;
   streakT = -9;
@@ -352,6 +362,8 @@ export class Run {
   featsNew: FeatId[] = [];
   featsLevel: FeatId[] = [];
   lastHurtAt = -999;
+  /** Czas runu, do którego pierścień ochrony przed wybuchem obrażeń się nie powtarza (jeden na okno BAL.burst.window). */
+  private burstFxAt = 0;
   lore: Record<string, number> = {};
   killsById: Record<string, number> = {};
   /** Leczenie: suma w runie, zebrane od ostatniej liczby nad postacią, poświata paska HP. */
@@ -399,6 +411,8 @@ export class Run {
   rhythmDrain = false;
   /** Liczba reakcji żywiołów w runie (podpowiedź przy pierwszej; odblokowania zawartości). */
   reactions = 0;
+  /** Czas (totalTime) ostatniego napisu każdej reakcji: najwyżej jeden napis danej reakcji na BAL.reactions.labelGap s. */
+  private reactLabelAt = new Map<string, number>();
   /** Odblokowania zawartości (data/unlocks.ts): trafienia krytyczne, szczęśliwe trafy, bronie bazowe po ewolucji. */
   critHits = 0;
   jackpots = 0;
@@ -412,6 +426,9 @@ export class Run {
   banishes: number = BAL.banishes;
   banished = new Set<string>();
   pendingLevels = 0;
+  /** Odstęp awansów w walce (BAL.levelGap): czas do następnego awansu (s) i czy od ostatniego odstępu był awans. */
+  private levelGapT = 0;
+  private levelBatch = false;
   /** Moc bossa (systems/powers.ts): posiadana, czas do wystrzału, wybory do pokazania (po każdym bossie). */
   power: { id: string; level: number } | null = null;
   powerT = 0;
@@ -420,7 +437,8 @@ export class Run {
   pacts: Record<string, number> = {};
   bossKills = 0;
   /** Skrzynie do otwarcia: przedmiot (wylosowany przy upadku) i źródło (tytuł ekranu łupu). */
-  pendingLoot: { source: LootSource; item: Item }[] = [];
+  /** Łup do pokazania; `title`: własny tytuł okna (ui/items.ts LootView), inaczej wg źródła. */
+  pendingLoot: { source: LootSource; item: Item; title?: string }[] = [];
 
   // --- ekwipunek ---
   equipment: Record<SlotId, Item | null> = { weapon: null, helmet: null, armor: null, gloves: null, boots: null, ring1: null, ring2: null, amulet: null };
@@ -585,9 +603,15 @@ export class Run {
   reduceFlash = false;
   /** Ukryte pociski gracza (ustawienie): nadal działają, tylko nie są rysowane. */
   playerFx: PlayerFx = 'auto';
-  /** Tryb 'auto' ataków gracza: przygaszenie 0..1 (wygładzone) i stan z histerezą (BAL.readability). */
+  /** Tryby 'auto' i 'dim' ataków gracza: przygaszenie 0..1 (wygładzone) i stan z histerezą (BAL.readability). */
   fxDim = 0;
   private fxDimOn = false;
+  /** Czas (totalTime) ostatniego błysku trafienia bossa / elity (BAL.readability.bigFlashGap). */
+  private bigFlashAt = new WeakMap<Enemy, number>();
+  /** Czas ostatniego wybuchu z zabójstwa, który trafił wroga (`queueExplosion`). */
+  private procHitAt = new WeakMap<Enemy, number>();
+  /** Czas ostatniego trafienia wroga cudzym wybuchem reakcji (Wybuch toksyn, Przeciążenie). */
+  private splashAt = new WeakMap<Enemy, number>();
 
   constructor(heroId: string, readonly mode: Mode, depth = 1, fresh = true, readonly altUlt = false) {
     this.hero = HERO_BY_ID[heroId];
@@ -726,8 +750,13 @@ export class Run {
     this.dmgStep = 0;
     const t = this.waveTime();
     const base = P.baseHp * BAL.enemyHpMul(this.time) * BAL.depthHpMul(this.depth);
-    const floor = P.floor(this.level), chase = Math.pow((this.dpsEma * P.ttk(t)) / (base * floor), P.chaseExp);
-    this.powerMul = Math.min(P.max, Math.max(1, floor * Math.min(P.chaseMax, Math.max(P.chaseMin, chase))));
+    // Ekspedycja na wysokim poziomie map / Udręce: powyżej kolana (`P.tier.knee` × podłoga) pogoń stromsza (BAL.power.tier).
+    const ex = this.expedition, tier = ex?.tier ?? 0, tor = ex?.torment ?? 0, T = P.tier;
+    const extra = ex ? T.exp[tier] + T.expPerTorment * tor : 0, cap = P.chaseMax * (ex ? T.max[tier] + T.maxPerTorment * tor : 1);
+    const top = P.max * (ex ? T.top[tier] + T.topPerTorment * tor : 1);
+    const floor = P.floor(this.level), r = (this.dpsEma * P.ttk(t)) / (base * floor);
+    const chase = r > T.knee && extra > 0 ? Math.pow(T.knee, P.chaseExp) * Math.pow(r / T.knee, P.chaseExp + extra) : Math.pow(r, P.chaseExp);
+    this.powerMul = Math.min(top, Math.max(1, floor * Math.min(cap, Math.max(P.chaseMin, chase))));
   }
 
   private sample(): void {
@@ -774,13 +803,13 @@ export class Run {
     if (this.inBanner && this.relic('turncoat')) this.cmdBuffT = Math.max(this.cmdBuffT, BAL.eliteTraits.buffT);
   }
 
-  /** Czytelność w tłumie: dużo pocisków wrogów blisko bohatera przygasza jego ataki (tryb 'auto'). */
+  /** Czytelność w tłumie: dużo pocisków wrogów blisko bohatera albo walka z bossem przygasza jego ataki (tryby 'auto' i 'dim'). */
   private updateFxDim(dt: number): void {
-    if (this.playerFx !== 'auto') { this.fxDim = 0; return; }
+    if (this.playerFx !== 'auto' && this.playerFx !== 'dim') { this.fxDim = 0; return; }
     const R = BAL.readability, p = this.player, r2 = R.radius * R.radius;
     let n = 0;
     for (const b of this.bullets.items) if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < r2 && ++n >= R.on) break;
-    this.fxDimOn = this.fxDimOn ? n > R.off : n >= R.on;
+    this.fxDimOn = (this.boss !== null && !this.boss.dead) || (this.fxDimOn ? n > R.off : n >= R.on);
     this.fxDim += ((this.fxDimOn ? 1 : 0) - this.fxDim) * Math.min(1, dt / R.ema);
   }
 
@@ -819,6 +848,13 @@ export class Run {
     this.time += dt;
     this.totalTime += dt;
     this.step++;
+    // Odstęp awansów (BAL.levelGap): po zamknięciu serii okien awansu chwila nietykalności, a następny awans czeka (XP rośnie dalej).
+    if (this.levelBatch && this.pendingLevels === 0) {
+      this.levelBatch = false;
+      this.levelGapT = this.scripted ? 0 : BAL.levelGap.gap;
+      this.player.iframes = Math.max(this.player.iframes, BAL.levelGap.grace);
+    }
+    if (this.levelGapT > 0 && (this.levelGapT -= dt) <= 0) this.addXp(0);
     if (this.step % Math.round(BAL.dpsEvery * 60) === 0) { this.dpsLog.push((this.dmgTotal - this.dpsMark) / BAL.dpsEvery); this.dpsMark = this.dmgTotal; }
     this.xpPulse = Math.max(0, this.xpPulse - dt);
     this.confusedT = Math.max(0, this.confusedT - dt);
@@ -1284,7 +1320,8 @@ export class Run {
    * Efekty wybuchów blisko już narysowanego w tym kroku (albo ponad limit na krok) są pomijane — obrażenia zawsze działają.
    */
   explode(x: number, y: number, r: number, dmg: number | ((e: Enemy) => number), src: string, col: number, knock = 3): void {
-    this.enemiesInCircle(x, y, r, (e) => this.damageEnemy(e, typeof dmg === 'number' ? dmg : dmg(e), src, { kx: e.x - x, ky: e.y - y, knock }));
+    // Obrażenia liczone per wróg mogą wynosić 0: ten wróg jest pomijany (wybuchy z zabójstw, `queueExplosion`).
+    this.enemiesInCircle(x, y, r, (e) => { const d = typeof dmg === 'number' ? dmg : dmg(e); if (d > 0) this.damageEnemy(e, d, src, { kx: e.x - x, ky: e.y - y, knock }); });
     // Teren: beczki w zasięgu wybuchają łańcuchowo, osłony pękają.
     terrainBlast(this, x, y, r);
     const spots = this.boomSpots, near = BAL.fx.boomMerge * BAL.fx.boomMerge;
@@ -1307,16 +1344,46 @@ export class Run {
     if (f) f.r = Math.max(1, Math.min(4, Math.round((r * 1.5 * 2) / 30)));
   }
 
-  /** Ostatnie zabójstwo zadane źródłem procentowym (wybuch z zabójstwa, Egzekucja): wybuchy z zabójstw go pomijają (łańcuch głębokości 1). */
-  chainKill(): boolean {
-    return PCT_SOURCES.has(this.lastHitSrc);
+  /**
+   * Boss albo miniboss (zachowanie 'warden': minibossowie biomów, Polowania, Strażnicy lochu i skarbca): efekty procentowe
+   * (Supernowa, Egzekucja, Ścinacz) traktują ich jak bossów (0.62: miniboss Polowania w akcie 3 ginął w 3-11 s od Supernowej).
+   */
+  bigFoe(e: Enemy): boolean {
+    return e.boss || e.def.behavior === 'warden';
   }
 
-  /** Wybuch w następnym kroku, z limitem na krok — dla efektów wyzwalanych zabójstwami. */
-  queueExplosion(x: number, y: number, r: number, dmg: number, src: string, col: number): void {
-    if (this.explosionsThisStep >= BAL.explosionBudget) return;
+  /**
+   * Punkt w kadrze (z marginesem `BAL.procs.view`): wybuchy z zabójstw i Supernowa działają tylko tam (0.62, weteran:
+   * 60-85% zabitych poza kadrem przez wybuchy w tłumie, którego broń nie sięga ani gracz nie widzi).
+   */
+  inView(x: number, y: number): boolean {
+    const m = BAL.procs.view;
+    return x > this.camX - m && x < this.camX + VIEW_W + m && y > this.camY - m && y < this.camY + VIEW_H + m;
+  }
+
+  /**
+   * Ostatnie zabójstwo zadane źródłem procentowym (wybuch z zabójstwa, Egzekucja) albo reakcją żywiołów: wybuchy
+   * z zabójstw go pomijają, Supernowa go nie liczy (0.62: zabici przez Wybuch toksyn wybuchali dalej, a zabici przez
+   * Supernowę ładowali następną — weteran: 84% obrażeń z wybuchów i reakcji, broń 2-4%).
+   */
+  chainKill(): boolean {
+    return PCT_SOURCES.has(this.lastHitSrc) || REACTION_COL[this.lastHitSrc] !== undefined;
+  }
+
+  /**
+   * Wybuch zabitego wroga (maks. HP `hp`) w następnym kroku, z limitem na krok: każdy trafiony traci `frac` × mniejsze
+   * z maks. HP zabitego i własnego (0.62). Wcześniej elita (HP ×20) wybuchała za 30% swojego HP i zabijała zwykłych
+   * na pierścieniu pojawiania, a nakładające się wybuchy w zbitym tłumie zabijały same — dlatego też wróg dostaje taki
+   * wybuch najwyżej raz na `BAL.procs.gap` s (weteran: 84% obrażeń z wybuchów i reakcji, broń 2-4%).
+   */
+  queueExplosion(x: number, y: number, r: number, hp: number, frac: number, src: string, col: number): void {
+    if (this.explosionsThisStep >= BAL.explosionBudget || !this.inView(x, y)) return;
     this.explosionsThisStep++;
-    this.schedule(0, () => this.explode(x, y, r, dmg, src, col, 2));
+    this.schedule(0, () => this.explode(x, y, r, (e) => {
+      if (!this.inView(e.x, e.y) || this.totalTime - (this.procHitAt.get(e) ?? -99) < BAL.procs.gap) return 0;
+      this.procHitAt.set(e, this.totalTime);
+      return Math.min(hp, e.maxHp) * frac;
+    }, src, col, 2));
   }
 
   // ================= statystyki i ekwipunek runu =================
@@ -1400,11 +1467,12 @@ export class Run {
 
   addXp(v: number): void {
     this.xp += v * this.stats.growth;
-    while (this.xp >= this.xpNext) {
+    while (this.xp >= this.xpNext && this.levelGapT <= 0) {
       this.xp -= this.xpNext;
       this.level++;
       this.xpNext = BAL.xpToNext(this.level);
       this.pendingLevels++;
+      this.levelBatch = true;
       const f = this.addFx('ring', this.player.x, this.player.y, C.gold, 0.4);
       if (f) f.r = 22;
       this.burst(this.player.x, this.player.y, C.yellow, 16, 70);
@@ -1424,6 +1492,8 @@ export class Run {
    * (połączone kryształy niosą XP na wiele poziomów); nadwyżka zostaje do 90% paska, reszta przepada.
    */
   addXpCapped(raw: number): void {
+    // Bez odstępu awansów (BAL.levelGap): koniec mapy, wejście do lochu — awanse od razu i bez odliczania po nich.
+    this.levelGapT = 0;
     let left = raw * this.stats.growth;
     const cap = this.level + BAL.collectLevels;
     while (left > 0 && this.level < cap) {
@@ -1432,6 +1502,7 @@ export class Run {
       this.addXp(part / this.stats.growth);
     }
     if (left > 0) this.xp = Math.min(this.xpNext * 0.9, this.xp + left);
+    this.levelBatch = false;
   }
 
   /** Stopień Wierności broni (BAL.loyal); 0, gdy gracz ma więcej niż jedną broń. */
@@ -1554,7 +1625,12 @@ export class Run {
     const dealt = Math.min(dmg, Math.max(0, e.hp));
     e.hp -= dmg;
     // Biały błysk trafienia: bez niego przy bardzo dużym tłumie (playtest 3: sylwetki zakrywały ekran od 10. minuty).
-    if (!this.reduceFlash && this.enemies.count < BAL.readability.flashCrowd) e.flash = 3;
+    // Boss i elity (0.62, playtest: miniboss „świecił na biało” i nie było widać zapowiedzi ataków, które też migają bielą):
+    // krótki błysk najwyżej co BAL.readability.bigFlashGap s.
+    if (!this.reduceFlash && this.enemies.count < BAL.readability.flashCrowd) {
+      if (!e.boss && !e.elite) e.flash = 3;
+      else if (this.totalTime - (this.bigFlashAt.get(e) ?? -99) >= BAL.readability.bigFlashGap) { this.bigFlashAt.set(e, this.totalTime); e.flash = 2; }
+    }
     this.dmgBySource.set(src, (this.dmgBySource.get(src) ?? 0) + dealt);
     this.dmgTotal += dealt;
     const pct = PCT_SOURCES.has(src);
@@ -1605,18 +1681,22 @@ export class Run {
     if (o.dot) { if (e.hp <= 0 && !e.dead) this.killEnemy(e); return; }
     // Trafienia procentowe i reakcji nie nakładają żywiołów (inaczej reakcje napędzałyby się same).
     if (!pct) resourceOnHit(this, e);
-    if (!pct && REACTION_COL[src] === undefined) {
+    // Trafienie zabijające też nie (0.62): martwy wróg reagował (Wybuch toksyn z każdego zabójstwa zatrutego wroga).
+    if (!pct && REACTION_COL[src] === undefined && e.hp > 0) {
+      // Stany i reakcje liczone z trafienia bez krytyka (0.62): trucizna brała największe trafienie (z nadkrytykiem ×16),
+      // a Wybuch toksyn i Przeciążenie mnożyły je jeszcze raz na cały obszar — reakcje zjadały broń w buildach krytycznych.
+      const eb = dmg / mult;
       const el = this.augElem.get(src) ?? SRC_ELEMENT[src];
-      if (el) this.applyElement(e, el, dmg * (1 + (this.srcElem.get(src) ?? 0)));
+      if (el) this.applyElement(e, el, eb * (1 + (this.srcElem.get(src) ?? 0)));
       // Karty i super-bonusy: szansa na żywioł przy trafieniu, krytyki porażają.
-      for (const k of ELEMENT_LIST) if (!e.dead && this.flag(`elemChance.${k}`) > 0 && rng.chance(this.flag(`elemChance.${k}`))) this.applyElement(e, k, dmg);
+      for (const k of ELEMENT_LIST) if (!e.dead && this.flag(`elemChance.${k}`) > 0 && rng.chance(this.flag(`elemChance.${k}`))) this.applyElement(e, k, eb);
       const any = this.flag('elemChance.any');
-      if (any > 0 && !e.dead && rng.chance(any)) this.applyElement(e, rng.pick(ELEMENT_LIST), dmg);
-      if (crit && this.flag('critShock') > 0 && !e.dead) this.applyElement(e, 'lightning', dmg);
+      if (any > 0 && !e.dead && rng.chance(any)) this.applyElement(e, rng.pick(ELEMENT_LIST), eb);
+      if (crit && this.flag('critShock') > 0 && !e.dead) this.applyElement(e, 'lightning', eb);
     }
     // Ścinacz: zwykli wrogowie i elity poniżej progu HP giną od razu.
     const cull = this.flag('cull');
-    if (cull > 0 && !e.boss && e.hp > 0 && e.hp < e.maxHp * cull) e.hp = 0;
+    if (cull > 0 && !this.bigFoe(e) && e.hp > 0 && e.hp < e.maxHp * cull) e.hp = 0;
     sfx.play('hit');
     if (!o.noHooks && !secondary) this.emit('onHit', e, dmg, crit);
     if (e.hp <= 0 && !e.dead) this.killEnemy(e);
@@ -1661,12 +1741,28 @@ export class Run {
     if (e.reactT > 0) return false;
     const has = (k: Element) => k !== el && (k === 'fire' ? e.burnT > 0 : k === 'ice' ? e.slowT > 0 : k === 'lightning' ? e.shockT > 0 : e.poisonStacks > 0);
     const pair = (a: Element, b: Element) => (el === a && has(b)) || (el === b && has(a));
-    const R = BAL.reactions, power = 1 + this.flag('reactPower');
+    // Skrócenie odnowienia z kart, Rozwoju i sekretów sumuje się — z dolnym limitem (0.62: Katalizator + klucz Rozwoju dawały 0 s).
+    const R = BAL.reactions, power = 1 + this.flag('reactPower'), cd = R.cd * Math.max(R.cdFloor, 1 - this.flag('reactCd'));
+    // Wybuch reakcji (0.62): trafieni w obszarze dostają odnowienie reakcji, a od cudzych wybuchów reakcji obrywają najwyżej
+    // raz na odnowienie. Inaczej w zbitym tłumie każdy wróg reagował sam i trafiał wszystkich sąsiadów, a jeden wróg obrywał
+    // od kilku wybuchów na sekundę (obrażenia rosły z kwadratem gęstości: Wybuch toksyn 50-87% buildu, broń 1-7%).
+    const splash = (d: number) => (o: Enemy) => {
+      if (o !== e) {
+        if (this.totalTime - (this.splashAt.get(o) ?? -99) < cd) return 0;
+        this.splashAt.set(o, this.totalTime);
+      }
+      o.reactT = Math.max(o.reactT, cd);
+      return d;
+    };
     const label = (text: string, col: number) => {
-      e.reactT = R.cd * Math.max(0, 1 - this.flag('reactCd'));
+      e.reactT = cd;
       this.reactions++;
-      this.popText(e.x, e.y - e.radius - 10, text, col);
-      sfx.play('react');
+      // Napis i dźwięk raz na labelGap s na rodzaj reakcji (playtest 0.62: od głębi 3 sześć „Przewodzenie!” naraz zalewało ekran).
+      if (this.totalTime - (this.reactLabelAt.get(text) ?? -99) >= R.labelGap) {
+        this.reactLabelAt.set(text, this.totalTime);
+        this.popText(e.x, e.y - e.radius - 10, text, col);
+        sfx.play('react');
+      }
     };
     if (pair('fire', 'ice')) {
       label('Para!', C.lgray);
@@ -1684,7 +1780,7 @@ export class Run {
       label('Wybuch toksyn!', C.lime);
       const d = e.poisonUnit * e.poisonStacks * R.toxic.mul * power;
       e.poisonStacks = 0; e.poisonUnit = 0; e.poisonT = 0;
-      this.explode(e.x, e.y, R.toxic.r * this.stats.area, d, 'Wybuch toksyn', C.lime, 2);
+      this.explode(e.x, e.y, R.toxic.r * this.stats.area, splash(d), 'Wybuch toksyn', C.lime, 2);
       return true;
     }
     if (pair('lightning', 'poison')) {
@@ -1705,7 +1801,7 @@ export class Run {
     if (pair('fire', 'lightning')) {
       label('Przeciążenie!', C.orange);
       e.shockT = 0;
-      this.explode(e.x, e.y, R.overload.r * this.stats.area, dmg * R.overload.mul * power, 'Przeciążenie', C.orange, R.overload.knock);
+      this.explode(e.x, e.y, R.overload.r * this.stats.area, splash(dmg * R.overload.mul * power), 'Przeciążenie', C.orange, R.overload.knock);
       return true;
     }
     return false;
@@ -1802,12 +1898,12 @@ export class Run {
       // Mapa elit: skrzynia co N-ta elita; Polowanie: miniboss kończy łowy, eskorta bez skrzyń.
       const X = BAL.expedition, hunt = this.levelInfo.objective.kind === 'hunt', mini = BIOME_MINIBOSS.includes(e.def.id);
       if (hunt && mini) this.huntKilled = true;
-      // Mapa elit i Zasadzka: skrzynia co N-ta elita; eskorta Polowania bez skrzyń i kart.
+      // Mapa elit i Zasadzka: skrzynia i karta co N-ta elita; eskorta Polowania bez skrzyń i kart.
       const counted = !!this.expedition && (this.levelInfo.eliteMul < 1 || !!this.levelInfo.ambush) && !mini, escort = hunt && !mini;
       if (counted) this.eliteKills++;
       if (!escort && (!counted || this.eliteKills % X.eliteChestEvery === 0)) this.dropChest(e.x, e.y, 'elite');
       for (let i = 0; i < 5; i++) this.spawnPickup(e.x + rng.range(-8, 8), e.y + rng.range(-8, 8), 'coin', 1);
-      if (!escort) this.pendingCards.push('elite');
+      if (!escort && (!counted || this.eliteKills % X.eliteCardEvery === 0)) this.pendingCards.push('elite');
       if (this.relic('mace')) this.cmdBuffT = Math.max(this.cmdBuffT, BAL.relics.maceTime);
       if (this.relic('chalice')) this.heal(this.stats.maxHp * BAL.relics.chaliceHeal);
     } else if (e.boss) {
@@ -1962,7 +2058,11 @@ export class Run {
     return n >= BAL.trance.min;
   }
 
-  hurtPlayer(base: number, bullet?: { x: number; y: number; vx: number; vy: number }): boolean {
+  /**
+   * Trafienie gracza. `src` = źródło do podsumowania na ekranie końca (wróg jak w bestiariuszu, boss po nazwie poziomu,
+   * „Kolce”, „Burza”...); `bullet` = pocisk wroga (Mikiri może go odbić).
+   */
+  hurtPlayer(base: number, src: string, bullet?: { x: number; y: number; vx: number; vy: number }): boolean {
     const p = this.player;
     if (this.outcome !== 'none' || p.iframes > 0) return false;
     if (this.tryParry(bullet)) return false;
@@ -1988,10 +2088,27 @@ export class Run {
     let dmg = trance * base * BAL.armorMul(this.stats.armor) * (1 - Math.min(0.8, this.flag('dmgTaken'))) * resourceTakenMul(this) * (this.inBanner && !this.relic('turncoat') ? 1 + BAL.eliteTraits.bannerTaken : 1);
     // Limit jednego trafienia (0.59, gracz: boss aktu 1 zabił na hita szklany build): najwyżej ułamek maks. HP,
     // na Udręce wyżej (BAL.hitCap). Kara za szklany build zostaje (2–3 trafienia), bez śmierci w jednej klatce.
-    const H = BAL.hitCap, cap = Math.min(H.max, H.base + H.perTorment * (this.expedition?.torment ?? 0));
+    const torment = this.expedition?.torment ?? 0, H = BAL.hitCap, cap = Math.min(H.max, H.base + H.perTorment * torment);
     dmg = Math.min(dmg, this.stats.maxHp * cap);
+    // Ochrona przed wybuchem obrażeń (BAL.burst, 0.62): ponad próg z ostatniego okna wchodzi tylko część nadwyżki.
+    // Pierścień wokół bohatera mówi „uciekaj”, zanim seria dobije.
+    const now = this.totalTime, B = BAL.burst, lim = this.stats.maxHp * Math.min(B.max, B.frac + B.perTorment * torment);
+    while (this.hitLog.length && this.hitLog[0].t < now - HIT_LOG) this.hitLog.shift();
+    let recent = 0;
+    for (const h of this.hitLog) if (h.t > now - B.window) recent += h.dmg;
+    if (recent + dmg > lim) {
+      const free = Math.max(0, lim - recent);
+      dmg = free + (dmg - free) * B.over;
+      if (now >= this.burstFxAt) {
+        this.burstFxAt = now + B.window;
+        const f = this.addFx('ring', p.x, p.y, C.white, 0.3);
+        if (f) f.r = 16;
+      }
+    }
     const total = dmg;
     this.takenTotal += total;
+    this.takenBySource.set(src, (this.takenBySource.get(src) ?? 0) + total);
+    this.hitLog.push({ t: now, src, dmg: total });
     const absorbed = Math.min(p.shield, dmg);
     p.shield -= absorbed;
     dmg -= absorbed;
@@ -2038,6 +2155,11 @@ export class Run {
         return true;
       }
       p.hp = 0;
+      // Zabójca = źródło z największymi obrażeniami w HIT_LOG s (playtest: ostatni cios za 3 HP wskazywał nie tego wroga).
+      const by = new Map<string, number>();
+      for (const h of this.hitLog) by.set(h.src, (by.get(h.src) ?? 0) + h.dmg);
+      const [top, share] = [...by].sort((a, b) => b[1] - a[1])[0] ?? [src, total];
+      this.killedBy = { src: top, share, last: src, dmg: total, hits: this.hitLog.length, recent: this.hitLog.reduce((a, h) => a + h.dmg, 0) };
       this.outcome = 'dead';
       this.outcomeT = 1.8;
       this.burst(p.x, p.y, C.red, 50, 80);
@@ -2166,7 +2288,7 @@ export class Run {
   rollLoot(source: LootSource): { source: LootSource; item: Item } {
     const U = BAL.uniques, chance = source === 'boss' ? U.boss : source === 'elite' ? U.elite : 0, L = BAL.loot;
     // Szczęśliwy traf: Legendarny przedmiot albo unikat z dowolnego łupu.
-    if (rng.chance(L.jackpot * (1 + this.luck()))) {
+    if (this.depth >= L.jackpotDepth && rng.chance(L.jackpot * (1 + this.luck()))) {
       this.jackpots++;
       this.showBanner('Szczęśliwy traf!');
       // Szczęśliwy traf (0.33): złoty deszcz iskier, napis nad bohaterem i krótkie zatrzymanie.
@@ -2256,7 +2378,7 @@ export class Run {
       rerolls: this.rerolls, skips: this.skips, banishes: this.banishes, cardRerolls: this.cardRerolls,
       banished: [...this.banished], ultCharge: this.ultCharge, ultUses: this.ultUses,
       bonus: { ...this.bonus }, basicWeaponId: this.basicWeaponId,
-      dmgBySource: [...this.dmgBySource.entries()], cardState: { ...this.cardState },
+      dmgBySource: [...this.dmgBySource.entries()], taken: [...this.takenBySource.entries()], cardState: { ...this.cardState },
       equipment: { ...this.equipment }, bag: [...this.bag],
       shop: this.shop, elixirsBought: this.elixirsBought, shards: this.shards, healed: this.healed, shopLevel: this.shopLevel, anvilLevel: this.anvilLevel,
       abilityEvo: (Object.keys(ab) as AbilitySlot[]).filter((k) => ab[k].def.evolved),
@@ -2307,6 +2429,7 @@ export class Run {
     run.bonus = { ...s.bonus };
     run.basicWeaponId = s.basicWeaponId;
     run.dmgBySource = new Map(s.dmgBySource);
+    run.takenBySource = new Map(s.taken ?? []);
     run.cardState = { ...s.cardState };
     run.pacts = { ...s.pacts };
     run.mats = { ...run.mats, ...s.mats };
@@ -2388,7 +2511,7 @@ function newProjectile(): Projectile {
 }
 
 function newBullet(): EnemyBullet {
-  return { _i: -1, x: 0, y: 0, vx: 0, vy: 0, life: 0, damage: 0, radius: 2, sprite: 'eb_red', acc: 0, minV: 0, turn: 0, wave: 0, t: 0 };
+  return { _i: -1, x: 0, y: 0, vx: 0, vy: 0, life: 0, damage: 0, radius: 2, sprite: 'eb_red', acc: 0, minV: 0, turn: 0, wave: 0, t: 0, src: '' };
 }
 
 function newZone(): Zone {

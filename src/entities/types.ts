@@ -202,6 +202,8 @@ export interface EnemyBullet extends Poolable {
   turn: number;
   wave: number;
   t: number;
+  /** Kto strzelił (nazwa wroga, jak w bestiariuszu): źródło obrażeń na ekranie końca. */
+  src: string;
 }
 
 export interface Gem extends Poolable {

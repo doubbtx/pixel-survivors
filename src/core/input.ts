@@ -138,6 +138,10 @@ export function abilitySlotPos(i: number, k = hudK): [number, number] {
   return [W + OX - 4 - (4 - i) * (ABILITY_SLOT + 3) * k, H - 4 - ABILITY_SLOT * k];
 }
 const TOUCH_ACTIONS: Action[] = ['q', 'e', 'dash', 'ult'];
+/** Akcje walki: w czasie blokady (Input.guardCombat) ich klawisze i przyciski pada nie potwierdzają ani nie losują. */
+const COMBAT: Action[] = ['q', 'e', 'dash', 'ult'];
+/** Każde naciśnięcie klawisza walki w czasie blokady przedłuża ją do tylu kroków (60 Hz): spamowany unik się nie przebije. */
+const GUARD_QUIET = 24;
 /**
  * Przyciski dotykowe pauzy, buildu i plecaka w kolumnie (większy HUD): blok liczników i minimapy sięga wtedy dalej w lewo,
  * a wiersz przycisków wszedłby pod zegar, cel i pasek bossa — kolumna stoi na lewo od tego bloku.
@@ -197,6 +201,8 @@ export class Input {
   capture: ((code: string) => void) | null = null;
   /** Dowolny klawisz (także bez przypisanej akcji) naciśnięty od ostatniego kroku. */
   private anyKey = false;
+  /** Pozostałe kroki blokady klawiszy wspólnych z walką (guardCombat). */
+  private guardSteps = 0;
 
   constructor(renderer: Renderer, canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
@@ -208,7 +214,8 @@ export class Input {
       e.preventDefault();
       this.lastDevice = 'kbm';
       if (e.repeat) return;
-      for (const a of acts) { this.held.add(a); this.pressedSet.add(a); }
+      for (const a of acts) this.held.add(a);
+      for (const a of this.guarded(acts)) this.pressedSet.add(a);
     });
     window.addEventListener('keyup', (e) => {
       for (const a of KEYMAP[e.code] ?? []) this.held.delete(a);
@@ -336,12 +343,31 @@ export class Input {
       const rx = dz(p.axes[2] ?? 0), ry = dz(p.axes[3] ?? 0);
       if (Math.hypot(rx, ry) > 0.3) { this.padAim.x = rx; this.padAim.y = ry; }
     }
-    for (const a of now) if (!this.padHeld.has(a)) { this.pressedSet.add(a); this.lastDevice = 'pad'; }
+    const fresh = [...now].filter((a) => !this.padHeld.has(a));
+    if (fresh.length) this.lastDevice = 'pad';
+    for (const a of this.guarded(fresh)) this.pressedSet.add(a);
     this.padHeld = now;
+  }
+
+  /**
+   * Blokada klawiszy wspólnych z walką (0.62, playtest: unik = Spacja = potwierdź, ult = R = losuj, pad A = unik i potwierdź):
+   * przez `s` sekund, i dopóki gracz je wciska (każde naciśnięcie przedłuża do GUARD_QUIET kroków), klawisz albo przycisk
+   * z akcją walki daje tylko akcję walki. Enter, cyfry, klik i dotyk działają od razu. Wołają ekrany otwierane z walki.
+   */
+  guardCombat(s: number): void {
+    this.guardSteps = Math.max(this.guardSteps, Math.round(s * 60));
+  }
+
+  /** Akcje naciśnięcia: w czasie blokady klawisz z akcją walki zostawia tylko akcje walki i przedłuża blokadę. */
+  private guarded(acts: Action[]): Action[] {
+    if (this.guardSteps <= 0 || !acts.some((a) => COMBAT.includes(a))) return acts;
+    this.guardSteps = Math.max(this.guardSteps, GUARD_QUIET);
+    return acts.filter((a) => COMBAT.includes(a));
   }
 
   /** Czyści zbocza po kroku symulacji, który je obsłużył. */
   endStep(): void {
+    if (this.guardSteps > 0) this.guardSteps--;
     this.pressedSet.clear();
     this.anyKey = false;
     this.scroll = 0;

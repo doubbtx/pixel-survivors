@@ -17,7 +17,7 @@ const fail = (note: string): BuyResult => ({ ok: false, note });
 /** Kupno przedmiotu: od razu zakładany, jeśli jego slot jest pusty, inaczej trafia do plecaka. */
 export function buyItem(run: Run, i: number): BuyResult {
   const shop = run.shop!, it = shop.items[i];
-  if (!it) return fail('Sprzedane');
+  if (!it) return fail('Already bought');
   const price = itemPrice(it, shop);
   if (run.gold < price) return fail('Za mało złota');
   const slot = run.slotFor(it);
