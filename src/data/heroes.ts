@@ -128,10 +128,15 @@ export function describeAbilityLevel(def: AbilityDef): string {
   return parts.join(', ');
 }
 
+/**
+ * Statystyki bazowe (`base` nadpisuje DEFAULT_STATS). 0.62 (playtest 2: Kestra ginęła na 2. mapie, Borgun przechodził akt 1
+ * bez obrażeń — tarcza za zabójstwa, pancerz i 150 HP): pozostali bohaterowie dostali więcej HP, trochę pancerza i regeneracji
+ * (bot, akt 1 na Zwykłej: mediana przejść map Kestry 1 → 4, Borgun bez zmian).
+ */
 export const HEROES: HeroDef[] = [
   {
     id: 'kestra', name: 'Kestra', role: 'Strzelec', sprite: 'kestra', color: C.lime,
-    base: { maxHp: 100, speed: 62, crit: 0.08 },
+    base: { maxHp: 135, speed: 62, crit: 0.08, armor: 3, regen: 0.2 },
     weapon: 'arrow',
     tags: ['Pociski', 'Krytyk'],
     passive: { name: 'Sokole oko', desc: 'Co 4. strzał z łuku wypuszcza 2 dodatkowe strzały, zawsze krytyczne.', kind: 'nthVolley', value: 4 },
@@ -205,7 +210,7 @@ export const HEROES: HeroDef[] = [
   },
   {
     id: 'ignara', name: 'Ignara', role: 'Mag ognia', sprite: 'ignara', color: C.orange,
-    base: { maxHp: 95, speed: 58, cdr: 0.1, elemPower: 0.15 },
+    base: { maxHp: 140, speed: 58, cdr: 0.1, elemPower: 0.15, armor: 3, regen: 0.2 },
     weapon: 'staff',
     tags: ['Ogień', 'Umiejętności'],
     passive: { name: 'Echo mocy', desc: 'Co 3. użycie Q lub E powtarza się po chwili za darmo.', kind: 'echoCast', value: 3 },
@@ -242,7 +247,7 @@ export const HEROES: HeroDef[] = [
   },
   {
     id: 'morwen', name: 'Morwen', role: 'Przywoływaczka', sprite: 'morwen', color: C.pink,
-    base: { maxHp: 95, speed: 56, duration: 1.1 },
+    base: { maxHp: 110, speed: 56, duration: 1.1, armor: 1, regen: 0.2 },
     weapon: 'souls',
     tags: ['Przywołania', 'Klątwa'],
     passive: { name: 'Zew dusz', desc: 'Co 15. zabójstwo z ciała wroga powstaje duch-sługa na 8 s.', kind: 'killSummon', value: 15 },
@@ -279,7 +284,7 @@ export const HEROES: HeroDef[] = [
   },
   {
     id: 'vesper', name: 'Vesper', role: 'Zabójczyni', sprite: 'vesper', color: C.salmon,
-    base: { maxHp: 90, speed: 66, crit: 0.12 },
+    base: { maxHp: 115, speed: 66, crit: 0.12, armor: 2, regen: 0.2 },
     weapon: 'knives',
     tags: ['Krytyk', 'Szybkość'],
     passive: { name: 'Łowczyni', desc: 'Elita albo co 12. zabójstwo od razu odnawia Cios z cienia.', kind: 'killReset', value: 12 },
@@ -316,7 +321,7 @@ export const HEROES: HeroDef[] = [
   },
   {
     id: 'aurel', name: 'Aurel', role: 'Kapłan', sprite: 'aurel', color: C.yellow,
-    base: { maxHp: 120, speed: 54, regen: 0.4, duration: 1.05 },
+    base: { maxHp: 135, speed: 54, regen: 0.4, duration: 1.05, armor: 2 },
     weapon: 'light',
     tags: ['Życie', 'Obszar'],
     passive: { name: 'Guardian', desc: 'Every 6 s you get a shield of 2% HP for each Branded enemy near you (max 10% HP).', kind: 'guardShield', value: 6 },
@@ -355,7 +360,7 @@ export const HEROES: HeroDef[] = [
   {
     // Takezo (0.32): szermierz na wzór Miyamoto Musashiego — dwa miecze (Niten Ichi-ryū), rytm walki (hyōshi), cięcie iai.
     id: 'takezo', name: 'Takezo', role: 'Swordsman', sprite: 'takezo', color: C.blue,
-    base: { maxHp: 105, speed: 60, atkSpeed: 0.1, might: 1.08 },
+    base: { maxHp: 135, speed: 60, atkSpeed: 0.1, might: 1.08, armor: 3, regen: 0.2 },
     weapon: 'katana',
     tags: ['Szybkość', 'Krytyk'],
     passive: { name: 'Mikiri', desc: '5% chance to parry a hit or a projectile at level 1, +0.6% per level (max 35%, cards included): no damage, a counter cut around you and +6 Rhythm. Parried projectiles fly back at enemies.', kind: 'parry', value: 20 },

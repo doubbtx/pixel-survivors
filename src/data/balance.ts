@@ -378,9 +378,10 @@ export const BAL = {
    * Jakość łupu (data/items.ts rollRarity): waga rzadkości i rośnie jak boost^i, boost = (1 + `depth` × (głębokość - 1))
    * × (1 + `luck` × szczęście) × źródło (`boss`, `elite`). Boss nie daje Zwykłych.
    * Szczęśliwy traf: każdy łup (także zwykła skrzynia) z szansą `jackpot` × (1 + Fortuna) to Legendarny przedmiot,
-   * a z tego ułamek `jackpotUnique` to unikat — runy, w których los sprzyja, mają być wyraźnie mocniejsze.
+   * a z tego ułamek `jackpotUnique` to unikat — runy, w których los sprzyja, mają być wyraźnie mocniejsze. Od głębokości
+   * `jackpotDepth` (0.62, weteran: Legendarny przedmiot już na 1. mapie).
    */
-  loot: { depth: 0.1, luck: 0.5, boss: 1.8, elite: 1.3, jackpot: 0.03, jackpotUnique: 0.35 },
+  loot: { depth: 0.1, luck: 0.5, boss: 1.8, elite: 1.3, jackpot: 0.03, jackpotUnique: 0.35, jackpotDepth: 2 },
   /** Odświeżenie przedmiotów: cena bazowa, podwaja się przy każdym użyciu w tym samym sklepie. */
   shopRefresh: 10,
   /** Ceny bazowe usług (× shopScale). */
@@ -517,6 +518,14 @@ export const BAL = {
     /** HP minibossa Polowania wg poziomu map (MAP_RARITY), +`huntHpPerTorment` na poziom Udręki (0.62, weteran: na Koszmarnej ginął w 3-7 s). */
     huntHp: [1.5, 1.5, 2.25, 3] as number[],
     huntHpPerTorment: 0.15,
+    /**
+     * Podłoga HP minibossa Polowania (0.62, weteran: ginął w 9-12 s w akcie 1 i poniżej 1,5 s w akcie 3, bo HP rośnie z pierwiastkiem
+     * mnożnika siły, a DPS liniowo): `huntTtk` s DPS buildu (większe z Run.dpsEma i ostatnich próbek dpsLog) × huntHp / huntHp[0],
+     * × (1 + `huntTtkAct` × (akt - 1)). Bot (god): akt 1 przed 9-51 s, po 7-40 s, akt 2 przed 6-34 s, po 5-81 s (2 ucieczki
+     * przy ×1.6). Akt 3 dalej 3-11 s: decydują obrażenia procentowe (Supernowa 50% maks. HP elity, wybuchy eskorty).
+     */
+    huntTtk: 8,
+    huntTtkAct: 0.3,
     huntCrowd: -0.3,
     huntEscort: 2,
     arenaReward: 0.5,
@@ -526,6 +535,8 @@ export const BAL = {
     weakMul: 1.5,
     resistReward: 15,
     eliteChestEvery: 2,
+    /** Mapa elit i Zasadzka: karta co N-ta elita (0.62, weteran: ok. 8 ofert kart na jednej mapie elit; plus karta za mapę). */
+    eliteCardEvery: 2,
     /** Szansa, że mapa nie ma bonusu. */
     noBonusChance: 0.35,
     /** Nagroda modyfikatorów: punkt ilości łupu (%) daje tyle szczęścia przedmiotów (× ułamek) i esencji (× ułamek). */
@@ -564,6 +575,15 @@ export const BAL = {
       crowd: [[-0.5, -0.4, -0.3, -0.2, -0.1, -0.1, 0], [-0.5, -0.25, -0.15, -0.1, 0, 0, 0]] as number[][],
       shooters: [[-0.6, -0.6, -0.5, -0.35, -0.2, -0.1, 0], [-0.4, -0.25, -0.15, -0.1, 0, 0, 0]] as number[][],
       heal: [0.3, 0.15] as number[],
+      /**
+       * Akt 2 (0.62, weteran: akt 1 Zwykła bez zagrożenia, 1. mapa aktu 2 na Magicznej zabiła po 35 s, Kultysta 31% HP):
+       * bez sufitu mnożnik skakał z 2.6 na 4-14 w pierwszej mapie (głębokość ta sama, 3), tłum rósł o 0.35 (akt), a strzelców
+       * przybywało. Sufit `cap2` jak `cap`, rosnący do mniej więcej wartości bez sufitu w połowie mapy na końcu aktu, i mniejszy
+       * tłum `crowd2` oraz mniej strzelców `shooters2` w pierwszych rzędach (akt 3 bez rampy). Rzadka i wyżej: bez zmian.
+       */
+      cap2: [[2.6, 3.1, 4, 5, 6.2, 7.6, 2.2], [2.8, 3.6, 5, 7, 9.5, 12, 3.2]] as number[][],
+      crowd2: [[-0.35, -0.25, -0.15, -0.05, 0, 0, 0], [-0.35, -0.25, -0.15, -0.05, 0, 0, 0]] as number[][],
+      shooters2: [[-0.3, -0.2, -0.1, 0, 0, 0, 0], [-0.3, -0.2, -0.1, 0, 0, 0, 0]] as number[][],
     },
     /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */
     waveOffsetPerDepth: 50,
@@ -594,7 +614,8 @@ export const BAL = {
   cardRerollsStart: 1,
   /** Szansa na złotą/pryzmatyczną ofertę; rośnie z głębokością i poziomem postaci. */
   goldChance: (depth: number, lvl: number) => Math.min(0.5, 0.2 + 0.05 * (depth - 1) + 0.004 * lvl),
-  prismChance: (depth: number, lvl: number) => Math.min(0.3, 0.03 + 0.03 * (depth - 1) + 0.002 * lvl),
+  /** Pryzmatyczne (0.62, weteran: 2 pryzmatyczne na 2. mapie): na 1. głębokości rzadziej, dalej jak dawniej. */
+  prismChance: (depth: number, lvl: number) => Math.min(0.3, 0.01 + 0.035 * (depth - 1) + 0.002 * lvl),
   /** Maks. liczba eksplozji z efektów kart w jednym kroku (chroni przed reakcją łańcuchową). */
   explosionBudget: 12,
   /**
@@ -678,6 +699,12 @@ export const BAL = {
   torment: { essence: 0.15, max: 10 },
   /** Maks. awansów z zebrania kryształów całej mapy po bossie / końcu poziomu (0.45, analiza Agenta 2). */
   collectLevels: 3,
+  /**
+   * Odstęp awansów w walce (0.62, playtest 2: 3 okna awansu w 4 s w tłumie 178 wrogów, śmierć w środku serii): po zamknięciu
+   * serii okien awansu następny awans czeka `gap` s czasu walki (XP rośnie dalej, zaległe awanse otwierają się potem jeden po
+   * drugim), a bohater ma `grace` s nietykalności na powrót do uników. Koniec mapy, wejście do lochu i samouczek bez odstępu.
+   */
+  levelGap: { gap: 3, grace: 0.5 },
   shootMargin: 10,
   projectileCap: 2600,
 

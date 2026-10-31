@@ -361,15 +361,17 @@ export function levelAt(act: number, row: number, m: MapNode, torment = 0): Leve
   // Udręka: zasady dodane do flag każdej mapy (łagodny start wyprawy tylko bez Udręki).
   const f: Record<string, number> = { ...f0 };
   for (const [k, v] of Object.entries(tormentFlags(torment))) f[k] = (f[k] ?? 0) + v;
-  // Łagodzenie aktu 1: rampa na niskich poziomach map (BAL.expedition.ramp), wyżej tylko łagodny start i połowa ulgi w 2. rzędzie.
+  // Łagodzenie aktów 1-2: rampa na niskich poziomach map (BAL.expedition.ramp), wyżej tylko łagodny start i połowa ulgi w 2. rzędzie.
   const second = act === 1 && row === 1 && !boss && !torment && m.kind !== 'hunt';
-  const rampCap = act === 1 && !torment ? X.ramp.cap[m.rarity ?? 0] : undefined, rampCrowd = act === 1 && !torment ? X.ramp.crowd[m.rarity ?? 0] : undefined;
+  // Akt 2: łagodne przejście z aktu 1 (ramp.cap2 / crowd2 / shooters2, bez leczenia między mapami).
+  const R = torment ? undefined : act === 1 ? X.ramp : act === 2 ? { cap: X.ramp.cap2, crowd: X.ramp.crowd2, shooters: X.ramp.shooters2 } : undefined;
+  const rampCap = R?.cap[m.rarity ?? 0], rampCrowd = R?.crowd[m.rarity ?? 0];
   const ri = Math.min(row, X.ramp.cap[0].length - 1);
   const ease = (v: number) => (gentle ? v : second ? v * X.gentle.second : 0);
   const dmg = ease(X.gentle.dmg), crowd = Math.min(ease(X.gentle.crowd), rampCrowd?.[ri] ?? 0) + (m.kind === 'hunt' ? X.huntCrowd : 0);
   if (dmg) f.enemyDmg = (f.enemyDmg ?? 0) + dmg;
   if (crowd) f.enemyCount = (f.enemyCount ?? 0) + crowd;
-  const shooters = act === 1 && !torment ? X.ramp.shooters[m.rarity ?? 0]?.[ri] ?? 0 : 0;
+  const shooters = R?.shooters[m.rarity ?? 0]?.[ri] ?? 0;
   if (shooters) f.shooters = (f.shooters ?? 0) + shooters;
   return {
     depth,

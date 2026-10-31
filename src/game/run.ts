@@ -424,6 +424,9 @@ export class Run {
   banishes: number = BAL.banishes;
   banished = new Set<string>();
   pendingLevels = 0;
+  /** Odstęp awansów w walce (BAL.levelGap): czas do następnego awansu (s) i czy od ostatniego odstępu był awans. */
+  private levelGapT = 0;
+  private levelBatch = false;
   /** Moc bossa (systems/powers.ts): posiadana, czas do wystrzału, wybory do pokazania (po każdym bossie). */
   power: { id: string; level: number } | null = null;
   powerT = 0;
@@ -839,6 +842,13 @@ export class Run {
     this.time += dt;
     this.totalTime += dt;
     this.step++;
+    // Odstęp awansów (BAL.levelGap): po zamknięciu serii okien awansu chwila nietykalności, a następny awans czeka (XP rośnie dalej).
+    if (this.levelBatch && this.pendingLevels === 0) {
+      this.levelBatch = false;
+      this.levelGapT = this.scripted ? 0 : BAL.levelGap.gap;
+      this.player.iframes = Math.max(this.player.iframes, BAL.levelGap.grace);
+    }
+    if (this.levelGapT > 0 && (this.levelGapT -= dt) <= 0) this.addXp(0);
     if (this.step % Math.round(BAL.dpsEvery * 60) === 0) { this.dpsLog.push((this.dmgTotal - this.dpsMark) / BAL.dpsEvery); this.dpsMark = this.dmgTotal; }
     this.xpPulse = Math.max(0, this.xpPulse - dt);
     this.confusedT = Math.max(0, this.confusedT - dt);
@@ -1420,11 +1430,12 @@ export class Run {
 
   addXp(v: number): void {
     this.xp += v * this.stats.growth;
-    while (this.xp >= this.xpNext) {
+    while (this.xp >= this.xpNext && this.levelGapT <= 0) {
       this.xp -= this.xpNext;
       this.level++;
       this.xpNext = BAL.xpToNext(this.level);
       this.pendingLevels++;
+      this.levelBatch = true;
       const f = this.addFx('ring', this.player.x, this.player.y, C.gold, 0.4);
       if (f) f.r = 22;
       this.burst(this.player.x, this.player.y, C.yellow, 16, 70);
@@ -1444,6 +1455,8 @@ export class Run {
    * (połączone kryształy niosą XP na wiele poziomów); nadwyżka zostaje do 90% paska, reszta przepada.
    */
   addXpCapped(raw: number): void {
+    // Bez odstępu awansów (BAL.levelGap): koniec mapy, wejście do lochu — awanse od razu i bez odliczania po nich.
+    this.levelGapT = 0;
     let left = raw * this.stats.growth;
     const cap = this.level + BAL.collectLevels;
     while (left > 0 && this.level < cap) {
@@ -1452,6 +1465,7 @@ export class Run {
       this.addXp(part / this.stats.growth);
     }
     if (left > 0) this.xp = Math.min(this.xpNext * 0.9, this.xp + left);
+    this.levelBatch = false;
   }
 
   /** Stopień Wierności broni (BAL.loyal); 0, gdy gracz ma więcej niż jedną broń. */
@@ -1827,12 +1841,12 @@ export class Run {
       // Mapa elit: skrzynia co N-ta elita; Polowanie: miniboss kończy łowy, eskorta bez skrzyń.
       const X = BAL.expedition, hunt = this.levelInfo.objective.kind === 'hunt', mini = BIOME_MINIBOSS.includes(e.def.id);
       if (hunt && mini) this.huntKilled = true;
-      // Mapa elit i Zasadzka: skrzynia co N-ta elita; eskorta Polowania bez skrzyń i kart.
+      // Mapa elit i Zasadzka: skrzynia i karta co N-ta elita; eskorta Polowania bez skrzyń i kart.
       const counted = !!this.expedition && (this.levelInfo.eliteMul < 1 || !!this.levelInfo.ambush) && !mini, escort = hunt && !mini;
       if (counted) this.eliteKills++;
       if (!escort && (!counted || this.eliteKills % X.eliteChestEvery === 0)) this.dropChest(e.x, e.y, 'elite');
       for (let i = 0; i < 5; i++) this.spawnPickup(e.x + rng.range(-8, 8), e.y + rng.range(-8, 8), 'coin', 1);
-      if (!escort) this.pendingCards.push('elite');
+      if (!escort && (!counted || this.eliteKills % X.eliteCardEvery === 0)) this.pendingCards.push('elite');
       if (this.relic('mace')) this.cmdBuffT = Math.max(this.cmdBuffT, BAL.relics.maceTime);
       if (this.relic('chalice')) this.heal(this.stats.maxHp * BAL.relics.chaliceHeal);
     } else if (e.boss) {
@@ -2217,7 +2231,7 @@ export class Run {
   rollLoot(source: LootSource): { source: LootSource; item: Item } {
     const U = BAL.uniques, chance = source === 'boss' ? U.boss : source === 'elite' ? U.elite : 0, L = BAL.loot;
     // Szczęśliwy traf: Legendarny przedmiot albo unikat z dowolnego łupu.
-    if (rng.chance(L.jackpot * (1 + this.luck()))) {
+    if (this.depth >= L.jackpotDepth && rng.chance(L.jackpot * (1 + this.luck()))) {
       this.jackpots++;
       this.showBanner('Szczęśliwy traf!');
       // Szczęśliwy traf (0.33): złoty deszcz iskier, napis nad bohaterem i krótkie zatrzymanie.
