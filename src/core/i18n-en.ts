@@ -702,7 +702,6 @@ export const EN: Record<string, string> = {
   "Cios z cienia": "Shadow Strike",
   "Cięcie dookoła ciebie, większe i mocniejsze.": "A bigger, stronger slash all around you.",
   "Cięcie przed sobą za całe kombo. Słabi wrogowie (bez bossów) giną od razu.": "A slash powered by your whole combo. Weak enemies (not bosses) die instantly.",
-  "Co 15. zabójstwo z ciała wroga powstaje duch-sługa na 8 s.": "Every 15th kill raises a ghost minion from the corpse for 8 s.",
   "Co 3. użycie Q lub E powtarza się po chwili za darmo.": "Every 3rd Q or E cast repeats for free a moment later.",
   "Co 4. strzał z łuku wypuszcza 2 dodatkowe strzały, zawsze krytyczne.": "Every 4th bow shot fires 2 extra arrows that always crit.",
   "Co 6 s dostajesz tarczę 3% HP za każdego sługę (maks. 18% HP).": "Every 6 s you gain a 3% HP shield per minion (max 18% HP).",

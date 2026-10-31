@@ -467,6 +467,8 @@ export class Run {
   levelKills = 0;
   /** Wskrzeszenia zużyte na poziomie; pozostałe liczone z bieżących flag (meta, karty i przedmioty działają od razu). */
   revivesUsed = 0;
+  /** Zatrzymanie gry po wskrzeszeniu (s, BAL.revive.stop); działa też przy wyłączonym zatrzymaniu klatki. */
+  reviveStop = 0;
   get revivesLeft(): number { return Math.max(0, this.flag('revive') - this.revivesUsed); }
   /** Zdarzenia mapy (systems/events.ts): obiekty, błogosławieństwa, loch i liczniki. */
   mapObjects: MapObject[] = [];
@@ -1769,7 +1771,9 @@ export class Run {
       case 'poison':
         e.poisonStacks = Math.min(ELEM.poisonMaxStacks, e.poisonStacks + 1);
         e.poisonT = ELEM.poisonTime;
-        e.poisonUnit = Math.max(e.poisonUnit, dmg * ELEM.poisonRatio * ep);
+        // Siła warstwy to średnia trafień, nie największe (0.63.1, gracz: jeden krytyk ustawiał całą truciznę i Wybuch toksyn,
+        // Morwen na Koszmarnej: 64% obrażeń z trucizny i wybuchu).
+        { const v = dmg * ELEM.poisonRatio * ep, n = e.poisonStacks; e.poisonUnit = n <= 1 ? v : e.poisonUnit + (v - e.poisonUnit) / n; }
         break;
     }
   }
@@ -1821,7 +1825,9 @@ export class Run {
       label('Wybuch toksyn!', C.lime);
       const d = e.poisonUnit * e.poisonStacks * R.toxic.mul * power;
       e.poisonStacks = 0; e.poisonUnit = 0; e.poisonT = 0;
-      this.explode(e.x, e.y, R.toxic.r * this.stats.area, splash(d), 'Wybuch toksyn', C.lime, 2);
+      // Pełne obrażenia tylko w zatruty cel, wrogowie wokół dostają ułamek `splash` (0.63.1).
+      const hit = splash(d), part = splash(d * R.toxic.splash);
+      this.explode(e.x, e.y, R.toxic.r * this.stats.area, (o: Enemy) => (o === e ? hit(o) : part(o)), 'Wybuch toksyn', C.lime, 2);
       return true;
     }
     if (pair('lightning', 'poison')) {
@@ -2192,7 +2198,11 @@ export class Run {
         this.explode(p.x, p.y, 60, this.cardDamage(40), 'Feniks', C.orange, 6);
         const ring = this.addFx('ring', p.x, p.y, C.orange, 0.6);
         if (ring) ring.r = R.r;
-        this.showBanner('Feniks!');
+        // Wyraźne wskrzeszenie (0.63.1, gracz: „nawet nie zauważyłem”): gra staje na chwilę, baner z liczbą pozostałych.
+        this.reviveStop = R.stop;
+        this.addShake(6);
+        sfx.play('evolve');
+        this.showBanner(this.revivesLeft > 0 ? `Revived! ${this.revivesLeft} left` : 'Revived! Last chance');
         return true;
       }
       p.hp = 0;

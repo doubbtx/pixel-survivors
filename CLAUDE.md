@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.63.0)
+## Stan (wersja 0.63.1)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -872,6 +872,14 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   promień (`beam`) bez białej płachty, Skorpion grubsza linia i krąg na linii, w walce z bossem liczby tylko na bossie
   (`juice.numbersBoss`). Przeklęte karty z czerwoną ramką („Cursed: no healing”), `REROLL_GUARD` (ui/widgets.ts) na R w awansie
   i kartach, licznik „Rewards” rośnie z nagrodami dokładanymi w serii, `optionScore`: jakość ×10, próg synergii +25, `evoPiece` +30.
+  Po testerach: podłoga HP z `Run.bigDps` (DPS w elity i bossów, nie `dpsEma` z tłumem), najwyżej `bossTtk.maxMul` × zwykłe HP.
+- 0.63.1 (gracz: Morwen na Koszmarnej w 9 min, 64% obrażeń z trucizny): siła warstwy trucizny = średnia trafień (`applyElement`),
+  Wybuch toksyn pełny tylko w cel, wokół `reactions.toxic.splash`; `power.tier` exp/max wyżej na Rzadkiej i Koszmarnej.
+  Bot (god, Koszmarna): Wybuch toksyn Morwen 54% → poza top 5, Ignara 16% → poza top 5.
+  Sługi (tester Morwen: 68-82% obrażeń w akcie 1, akt 1 bez ulepszania broni): `minions.cap` 30, Zew dusz co 22. zabójstwo na 6 s,
+  `minions.bigMul` 0.5 na bossy i elity. Bot Magiczna: Morwen 2,7 → 1,7 mapy (Kestra 2,7), Zew dusz 15-43% → 12-16%.
+  Wskrzeszenie widoczne: `Run.reviveStop` (gra staje na `BAL.revive.stop` s, także przy wyłączonym zatrzymaniu klatki), baner
+  „Revived! N left”, wstrząs i dźwięk. Naprawa: Buty Burzy Strzał z minami jako pierwszą bronią („Brak sprite'a: mine”).
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`
