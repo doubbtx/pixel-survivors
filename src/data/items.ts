@@ -126,7 +126,7 @@ const KIND_ABOUT: Record<ItemKind, string> = {
 export function itemAbout(it: Item): string[] {
   const base = BASE_BY_ID[it.base], R = RARITIES[it.rarity];
   const out = [KIND_ABOUT[base.kind]];
-  if (!it.unique) out.push(`${R.name[base.gender]}: ${R.affixes} losowe bonusy (niebieskie), wartości x${R.power}.`);
+  if (!it.unique) out.push(`${R.name[base.gender]}: ${R.affixes} random bonus${R.affixes === 1 ? '' : 'es'} (blue), values x${R.power}.`);
   else out.push('Unikat: stały efekt specjalny, który zmienia zasady gry.');
   if (it.super) out.push('Gwiazdka: super-bonus (złoty), rzadki efekt specjalny.');
   out.push(`Kowadło ulepsza do +${BAL.anvil.maxUpgrades}. W nawiasie: twoja suma.`);

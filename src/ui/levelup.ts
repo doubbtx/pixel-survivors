@@ -172,7 +172,13 @@ export class LevelUpView {
   private roll(): void {
     this.born = performance.now();
     this.options = generateOptions(this.run, this.count);
-    this.sel = Math.min(this.sel, this.options.length - 1);
+    this.sel = this.bestIndex();
+  }
+
+  /** Indeks opcji „Polecane” (optionScore): zaznaczona od razu, Enter bierze to, co gra poleca (playtest 0.62). */
+  private bestIndex(): number {
+    const scores = this.options.map((o) => optionScore(this.run, o));
+    return Math.max(0, scores.indexOf(Math.max(...scores)));
   }
 
   private cardX(i: number): number {
@@ -221,7 +227,7 @@ export class LevelUpView {
       const repl = generateOptions(this.run, 1, this.options)[0];
       if (repl) this.options[i] = repl;
       else this.options.splice(i, 1);
-      this.sel = 0;
+      this.sel = this.bestIndex();
       sfx.play('kill');
       return this.options.length === 0;
     }
@@ -259,8 +265,7 @@ export class LevelUpView {
     dim(r);
     const title = this.banishMode ? 'Wybierz kartę do wygnania' : `Awans! LV ${this.run.level - this.run.pendingLevels + 1}`;
     drawText(r.g, title, W / 2, 10, this.banishMode ? C.salmon : C.yellow, { align: 'center', scale: 2, outline: C.black });
-    const scores = this.options.map((o) => optionScore(this.run, o));
-    const best = scores.indexOf(Math.max(...scores));
+    const best = this.bestIndex();
     const t = (performance.now() - this.born) / 1000;
     this.options.forEach((o, i) => {
       // Wjazd kart od dołu jedna po drugiej; zaznaczona lekko uniesiona; rzadkie (Epickie+, ewolucje) z błyskiem.
