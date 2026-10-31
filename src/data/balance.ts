@@ -39,7 +39,11 @@ export const BAL = {
     },
   },
   /** Sługi (systems/minions.ts): limit naraz, szybkość, zasięg szukania celu, odstęp ciosów, promień zwarcia, odległość od gracza bez celu. */
-  minions: { cap: 40, speed: 85, range: 180, hitEvery: 0.5, radius: 6, bigRadius: 10, follow: 26, passiveDmg: 12, passiveLife: 8, harvestChance: 0.1 },
+  /**
+   * Sługi. 0.63.1 (tester Morwen: sługi 68-82% obrażeń w akcie 1, akt 1 Magicznej przechodzony bez ulepszania broni, boss
+   * aktu 1 w 1-3 s): limit 40 → 30, duch Zewu dusz 8 → 6 s, bossowie, elity i minibossowie dostają od sług × `bigMul`.
+   */
+  minions: { cap: 30, speed: 85, range: 180, hitEvery: 0.5, radius: 6, bigRadius: 10, follow: 26, passiveDmg: 12, passiveLife: 6, harvestChance: 0.1, bigMul: 0.5 },
   /**
    * Zasoby bohaterów (systems/resource.ts). Karty: res.gain (+przyrost), res.power (+siła efektu), res.max (+pojemność).
    * focus: trafienie wroga dalej niż `range` daje 1 (najwyżej co `gap` s); +`crit` krytyka za punkt; pełna = darmowa Salwa i zostaje `keep`;

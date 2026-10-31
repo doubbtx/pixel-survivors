@@ -61,7 +61,7 @@ export function updateMinions(run: Run, dt: number): void {
     }
     if (t && d <= r + t.radius + 2 && m.hitT <= 0) {
       m.hitT = M.hitEvery;
-      run.damageEnemy(t, m.damage, m.src, { kx: dx, ky: dy, knock: m.big ? 3 : 1 });
+      run.damageEnemy(t, m.damage * (t.boss || t.elite ? M.bigMul : 1), m.src, { kx: dx, ky: dy, knock: m.big ? 3 : 1 });
       if (m.holy) run.sustain(run.stats.maxHp * BAL.resource.faith.guardHeal * (1 + run.flag('guardHeal')));
     }
   }

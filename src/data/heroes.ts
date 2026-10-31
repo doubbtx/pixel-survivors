@@ -250,7 +250,7 @@ export const HEROES: HeroDef[] = [
     base: { maxHp: 110, speed: 56, duration: 1.1, armor: 1, regen: 0.2 },
     weapon: 'souls',
     tags: ['Przywołania', 'Klątwa'],
-    passive: { name: 'Zew dusz', desc: 'Co 15. zabójstwo z ciała wroga powstaje duch-sługa na 8 s.', kind: 'killSummon', value: 15 },
+    passive: { name: 'Zew dusz', desc: 'Every 22nd kill raises a ghost minion from the corpse for 6 s.', kind: 'killSummon', value: 22 },
     resource: { kind: 'souls', name: 'Dusze', color: C.pink, desc: 'Wrogowie ginący w pobliżu dają dusze. Pełne zamieniają się w sługę, a R zużywa wszystkie: mocniejsza armia.' },
     abilities: [
       {

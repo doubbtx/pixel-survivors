@@ -876,6 +876,8 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - 0.63.1 (gracz: Morwen na Koszmarnej w 9 min, 64% obrażeń z trucizny): siła warstwy trucizny = średnia trafień (`applyElement`),
   Wybuch toksyn pełny tylko w cel, wokół `reactions.toxic.splash`; `power.tier` exp/max wyżej na Rzadkiej i Koszmarnej.
   Bot (god, Koszmarna): Wybuch toksyn Morwen 54% → poza top 5, Ignara 16% → poza top 5.
+  Sługi (tester Morwen: 68-82% obrażeń w akcie 1, akt 1 bez ulepszania broni): `minions.cap` 30, Zew dusz co 22. zabójstwo na 6 s,
+  `minions.bigMul` 0.5 na bossy i elity. Bot Magiczna: Morwen 2,7 → 1,7 mapy (Kestra 2,7), Zew dusz 15-43% → 12-16%.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`
