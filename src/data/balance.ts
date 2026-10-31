@@ -172,9 +172,10 @@ export const BAL = {
    * 0.62 runda 2: zapowiedzi ataków wrogów w warstwie nad efektami gracza z ciemnym podkładem (alfa `tellBack` względem
    * zapowiedzi) i przyciemnionym obszarem uderzeń z ziemi / stożka (`tellShade`); znacznik gracza w tłumie (strzałka nad
    * głową, mocniejsza elipsa) od połowy `markerCrowd` wrogów, pełny przy `markerCrowd` (albo przy przygaszaniu ataków).
-   * 0.63: aura o promieniu ponad `auraBig` px bez wypełnienia, plamy meteorów bledsze ponad `meteorMany` stref naraz.
+   * 0.63: aura o promieniu ponad `auraBig` px bez wypełnienia, plamy meteorów bledsze ponad `meteorMany` stref naraz,
+   * promień (laser) rysowany najwyżej na `beamMax` px szerokości (reszta trafienia bladym pasmem).
    */
-  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5, tellBack: 0.6, tellShade: 0.28, markerCrowd: 150, auraBig: 80, meteorMany: 6 },
+  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5, tellBack: 0.6, tellShade: 0.28, markerCrowd: 150, auraBig: 80, meteorMany: 6, beamMax: 10 },
   /** 0.47 (gracz: „biorę bronie dystansowe i samo się wygrywa”; pomiar: wręcz ≈ 30% zabójstw pocisków naprowadzanych).
    * Mnożniki obrażeń/obszaru broni wg wzorca (z ewolucjami) i wg id (prefiks), plus bonus za trafienia z bliska. */
   weaponTune: {
@@ -676,9 +677,10 @@ export const BAL = {
    * bez czasu na ich ataki): co najmniej `boss` / `mini` s DPS w duże cele (Run.bigDps: obrażenia elit, minibossów i bossów
    * przez czas walki z nimi — trafienie w ostatnich `engage` s; oba wygaszane z czasem `decay` s, liczone od `minTime` s walki),
    * ×(1 + `perAct` × (akt - 1)), w Endless × głębokość. Run.dpsEma się nie nadaje: liczy tłum i wybuchy (bot: 99 mln przy
-   * 0,7 mln w samego bossa). Słaby build tej podłogi nie czuje; ratunkiem jest BAL.bossSoften.
+   * 0,7 mln w samego bossa). Najwyżej `maxMul` × zwykłe HP (elity zabite jednym trafieniem zawyżają pomiar). Słaby build tej
+   * podłogi nie czuje; ratunkiem jest BAL.bossSoften.
    */
-  bossTtk: { boss: 30, mini: 12, perAct: 0.15, engage: 0.5, decay: 90, minTime: 5 },
+  bossTtk: { boss: 30, mini: 12, perAct: 0.15, engage: 0.5, decay: 90, minTime: 5, maxMul: 2 },
 
   // --- gracz: diminishing returns tam, gdzie wartości ≥100% psułyby grę ---
   /** Pancerz → mnożnik otrzymywanych obrażeń. 25 pancerza = -50%. Nigdy 0. */

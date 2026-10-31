@@ -303,7 +303,8 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
           for (let k = 0; k < 4; k++) r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7 - rng.range(0, 6), 1, 2, k % 2 ? C.white : C.yellow);
           break;
         case 'fire':
-          r.withAlpha(0.2, () => r.circle(zx, zy, zr, C.orange, true));
+          // Duże pole ognia bledsze (0.63, weteran: pomarańczowa płachta, w której giną pociski bossa).
+          r.withAlpha(zr > BAL.readability.auraBig * ZOOM ? 0.08 : 0.2, () => r.circle(zx, zy, zr, C.orange, true));
           for (let k = 0; k < 5; k++) {
             r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7 - rng.range(0, 4), 2, 2, rng.pick(FIRE_COLS));
           }
@@ -312,10 +313,13 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
           const ex = zx + Math.cos(z.angle) * z.len * ZOOM, ey = zy + Math.sin(z.angle) * z.len * ZOOM;
           const wdt = Math.max(2, Math.round(z.r * 2 * ZOOM));
           // Szeroka poświata tylko przy widocznych atakach (0.62, playtest: lasery na pół ekranu zasłaniały pociski bossa).
-          // Bez białej płachty (0.63, weteran: wachlarz Lustrzanego promienia bielił ekran): różowe półprzezroczyste pasmo, wąski jasny rdzeń.
-          if (glow) r.withAlpha(0.3, () => r.line(zx, zy, ex, ey, C.pink, wdt + 4));
-          r.withAlpha(0.55, () => r.line(zx, zy, ex, ey, C.pink, wdt));
-          r.line(zx, zy, ex, ey, C.cream, Math.max(1, Math.round(wdt * 0.25)));
+          // Bez białej płachty (0.63, weteran: przy dużym obszarze wachlarz Lustrzanego promienia bielił ekran): pełna szerokość
+          // trafienia tylko bladym pasmem, rysowany promień najwyżej BAL.readability.beamMax px.
+          const vis = Math.min(wdt, BAL.readability.beamMax);
+          if (wdt > vis) r.withAlpha(0.12, () => r.line(zx, zy, ex, ey, C.pink, wdt));
+          else if (glow) r.withAlpha(0.3, () => r.line(zx, zy, ex, ey, C.pink, wdt + 4));
+          r.withAlpha(0.55, () => r.line(zx, zy, ex, ey, C.pink, vis));
+          r.line(zx, zy, ex, ey, C.cream, Math.max(1, Math.round(vis * 0.25)));
           break;
         }
       }
