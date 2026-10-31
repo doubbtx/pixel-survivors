@@ -843,6 +843,21 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   rośnie z głębokością. Sufit `powerMul` = `BAL.power.max × (tier.top[poziom] + topPerTorment × Udręka)`. HP Polowania:
   `BAL.expedition.huntHp[poziom] + huntHpPerTorment × Udręka`. Odkrycia: `discoveryCost` (`BAL.discovery.first`, potem `every`).
   Bot: `maps[]` w raporcie ma `node`, `bul`, `hp`, `shot` (udział pocisków) i `dead`.
+  Runda 2 (drugi playtest: wszyscy 7/10; sterownik turowy wymaga `page.clock.pauseAt`, sam `install` nie zatrzymuje czasu):
+  wybuchy z zabójstw `Run.queueExplosion(x, y, r, hpZabitego, frac, …)` biją każdego za `min(HP zabitego, własne) × frac`, najwyżej
+  raz na `BAL.procs.gap` s i tylko w kadrze (`Run.inView`, `BAL.procs.view`); Supernowa liczy tylko zabójstwa bronią i umiejętnościami
+  (`chainKill` obejmuje reakcje); minibossowie (`Run.bigFoe`) jak bossowie dla Supernowej, Egzekucji i Ścinacza. Żywioły i reakcje
+  z trafienia bez krytyka, trafienie zabijające nie nakłada żywiołów, wybuch reakcji (`splash` w `Run.react`) trafia wroga raz na
+  odnowienie; `BAL.reactions` cd 1 z `cdFloor`, toxic r 20 / mul 1 (udział wybuchów i reakcji 84-94% → 52-60%).
+  Bohaterowie poza Borgunem: więcej HP, pancerz 1-3, regeneracja 0.2. Akt 2 na Zwykłej/Magicznej: `ramp.cap2/crowd2/shooters2`.
+  Miniboss Polowania: podłoga HP z DPS (`huntTtk`, `huntTtkAct`). `BAL.levelGap` (`Run.levelGapT`): po serii awansów w walce
+  następny czeka 3 s, 0.5 s nietykalności. Karta co `eliteCardEvery` elitę, Szczęśliwy traf od `loot.jackpotDepth`.
+  Czytelność: zapowiedzi (`drawTell`, `drawBossTell`, `run.strikes`, sytuacje) w warstwie po liczbach, przed pociskami wrogów
+  (`tellQ`, `TELL_KINDS`, `tellLine/tellRing/tellOval`, `BAL.readability.tellBack/tellShade`); błysk trafienia w świecie to
+  `DrawOpts.hit` (`hitImage`), nie biała sylwetka `flash`; znacznik gracza w tłumie (`crowdK`, `markerCrowd`); napisy reakcji raz
+  na `BAL.reactions.labelGap` s. UI: lista odblokowań na końcu w `END_UNLOCK_LINES` liniach, `pickBuf` (Enter/cyfra z opóźnienia
+  nakładki), awans zaznacza Polecane, `Option.evoPiece` (karta „Evolution piece!”: nowa pasywka/broń dopełnia ewolucję posiadanej),
+  odbicie Takezo pod kartą bohatera, „Weakened” pod paskiem bossa, w Ekspedycji w rogu HUD tylko złoto, sklep bez Kuźni przy `noForge`.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`

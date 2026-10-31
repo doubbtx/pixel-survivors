@@ -23,6 +23,8 @@ const NOTES: { version: string; lines: string[] }[] = [
       "When you die, the end screen says what killed you and has a Damage taken tab. Very fast bursts of damage are softened, so you get a moment to react, but standing still is still deadly. Keys you mash in combat (dodge, ultimate) no longer pick cards or skip the end screen.",
       "Easier start: on Common and Magic the first maps of act 1 ramp up gently (fewer shooters and bullets, some HP back after each map), and your first discoveries come after one or two runs. Enemy bullets are drawn on top with a bright rim, bosses flash less, and level-up cards explain why they are Recommended.",
       "Nightmare and Torment: strong builds must keep moving. Very strong builds face tougher enemies, and Takezo's katana covers at most 3 rows of cuts.",
+      "Weapons carry your build again: kill explosions, Supernova and reactions are now a bonus (they hit only on screen and no longer chain through the crowd). All heroes except Borgun start tougher, act 2 eases in on Common and Magic, level-ups in combat come at most every 3 s, and Hunt minibosses last longer.",
+      "Level-up cards marked Evolution piece! complete an evolution of a weapon or passive you own. Enemy attack warnings are drawn above your effects, hit flashes no longer turn enemies into white blobs, and a marker shows your hero in big crowds.",
     ],
   },
   {
