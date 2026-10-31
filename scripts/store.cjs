@@ -1,5 +1,5 @@
 /**
- * Materiały do sklepu (Steam, Google Play, itch.io) z działającej gry: zrzuty 1920×1080, kapsuły Steam z logo
+ * Materiały do sklepu (Steam, Google Play, itch.io) z działającej gry: zrzuty 1920×1080, kapsuły Steam i okładka itch.io (630×500) z logo
  * i nagranie rozgrywki (webm, materiał na zwiastun). Wynik w katalogu `out=` (domyślnie /tmp/store), poza repozytorium.
  *
  *   npm run dev            (w drugim terminalu)
@@ -71,7 +71,7 @@ const run = (p, js) => p.evaluate(`(async()=>{const s=window.__screen(),r=s.run;
   await p.evaluate(`(async()=>{const s=window.__screen(),M=await import('/src/ui/menus.ts');let t=3;s.app.go({update(dt){t+=dt;},render(){M.menuBackdrop(s.app,t);}});})()`);
   await p.waitForTimeout(1500);
   const menu = await p.screenshot();
-  for (const [name, w, h] of [['capsule-main', 1232, 706], ['capsule-header', 920, 430], ['capsule-small', 462, 174], ['capsule-library', 600, 900]]) {
+  for (const [name, w, h] of [['capsule-main', 1232, 706], ['capsule-header', 920, 430], ['capsule-small', 462, 174], ['capsule-library', 600, 900], ['itch-cover', 630, 500]]) {
     const data = await p.evaluate(async ({ img, w, h }) => {
       const im = new Image();
       im.src = `data:image/png;base64,${img}`;
