@@ -30,13 +30,15 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   const cx = x + CARD_W / 2;
   const isNew = o.kind === 'weaponNew' || o.kind === 'passiveNew';
   const evolve = o.kind === 'evolve' || o.kind === 'abilityEvolve' || o.kind === 'passiveEvolve' || o.kind === 'fusion';
-  cardFrame(r, x, y, CARD_W, CARD_H, warn ? C.red : q ? qCol : evolve ? C.gold : C.slate, selected);
+  // Brakujący składnik ewolucji (prośba gracza): złota ramka i napis zamiast rodzaju karty.
+  const piece = !!o.evoPiece;
+  cardFrame(r, x, y, CARD_W, CARD_H, warn ? C.red : q ? qCol : evolve || piece ? C.gold : C.slate, selected);
   const augment = o.kind === 'augment';
   const tagCol = q ? RARITIES[q].color : evolve ? C.yellow : isNew ? C.white : augment ? C.cyan : C.lavender;
-  drawText(r.g, o.tag, cx, y + 7, tagCol, { align: 'center', shadow: C.black });
+  drawText(r.g, piece ? 'Evolution piece!' : o.tag, cx, y + 7, piece ? C.gold : tagCol, { align: 'center', shadow: C.black });
   // Znaczek "Polecane" na górnej krawędzi karty (plakietka zamiast napisu nad kartą, który wchodził na wstęgę tytułu).
   if (recommended) cardBadge(r, cx, y, 'Polecane', C.yellow);
-  cardIcon(r, o.icon, cx, y + 36, q ? RARITIES[q].color : evolve ? C.gold : isNew ? C.lgray : augment ? C.cyan : C.dgray);
+  cardIcon(r, o.icon, cx, y + 36, q ? RARITIES[q].color : evolve || piece ? C.gold : isNew ? C.lgray : augment ? C.cyan : C.dgray);
   let ly = y + 60;
   for (const line of wrapText(o.name, CARD_W - 12)) {
     drawText(r.g, line, cx, ly, o.color, { align: 'center', shadow: C.black });
@@ -96,6 +98,7 @@ function recommendWhy(run: Run, o: Option): string {
  */
 function explain(run: Run, o: Option, recommended: boolean): string[] {
   const out: string[] = [];
+  if (o.evoPiece) out.push(`Evolution piece: you already have ${o.evoPiece}, at max level they evolve`);
   if (recommended) out.push(`Recommended: ${recommendWhy(run, o)}`);
   const wd = o.kind === 'weaponNew' || o.kind === 'weaponUp' || o.kind === 'evolve' || o.kind === 'fusion' ? WEAPON_BY_ID[o.id] : undefined;
   if (wd) out.push(roleInfo(wd.role).desc);

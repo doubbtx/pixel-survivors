@@ -883,6 +883,8 @@ export const PL: Record<string, string> = {
   "Map bonus!": "Bonus mapy!",
   "Tutorial skipped. Start an Expedition. Hints for new mechanics can be turned off in Settings > General.": "Samouczek pominięty. Zacznij Ekspedycję. Podpowiedzi o nowych mechanikach wyłączysz w Ustawieniach > Ogólne.",
   "Top source overall: {}, {}% (not a weapon)": "Największe źródło obrażeń: {}, {}% (nie broń)",
+  "Evolution piece!": "Do ewolucji!",
+  "Evolution piece: you already have {}, at max level they evolve": "Składnik ewolucji: masz już {}, na maks. poziomie ewoluują",
   "Recommended: {}": "Polecane: {}",
   "evolution, the biggest power jump": "ewolucja, największy skok mocy",
   "fusion, a stronger hybrid and a free weapon slot": "fuzja, mocniejsza hybryda i wolny slot broni",
