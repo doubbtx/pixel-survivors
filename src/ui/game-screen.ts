@@ -1,6 +1,6 @@
 import { tr } from '../core/i18n';
 import { W, H, type Renderer } from '../core/renderer';
-import { C, RAMP } from '../core/palette';
+import { C, PAL, RAMP } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
 import { hudScale, type Action } from '../core/input';
 import { sfx } from '../core/audio';
@@ -1187,7 +1187,7 @@ export class GameScreen implements Screen {
 
   /** Przewijany obszar zakładki ekranu końca (Obrażenia: pod nagłówkiem kolumn, który stoi w miejscu). */
   private endArea(): [number, number, number, number] {
-    const top = this.endPage === 1 || this.endPage === 2 ? 17 : 2;
+    const top = this.endPage === 2 || this.endPage === 3 ? 17 : 2;
     return [END_X + 2, this.endY + top, END_W - 4, this.endH - top - 2];
   }
 
@@ -1246,13 +1246,14 @@ export class GameScreen implements Screen {
       button(r, ...this.endTab(i), t, { active: i === this.endPage, accent: C.gold });
     });
     panel(r, END_X, this.endY, END_W, this.endH);
-    if (this.endPage === 0) this.renderHighlights();
-    else if (this.endPage === 1) this.renderDamage();
-    else if (this.endPage === 2) this.renderTaken();
-    else if (this.endPage === 3) this.renderDpsGraph();
+    if (this.endPage === 0) this.renderSummary();
+    else if (this.endPage === 1) this.renderHighlights();
+    else if (this.endPage === 2) this.renderDamage();
+    else if (this.endPage === 3) this.renderTaken();
+    else if (this.endPage === 4) this.renderDpsGraph();
     else this.renderBuild();
     this.endMenu.render(r);
-    if (this.endPage === 4 && this.endTip) drawTip(r, ...this.endTip);
+    if (this.endPage === 5 && this.endTip) drawTip(r, ...this.endTip);
   }
 
   /**
@@ -1338,6 +1339,71 @@ export class GameScreen implements Screen {
       by += 14;
     }
     this.endScroll.end(r, by + oy - area[1], ...area);
+  }
+
+  /**
+   * Ocena runu 0-100 z rozbiciem (0.64): postęp (Ekspedycja: węzły z wszystkich aktów, Endless: czas do 25 min), przetrwanie
+   * (otrzymane obrażenia na minutę względem maks. HP), tempo zabójstw, bossowie i trudność (poziom map, Udręka, głębia Endless).
+   */
+  private runGrade(): { score: number; letter: string; col: number; parts: [string, number, number][] } {
+    const run = this.run, ex = run.expedition, X = BAL.expedition, min = Math.max(1, run.totalTime / 60);
+    let taken = 0;
+    for (const v of run.takenBySource.values()) taken += v;
+    const clamp = (v: number) => Math.max(0, Math.min(1, v));
+    const progress = ex ? (run.outcome === 'victory' && ex.act >= X.acts ? 1 : ex.cleared / (X.acts * X.rows)) : run.totalTime / 1500;
+    const parts: [string, number, number][] = [
+      ['Progress', Math.round(40 * clamp(progress)), 40],
+      ['Survival', Math.round(20 * clamp(1 - (taken / run.stats.maxHp / min - 0.5) / 3.5)), 20],
+      ['Kills', Math.round(15 * clamp(run.kills / min / 600)), 15],
+      ['Bosses', Math.min(15, run.bossKills * 5), 15],
+      ['Difficulty', Math.round(Math.min(10, ex ? (ex.tier ?? 0) * 2.5 + (ex.torment ?? 0) : run.depth - 1)), 10],
+    ];
+    const score = parts.reduce((s, p) => s + p[1], 0), [letter, , col] = GRADES.find((gr) => score >= gr[1])!;
+    return { score, letter, col, parts };
+  }
+
+  /**
+   * Ekran końca, zakładka Summary (0.64): ocena runu w pierścieniu z rozbiciem punktów i pierścienie udziału obrażeń
+   * (bronie / umiejętności i sługi / efekty: reakcje, karty, synergie, moce) — od razu widać, co niosło build.
+   */
+  private renderSummary(): void {
+    const r = this.app.r, g = r.g, run = this.run, top = this.endY + 4, h = this.endH - 8;
+    const ring = (cx: number, cy: number, R: number, w: number, f: number, col: number) => {
+      g.lineWidth = w; g.lineCap = 'round';
+      g.strokeStyle = PAL[C.slate]; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
+      if (f > 0.005) { g.strokeStyle = PAL[col]; g.beginPath(); g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, f)); g.stroke(); }
+      g.lineCap = 'butt';
+    };
+    // Lewa część: ocena w pierścieniu (wypełnienie = punkty / 100) i rozbicie punktów.
+    const gr = this.runGrade(), R = Math.max(12, Math.min(32, h / 2 - 5)), gx = END_X + 16 + R, gy = top + h / 2;
+    ring(gx, gy, R, 5, gr.score / 100, gr.col);
+    drawText(g, gr.letter, gx, gy - 11, gr.col, { align: 'center', scale: 2, outline: C.black });
+    drawText(g, `${gr.score}/100`, gx, gy + 8, C.lgray, { align: 'center', scale: smallS() });
+    const bx = gx + R + 12, bw = 128;
+    drawText(g, 'Run grade', bx, top + 2, C.lavender);
+    gr.parts.forEach(([k, v, max], i) => {
+      const y = top + 14 + i * 10;
+      drawText(g, k, bx, y, C.lgray, { scale: smallS() });
+      bar(r, bx + 52, y + 2, bw - 82, 4, v / max, RAMP.gold);
+      drawText(g, `${v}/${max}`, bx + bw, y, v >= max ? C.yellow : C.white, { align: 'right', scale: smallS() });
+    });
+    // Prawa część: trzy koncentryczne pierścienie udziału obrażeń z legendą.
+    const ab = run.abilities, names = new Set([ab.q, ab.e, ab.dash, ab.ult].map((a) => a.def.name));
+    names.add(run.hero.passive.name); names.add(run.hero.resource.name);
+    let wpn = 0, abl = 0, total = 0;
+    for (const [src, v] of run.dmgBySource) { total += v; if (ROLE_BY_SRC[src]) wpn += v; else if (names.has(src)) abl += v; }
+    total ||= 1;
+    const groups: [string, number, number][] = [['Weapons', wpn / total, C.gold], ['Abilities and minions', abl / total, C.cyan], ['Effects and reactions', (total - wpn - abl) / total, C.pink]];
+    const Rr = Math.max(14, Math.min(32, h / 2 - 5)), rx = END_X + END_W - 132 - Rr, ry = top + h / 2;
+    groups.forEach(([, f, col], i) => ring(rx, ry, Rr - i * 7, 5, f, col));
+    const lx = rx + Rr + 10;
+    drawText(g, 'Damage share', lx, top + 2, C.lavender);
+    groups.forEach(([k, f, col], i) => {
+      const y = top + 16 + i * 12;
+      r.rect(lx, y + 2, 4, 4, col);
+      drawText(g, `${Math.round(f * 100)}%`, lx + 8, y, C.white, { scale: smallS() });
+      drawText(g, k, lx + 30, y, C.lgray, { scale: Math.min(smallS(), (END_X + END_W - 8 - lx - 30) / Math.max(1, textWidth(k))) });
+    });
   }
 
   /** Ekran końca: obrażenia per źródło (suma, udział i DPS, pasek udziału). */
@@ -1512,7 +1578,9 @@ const HINT_BOX: Partial<Record<string, HintBox>> = {
 const MAP_TOAST_Y = 30;
 
 /** Zakładki ekranu końca runu i panel pod nimi. */
-const END_TABS = ['Highlights', 'Obrażenia', 'Damage taken', 'Wykres DPS', 'Build'];
+const END_TABS = ['Summary', 'Highlights', 'Obrażenia', 'Damage taken', 'Wykres DPS', 'Build'];
+/** Ocena runu (0.64, pomysł z BoardUI: wynik z rozbiciem): litera od progu punktów, kolor litery. */
+const GRADES: [string, number, number][] = [['S', 90, C.gold], ['A', 75, C.lime], ['B', 60, C.cyan], ['C', 40, C.lgray], ['D', 0, C.salmon]];
 const END_X = 12, END_W = W - 24, END_BOTTOM = 210;
 /** Ekran końca: najwięcej linii listy odblokowań nad panelem i wysokość panelu, od której kafelki Highlights mają ikony. */
 const END_UNLOCK_LINES = 2;
