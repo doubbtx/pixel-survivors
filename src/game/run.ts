@@ -1600,8 +1600,9 @@ export class Run {
    * Bez limitu szybkie zabijanie odnawiało tarczę szybciej, niż wrogowie ją zbijali.
    */
   killShield(frac: number, capFrac: number): void {
-    const gain = Math.min(this.killShieldBudget, this.stats.maxHp * frac);
-    if (gain > 0) this.killShieldBudget -= this.addShield(gain, capFrac);
+    // Wspólny sufit z leczeniem (0.63.2, gracz: Borgun z tarczą za zabójstwa stał w miejscu): tarcza też zużywa sustainLeft.
+    const gain = Math.min(this.killShieldBudget, this.sustainLeft, this.stats.maxHp * frac);
+    if (gain > 0) { const got = this.addShield(gain, capFrac); this.killShieldBudget -= got; this.sustainLeft -= got; }
   }
 
   // ================= walka =================

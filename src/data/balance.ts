@@ -269,7 +269,8 @@ export const BAL = {
    * bazowe HP o 15-45% dla nowicjuszy; od Magicznej wraca mniej więcej dawne HP (testerzy: wyższe poziomy za łatwe).
    */
   heroHpTier: [1, 0.85, 0.8, 0.8] as number[],
-  sustain: { tier: [0.05, 0.03, 0.022, 0.016] as number[], perTorment: 0.001, endless: 0.03, endlessFrom: 3, perDepth: 0.002, min: 0.008 },
+  // 0.63.2 (gracz: pierwsza wyprawa na Zwykłej do aktu 3, stanie z tarczą): niżej na każdym poziomie, tarcza za zabójstwa w tym samym budżecie.
+  sustain: { tier: [0.035, 0.025, 0.018, 0.013] as number[], perTorment: 0.001, endless: 0.025, endlessFrom: 3, perDepth: 0.002, min: 0.008 },
   /** Piętno Aurela (0.43): leczenie za trafienie napiętnowanego (ułamek maks. HP, w budżecie drainPerSec; do Wiary liczy się `faith` leczenia), maks. czas, przedłużanie w Uświęconej ziemi (s/s), tarcza Opiekuna za napiętnowanego w `guardR`, wybuch Włóczni świtu. */
   brand: { heal: 0.004, faith: 0.5, max: 12, shieldCap: 0.1, sanct: 1.5, guardR: 120, shieldPer: 0.02, boom: 0.6, boomR: 24, speed: 260, life: 0.6, width: 9 },
   relics: { max: 3, offer: 3, prismWeak: 2.25, prismResist: 0.25, huntElite: 0.4, huntRegular: 0.1, cloakTime: 1, cloakCd: 8, cloakHp: 0.75, maceTime: 6, maceDmgLoss: 0.15, turncoatHp: 1.5, turncoatAura: 0.5, hornWindow: 15, chaliceHeal: 0.15, bossDmg: 1.25, shopMarkup: 1.25 },
@@ -602,7 +603,7 @@ export const BAL = {
     /** HP bossa aktu ponad zwykły wzór (0.37: walki trwały medianę 6-9 s; przy ×4 bot god P50 19 s, P90 119 s — ×3 z zapasem dla słabszych buildów). */
     bossHp: 3,
     /** Dodatkowy tłum wrogów na mapach Ekspedycji (flaga enemyCount) w akcie. */
-    crowd: (act: number) => 0.5 + 0.25 * act,
+    crowd: (act: number) => 0.6 + 0.3 * act,
     /** Pierwszy węzeł wyprawy (playtest 0.43.2: gracze i boty ginęli tu w 50-100 s): cel zabójstw, mniej wrogów (enemyCount), cisza bez sytuacji, zadań i wydarzeń (s), pierwsza elita (s). */
     gentle: { kills: 300, crowd: -0.5, dmg: -0.35, quiet: 90, stagger: 20, elite: 60, second: 0.5 },
     /**
@@ -617,10 +618,11 @@ export const BAL = {
      * po każdej ukończonej mapie aktu (bot: wchodził na 2. mapę z 7-50% HP, bez leczenia między mapami). Rzadka i wyżej: bez zmian.
      */
     ramp: {
-      cap: [[0.6, 0.7, 1.2, 1.6, 2.1, 2.6, 0.7], [1, 1.6, 3, 4, 5.5, 7, 1.4]] as number[][],
-      crowd: [[-0.5, -0.4, -0.3, -0.2, -0.1, -0.1, 0], [-0.5, -0.25, -0.15, -0.1, 0, 0, 0]] as number[][],
+      // 0.63.2 (gracz: pierwsza wyprawa przeszła do aktu 3, „potwory za mało biją, jest ich za mało”): Zwykła ostrzej od 2. mapy.
+      cap: [[0.6, 0.9, 1.6, 2.2, 3, 3.8, 1], [1, 1.6, 3, 4, 5.5, 7, 1.4]] as number[][],
+      crowd: [[-0.5, -0.3, -0.2, -0.1, 0, 0, 0], [-0.5, -0.25, -0.15, -0.1, 0, 0, 0]] as number[][],
       shooters: [[-0.6, -0.6, -0.5, -0.35, -0.2, -0.1, 0], [-0.4, -0.25, -0.15, -0.1, 0, 0, 0]] as number[][],
-      heal: [0.3, 0.15] as number[],
+      heal: [0.2, 0.15] as number[],
       /**
        * Akt 2 (0.62, weteran: akt 1 Zwykła bez zagrożenia, 1. mapa aktu 2 na Magicznej zabiła po 35 s, Kultysta 31% HP):
        * bez sufitu mnożnik skakał z 2.6 na 4-14 w pierwszej mapie (głębokość ta sama, 3), tłum rósł o 0.35 (akt), a strzelców
@@ -629,9 +631,9 @@ export const BAL = {
        */
       // 0.63 (testerzy 0.62: akt 2 Magicznej po Rozwoju bez zagrożenia): Magiczna w akcie 2 z wyższym sufitem, pełnym tłumem
       // i strzelcami od 2. mapy (Zwykła bez zmian).
-      cap2: [[2.6, 3.1, 4, 5, 6.2, 7.6, 2.2], [3.6, 5, 7, 9.5, 12.5, 16, 4.5]] as number[][],
-      crowd2: [[-0.35, -0.25, -0.15, -0.05, 0, 0, 0], [-0.2, 0, 0, 0, 0, 0, 0]] as number[][],
-      shooters2: [[-0.3, -0.2, -0.1, 0, 0, 0, 0], [-0.15, 0, 0, 0, 0, 0, 0]] as number[][],
+      cap2: [[3.2, 4, 5.2, 6.8, 8.5, 10.5, 3], [3.6, 5, 7, 9.5, 12.5, 16, 4.5]] as number[][],
+      crowd2: [[-0.2, -0.1, 0, 0, 0, 0, 0], [-0.2, 0, 0, 0, 0, 0, 0]] as number[][],
+      shooters2: [[-0.15, 0, 0, 0, 0, 0, 0], [-0.15, 0, 0, 0, 0, 0, 0]] as number[][],
     },
     /** Przesunięcie czasu fal (s) na głębokość — bogatszy skład wrogów w dalszych węzłach. */
     waveOffsetPerDepth: 50,
