@@ -1062,7 +1062,9 @@ export class GameScreen implements Screen {
     const pct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`;
     const stats: [string, string, boolean][] = [
       ['HP', fmt(s.maxHp), true], ['Pancerz', fmt(s.armor), s.armor > 0],
-      ['Regeneracja', `${s.regen.toFixed(1)}/s`, s.regen > 0], ['Leczenie z obrażeń', `${Math.round(s.lifesteal * 100)}%`, s.lifesteal > 0],
+      // Leczenie: wartość i wspólny sufit na sekundę (BAL.sustain) — regeneracja, kradzież życia i tarcze za zabójstwa razem.
+      ['Regeneration', `${s.regen.toFixed(1)}/s (max ${fmt(Math.round(s.maxHp * run.sustainRate()))}/s)`, s.regen > 0],
+      ['Leczenie z obrażeń', `${Math.round(s.lifesteal * 100)}% (${(s.lifesteal * BAL.lifestealRate * 100).toFixed(1)}%/s)`, s.lifesteal > 0],
       ['Obrażenia', `x${s.might.toFixed(2)}`, s.might !== 1], ['Krytyk', `${Math.round(s.crit * 100)}% (x${s.critMult.toFixed(1)})`, true],
       ['Szybkość ataku', pct(s.atkSpeed), s.atkSpeed !== 0], ['Szybkość odnowienia', pct(s.cdr), s.cdr !== 0],
       ['Obszar', `x${s.area.toFixed(2)}`, s.area !== 1], ['Pociski', `+${s.amount}`, s.amount > 0],

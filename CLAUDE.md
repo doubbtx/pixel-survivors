@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.63.1)
+## Stan (wersja 0.63.2)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -880,6 +880,10 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   `minions.bigMul` 0.5 na bossy i elity. Bot Magiczna: Morwen 2,7 → 1,7 mapy (Kestra 2,7), Zew dusz 15-43% → 12-16%.
   Wskrzeszenie widoczne: `Run.reviveStop` (gra staje na `BAL.revive.stop` s, także przy wyłączonym zatrzymaniu klatki), baner
   „Revived! N left”, wstrząs i dźwięk. Naprawa: Buty Burzy Strzał z minami jako pierwszą bronią („Brak sprite'a: mine”).
+- 0.63.2 (gracz: świeży zapis, Borgun z tarczą do aktu 3 za pierwszym razem): `killShield` zużywa też `sustainLeft`, `BAL.sustain.tier`
+  [0.035, 0.025, 0.018, 0.013], Zwykła ostrzej (`ramp.cap/crowd[0]` od 2. mapy, `heal[0]` 0.2, `cap2/crowd2/shooters2[0]`), `expedition.crowd`
+  0.6 + 0.3 × akt. Bot nowy gracz (Kestra, Borgun, Takezo × 2): 0.63.0 do aktu 1-2 (2-9 map), 0.63.2 ginie w akcie 1 (2-3 mapy).
+  Kradzież życia: budżet `lifesteal × BAL.lifestealRate` maks. HP/s (zamiast stałego 4%/s), pauza pokazuje „4% (2%/s)” i sufit leczenia przy regeneracji.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`

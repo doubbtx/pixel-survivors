@@ -523,7 +523,7 @@ export class Run {
   cmdBuffT = 0;
   /** Sierp krwi: pozostały budżet leczenia (HP), odnawiany co sekundę do BAL.drainPerSec × maks. HP; Kości: czas ostatniej monety. */
   drainLeft = 0;
-  /** Kradzież życia: pozostały budżet (HP), odnawiany do BAL.lifestealPerSec × maks. HP na sekundę. */
+  /** Kradzież życia: pozostały budżet (HP), odnawiany do lifesteal × BAL.lifestealRate × maks. HP na sekundę. */
   stealLeft = 0;
   /** Stałe leczenie (regeneracja, kradzież życia, Sierp krwi, Piętno): pozostały wspólny budżet (HP) z sufitu BAL.sustain. */
   sustainLeft = 0;
@@ -804,7 +804,9 @@ export class Run {
     if (this.cmdBuffT > 0) this.cmdBuffT -= dt;
     if (this.cloakCd > 0) this.cloakCd -= dt;
     this.drainLeft = Math.min(this.stats.maxHp * BAL.drainPerSec, this.drainLeft + this.stats.maxHp * BAL.drainPerSec * dt);
-    this.stealLeft = Math.min(this.stats.maxHp * BAL.lifestealPerSec, this.stealLeft + this.stats.maxHp * BAL.lifestealPerSec * dt);
+    // Budżet kradzieży życia rośnie ze statystyką (0.63.2, gracz: „mamy 5%, a nie leczymy się prawie wcale”): lifesteal × lifestealRate maks. HP/s.
+    const steal = this.stats.maxHp * this.stats.lifesteal * BAL.lifestealRate;
+    this.stealLeft = Math.min(steal, this.stealLeft + steal * dt);
     const sus = this.stats.maxHp * this.sustainRate();
     this.sustainLeft = Math.min(sus, this.sustainLeft + sus * dt);
     if (!this.banners.length) return;
@@ -1600,8 +1602,9 @@ export class Run {
    * Bez limitu szybkie zabijanie odnawiało tarczę szybciej, niż wrogowie ją zbijali.
    */
   killShield(frac: number, capFrac: number): void {
-    const gain = Math.min(this.killShieldBudget, this.stats.maxHp * frac);
-    if (gain > 0) this.killShieldBudget -= this.addShield(gain, capFrac);
+    // Wspólny sufit z leczeniem (0.63.2, gracz: Borgun z tarczą za zabójstwa stał w miejscu): tarcza też zużywa sustainLeft.
+    const gain = Math.min(this.killShieldBudget, this.sustainLeft, this.stats.maxHp * frac);
+    if (gain > 0) { const got = this.addShield(gain, capFrac); this.killShieldBudget -= got; this.sustainLeft -= got; }
   }
 
   // ================= walka =================
