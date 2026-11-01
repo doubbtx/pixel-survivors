@@ -902,6 +902,8 @@ export const PL: Record<string, string> = {
   "Cursed: no healing": "Przeklęta: bez leczenia",
   "Revived! {} left": "Wskrzeszenie! Zostało: {}",
   "Revived! Last chance": "Wskrzeszenie! Ostatnia szansa",
+  "Regeneration": "Regeneracja",
+  "{}/s (max {}/s)": "{}/s (maks. {}/s)",
   "Every 22nd kill raises a ghost minion from the corpse for 6 s.": "Co 22. zabójstwo z ciała wroga powstaje duch-sługa na 6 s.",
   "Evolution piece: you already have {}, at max level they evolve": "Składnik ewolucji: masz już {}, na maks. poziomie ewoluują",
   "Recommended: {}": "Polecane: {}",

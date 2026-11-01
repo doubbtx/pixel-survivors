@@ -257,7 +257,9 @@ export const BAL = {
     goals: { magnet: 25, laser: 40, reactions: 250, crits: 3000, heal: 2500, kills: 3000, synTier: 2, minesMin: 10 },
   },
   /** Kradzież życia (0.60): osobny budżet, ułamek maks. HP na sekundę; wcześniej 2% za każde trafienie = kilka pasków HP na s. */
-  lifestealPerSec: 0.04,
+  // 0.63.2: budżet z samej statystyki — 5% kradzieży = do 2,5% maks. HP/s przy trafianiu (wcześniej stałe 4%/s dla każdej wartości,
+  // a ze wspólnym sufitem BAL.sustain każda wartość dawała to samo). Pauza pokazuje oba (Lifesteal „4% (2%/s)”, Regeneration „maks.”).
+  lifestealRate: 0.5,
   /**
    * Sufit stałego leczenia (0.63): regeneracja, kradzież życia, Sierp krwi i Piętno razem najwyżej tyle maks. HP na sekundę.
    * Ekspedycja wg poziomu map (Zwykła, Magiczna, Rzadka, Koszmarna) minus `perTorment` za stopień Udręki; Endless: `endless`

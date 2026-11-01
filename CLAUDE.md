@@ -883,6 +883,7 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - 0.63.2 (gracz: świeży zapis, Borgun z tarczą do aktu 3 za pierwszym razem): `killShield` zużywa też `sustainLeft`, `BAL.sustain.tier`
   [0.035, 0.025, 0.018, 0.013], Zwykła ostrzej (`ramp.cap/crowd[0]` od 2. mapy, `heal[0]` 0.2, `cap2/crowd2/shooters2[0]`), `expedition.crowd`
   0.6 + 0.3 × akt. Bot nowy gracz (Kestra, Borgun, Takezo × 2): 0.63.0 do aktu 1-2 (2-9 map), 0.63.2 ginie w akcie 1 (2-3 mapy).
+  Kradzież życia: budżet `lifesteal × BAL.lifestealRate` maks. HP/s (zamiast stałego 4%/s), pauza pokazuje „4% (2%/s)” i sufit leczenia przy regeneracji.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`
