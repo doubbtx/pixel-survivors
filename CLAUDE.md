@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.63.2)
+## Stan (wersja 0.63.3)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -884,6 +884,9 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
   [0.035, 0.025, 0.018, 0.013], Zwykła ostrzej (`ramp.cap/crowd[0]` od 2. mapy, `heal[0]` 0.2, `cap2/crowd2/shooters2[0]`), `expedition.crowd`
   0.6 + 0.3 × akt. Bot nowy gracz (Kestra, Borgun, Takezo × 2): 0.63.0 do aktu 1-2 (2-9 map), 0.63.2 ginie w akcie 1 (2-3 mapy).
   Kradzież życia: budżet `lifesteal × BAL.lifestealRate` maks. HP/s (zamiast stałego 4%/s), pauza pokazuje „4% (2%/s)” i sufit leczenia przy regeneracji.
+- Ekran końca, zakładka Summary (pierwsza; pomysł z BoardUI): `runGrade` (0-100, litera `GRADES` S/A/B/C/D; postęp 40, przetrwanie 20,
+  zabójstwa/min 15, bossowie 15, trudność 10) w pierścieniu z rozbiciem i trzy pierścienie udziału obrażeń `renderSummary` (bronie po
+  `ROLE_BY_SRC`, umiejętności i sługi po nazwach Q/E/unik/R, pasywki i zasobu, reszta = efekty). `END_TABS` ma 6 zakładek (Build = 5).
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`

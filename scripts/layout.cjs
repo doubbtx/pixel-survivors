@@ -64,7 +64,7 @@ const GAME = [
   { js: `(async()=>{${R}const m=await import('/src/data/shop.ts');r.gold=5000;r.shop=m.rollShop(r,r.depth);s.openShop('map');})()`, wait: 900, chk: 'shop' },
   { k: 'ArrowRight', w: 300, chk: 'shop2' }, { k: 'ArrowDown ArrowDown', w: 300, chk: 'shop3' },
   { js: `(()=>{${R}r.shop=null;s.state='play';s.openAnvil('play');})()`, wait: 900, chk: 'anvil' }, { k: 'Enter', w: 500, chk: 'anvil2' }, { k: 'Escape', w: 500 }, { k: 'KeyB', w: 500, chk: 'anvil_workshop' },
-  { js: `(()=>{${R}s.state='play';r.player.hp=0;r.outcome='dead';r.outcomeT=0.2;r.killedBy={src:'Strażnik skarbca',dmg:1234,hits:12,recent:4321};r.takenBySource=new Map([['Strażnik skarbca',4321],['Shattered Knight',900],['Kultysta',500],['Bombardment',300],['Kolce',12]]);})()`, wait: 2500, chk: 'end1' }, ...right('end', 4),
+  { js: `(()=>{${R}s.state='play';r.player.hp=0;r.outcome='dead';r.outcomeT=0.2;r.killedBy={src:'Strażnik skarbca',dmg:1234,hits:12,recent:4321};r.takenBySource=new Map([['Strażnik skarbca',4321],['Shattered Knight',900],['Kultysta',500],['Bombardment',300],['Kolce',12]]);})()`, wait: 2500, chk: 'end1' }, ...right('end', 5),
 ];
 
 const PATCH = () => {
