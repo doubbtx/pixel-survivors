@@ -3,12 +3,11 @@ import type { Input } from '../core/input';
 import { C } from '../core/palette';
 import { drawText, wrapText } from '../core/font';
 import { sfx } from '../core/audio';
-import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { BOSS_POWER_BY_ID, type BossPowerDef } from '../data/enemies';
 import type { Run } from '../game/run';
 import { rollPowerOffer, takePower } from '../systems/powers';
-import { dim, inside, cardFrame, button } from './widgets';
+import { dim, inside, cardFrame, cardIcon, pill, button } from './widgets';
 import { hintShowing } from './hints';
 
 const CARD_W = 132, CARD_H = 150, CARD_Y = 50;
@@ -79,12 +78,12 @@ export class PowerPickView {
       const x = this.cardX(i), on = i === this.sel, up = own?.id === o.id, cy = CARD_Y + Math.round((1 - k) ** 3 * 30) - (on ? 3 : 0);
       r.withAlpha(k, () => {
         cardFrame(r, x, cy, CARD_W, CARD_H, on ? C.pink : C.slate, on);
-        r.withAlpha(0.3, () => r.circle(x + CARD_W / 2, cy + 30, 20, C.plum, true));
-        drawSprite(g, o.icon, x + CARD_W / 2, cy + 30, { scale: 2 });
+        // Wnętrze jak karty awansu: ikona w kole, nazwa, pigułka statusu (faza bossa albo ulepszenie), opis.
+        cardIcon(r, o.icon, x + CARD_W / 2, cy + 30, C.plum, on ? C.pink : C.plum);
         drawText(g, o.name, x + CARD_W / 2, cy + 54, up ? C.yellow : C.white, { align: 'center', shadow: C.black });
-        drawText(g, up ? `Ulepszenie: poziom ${own!.level + 1}/${BAL.bossPowers.maxLevel}` : `Faza ${o.phase + 1} bossa`, x + CARD_W / 2, cy + 66, up ? C.lime : C.lavender, { align: 'center' });
+        pill(r, x + CARD_W / 2, cy + 67, up ? `Ulepszenie: poziom ${own!.level + 1}/${BAL.bossPowers.maxLevel}` : `Faza ${o.phase + 1} bossa`, up ? C.lime : C.lavender, 'center');
         wrapText(o.desc, CARD_W - 16).forEach((l, j) => drawText(g, l, x + 8, cy + 82 + j * 11, C.lgray));
-        if (up) drawText(g, `+${Math.round(BAL.bossPowers.perLevel * 100)}% obrażeń`, x + CARD_W / 2, cy + CARD_H - 16, C.lime, { align: 'center' });
+        if (up) pill(r, x + CARD_W / 2, cy + CARD_H - 15, `+${Math.round(BAL.bossPowers.perLevel * 100)}% obrażeń`, C.lime, 'center');
         drawText(g, String(i + 1), x + 6, cy + 4, on ? C.yellow : C.lavender);
       });
     });

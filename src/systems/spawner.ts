@@ -95,10 +95,11 @@ export function spawnEnemy(run: Run, id: string, x: number, y: number, o: SpawnO
 /**
  * HP bossa / minibossa z podłogą: tyle sekund DPS w duże cele (Run.bigDps), w dalszych aktach i głębiach więcej, ale najwyżej
  * `maxMul` × zwykłe HP (BAL.bossTtk; playtest 0.63: po Skarbcu boss aktu 3 dostał 10,7 mld HP i nie dało się go pokonać).
+ * `dps` = mierzony DPS (miniboss podaje większy z bigDps i DPS buildu × `emaFrac`).
  */
-function ttkFloor(run: Run, hp: number, sec: number): number {
+function ttkFloor(run: Run, hp: number, sec: number, dps = run.bigDps()): number {
   const K = BAL.bossTtk, step = run.expedition ? run.expedition.act - 1 : Math.max(0, run.depth - 1);
-  return Math.max(hp, Math.min(hp * K.maxMul, run.bigDps() * sec * (1 + K.perAct * step)));
+  return Math.max(hp, Math.min(hp * K.maxMul, dps * sec * (1 + K.perAct * step)));
 }
 
 function freeSlot(run: Run): void {
@@ -289,7 +290,7 @@ function updateMiniboss(run: Run, dt: number, waveT: number): void {
   if (hunt) {
     e.maxHp = Math.max(e.maxHp, run.dpsEma * X.huntTtk * (1 + X.huntTtkAct * ((ex?.act ?? 1) - 1)) * huntHp / X.huntHp[0]);
     e.hp = e.maxHp * run.huntHpFrac;
-  } else e.maxHp = e.hp = ttkFloor(run, e.maxHp, BAL.bossTtk.mini);
+  } else e.maxHp = e.hp = ttkFloor(run, e.maxHp, BAL.bossTtk.mini, Math.max(run.bigDps(), run.dpsEma * BAL.bossTtk.emaFrac));
   if (hunt) {
     // Eskorta: elity bez skrzyń (Run.killEnemy); w akcie 1 bez cech zachowania (jak zwykłe elity, R3).
     const mods = Object.keys(ELITE_MODS).filter((k) => (ex?.act ?? 2) >= 2 || !ELITE_MODS[k].kind);

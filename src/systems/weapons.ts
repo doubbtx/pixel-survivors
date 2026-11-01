@@ -250,8 +250,8 @@ const BEHAVIORS: Record<WeaponKind, Behavior> = {
               // Kojące światło (augment): leczenie za trafionych (do 1% HP na pierścień).
               if (mend && healed < 10) { healed++; run.sustain(run.stats.maxHp * 0.001); }
             });
-            const f = run.addFx('ring', x, y, i % 2 ? w.def.color : C.white, 0.12);
-            if (f) f.r = rr;
+            // Pierścień rysowany co drugi krok (0.64: mniej warstw naraz), trafienia dalej co krok.
+            if (i % 2 === 0) { const f = run.addFx('ring', x, y, i === NOVA_STEPS ? C.white : w.def.color, 0.12); if (f) f.r = rr; }
           });
         }
         sfx.play(weaponSound(w));

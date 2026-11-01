@@ -53,7 +53,7 @@ Pule obiektów + spatial hash (cel: 60 FPS przy ~1000 wrogach i ~2000 pocisków)
 - `game/tutorial.ts` (samouczek: kroki `STEPS`, teksty per urządzenie), `data/unlocks.ts` (odblokowania: `UNLOCKS`, `grantUnlocks`, `heroUnlocked`, `maxTier`),
   `dev/bot.ts` (bot testowy, tylko serwer deweloperski) i `scripts/bot.cjs` (uruchamia bota w Playwright i wypisuje raport).
 
-## Stan (wersja 0.63.3)
+## Stan (wersja 0.64.0)
 
 - Etap 1: ruch, broń automatyczna, XP, awans 3 karty z losuj/pomiń/wygnaj.
 - Etap 2: 10 broni + ewolucje, 13 pasywek, 6 typów wrogów + elity, boss z 3 fazami, 2 bohaterów
@@ -887,6 +887,17 @@ Stan wyjściowy: wersja 0.26.1 (numery faz przesunięte za wersje 0.24–0.26 z 
 - Ekran końca, zakładka Summary (pierwsza; pomysł z BoardUI): `runGrade` (0-100, litera `GRADES` S/A/B/C/D; postęp 40, przetrwanie 20,
   zabójstwa/min 15, bossowie 15, trudność 10) w pierścieniu z rozbiciem i trzy pierścienie udziału obrażeń `renderSummary` (bronie po
   `ROLE_BY_SRC`, umiejętności i sługi po nazwach Q/E/unik/R, pasywki i zasobu, reszta = efekty). `END_TABS` ma 6 zakładek (Build = 5).
+- 0.64.0 (rework UI na wzór BoardUI, zespół agentów): widgets.ts — `panel` jako karta (radius 4, cień, linia u góry), `button`
+  active = wypełniony akcentem z ciemnym napisem, `pill` (pigułka stanu, 10/11 px), `statTile`, `tabs` + `tabRect` (zakładki
+  segmentowe; na czarnym tle menu `screenTabs`), `ring`, `sectionTitle`, `inlineStat`, `rowBg` + `tableHead` (tabele), `Menu`:
+  aktywny wiersz C.slate ze złotym paskiem (bez kursora). Menu: kafelki i pigułki na MainMenu/SlotScreen/HeroSelect (kafelek Resource
+  otwiera zakładkę Zasób)/Records, pierścienie gałęzi w Rozwoju, zaznaczenie w siatkach Kolekcji złotą obwódką. Ekrany runu: pauza
+  (pierścień ładunku R, pigułka poziomu, wiersze statystyk), ekran końca (statTile, tabele), karty awansu/kart (pigułki rodzaju i tagów),
+  porównanie przedmiotów (pigułki zmian, werdykt Better/Worse/Similar z `itemScore`), Kup/Kuj/Wyrusz wypełnione gdy możliwe,
+  pierścień szansy Kuźni i postępu synergii. HUD bez zmian (czytelność walki). Poprawki: duże pierścienie fx i Uświęcona ziemia ponad
+  `auraBig` bez wypełnienia (`readability.bigRingA`), nova rysuje co drugi krok; portal wyjścia z lochu obok skrzyń
+  (`events.exitDx`), `enterDungeon` kasuje `run.situation`; `CURSE_CLASH` (Gorączka / Pakt krwi), drenaż wstrzymany przy noHeal;
+  opis mapy elit w panelu mapy; miniboss: podłoga z `max(bigDps, dpsEma × bossTtk.emaFrac)`; Takezo maxHp 150, pancerz 4; bot `minis`.
 - 0.61.0 (role broni, gracz: „nie chcę, żeby wszystko było AoE”): `WeaponDef.role` / `AltEvo.role` ('single' | 'crowd' |
   'hybrid', data/weapons.ts; ewolucje i warianty mają własną rolę, fuzje = hybryda), `ROLE_BY_SRC` (rola po nazwie źródła),
   `roleInfo` (nazwa, kolor, opis dla UI). `BAL.roles`: mnożnik `big` na bossach, elitach i minibossach w `damageEnemy`

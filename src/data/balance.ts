@@ -179,8 +179,9 @@ export const BAL = {
    * głową, mocniejsza elipsa) od połowy `markerCrowd` wrogów, pełny przy `markerCrowd` (albo przy przygaszaniu ataków).
    * 0.63: aura o promieniu ponad `auraBig` px bez wypełnienia, plamy meteorów bledsze ponad `meteorMany` stref naraz,
    * promień (laser) rysowany najwyżej na `beamMax` px szerokości (reszta trafienia bladym pasmem).
+   * 0.64: pierścienie (fale Świętego światła) i Uświęcona ziemia ponad `auraBig` px bez wypełnienia, brzeg z alfą `bigRingA`.
    */
-  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5, tellBack: 0.6, tellShade: 0.28, markerCrowd: 150, auraBig: 80, meteorMany: 6, beamMax: 10 },
+  readability: { radius: 110, on: 20, off: 12, ema: 0.3, alpha: 0.55, flashCrowd: 500, dim: 0.35, dimMin: 0.2, projDraw: 300, ring: 0.6, bigFlashGap: 0.5, tellBack: 0.6, tellShade: 0.28, markerCrowd: 150, auraBig: 80, meteorMany: 6, beamMax: 10, bigRingA: 0.35 },
   /** 0.47 (gracz: „biorę bronie dystansowe i samo się wygrywa”; pomiar: wręcz ≈ 30% zabójstw pocisków naprowadzanych).
    * Mnożniki obrażeń/obszaru broni wg wzorca (z ewolucjami) i wg id (prefiks), plus bonus za trafienia z bliska. */
   weaponTune: {
@@ -470,6 +471,8 @@ export const BAL = {
     swordAt: 40, swordChance: 0.4,
     portalEvery: 120, portalChance: 0.6, portalLife: 35,
     dungeonWaves: 3, dungeonWaveSize: 10, arenaR: 150,
+    /** Portal powrotny z oczyszczonego lochu: tyle jednostek w bok od środka areny (obok skrzyń, z dala od gracza). */
+    exitDx: 44,
     /** Złoty szlam: szansa przy spawnie, minimalny odstęp (s), najwyżej jeden naraz. */
     goldSlimeChance: 0.0005, goldSlimeGap: 90, goldSlimeLife: 25, goldSlimeCoins: 30,
   },
@@ -688,9 +691,11 @@ export const BAL = {
    * przez czas walki z nimi — trafienie w ostatnich `engage` s; oba wygaszane z czasem `decay` s, liczone od `minTime` s walki),
    * ×(1 + `perAct` × (akt - 1)), w Endless × głębokość. Run.dpsEma się nie nadaje: liczy tłum i wybuchy (bot: 99 mln przy
    * 0,7 mln w samego bossa). Najwyżej `maxMul` × zwykłe HP (elity zabite jednym trafieniem zawyżają pomiar). Słaby build tej
-   * podłogi nie czuje; ratunkiem jest BAL.bossSoften.
+   * podłogi nie czuje; ratunkiem jest BAL.bossSoften. 0.64: miniboss liczy z większego z bigDps i Run.dpsEma × `emaFrac`
+   * (bigDps = 0 przed walką z elitą i zaniża DPS skupiony na jednym celu: elity giną szybko, bez nadwyżki;
+   * bot: miniboss aktu 2 przy bigDps 6 tys. padał w 2,7 s).
    */
-  bossTtk: { boss: 30, mini: 12, perAct: 0.15, engage: 0.5, decay: 90, minTime: 5, maxMul: 2 },
+  bossTtk: { boss: 30, mini: 12, perAct: 0.15, engage: 0.5, decay: 90, minTime: 5, maxMul: 2, emaFrac: 0.25 },
 
   // --- gracz: diminishing returns tam, gdzie wartości ≥100% psułyby grę ---
   /** Pancerz → mnożnik otrzymywanych obrażeń. 25 pancerza = -50%. Nigdy 0. */

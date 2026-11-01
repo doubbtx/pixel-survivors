@@ -1,12 +1,12 @@
 import { W, type Renderer } from '../core/renderer';
 import type { Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText } from '../core/font';
+import { drawText, wrapText, textWidth, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { rng } from '../core/rng';
 import { RARITY, rollOffer, cardPool, type CardDef, type CardSource, type Rarity } from '../data/cards';
 import type { Run } from '../game/run';
-import { button, dim, inside, cardFrame, cardBadge, cardIcon, REROLL_GUARD } from './widgets';
+import { button, dim, inside, cardFrame, cardBadge, cardIcon, pill, REROLL_GUARD } from './widgets';
 import { hintShowing } from './hints';
 import { drawTagGain } from './synergies';
 
@@ -32,7 +32,8 @@ export function drawCard(r: Renderer, c: CardDef, x: number, y: number, selected
   if (c.cursed) r.withAlpha(0.14, () => r.roundRect(x + 2, y + 2, CARD_W - 4, CARD_H - 4, 3, C.red));
   const g = r.g;
   const cx = x + CARD_W / 2;
-  drawText(g, c.cursed ? (c.flags?.noHeal ? 'Cursed: no healing' : 'Przeklęta') : RARITY[c.rarity].name, cx, y + 7, c.cursed ? C.hotpink : col, { align: 'center', shadow: C.black });
+  // Rzadkość (albo klątwa) jako pigułka statusu u góry karty.
+  pill(r, cx, y + 7, c.cursed ? (c.flags?.noHeal ? 'Cursed: no healing' : 'Przeklęta') : RARITY[c.rarity].name, c.cursed ? C.hotpink : col, 'center');
   cardIcon(r, c.icon!, cx, y + 36, c.cursed ? C.hotpink : col, c.cursed ? C.plum : col);
   // Pryzmatyczne: przesuwający się po karcie pas światła.
   if (c.rarity === 'prism' && !c.cursed) {
@@ -44,14 +45,22 @@ export function drawCard(r: Renderer, c: CardDef, x: number, y: number, selected
     drawText(g, line, cx, ly, C.white, { align: 'center', shadow: C.black });
     ly += 12;
   }
-  drawText(g, c.tags.join(' / '), cx, ly, C.lavender, { align: 'center' });
+  // Tagi synergii jako przygaszone pigułki w rzędzie (za szerokie: jedną linią tekstu).
+  const sc = smallS(), tw = c.tags.reduce((s, t) => s + textWidth(t) * sc + 8 + 3, -3);
+  if (tw <= CARD_W - 10) {
+    let tx = cx - tw / 2;
+    for (const t of c.tags) tx += pill(r, tx, ly, t, C.lavender) + 3;
+  } else drawText(g, c.tags.join(' / '), cx, ly, C.lavender, { align: 'center', scale: Math.min(1, (CARD_W - 8) / textWidth(c.tags.join(' / '))) });
   ly += 15;
   for (const line of wrapText(c.desc, CARD_W - 18).slice(0, 6)) {
     drawText(g, line, cx, ly, C.lgray, { align: 'center' });
     ly += 11;
   }
-  const foot = [c.hero ? 'Bohater' : '', stacks > 0 ? `Masz x${stacks}` : ''].filter(Boolean).join('   ');
-  if (foot) drawText(g, foot, cx, y + CARD_H - 32, C.gold, { align: 'center', shadow: C.black });
+  // Karta bohatera i posiadane kopie: złote pigułki nad tagami synergii.
+  const foot = [c.hero ? 'Bohater' : '', stacks > 0 ? `Masz x${stacks}` : ''].filter(Boolean);
+  const fw = foot.reduce((s, t) => s + textWidth(t) * smallS() + 8 + 4, -4);
+  let fx = cx - fw / 2;
+  for (const t of foot) fx += pill(r, fx, y + CARD_H - 31, t, C.gold) + 4;
 }
 
 /**

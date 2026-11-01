@@ -296,10 +296,15 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
           for (let k = 0; k < 4; k++) r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7, 2, 2, k % 2 ? C.lime : C.pink);
           break;
         case 'holy':
-          // Uświęcona ziemia: złoty krąg z unoszącymi się iskrami światła.
-          r.withAlpha(0.18, () => r.circle(zx, zy, zr, C.yellow, true));
-          r.circle(zx, zy, zr, run.blink(30, 15) ? C.gold : C.yellow);
-          r.circle(zx, zy, zr * 0.6, C.cream);
+          // Uświęcona ziemia: złoty krąg z unoszącymi się iskrami światła. Duża (0.64, Aurel od aktu 2) bez wypełnienia
+          // i z bladym brzegiem, jak duże aury.
+          if (zr > BAL.readability.auraBig * ZOOM) {
+            r.withAlpha(BAL.readability.bigRingA, () => { r.circle(zx, zy, zr, C.gold); r.circle(zx, zy, zr * 0.6, C.cream); });
+          } else {
+            r.withAlpha(0.18, () => r.circle(zx, zy, zr, C.yellow, true));
+            r.circle(zx, zy, zr, run.blink(30, 15) ? C.gold : C.yellow);
+            r.circle(zx, zy, zr * 0.6, C.cream);
+          }
           for (let k = 0; k < 4; k++) r.rect(zx + rng.range(-zr, zr) * 0.7, zy + rng.range(-zr, zr) * 0.7 - rng.range(0, 6), 1, 2, k % 2 ? C.white : C.yellow);
           break;
         case 'fire':
@@ -744,7 +749,10 @@ function drawWorld(run: Run, r: Renderer, live: boolean): void {
           r.line(X(f.x), Y(f.y), X(f.x2), Y(f.y2), C.white, 1);
           break;
         case 'ring': {
+          // Duży pierścień (0.64, fale Świętego światła na pół ekranu): bez wypełnienia, bledszy brzeg; inaczej nakładające się
+          // pierścienie składały się w biało-żółtą płachtę, w której ginęły pociski wrogów.
           const rr = f.r * ZOOM * (1.15 - k * 0.3);
+          if (rr > BAL.readability.auraBig * ZOOM) { r.withAlpha(BAL.readability.bigRingA * k, () => r.circle(X(f.x), Y(f.y), rr, f.col)); break; }
           if (glow) r.withAlpha(0.3 * k, () => r.circle(X(f.x), Y(f.y), rr, f.col, true));
           r.circle(X(f.x), Y(f.y), rr, f.col);
           break;

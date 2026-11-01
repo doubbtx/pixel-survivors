@@ -35,7 +35,8 @@ export function updatePlayer(run: Run, input: Input, dt: number): void {
   if (p.flash > 0) p.flash--;
   if (run.stats.regen > 0) run.sustain(run.stats.regen * dt);
   // Gorączka (klątwa): stała utrata HP, która nie zabija (jak Rytuał) i nie zależy od mnożników regeneracji.
-  const drain = run.flag('hpDrain');
+  // Przy blokadzie leczenia (mapa Pustki) wstrzymana (0.64): bez leczenia zostawiała bohatera na 1 HP do końca mapy.
+  const drain = run.flag('noHeal') > 0 ? 0 : run.flag('hpDrain');
   if (drain > 0 && p.hp > 1) p.hp = Math.max(1, p.hp - drain * dt);
 
   // Punkt celowania wg ustawienia (core/save.ts AimMode):

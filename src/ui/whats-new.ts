@@ -18,6 +18,14 @@ function newer(a: string, b: string): boolean {
 /** Nowości wersji (po angielsku; polski w core/i18n-pl.ts). Najnowsza na górze. */
 const NOTES: { version: string; lines: string[] }[] = [
   {
+    version: '0.64',
+    lines: [
+      "New look: menus and in-run screens use cards, big numbers, status pills, segmented tabs and progress rings. Items show Better / Worse at a glance, and the end screen opens on a Summary with a run grade.",
+      "Fixes: Aurel's light no longer floods the screen, the dungeon exit portal stands next to the chests, Fever and Pact of Blood are never offered together, and the elite map warns that it is much harder.",
+      "Balance: minibosses last longer against strong builds, and Takezo starts tougher.",
+    ],
+  },
+  {
     version: '0.63',
     lines: [
       "Healing has a cap per second: regeneration, life steal and other steady healing add up to a few percent of your max HP each second, less on higher map tiers, Torment and deep Endless. Potions, camps and meat still heal fully.",

@@ -1,8 +1,8 @@
 import { tr } from '../core/i18n';
 import { W, H, type Renderer } from '../core/renderer';
-import { C, PAL, RAMP } from '../core/palette';
+import { C, RAMP } from '../core/palette';
 import { drawText, wrapText, textWidth, DESC, descS, descLH, smallS } from '../core/font';
-import { hudScale, type Action } from '../core/input';
+import { hudScale, actionKey, type Action } from '../core/input';
 import { sfx } from '../core/audio';
 import { heroRecord, type HeroRecord } from '../core/save';
 import { drawSprite } from '../gfx/sprites';
@@ -14,7 +14,7 @@ import { renderWorld, warmFx } from '../game/render';
 import { endSlotRun } from '../game/campaign';
 import { fmt, fmtTime } from '../util/format';
 import type { App, Screen } from './app';
-import { button, Menu, dim, panel, inside, slot, bar, Scroll, Confirm, drawTip, type Tip } from './widgets';
+import { button, Menu, dim, panel, inside, slot, bar, Scroll, Confirm, drawTip, ring, pill, statTile, tabs, tabRect, sectionTitle, rowBg, tableHead, type Tip } from './widgets';
 import { renderHud, messageY, belowHud, hudGap } from './hud';
 import { UI, tile } from './theme';
 import { drawSkills } from './skills';
@@ -66,6 +66,8 @@ const REPEAT_DELAY = 0.12;
 /** Pauza: lewa kolumna z menu (x, szerokość) i drobny tekst podsumowania. */
 const PL = 8, PLW = 150;
 const PAUSE_TABS = ['Postać', 'Build', 'Umiejętności'];
+/** Tor zakładek segmentowych pauzy (x, y, szerokość, wysokość) przy prawej kolumnie zaczynającej się w `px`. */
+const PAUSE_TABS_BOX = (px: number): [number, number, number, number] => [px + 6, 11, 246, 18];
 
 /**
  * Ekran rozgrywki: run + nakładki (awans, karta, skrzynia, pauza, ukończenie poziomu, mapa Ekspedycji, koniec runu).
@@ -1042,22 +1044,31 @@ export class GameScreen implements Screen {
       lines.forEach((l, i) => drawText(g, l, PL + PLW / 2, H - 14 - lines.length * 11 + i * 11, C.salmon, { align: 'center' }));
     }
 
-    // Prawa kolumna: zakładki (strzałki lewo/prawo albo klik) i wspólny nagłówek: bohater, poziom, DPS.
+    // Prawa kolumna: zakładki segmentowe (strzałki lewo/prawo albo klik), pierścień ładunku ultimate i wspólny nagłówek.
     const px = PL + PLW + 6, pw = W - px - 8, x0 = px + 10, colW = (pw - 20) / 2;
     panel(r, px, 8, pw, H - 16);
-    PAUSE_TABS.forEach((t, i) => button(r, ...this.pauseTab(i), t, { active: i === this.pausePage, accent: C.gold }));
+    tabs(r, ...PAUSE_TABS_BOX(px), PAUSE_TABS, this.pausePage);
+    {
+      // Ładunek R (BoardUI: pierścień postępu): pełny = złoty, z literą klawisza w środku.
+      const need = run.ultNeed(), f = Math.min(1, run.ultCharge / Math.max(1, need)), cx = px + pw - 16, cy = 20;
+      ring(r, cx, cy, 6.5, 2.5, f, f >= 1 ? C.gold : run.hero.color);
+      drawText(g, actionKey('ult'), cx, cy - 4.5, f >= 1 ? C.yellow : C.lgray, { align: 'center', scale: smallS() });
+      drawText(g, `${Math.round(f * 100)}%`, cx - 11, cy - 4, f >= 1 ? C.yellow : C.lavender, { align: 'right', scale: smallS() });
+    }
     const time = Math.max(1, run.totalTime);
     let totalDmg = 0;
     for (const v of run.dmgBySource.values()) totalDmg += v;
-    drawText(g, run.hero.name, x0, 33, run.hero.color, { shadow: C.black });
-    const lvlTxt = `poziom postaci ${run.level}`, lvlX = x0 + textWidth(run.hero.name) + 6;
-    drawText(g, lvlTxt, lvlX, 33, C.lgray);
-    drawText(g, `DPS ${fmt(Math.round(totalDmg / time))}`, lvlX + textWidth(lvlTxt) + 10, 33, C.gold, { shadow: C.black });
+    // Nagłówek: bohater, pigułka poziomu, po prawej DPS (przygaszona etykieta, duża wartość).
+    drawText(g, run.hero.name, x0, 32, run.hero.color, { shadow: C.black });
+    pill(r, x0 + textWidth(run.hero.name) + 5, 33.5, tr(`poziom postaci ${run.level}`), C.cyan);
+    const dps = fmt(Math.round(totalDmg / time)), dpsX = px + pw - 12;
+    drawText(g, dps, dpsX, 32, C.gold, { align: 'right', shadow: C.black });
+    drawText(g, 'DPS', dpsX - textWidth(dps) - 4, 33.5, C.lavender, { align: 'right', scale: smallS() });
     if (this.pausePage === 2) { this.renderPauseSkills(x0, pw); return; }
-    const head = (t: string, y: number) => { drawText(g, t, x0, y, C.lavender); r.withAlpha(0.4, () => r.rect(x0 + textWidth(t) + 4, y + 5, pw - 24 - textWidth(t), 0.5, C.lavender)); };
+    const head = (t: string, y: number) => sectionTitle(r, t, x0, y + 1, pw - 20);
     if (this.pausePage === 1) { this.renderPauseBuild(x0, colW, head); return; }
 
-    // Statystyki: etykieta po lewej, wartość po prawej; wartość bazowa przygaszona.
+    // Statystyki: etykieta po lewej, wartość po prawej; wartość bazowa przygaszona, co drugi wiersz z delikatnym tłem.
     head('Statystyki', 47);
     const pct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`;
     const stats: [string, string, boolean][] = [
@@ -1073,24 +1084,27 @@ export class GameScreen implements Screen {
     ];
     stats.forEach(([k, v, on], i) => {
       const cx = x0 + (i % 2) * (colW + 8), y = 59 + Math.floor(i / 2) * 11;
+      if (Math.floor(i / 2) % 2 === 0) r.withAlpha(0.3, () => r.roundRect(cx - 3, y - 1.5, colW - 2, 13, 2, C.black));
       drawText(g, k, cx, y, on ? C.lgray : C.lavender);
       drawText(g, v, cx + colW - 8, y, on ? C.white : C.lavender, { align: 'right' });
     });
 
-    // Bronie: ikona, nazwa, poziom, DPS i udział w obrażeniach.
+    // Bronie: kafelek na broń (ikona, nazwa, poziom albo pigułka ewolucji, DPS i udział w obrażeniach).
     head('Bronie', 140);
     const best = Math.max(1, ...run.weapons.map((w) => run.dmgBySource.get(w.def.name) ?? 0));
     run.weapons.forEach((w, i) => {
-      const cx = x0 + (i % 2) * (colW + 8), y = 152 + Math.floor(i / 2) * 22;
+      const cx = x0 + (i % 2) * (colW + 8), y = 154 + Math.floor(i / 2) * 25;
+      r.withAlpha(0.35, () => r.roundRect(cx - 3, y - 3, colW - 2, 23, 3, C.black));
       slot(r, cx, y, 18, w.def.evolved ? C.gold : C.slate);
       drawSprite(g, w.def.icon, cx + 9, y + 9);
       const augs = run.augments.filter((id) => augmentWorks(AUGMENT_BY_ID[id], w.def)).length;
       for (let k = 0; k < augs; k++) r.rect(cx + 2 + k * 4, y - 2, 3, 2, C.cyan);
-      drawText(g, w.def.name, cx + 22, y - 1, w.def.color);
-      drawText(g, w.def.fused ? 'fuzja' : w.def.evolved ? 'ewolucja' : `poz. ${w.level}/${maxLevel(w.def)}`, cx + 22, y + 9, C.lavender);
+      drawText(g, w.def.name, cx + 22, y - 2, w.def.color, { scale: Math.min(1, (colW - 70) / Math.max(1, textWidth(w.def.name))) });
+      if (w.def.evolved) pill(r, cx + 22, y + 9, w.def.fused ? 'fuzja' : 'ewolucja', C.gold);
+      else drawText(g, `poz. ${w.level}/${maxLevel(w.def)}`, cx + 22, y + 9, C.lavender, { scale: smallS() });
       const dmg = run.dmgBySource.get(w.def.name) ?? 0;
-      drawText(g, fmt(Math.round(dmg / time)), cx + colW - 8, y - 1, C.gold, { align: 'right' });
-      bar(r, cx + colW - 40, y + 12, 32, 4, dmg / best, RAMP.gold);
+      drawText(g, fmt(Math.round(dmg / time)), cx + colW - 9, y - 2, C.gold, { align: 'right' });
+      bar(r, cx + colW - 41, y + 12, 32, 4, dmg / best, RAMP.gold);
     });
   }
 
@@ -1146,8 +1160,7 @@ export class GameScreen implements Screen {
 
   /** Zakładka `i` prawej kolumny pauzy: [x, y, szerokość, wysokość]. */
   private pauseTab(i: number): [number, number, number, number] {
-    const px = PL + PLW + 6, tw = 80;
-    return [px + 10 + i * (tw + 3), 12, tw, 16];
+    return tabRect(...PAUSE_TABS_BOX(PL + PLW + 6), PAUSE_TABS.length, i);
   }
 
   /** Pauza, zakładka umiejętności: poziom, odnowienie, opis i ewolucja każdej umiejętności; pasywka i zasób bohatera. */
@@ -1181,8 +1194,7 @@ export class GameScreen implements Screen {
 
   /** Prostokąt zakładki `i` ekranu końca (rysowanie i kliknięcie z jednego miejsca). */
   private endTab(i: number): [number, number, number, number] {
-    const n = END_TABS.length;
-    return [END_X + i * ((END_W + 4) / n), this.endY - 17, (END_W + 4) / n - 4, 14];
+    return tabRect(END_X, this.endY - 18, END_W, 16, END_TABS.length, i);
   }
 
   /** Przewijany obszar zakładki ekranu końca (Obrażenia: pod nagłówkiem kolumn, który stoi w miejscu). */
@@ -1211,13 +1223,7 @@ export class GameScreen implements Screen {
       ['Złoto', fmt(Math.floor(run.gold)), C.yellow],
     ];
     const tw = (W - 24 - 5 * 4) / 6;
-    tiles.forEach(([k, v, col], i) => {
-      const x = 12 + i * (tw + 4);
-      r.withAlpha(0.85, () => r.roundRect(x, 38, tw, 26, 3, C.navy, C.black));
-      r.roundFrame(x + 0.5, 38.5, tw - 1, 25, 3, C.slate, 0.75);
-      drawText(g, k, x + tw / 2, 41, C.lgray, { align: 'center', scale: smallS() });
-      drawText(g, v, x + tw / 2, 50, col, { align: 'center', shadow: C.black });
-    });
+    tiles.forEach(([k, v, col], i) => statTile(r, 12 + i * (tw + 4), 38, tw, 26, k, v, col));
     const modeLine = this.mode === 'endless' ? `Endless: rekord ${fmtTime(heroRecord(this.app.save, this.heroId).bestEndless)}`
       : `Ekspedycja: ukończone węzły ${ex!.cleared}${won ? `, esencja x${BAL.expedition.winEssenceMul}` : ''}`;
     // Esencja za run (oba tryby) i wyczyny runu (jeśli są).
@@ -1242,9 +1248,7 @@ export class GameScreen implements Screen {
     // Panel kończy się nad menu (propozycja trybu łatwego przesuwa menu w górę).
     this.endH = Math.min(END_BOTTOM, this.endMenu.y - 4) - this.endY;
     // Zakładki: obrażenia, wykres DPS, karta buildu (Tab / strzałki / klik).
-    END_TABS.forEach((t, i) => {
-      button(r, ...this.endTab(i), t, { active: i === this.endPage, accent: C.gold });
-    });
+    tabs(r, END_X, this.endY - 18, END_W, 16, END_TABS, this.endPage);
     panel(r, END_X, this.endY, END_W, this.endH);
     if (this.endPage === 0) this.renderSummary();
     else if (this.endPage === 1) this.renderHighlights();
@@ -1302,14 +1306,14 @@ export class GameScreen implements Screen {
     const big = this.endH >= END_TILE_FULL, cw = (END_W - 24 - 4 * 4) / 5, ch = big ? 48 : 34, y = this.endY + 6 - oy;
     cards.forEach((c, i) => {
       const x = END_X + 12 + i * (cw + 4);
-      r.withAlpha(0.85, () => r.roundRect(x, y, cw, ch, 3, C.navy, C.black));
-      r.roundFrame(x + 0.5, y + 0.5, cw - 1, ch - 1, 3, c.rec ? C.gold : C.slate, c.rec ? 1 : 0.75);
+      // Kafelek liczby (BoardUI): ramka złota tylko przy rekordzie, przygaszony tytuł, ikona po lewej, pigułka „Record!” po prawej.
+      panel(r, x, y, cw, ch, c.rec ? C.gold : UI.border);
       // Dłuższe tytuły (po polsku „Najmocniejszy cios”) zmniejszone do szerokości kafelka.
-      drawText(g, c.title, x + cw / 2, y + 3, C.lgray, { align: 'center', scale: Math.min(smallS(), (cw - 6) / textWidth(c.title)) });
-      if (c.icon && big) drawSprite(g, c.icon, x + cw / 2, y + 18);
+      drawText(g, c.title, x + cw / 2, y + 3, C.lavender, { align: 'center', scale: Math.min(smallS(), (cw - 6) / textWidth(c.title)) });
+      if (c.icon && big) drawSprite(g, c.icon, x + 13, y + 19);
+      if (c.rec && big) pill(r, x + cw - 4, y + 14, 'Record!', C.gold, 'right');
       drawText(g, c.value, x + cw / 2, y + (big ? 27 : 13), c.rec ? C.yellow : C.white, { align: 'center', shadow: C.black, scale: textWidth(c.value) > cw - 6 ? 0.75 : 1 });
       drawText(g, c.note, x + cw / 2, y + (big ? 38 : 24), C.lavender, { align: 'center', scale: Math.min(smallS(), (cw - 6) / Math.max(1, textWidth(c.note))) });
-      if (c.rec && big && run.blink(40, 28)) drawText(g, 'Record!', x + cw - 4, y + 13, C.gold, { align: 'right', outline: C.black, scale: smallS() });
     });
     // Pobite rekordy bohatera (porównanie z zapisem sprzed runu).
     const broke: string[] = [];
@@ -1325,13 +1329,14 @@ export class GameScreen implements Screen {
     const first = !broke.length && cards.some((c) => c.rec);
     const title = broke.length ? `${tr('Records broken')}: ${broke.length}` : first ? 'Your first records! Beat them next time.' : 'No records broken this time';
     drawText(g, title, END_X + 12, ly, broke.length || first ? C.gold : C.lavender);
-    // Pełna lista w dwóch kolumnach; niski panel (dużo linii informacji) przewija się zamiast ucinać.
-    broke.forEach((t, i) => {
-      const bx = END_X + 16 + (i % 2) * (END_W / 2 - 10), by = ly + 11 + Math.floor(i / 2) * 10;
-      drawText(g, '-', bx, by, C.gold);
-      drawText(g, t, bx + 6, by, C.yellow);
-    });
-    let by = ly + 13 + Math.ceil(broke.length / 2) * 10;
+    // Pełna lista jako złote pigułki w rzędach; niski panel (dużo linii informacji) przewija się zamiast ucinać.
+    let px = END_X + 12, by = ly + 12;
+    for (const t of broke) {
+      const pw = textWidth(t) * smallS() + 8;
+      if (px + pw > END_X + END_W - 12 && px > END_X + 12) { px = END_X + 12; by += 13; }
+      px += pill(r, px, by, t, C.gold) + 4;
+    }
+    by += broke.length ? 15 : 2;
     // Pełna lista odblokowań, gdy nad panelem zmieściła się tylko część.
     if (this.unlockedCut) {
       drawText(g, 'Unlocked this run', END_X + 12, by + 2, C.lime);
@@ -1368,15 +1373,9 @@ export class GameScreen implements Screen {
    */
   private renderSummary(): void {
     const r = this.app.r, g = r.g, run = this.run, top = this.endY + 4, h = this.endH - 8;
-    const ring = (cx: number, cy: number, R: number, w: number, f: number, col: number) => {
-      g.lineWidth = w; g.lineCap = 'round';
-      g.strokeStyle = PAL[C.slate]; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
-      if (f > 0.005) { g.strokeStyle = PAL[col]; g.beginPath(); g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, f)); g.stroke(); }
-      g.lineCap = 'butt';
-    };
     // Lewa część: ocena w pierścieniu (wypełnienie = punkty / 100) i rozbicie punktów.
     const gr = this.runGrade(), R = Math.max(12, Math.min(32, h / 2 - 5)), gx = END_X + 16 + R, gy = top + h / 2;
-    ring(gx, gy, R, 5, gr.score / 100, gr.col);
+    ring(r, gx, gy, R, 5, gr.score / 100, gr.col);
     drawText(g, gr.letter, gx, gy - 11, gr.col, { align: 'center', scale: 2, outline: C.black });
     drawText(g, `${gr.score}/100`, gx, gy + 8, C.lgray, { align: 'center', scale: smallS() });
     const bx = gx + R + 12, bw = 128;
@@ -1395,7 +1394,7 @@ export class GameScreen implements Screen {
     total ||= 1;
     const groups: [string, number, number][] = [['Weapons', wpn / total, C.gold], ['Abilities and minions', abl / total, C.cyan], ['Effects and reactions', (total - wpn - abl) / total, C.pink]];
     const Rr = Math.max(14, Math.min(32, h / 2 - 5)), rx = END_X + END_W - 132 - Rr, ry = top + h / 2;
-    groups.forEach(([, f, col], i) => ring(rx, ry, Rr - i * 7, 5, f, col));
+    groups.forEach(([, f, col], i) => ring(r, rx, ry, Rr - i * 7, 5, f, col));
     const lx = rx + Rr + 10;
     drawText(g, 'Damage share', lx, top + 2, C.lavender);
     groups.forEach(([k, f, col], i) => {
@@ -1409,18 +1408,17 @@ export class GameScreen implements Screen {
   /** Ekran końca: obrażenia per źródło (suma, udział i DPS, pasek udziału). */
   private renderDamage(): void {
     const r = this.app.r, g = r.g, run = this.run, x0 = END_X + 12, x1 = END_X + END_W - 12;
-    drawText(g, 'Źródło obrażeń', x0, this.endY + 6, C.lavender);
-    drawText(g, 'Suma', x1 - 110, this.endY + 6, C.lavender, { align: 'right' });
-    drawText(g, 'Udział', x1 - 55, this.endY + 6, C.lavender, { align: 'right' });
-    drawText(g, 'DPS', x1, this.endY + 6, C.lavender, { align: 'right' });
+    // Tabela (BoardUI): nagłówek kolumn w ciemnym pasie, wiersze na przemian z tłem, wiersz pod myszą podświetlony.
+    tableHead(r, x0 - 4, this.endY + 4, x1 - x0 + 8, [['Źródło obrażeń', x0, 'left'], ['Suma', x1 - 110, 'right'], ['Udział', x1 - 55, 'right'], ['DPS', x1, 'right']]);
     const all = [...run.dmgBySource.entries()].sort((a, b) => b[1] - a[1]);
     const total = all.reduce((sum, x) => sum + x[1], 0) || 1, best = all[0]?.[1] || 1;
     // Wszystkie źródła; lista pod nagłówkiem kolumn przewija się (wcześniej 7 wierszy i „+N więcej” bez wglądu w resztę).
     const area = this.endArea(), oy = this.endScroll.begin(r, ...area);
     all.forEach(([name, dmg], i) => {
       const y = area[1] + 2 + i * 11 - oy;
-      bar(r, x0 + 120, y + 2, 140, 5, dmg / best, RAMP.gold);
-      drawText(g, name, x0, y, C.white);
+      rowBg(r, x0 - 4, y - 1.5, x1 - x0 + 8, 13, i, area);
+      bar(r, x0 + 120, y + 2.5, 140, 4, dmg / best, RAMP.gold);
+      drawText(g, name, x0, y, C.white, { scale: Math.min(1, 116 / Math.max(1, textWidth(name))) });
       drawText(g, fmt(dmg), x1 - 110, y, C.gold, { align: 'right' });
       drawText(g, `${Math.round((100 * dmg) / total)}%`, x1 - 55, y, C.lgray, { align: 'right' });
       drawText(g, fmt(dmg / Math.max(1, run.totalTime)), x1, y, C.lgray, { align: 'right' });
@@ -1431,9 +1429,7 @@ export class GameScreen implements Screen {
   /** Ekran końca (0.62): obrażenia otrzymane wg źródła (po pancerzu, z tarczą), udział i pasek; źródło śmiertelnego ciosu na czerwono. */
   private renderTaken(): void {
     const r = this.app.r, g = r.g, run = this.run, x0 = END_X + 12, x1 = END_X + END_W - 12;
-    drawText(g, 'Źródło obrażeń', x0, this.endY + 6, C.lavender);
-    drawText(g, 'Suma', x1 - 55, this.endY + 6, C.lavender, { align: 'right' });
-    drawText(g, 'Udział', x1, this.endY + 6, C.lavender, { align: 'right' });
+    tableHead(r, x0 - 4, this.endY + 4, x1 - x0 + 8, [['Źródło obrażeń', x0, 'left'], ['Suma', x1 - 55, 'right'], ['Udział', x1, 'right']]);
     const all = [...run.takenBySource.entries()].sort((a, b) => b[1] - a[1]);
     const area = this.endArea();
     if (!all.length) { drawText(g, 'No damage taken', W / 2, area[1] + 16, C.lavender, { align: 'center' }); return; }
@@ -1441,8 +1437,10 @@ export class GameScreen implements Screen {
     const oy = this.endScroll.begin(r, ...area);
     all.forEach(([name, dmg], i) => {
       const y = area[1] + 2 + i * 11 - oy;
-      bar(r, x0 + 150, y + 2, 160, 5, dmg / best, RAMP.red);
-      drawText(g, name, x0, y, name === killer ? C.salmon : C.white);
+      rowBg(r, x0 - 4, y - 1.5, x1 - x0 + 8, 13, i, area);
+      bar(r, x0 + 150, y + 2.5, 130, 4, dmg / best, RAMP.red);
+      drawText(g, name, x0, y, name === killer ? C.salmon : C.white, { scale: Math.min(1, 140 / Math.max(1, textWidth(name))) });
+      if (name === killer) pill(r, x0 + 284, y + 0.5, 'Fatal', C.red);
       drawText(g, fmt(Math.ceil(dmg)), x1 - 55, y, C.salmon, { align: 'right' });
       drawText(g, `${Math.round((100 * dmg) / total)}%`, x1, y, C.lgray, { align: 'right' });
     });
@@ -1455,8 +1453,12 @@ export class GameScreen implements Screen {
     if (log.length < 2) { drawText(g, 'Za krótki run na wykres.', W / 2, this.endY + this.endH / 2 - 5, C.lavender, { align: 'center' }); return; }
     const x0 = END_X + 40, x1 = END_X + END_W - 12, y0 = this.endY + 18, y1 = this.endY + this.endH - 14, max = Math.max(1, ...log);
     const avg = log.reduce((a, b) => a + b, 0) / log.length;
-    drawText(g, `Najwyżej ${fmt(Math.round(max))} DPS`, x0, this.endY + 5, C.gold);
-    drawText(g, `Średnio ${fmt(avg)} DPS`, x1, this.endY + 5, C.lgray, { align: 'right' });
+    // Szczyt i średnia jako para etykieta + wartość (przygaszona etykieta, wartość w kolorze linii wykresu).
+    const pk = fmt(Math.round(max)), av = fmt(avg);
+    drawText(g, 'Peak DPS', x0, this.endY + 6, C.lavender, { scale: smallS() });
+    drawText(g, pk, x0 + textWidth('Peak DPS') * smallS() + 4, this.endY + 4, C.gold, { shadow: C.black });
+    drawText(g, av, x1, this.endY + 4, C.lgray, { align: 'right', shadow: C.black });
+    drawText(g, 'Average', x1 - textWidth(av) - 4, this.endY + 6, C.lavender, { align: 'right', scale: smallS() });
     // Skala logarytmiczna: obrażenia rosną wykładniczo, w skali liniowej większość runu leżała płasko przy zerze.
     // Linie siatki i podpisy osi Y co rząd wielkości (co dwa przy dużej rozpiętości).
     const lo = Math.max(1, Math.min(...log.filter((v) => v > 0), max));
@@ -1518,7 +1520,7 @@ export class GameScreen implements Screen {
     let y = wy + 24;
     if (run.cards.length) {
       const head = `${tr('Karty')} (${run.cards.reduce((n, c) => n + c.stacks, 0)})`, hint = 'Point at or tap an icon: details';
-      drawText(g, head, x0, y, C.lavender);
+      sectionTitle(r, head, x0, y + 1, right - x0 - textWidth(hint) * smallS() - 6);
       drawText(g, hint, right, y + 1, C.lavender, { align: 'right', scale: smallS() });
       y += 12;
       const cols = 3, colW = (right - x0 - (cols - 1) * 8) / cols;

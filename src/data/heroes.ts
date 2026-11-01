@@ -360,7 +360,8 @@ export const HEROES: HeroDef[] = [
   {
     // Takezo (0.32): szermierz na wzór Miyamoto Musashiego — dwa miecze (Niten Ichi-ryū), rytm walki (hyōshi), cięcie iai.
     id: 'takezo', name: 'Takezo', role: 'Swordsman', sprite: 'takezo', color: C.blue,
-    base: { maxHp: 135, speed: 60, atkSpeed: 0.1, might: 1.08, armor: 3, regen: 0.2 },
+    // 0.64: maxHp 135 → 150 i pancerz 3 → 4 (tester: ginął na 3. mapie aktu 1 na Magicznej; bot tier 2: najkrótsze runy z trójki z Borgunem i Kestrą).
+    base: { maxHp: 150, speed: 60, atkSpeed: 0.1, might: 1.08, armor: 4, regen: 0.2 },
     weapon: 'katana',
     tags: ['Szybkość', 'Krytyk'],
     passive: { name: 'Mikiri', desc: '5% chance to parry a hit or a projectile at level 1, +0.6% per level (max 35%, cards included): no damage, a counter cut around you and +6 Rhythm. Parried projectiles fly back at enemies.', kind: 'parry', value: 20 },

@@ -8,12 +8,12 @@ import { drawSprite } from '../gfx/sprites';
 import { BAL } from '../data/balance';
 import { fmt } from '../util/format';
 import {
-  RARITIES, BASE_BY_ID, SLOTS, itemAbout, UNIQUE_BY_ID, forgeMul, UNIQUE_COLOR, implicitLine, statLine, statTotal, superLine, compareItems, salvageGold, salvageShards, itemColor,
+  RARITIES, BASE_BY_ID, SLOTS, itemAbout, UNIQUE_BY_ID, forgeMul, UNIQUE_COLOR, implicitLine, statLine, statTotal, superLine, compareItems, itemScore, salvageGold, salvageShards, itemColor,
   type Item, type StatDiff, type LootSource, type SlotId,
 } from '../data/items';
 import type { Run } from '../game/run';
 import type { Stats } from '../entities/types';
-import { button, backButton, backHit, Menu, dim, panel, slot, inside, Scroll, type Tip } from './widgets';
+import { button, backButton, backHit, Menu, dim, panel, slot, inside, Scroll, pill, sectionTitle, type Tip } from './widgets';
 import { itemTags } from '../data/synergies';
 import { AWAKENINGS } from '../data/forge';
 import { drawTagIcons } from './synergies';
@@ -88,7 +88,7 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
   ly = y + 40;
   const tags = itemTags(it);
   if (tags.length) drawTagIcons(r, tags, x + w - 14 - ((tags.length - 1) * 18) / 2, y + h - 14);
-  const bottom = y + h - (tags.length ? 30 : 14);
+  const bottom = y + h - (tags.length ? 30 : cmp !== undefined ? 26 : 14);
   const affixY: number[] = [];
   // Porównanie z założonym przedmiotem: zmiana przy wierszu bonusu (↑ lepiej, ↓ gorzej) zamiast drugiej listy;
   // osobno tylko statystyki, które ma wyłącznie założony przedmiot. Sumy w nawiasach wtedy pomijane (za długie wiersze).
@@ -101,10 +101,11 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
     return diffs.find((d) => d.stat === k);
   };
   const line = (s: string, col: number, tw = w - 16, d?: StatDiff) => {
-    for (const [i, l] of wrapText(s, d ? tw - 30 : tw).entries()) {
+    for (const [i, l] of wrapText(s, d ? tw - 36 : tw).entries()) {
       if (ly > bottom) return;
       drawText(g, l, x + 8, ly, col);
-      if (i === 0 && d) drawText(g, `${d.better ? '↑' : '↓'}${d.short}`, x + w - 8, ly, d.better ? C.lime : C.red, { align: 'right' });
+      // Zmiana względem założonego: pigułka statusu (zielona = lepiej, czerwona = gorzej) przy prawej krawędzi.
+      if (i === 0 && d) pill(r, x + w - 7, ly + 1, `${d.better ? '↑' : '↓'}${d.short}`, d.better ? C.lime : C.red, 'right');
       ly += 11;
     }
   };
@@ -136,8 +137,16 @@ export function drawItemCard(r: Renderer, it: Item, x: number, y: number, w: num
   }
   if (it.cracked) line(`Pęknięty: wartości -${Math.round((1 - BAL.forge.crackMul) * 100)}%, napraw w kowadle`, C.red);
   if (cmp === undefined) return affixY;
+  // Werdykt porównania (BoardUI: pigułka statusu) w lewym dolnym rogu karty: wszystkie zmiany w jedną stronę albo ocena
+  // przedmiotu (itemScore, ta sama co przy automatycznym zakładaniu) przy zmianach mieszanych.
+  if (cmp) {
+    const ref = Math.max(it.ilvl, cmp.ilvl), a = itemScore(it, ref), b = itemScore(cmp, ref);
+    const up = diffs.length > 0 && diffs.every((d) => d.better), down = diffs.length > 0 && diffs.every((d) => !d.better);
+    const v = up || (!down && a > b * 1.03) ? 1 : down || a < b * 0.97 ? -1 : 0;
+    pill(r, x + 8, y + h - 13, v > 0 ? 'Better' : v < 0 ? 'Worse' : 'Similar', v > 0 ? C.lime : v < 0 ? C.red : C.gold);
+  } else pill(r, x + 8, y + h - 13, 'Empty slot', C.lime);
   ly += 3;
-  if (!cmp) { line('Pusty slot: czysty zysk.', C.lime); return affixY; }
+  if (!cmp) return affixY;
   const rest = diffs.filter((d) => !shown.has(d.stat));
   if (!diffs.length) line('Bez zmian w statystykach.', C.lavender);
   for (const d of rest) line(d.text, d.better ? C.lime : C.red);
@@ -221,7 +230,7 @@ export class LootView {
       drawItemCard(r, it, W / 2 - 150, 40, 300, ch, null, false, run.stats);
     } else {
       drawItemCard(r, it, 18, 40, 216, ch, cur, false, run.stats);
-      drawText(r.g, 'Założone', 246 + 108, 30, C.lavender, { align: 'center' });
+      pill(r, 246 + 108, 29, 'Założone', C.lavender, 'center');
       drawItemCard(r, cur, 246, 40, 216, ch, undefined, false, run.stats);
     }
     this.menu.render(r);
@@ -375,7 +384,7 @@ export class InventoryView {
     drawText(g, `${fmt(Math.floor(run.gold))} zł   ${fmt(run.shards)} odł.`, BAG_X + BAG_COLS * (CELL + 1) - 1, 148, C.gold, { align: 'right' });
     // Opis zaznaczonego przedmiotu (albo slotu) małym tekstem pod plecakiem.
     const it = this.itemAt(sel), aw = (BAG_COLS * (CELL + 1) - 4) / descS();
-    drawText(g, it ? 'O przedmiocie' : 'Wskazówka', BAG_X, 162, C.yellow);
+    sectionTitle(r, it ? 'O przedmiocie' : 'Wskazówka', BAG_X, 163, BAG_COLS * (CELL + 1) - 1);
     const about = it ? itemAbout(it) : [sel.kind === 'eq' ? 'Pusty slot: najedź na przedmiot w plecaku i kliknij, żeby go założyć.' : 'Najedź na przedmiot, żeby zobaczyć opis. Klik: załóż / zdejmij, X: rozłóż na złoto.'];
     // Opis przewijany (kółko / palec / PageUp-PageDown), od góry przy zmianie zaznaczenia.
     const key = `${sel.kind}:${this.cx}:${this.cy}`;

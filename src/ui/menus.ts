@@ -13,7 +13,7 @@ import { endSlotRun } from '../game/campaign';
 import type { Mode, RunSnapshot, SlotMode } from '../game/run';
 import { fmtTime, fmt } from '../util/format';
 import type { App, Screen } from './app';
-import { Menu, panel, inside, slot, button, hovered, Scroll, type MenuItem, titleBar, ember, Confirm } from './widgets';
+import { Menu, panel, inside, slot, button, hovered, Scroll, type MenuItem, titleBar, Confirm, pill, statTile, tabs, tabRect, sectionTitle, screenTabs } from './widgets';
 import { UI } from './theme';
 import { drawSkills } from './skills';
 import { setLang, type Lang } from '../core/i18n';
@@ -213,51 +213,70 @@ export class MainMenu implements Screen {
     }
     drawText(g, 'Przetrwaj. Rozwijaj się. Bez końca.', W / 2, 39, C.lavender, { align: 'center', scale: smallS(), outline: C.black });
     drawText(g, `v${__APP_VERSION__}`, W - 4, H - 10, C.lavender, { align: 'right', scale: smallS(), outline: C.black });
-    // Lewy panel: pozycje w grupach z nagłówkami.
-    panel(r, MENU_X, 48, MENU_W, 166);
-    MENU_GROUPS.forEach(([name, first]) => {
-      const y = m.top(first) - 9;
-      drawText(g, name, MENU_X + 10, y, C.lavender, { scale: smallS() });
-      r.withAlpha(0.5, () => r.rect(MENU_X + 10 + textWidth(name) * smallS() + 4, y + 3.5, MENU_W - 30 - textWidth(name) * smallS(), 0.5, C.slate));
-    });
+    // Lewy panel (karta): pozycje w grupach z nagłówkami sekcji.
+    panel(r, MENU_X, 48, MENU_W, MENU_H);
+    MENU_GROUPS.forEach(([name, first]) => sectionTitle(r, name, MENU_X + 10, m.top(first) - 9, MENU_W - 20));
     m.render(r);
-    // Prawy panel: ikona, nazwa i opis zaznaczonej pozycji; nowemu graczowi Ekspedycja jest polecana.
-    const dx = MENU_X + MENU_W + 10, dw = W - dx - 18;
-    panel(r, dx, 48, dw, 112);
+    // Prawa karta: ikona w gnieździe, nazwa, pigułka stanu, opis, kafelki liczb i (na dole) komunikat albo klawisze.
+    const dx = MENU_X + MENU_W + 10, dw = W - dx - 18, s = this.app.save;
+    panel(r, dx, 48, dw, MENU_H);
     slot(r, dx + 10, 58, 28);
     drawSprite(g, MENU_ICON[m.sel], dx + 24, 72);
-    drawText(g, m.items[m.sel].label(), dx + 46, 60, C.yellow, { shadow: C.black });
-    const tip = isNewPlayer(this.app) && m.sel === 0;
-    if (tip) drawText(g, 'Recommended for a first run', dx + 46, 72, C.lime, { shadow: C.black });
+    drawText(g, m.items[m.sel].label(), dx + 46, 59, C.white, { shadow: C.black, scale: Math.min(1, (dw - 56) / textWidth(m.items[m.sel].label())) });
+    const st = this.status(m.sel);
+    if (st) pill(r, dx + 46, 73, st[0], st[1]);
     let ly = 94;
-    const desc = m.sel === 1 && !unlocked(this.app.save, 'endless') ? `Locked. ${UNLOCK_BY_ID.endless.how}` : MENU_DESC[m.sel] ?? '';
+    const locked = m.sel === 1 && !unlocked(s, 'endless');
+    const desc = locked ? UNLOCK_BY_ID.endless.how : MENU_DESC[m.sel] ?? '';
     for (const l of wrapText(desc, dw - 22)) { drawText(g, l, dx + 11, ly, C.lgray); ly += 11; }
-    ly += 4;
-    for (const [l, col] of this.info(m.sel)) { drawText(g, l, dx + 11, ly, col, { scale: smallS() }); ly += 9; }
-    drawText(g, 'Strzałki / mysz: wybór   Enter: wejdź   F: pełny ekran', dx + dw / 2, 148, C.lavender, { align: 'center', scale: smallS() });
-    if (this.app.save.notice) {
-      panel(r, dx, 166, dw, 44, C.orange);
-      wrapText(this.app.save.notice, dw - 22).slice(0, 3).forEach((l, i) => drawText(g, l, dx + 11, 172 + i * 11, C.orange));
+    // Komunikat (przerwany run, odblokowania) w pomarańczowej karcie przy dolnej krawędzi; bez niego podpowiedź klawiszy.
+    const notice = s.notice ? wrapText(s.notice, dw - 34).slice(0, 3) : [];
+    const bottom = notice.length ? 48 + MENU_H - 12 - notice.length * 11 - 8 : 48 + MENU_H - 16;
+    const tiles = this.tiles(m.sel), th = 26;
+    if (tiles.length && ly + 4 + th <= bottom - 2) {
+      const tw = (dw - 22 - (tiles.length - 1) * 5) / tiles.length;
+      tiles.forEach(([lab, val, col], i) => statTile(r, dx + 11 + i * (tw + 5), ly + 4, tw, th, lab, val, col));
     }
+    if (notice.length) {
+      panel(r, dx + 6, bottom, dw - 12, notice.length * 11 + 8, C.orange);
+      notice.forEach((l, i) => drawText(g, l, dx + 12, bottom + 4 + i * 11, C.orange));
+    } else drawText(g, 'Strzałki / mysz: wybór   Enter: wejdź   F: pełny ekran', dx + dw / 2, bottom + 2, C.lavender, { align: 'center', scale: smallS() });
   }
 
-  /** Dodatkowe informacje w panelu opisu: zapisany run, esencja do rozdania, postęp kolekcji. */
-  private info(sel: number): [string, number][] {
-    const s = this.app.save;
-    const slotMode = (['expedition', 'endless'] as const)[sel];
+  /** Pigułka stanu pod nazwą pozycji: polecane, zablokowane, zapisany run, esencja do rozdania. */
+  private status(sel: number): [string, number] | null {
+    const s = this.app.save, slotMode = (['expedition', 'endless'] as const)[sel];
+    if (slotMode === 'endless' && !unlocked(s, 'endless')) return ['Locked', C.lavender];
+    if (slotMode && s.slots[slotMode]) return ['Saved run', C.lime];
+    if (sel === 0 && isNewPlayer(this.app)) return ['Recommended for a first run', C.lime];
+    if (sel === 2 && s.meta.unassigned > 0) return [`${fmt(s.meta.unassigned)} to assign`, C.cyan];
+    return null;
+  }
+
+  /** Kafelki liczb w karcie opisu: zapisany run, esencja bohatera, postęp kolekcji. */
+  private tiles(sel: number): [string, string, number][] {
+    const s = this.app.save, slotMode = (['expedition', 'endless'] as const)[sel];
     if (slotMode === 'endless' && !unlocked(s, 'endless')) return [];
     if (slotMode) {
-      const snap = s.slots[slotMode];
-      return snap ? [[`Zapisany run: ${HERO_BY_ID[snap.hero]?.name ?? snap.hero}, LV ${snap.level}`, C.lime], ...slotLines(slotMode, snap).slice(0, 1).map((l): [string, number] => [l, C.lgray])] : [['Brak zapisanego runu.', C.lavender]];
+      const snap = s.slots[slotMode], recs = Object.values(s.records);
+      // Bez zapisanego runu: rekordy trybu ze wszystkich bohaterów.
+      if (!snap) return slotMode === 'endless'
+        ? [['Best Endless', fmtTime(Math.max(0, ...recs.map((x) => x.bestEndless))), C.cyan], ['Most kills', fmt(Math.max(0, ...recs.map((x) => x.bestKills))), C.white]]
+        : [['Most maps', String(Math.max(0, ...recs.map((x) => x.bestExpedition))), C.white], ['Expeditions won', String(recs.reduce((n, x) => n + x.expeditionWins, 0)), C.gold]];
+      const where = slotMode === 'endless' ? ['Depth', String(snap.depth)] : ['Act', `${snap.expedition?.act ?? 1}/${BAL.expedition.acts}`];
+      return [['Hero', HERO_BY_ID[snap.hero]?.name ?? snap.hero, HERO_BY_ID[snap.hero]?.color ?? C.white], ['LV', String(snap.level), C.white], [where[0], where[1], C.white]];
     }
-    if (sel === 2) return [[s.meta.unassigned > 0 ? `Esencja do rozdania: ${fmt(s.meta.unassigned)}` : 'You earn essence in Expeditions and in Endless.', C.cyan]];
-    if (sel === 3) return [[`Karty ${s.collection.seen.length}, sekrety ${s.collection.secrets.length}, osiągnięcia ${s.achievements.length}`, C.lgray]];
+    if (sel === 2) {
+      const h = HERO_BY_ID[s.lastHero] ?? HEROES[0];
+      return [['Hero', h.name, h.color], ['Essence', fmt(heroMeta(s.meta, h.id).essence), C.cyan]];
+    }
+    if (sel === 3) return [['Cards', String(s.collection.seen.length), C.gold], ['Secrets', String(s.collection.secrets.length), C.hotpink], ['Achievements', String(s.achievements.length), C.lime]];
     return [];
   }
 }
 
 /** Menu główne: lewy panel z pozycjami (grupy: od indeksu) i ikony pozycji w panelu opisu. */
-const MENU_X = 18, MENU_W = 196;
+const MENU_X = 18, MENU_W = 196, MENU_H = 166;
 const MENU_GROUPS: [string, number][] = [['Play', 0], ['Progress', 2], ['Other', 6]];
 const MENU_ICON = ['ex_boss', 'ic_orbit_evo', 'syn_all', 'ex_chest', 'ic_bolt_evo', 'cd_gold', 'tag:Umiejętności', 'ex_anvil'];
 
@@ -316,7 +335,7 @@ export class SlotScreen implements Screen {
 
   /** Wysokość panelu po lewej: zapisany run albo opis zasad (wtedy menu tuż pod nim, bez pustego pola). */
   private panelH(): number {
-    return this.app.save.slots[this.mode] ? 146 : 24 + wrapText(SLOT_RULES[this.mode], 200).length * 13;
+    return this.app.save.slots[this.mode] ? 146 : 32 + wrapText(SLOT_RULES[this.mode], 200).length * 13;
   }
 
   update(): void {
@@ -331,17 +350,21 @@ export class SlotScreen implements Screen {
     panel(r, 12, 40, 224, this.panelH());
     const s = this.app.save.slots[this.mode];
     if (s) {
+      // Zapisany run: bohater z pigułką stanu, kafelki liczb w dwóch rzędach, pod nimi miejsce w runie.
       const h = HERO_BY_ID[s.hero];
-      drawSprite(g, h.sprite, 38, 70, { scale: 2 });
-      drawText(g, h.name, 62, 54, h.color, { scale: 2, shadow: C.black });
-      drawText(g, h.role, 62, 78, C.lavender);
-      const lines = [...slotLines(this.mode, s),
-        `LV ${s.level}   karty ${s.cards.reduce((n, c) => n + c[1], 0)}   złoto ${fmt(s.gold)}`,
-        `Czas ${fmtTime(s.totalTime)}   zabójstwa ${fmt(s.kills)}`,
-      ];
-      lines.forEach((l, i) => drawText(g, l, 24, 104 + i * 13, i === 0 ? C.yellow : C.lgray));
+      r.withAlpha(0.5, () => r.circle(36, 64, 16, C.black, true));
+      drawSprite(g, h.sprite, 36, 64, { scale: 2 });
+      drawText(g, h.name, 60, 48, h.color, { scale: 2, shadow: C.black });
+      drawText(g, h.role, 60, 70, C.lavender);
+      pill(r, 228, 48, 'Saved run', C.lime, 'right');
+      const tw = (224 - 22 - 10) / 3;
+      const where: [string, string] = this.mode === 'endless' ? ['Depth', String(s.depth)] : ['Act', `${s.expedition?.act ?? 1}/${BAL.expedition.acts}`];
+      ([['LV', String(s.level)], ['Time', fmtTime(s.totalTime)], ['Kills', fmt(s.kills)], ['Gold', fmt(s.gold)], ['Cards', String(s.cards.reduce((n, c) => n + c[1], 0))], where] as [string, string][])
+        .forEach(([lab, val], i) => statTile(r, 23 + (i % 3) * (tw + 5), 86 + Math.floor(i / 3) * 30, tw, 26, lab, val, lab === 'Gold' ? C.gold : C.white));
+      slotLines(this.mode, s).forEach((l, i) => drawText(g, l, 24, 148 + i * 12, i === 0 ? C.yellow : C.lgray));
     } else {
-      wrapText(SLOT_RULES[this.mode], 200).forEach((l, i) => drawText(g, l, 24, 52 + i * 13, C.lgray));
+      sectionTitle(r, 'Rules', 24, 48, 200);
+      wrapText(SLOT_RULES[this.mode], 200).forEach((l, i) => drawText(g, l, 24, 60 + i * 13, C.lgray));
     }
     this.menu.render(r);
     renderHeroBests(this.app, this.mode, 246, 40, 224);
@@ -362,28 +385,38 @@ function slotLines(mode: SlotMode, s: RunSnapshot): string[] {
 /** Rekordy bohaterów w trybie (Endless: najdłuższy czas, Ekspedycja: węzły i ukończone wyprawy). */
 function renderHeroBests(app: App, mode: SlotMode, x: number, y: number, w: number): void {
   const r = app.r, g = r.g;
-  panel(r, x, y, w, 26 + HEROES.length * 13);
-  drawText(g, 'Rekordy bohaterów', x + 12, y + 8, C.yellow, { shadow: C.black });
+  const RH = 15;
+  panel(r, x, y, w, 36 + HEROES.length * RH);
+  sectionTitle(r, 'Rekordy bohaterów', x + 10, y + 7, w - 20);
+  // Nagłówki kolumn (przygaszone), liczby wyrównane do prawej.
+  const cols: [string, number][] = mode === 'endless' ? [['Best time', x + w - 12]] : [['Most maps', x + w - 70], ['Won', x + w - 12]];
+  cols.forEach(([t, cx]) => drawText(g, t, cx, y + 19, C.lavender, { align: 'right', scale: smallS() }));
   HEROES.forEach((h, i) => {
     const rec = heroRecord(app.save, h.id);
-    const yy = y + 24 + i * 13;
+    const yy = y + 30 + i * RH;
+    if (i % 2 === 0) r.withAlpha(0.25, () => r.roundRect(x + 6, yy - 2, w - 12, RH - 1, 3, C.black));
     drawText(g, h.name, x + 12, yy, h.color);
     const none = mode === 'endless' ? rec.bestEndless <= 0 : rec.bestExpedition <= 0 && rec.expeditionWins <= 0;
-    const v = none ? 'not played yet' : mode === 'endless' ? fmtTime(rec.bestEndless) : `węzły ${rec.bestExpedition}   ukończone ${rec.expeditionWins}`;
-    drawText(g, v, x + w - 12, yy, none ? C.lavender : C.white, { align: 'right' });
+    if (none) { pill(r, x + w - 12, yy + 1, 'not played yet', C.lavender, 'right'); return; }
+    if (mode === 'endless') drawText(g, fmtTime(rec.bestEndless), x + w - 12, yy, C.white, { align: 'right' });
+    else {
+      drawText(g, String(rec.bestExpedition), x + w - 70, yy, C.white, { align: 'right' });
+      drawText(g, String(rec.expeditionWins), x + w - 12, yy, rec.expeditionWins ? C.gold : C.white, { align: 'right' });
+    }
   });
 }
 
 const LIST_X = 12, LIST_W = 140, ROW_H = 27, TOP = 36;
-const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212, TAB_W = 62, MORE_W = 64;
+const DET_X = LIST_X + LIST_W + 8, DET_W = W - DET_X - 12, DET_H = 212;
 const TABS = ['Ogólne', 'Umiejętności', 'Zasób'];
-const TAB_Y = TOP + 43;
+/** Zakładki segmentowe szczegółów (pod nagłówkiem z kafelkami): x, y, szerokość, wysokość. */
+const TAB_Y = TOP + 54, TAB_X = DET_X + 8, TAB_TW = DET_W - 16, TAB_H = 14;
 /** Przyciski na dole ekranu wyboru bohatera: Wstecz (lewo) i Start (prawo). */
 const BTN_Y = H - 18, BTN_H = 15, BACK_W = 70, START_W = 110;
 /** Przycisk zmiany ultimate (R4) między Wstecz a Start. */
 const ULT_W = 200, ULT_X = (LIST_X + BACK_W + W - 12 - START_W) / 2 - ULT_W / 2;
 /** Przewijany obszar szczegółów na stronach Umiejętności i Zasób (x, y, w, h). */
-const DET_AREA = [DET_X + 4, TOP + 60, DET_W - 8, DET_H - 63] as const;
+const DET_AREA = [DET_X + 4, TOP + 72, DET_W - 8, DET_H - 75] as const;
 
 /** Wybór bohatera: lista po lewej (do 6 bohaterów), szczegóły zaznaczonego po prawej. */
 export class HeroSelect implements Screen {
@@ -392,8 +425,8 @@ export class HeroSelect implements Screen {
   private scrollKey = -1;
   /** Strona szczegółów: 0 ogólne (broń, pasywka, umiejętności), 1 umiejętności z opisami, 2 zasób z liczbami. */
   private page = 0;
-  /** Lewy górny róg przycisku „Szczegóły” na stronie ogólnej (ustawiany przy rysowaniu). */
-  private moreAt: [number, number] = [-99, -99];
+  /** Prostokąt kafelka zasobu w nagłówku (klik: zakładka Zasób; ustawiany przy rysowaniu). */
+  private moreAt: [number, number, number, number] = [-99, -99, 0, 0];
   /** Górna krawędź siatki umiejętności na stronie ogólnej (klik otwiera stronę umiejętności). */
   private skillsAt = -99;
 
@@ -425,8 +458,8 @@ export class HeroSelect implements Screen {
     if (inp.pressed('click')) {
       const { x, y } = inp.mouse;
       if (inside(x, y, LIST_X, this.pactY(), LIST_W, 18) && unlocked(this.app.save, 'pacts')) { this.app.go(new PactScreen(this.app, this)); return; }
-      for (let i = 0; i < TABS.length; i++) if (inside(x, y, this.tabX(i), TAB_Y, TAB_W, 14)) { this.page = i; sfx.play('select'); return; }
-      if (this.page === 0 && inside(x, y, this.moreAt[0], this.moreAt[1] - 1, MORE_W, 14)) { this.page = 2; sfx.play('select'); return; }
+      for (let i = 0; i < TABS.length; i++) if (inside(x, y, ...tabRect(TAB_X, TAB_Y, TAB_TW, TAB_H, TABS.length, i))) { this.page = i; sfx.play('select'); return; }
+      if (inside(x, y, ...this.moreAt)) { this.page = 2; sfx.play('select'); return; }
       if (this.page === 0 && inside(x, y, DET_X + 8, this.skillsAt, DET_W - 16, 40)) { this.page = 1; sfx.play('select'); return; }
       if (inside(x, y, W - 12 - START_W, BTN_Y, START_W, BTN_H)) { this.start(); return; }
       if (inside(x, y, LIST_X, BTN_Y, BACK_W, BTN_H)) { this.app.go(new SlotScreen(this.app, this.mode)); return; }
@@ -474,11 +507,6 @@ export class HeroSelect implements Screen {
     return skin && heroSkins(this.app.save.pacts.best[id] ?? 0).some((b) => b.id === skin) ? `${h.sprite}~${skin}` : h.sprite;
   }
 
-  /** Lewa krawędź zakładki `i` szczegółów (rząd pod nazwą bohatera). */
-  private tabX(i: number): number {
-    return DET_X + 64 + i * (TAB_W + 2);
-  }
-
   /** Przycisk paktów pod listą bohaterów. */
   private pactY(): number {
     return TOP + HEROES.length * ROW_H + 2;
@@ -489,20 +517,23 @@ export class HeroSelect implements Screen {
     r.clear(C.black);
     const m = this.mode;
     titleBar(r, PICK_TITLE[m], 10);
-    // Lista bohaterów.
+    // Lista bohaterów (menu boczne): zaznaczony wiersz jaśniejszy ze złotym paskiem po lewej, pod myszą jasna ramka.
     HEROES.forEach((h, i) => {
-      const y = TOP + i * ROW_H, on = i === this.sel;
-      if (on) ember(r, LIST_X, y, LIST_W, ROW_H - 4, UI.radius + 1);
-      panel(r, LIST_X, y, LIST_W, ROW_H - 4, on ? C.gold : hovered(LIST_X, y, LIST_W, ROW_H - 4) ? C.lavender : C.slate);
+      const y = TOP + i * ROW_H, on = i === this.sel, rh = ROW_H - 4;
+      panel(r, LIST_X, y, LIST_W, rh, !on && hovered(LIST_X, y, LIST_W, rh) ? C.lavender : UI.border, on ? C.slate : C.navy);
+      if (on) r.roundRect(LIST_X + 2, y + 4, 2, rh - 8, 1, C.gold);
       const spr = this.spriteOf(h.id), open = heroUnlocked(this.app.save, h.id);
-      // Zablokowany bohater: przygaszony, zamiast roli warunek odblokowania.
+      // Zablokowany bohater: przygaszony, pigułka „Locked”, zamiast roli warunek odblokowania.
       r.withAlpha(open ? 1 : 0.3, () => drawSprite(g, `${spr}@${on && open ? animFrame(spr, Math.floor(performance.now() / 16), 0) : 0}`, LIST_X + 18, y + 11.5));
       drawText(g, h.name, LIST_X + 34, y + 2, open ? h.color : C.lavender, { shadow: C.black });
       if (open) drawText(g, h.role, LIST_X + 34, y + 12, C.lavender);
-      else drawText(g, UNLOCK_BY_ID[`hero:${h.id}`]?.how ?? "", LIST_X + 34, y + 14, C.lavender, { scale: smallS() });
+      else {
+        drawText(g, UNLOCK_BY_ID[`hero:${h.id}`]?.how ?? "", LIST_X + 34, y + 14, C.lavender, { scale: smallS() });
+        pill(r, LIST_X + LIST_W - 5, y + 3, 'Locked', C.lavender, 'right');
+      }
       // Odznaka Paktu: najwyższy poziom Paktu z pokonanym bossem.
       const best = this.app.save.pacts.best[h.id] ?? 0, badge = pactBadge(best);
-      if (badge) drawText(g, `${badge.name} ${best}`, LIST_X + LIST_W - 6, y + 3, badge.color, { align: 'right' });
+      if (badge && open) pill(r, LIST_X + LIST_W - 5, y + 3, `${badge.name} ${best}`, badge.color, 'right');
     });
     const pl = pactLevel(this.app.save.pacts.chosen);
     if (unlocked(this.app.save, 'pacts')) button(r, LIST_X, this.pactY(), LIST_W, 18, pl ? `Pakty: poziom ${pl} [Tab]` : 'Pakty ryzyka [Tab]', { accent: C.salmon, col: pl ? C.salmon : undefined });
@@ -511,11 +542,21 @@ export class HeroSelect implements Screen {
     const h = HEROES[this.sel], x = DET_X, y = TOP;
     if (this.sel * 10 + this.page !== this.scrollKey) { this.scrollKey = this.sel * 10 + this.page; this.scroll.reset(); }
     panel(r, x, y, DET_W, DET_H);
-    r.withAlpha(0.5, () => r.circle(x + 32, y + 34, 22, C.black, true));
-    drawShadow(g, x + 32, y + 56, 30);
-    const spr = this.spriteOf(h.id);
-    drawSprite(g, `${spr}@${animFrame(spr, Math.floor(performance.now() / 16), 0)}`, x + 32, y + 34, { scale: 2 });
-    drawText(g, h.name, x + 64, y + 12, h.color, { scale: 2, shadow: C.black });
+    // Nagłówek karty bohatera: portret, imię i rola, po prawej kafelki liczb; pod spodem zakładki segmentowe.
+    r.withAlpha(0.5, () => r.circle(x + 30, y + 27, 20, C.black, true));
+    drawShadow(g, x + 30, y + 47, 26);
+    const spr = this.spriteOf(h.id), open = heroUnlocked(this.app.save, h.id);
+    r.withAlpha(open ? 1 : 0.4, () => drawSprite(g, `${spr}@${animFrame(spr, Math.floor(performance.now() / 16), 0)}`, x + 30, y + 27, { scale: 2 }));
+    drawText(g, h.name, x + 58, y + 5, h.color, { scale: 2, shadow: C.black });
+    const tilesX = x + DET_W - 8 - 3 * 50 - 2 * 4;
+    drawText(g, h.role, x + 58, y + 28, C.lavender, { scale: Math.min(1, (tilesX - x - 62) / Math.max(1, textWidth(h.role))) });
+    if (!open) pill(r, x + 58, y + 40, 'Locked', C.lavender);
+    ([['HP', String(h.base.maxHp), C.lime], ['Speed', String(h.base.speed), C.white], ['Resource', h.resource.name, h.resource.color]] as [string, string, number][])
+      .forEach(([lab, val, col], i) => statTile(r, tilesX + i * 54, y + 22, 50, 26, lab, val, col));
+    // Kafelek zasobu jest przyciskiem: otwiera zakładkę Zasób (pod myszą ramka w kolorze zasobu, strzałka w rogu).
+    this.moreAt = [tilesX + 108, y + 22, 50, 26];
+    if (hovered(...this.moreAt)) r.roundFrame(tilesX + 108, y + 22, 50, 26, UI.radius + 2, h.resource.color, 1);
+    drawText(g, '>', tilesX + 108 + 50 - 5, y + 25, h.resource.color, { align: 'right', scale: smallS() });
     // Skórki za odznaki Paktu.
     const owned = heroSkins(this.app.save.pacts.best[h.id] ?? 0), cur = this.app.save.skins[h.id] ?? '';
     // Skórka: napis jest też przyciskiem (dotyk).
@@ -525,8 +566,7 @@ export class HeroSelect implements Screen {
       this.skinAt = [x + DET_W - 6 - sw, y + 5, sw, 13];
       button(r, ...this.skinAt, label, { col: cur ? BADGE_BY_ID[cur]?.color ?? C.lgray : C.lgray });
     }
-    drawText(g, `${h.role}   HP ${h.base.maxHp}   szybkość ${h.base.speed}`, x + 64, y + 31, C.lavender);
-    TABS.forEach((t, i) => button(r, this.tabX(i), TAB_Y, TAB_W, 14, t, { active: i === this.page, accent: C.gold }));
+    tabs(r, TAB_X, TAB_Y, TAB_TW, TAB_H, TABS, this.page);
     if (this.page === 0) this.renderGeneral(h, x, y);
     else {
       // Umiejętności i zasób: przewijany obszar do dołu panelu (dłuższe opisy przy dużym tekście).
@@ -538,12 +578,14 @@ export class HeroSelect implements Screen {
     }
     if (this.page !== 0) { this.renderButtons(h); return; }
     const rec = heroRecord(this.app.save, h.id);
+    // Stopka karty: rozwój bohatera po lewej, rekord trybu po prawej (drobny tekst nad linią podziału).
     const best = m === 'expedition' ? `Najwięcej map: ${rec.bestExpedition}   ukończone: ${rec.expeditionWins}` : `Rekord: ${fmtTime(rec.bestEndless)}`;
-    drawText(g, best, x + 12, y + DET_H - 14, C.lavender);
-    {
-      const hm = heroMeta(this.app.save.meta, h.id);
-      drawText(g, `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`, x + 12, y + DET_H - 25, C.cyan);
-    }
+    const hm = heroMeta(this.app.save.meta, h.id), sc = smallS();
+    const prog = `Rozwój: esencja ${fmt(hm.essence)}, Paragon ${paragonLevel(hm.total)}, prestiż ${hm.prestige}`;
+    r.withAlpha(0.6, () => r.rect(x + 8, y + DET_H - 16, DET_W - 16, 0.5, C.slate));
+    const room = DET_W - 24, fit = Math.min(sc, (room - 10) / Math.max(1, textWidth(prog) + textWidth(best)));
+    drawText(g, prog, x + 12, y + DET_H - 12, C.cyan, { scale: fit });
+    drawText(g, best, x + DET_W - 12, y + DET_H - 12, C.lavender, { align: 'right', scale: fit });
     this.renderButtons(h);
   }
 
@@ -551,7 +593,7 @@ export class HeroSelect implements Screen {
   private renderButtons(h: HeroDef): void {
     const r = this.app.r, g = r.g;
     button(r, LIST_X, BTN_Y, BACK_W, BTN_H, 'Wstecz [Esc]');
-    if (heroUnlocked(this.app.save, h.id)) button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, `Start: ${h.name} [Enter]`, { accent: C.gold, col: C.yellow, pulse: true });
+    if (heroUnlocked(this.app.save, h.id)) button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, `Start: ${h.name} [Enter]`, { active: true });
     else button(r, W - 12 - START_W, BTN_Y, START_W, BTN_H, 'Locked', { col: C.dgray });
     // R4: przełącznik ultimate jako przycisk (dotyk: wcześniej tylko klawisz R), na każdej zakładce.
     if (h.altUlt) {
@@ -564,22 +606,18 @@ export class HeroSelect implements Screen {
   private renderGeneral(h: HeroDef, x: number, y: number): void {
     const r = this.app.r, g = r.g;
     const wpn = WEAPON_BY_ID[h.weapon];
-    drawSprite(g, wpn.icon, x + 19, y + 71);
-    drawText(g, `Broń: ${wpn.name}`, x + 32, y + 66, C.white);
-    drawText(g, `Pasywka: ${h.passive.name}`, x + 12, y + 84, C.yellow);
-    let ly = y + 97;
+    // Broń startowa w gnieździe (zasób: kafelek w nagłówku, klik otwiera jego stronę).
+    slot(r, x + 10, y + 76, 18);
+    drawSprite(g, wpn.icon, x + 19, y + 85);
+    drawText(g, `Broń: ${wpn.name}`, x + 32, y + 79, C.white);
+    sectionTitle(r, 'Passive', x + 12, y + 99, DET_W - 24);
+    drawText(g, h.passive.name, x + 12, y + 108, C.yellow);
+    let ly = y + 120;
     for (const line of wrapText(h.passive.desc, DET_W - 24)) { drawText(g, line, x + 12, ly, C.lgray); ly += 11; }
-    // Zasób bohatera: tylko nazwa, opis z liczbami na drugiej zakładce.
-    drawText(g, `Zasób: ${h.resource.name}`, x + 12, ly + 2, h.resource.color);
-    const mx = x + 18 + textWidth(`Zasób: ${h.resource.name}`);
-    button(r, mx, ly - 1, MORE_W, 14, 'Szczegóły >', { pulse: true, accent: h.resource.color, col: h.resource.color });
-    this.moreAt = [mx, ly];
-    ly += 11;
-    ly += 6;
+    ly += 4;
     // Umiejętności w dwóch kolumnach: ikona, klawisz, nazwa (klik: strona z opisami).
     this.skillsAt = ly;
     if (hovered(x + 8, ly, DET_W - 16, 40)) r.withAlpha(0.15, () => r.roundRect(x + 8, ly - 2, DET_W - 16, 42, 2, C.white));
-    drawText(g, 'Opisy: zakładka Umiejętności', x + DET_W - 12, ly + 41, C.lavender, { align: 'right', scale: smallS() });
     this.kit(h).forEach((a, i) => {
       const key = a.slot === 'dash' ? 'Spc' : a.slot === 'ult' ? 'R' : a.slot.toUpperCase();
       const ax = x + 12 + (i % 2) * 140, ay = ly + Math.floor(i / 2) * 20;
@@ -627,19 +665,34 @@ export class RecordsScreen implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     titleBar(r, 'Rekordy', 8);
-    panel(r, 30, 40, 420, 30 + HEROES.length * 16, C.slate);
-    const cols = [42, 110, 176, 242, 300, 370];
-    ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Endless', 'Ekspedycja'].forEach((s, i) => drawText(g, s, cols[i], 48, C.lavender));
-    drawText(g, 'Expedition: most maps (expeditions won)', W / 2, 54 + HEROES.length * 16 + 26, C.lavender, { align: 'center' });
+    const recs = HEROES.map((h) => heroRecord(this.app.save, h.id));
+    // Kafelki: najlepsze wyniki ze wszystkich bohaterów.
+    const best = (f: (x: (typeof recs)[number]) => number) => Math.max(0, ...recs.map(f));
+    const tiles: [string, string, number][] = [
+      ['Longest run', fmtTime(best((x) => x.bestTime)), C.white],
+      ['Most kills', fmt(best((x) => x.bestKills)), C.white],
+      ['Best Endless', fmtTime(best((x) => x.bestEndless)), C.cyan],
+      ['Expeditions won', String(recs.reduce((n, x) => n + x.expeditionWins, 0)), C.gold],
+    ];
+    const TX = 30, TW = 420, tw = (TW - 3 * 6) / 4;
+    tiles.forEach(([lab, val, col], i) => statTile(r, TX + i * (tw + 6), 38, tw, 28, lab, val, col));
+    // Tabela: nagłówki przygaszone, liczby wyrównane do prawej krawędzi kolumny, co drugi wiersz ciemniejszy.
+    const RH = 16, ty = 74;
+    panel(r, TX, ty, TW, 26 + HEROES.length * RH);
+    const head = ['Bohater', 'Najdłużej', 'Zabójstwa', 'Maks. LV', 'Endless', 'Ekspedycja'];
+    const right = [0, 170, 230, 285, 345, 408].map((c) => TX + c);
+    head.forEach((s, i) => drawText(g, s, i ? right[i] : TX + 12, ty + 7, C.lavender, { align: i ? 'right' : 'left', scale: smallS() }));
+    r.withAlpha(0.6, () => r.rect(TX + 8, ty + 18, TW - 16, 0.5, C.slate));
     HEROES.forEach((h, i) => {
-      const rec = heroRecord(this.app.save, h.id);
-      const y = 64 + i * 16;
-      drawText(g, h.name, cols[0], y, h.color);
-      // Bohater bez żadnego runu: jeden napis zamiast rzędu zer.
-      if (rec.bestTime <= 0 && rec.bestEndless <= 0 && rec.bestExpedition <= 0) { drawText(g, 'not played yet', cols[1], y, C.lavender); return; }
+      const rec = recs[i], y = ty + 23 + i * RH;
+      if (i % 2 === 1) r.withAlpha(0.25, () => r.roundRect(TX + 6, y - 2, TW - 12, RH - 1, 3, C.black));
+      drawText(g, h.name, TX + 12, y, h.color);
+      // Bohater bez żadnego runu: pigułka zamiast rzędu zer.
+      if (rec.bestTime <= 0 && rec.bestEndless <= 0 && rec.bestExpedition <= 0) { pill(r, right[1], y + 1, 'not played yet', C.lavender, 'right'); return; }
       [fmtTime(rec.bestTime), fmt(rec.bestKills), String(rec.bestLevel), fmtTime(rec.bestEndless), `${rec.bestExpedition} (${rec.expeditionWins})`]
-        .forEach((s, j) => drawText(g, s, cols[j + 1], y, C.white));
+        .forEach((s, j) => drawText(g, s, right[j + 1], y, C.white, { align: 'right' }));
     });
+    drawText(g, 'Expedition: most maps (expeditions won)', W / 2, ty + 34 + HEROES.length * RH, C.lavender, { align: 'center', scale: smallS() });
   }
 }
 
@@ -663,8 +716,9 @@ const ZOOM_LABEL = ['daleko', 'normalne', 'blisko'];
 /** Kategorie ustawień (zakładki u góry ekranu). */
 /** Zakładka „Inne” (tryb debug, podgląd balansu) tylko w wersji deweloperskiej. */
 const SET_TABS = ['Ogólne', 'Dźwięk', 'Obraz', 'Czytelność', ...(__DEV_TOOLS__ ? ['Inne'] : [])];
-const SET_TAB_W = 76, SET_TAB_Y = 32, SET_LIST_Y = 58, SET_ROW = 15;
-const setTabX = (i: number) => W / 2 - (SET_TABS.length * (SET_TAB_W + 4) - 4) / 2 + i * (SET_TAB_W + 4);
+const SET_TAB_W = 80, SET_TAB_Y = 32, SET_TAB_H = 16, SET_LIST_Y = 58, SET_ROW = 15;
+/** Tor zakładek segmentowych (x, szerokość); prostokąt zakładki do kliknięć: `tabRect`. */
+const SET_TRACK_W = SET_TABS.length * SET_TAB_W, SET_TRACK_X = W / 2 - SET_TRACK_W / 2;
 
 /**
  * Ustawienia: kategorie jako zakładki u góry (Tab / Q / E albo klik), pod nimi lista opcji: nazwa po lewej,
@@ -767,7 +821,7 @@ export class SettingsScreen implements Screen {
     if (inp.pressed('inventory') || inp.pressed('e')) { this.setTab(this.tab + 1); return; }
     if (inp.pressed('q')) { this.setTab(this.tab - 1); return; }
     if (inp.pressed('click')) {
-      for (let i = 0; i < SET_TABS.length; i++) if (inside(inp.mouse.x, inp.mouse.y, setTabX(i), SET_TAB_Y, SET_TAB_W, 16)) { this.setTab(i); return; }
+      for (let i = 0; i < SET_TABS.length; i++) if (inside(inp.mouse.x, inp.mouse.y, ...tabRect(SET_TRACK_X, SET_TAB_Y, SET_TRACK_W, SET_TAB_H, SET_TABS.length, i))) { this.setTab(i); return; }
     }
     this.menu.update(inp);
   }
@@ -776,8 +830,8 @@ export class SettingsScreen implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     titleBar(r, 'Ustawienia', 6);
-    SET_TABS.forEach((t, i) => button(r, setTabX(i), SET_TAB_Y, SET_TAB_W, 16, t, { active: i === this.tab, accent: C.gold }));
-    panel(r, W / 2 - 180, SET_LIST_Y - 6, 360, this.menu.items.length * this.menu.lineH + 10, C.slate);
+    screenTabs(r, SET_TRACK_X, SET_TAB_Y, SET_TRACK_W, SET_TAB_H, SET_TABS, this.tab);
+    panel(r, W / 2 - 180, SET_LIST_Y - 6, 360, this.menu.items.length * this.menu.lineH + 10);
     this.menu.render(r);
     drawText(g, 'Tab / Q / E: kategoria    Lewo/prawo: zmień', W / 2, H - 14, C.lavender, { align: 'center' });
     // Opis pod oknem listy (długie zakładki mają wyższe okno, opis zjeżdża niżej).
