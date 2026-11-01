@@ -14,7 +14,7 @@ import { buyItem, buyService, buyElixir, buyShopUpgrade, refreshShop, type BuyRe
 import type { Run } from '../game/run';
 import { CardPickView } from './cards';
 import { drawItemSlot, drawItemCard } from './items';
-import { button, backButton, backHit, dim, panel, slot, inside } from './widgets';
+import { button, backButton, backHit, dim, panel, slot, inside, pill, sectionTitle } from './widgets';
 import { hintShowing } from './hints';
 
 const CELL = 28;
@@ -176,10 +176,12 @@ export class ShopView {
     drawText(g, fmt(Math.floor(run.gold)), W - 62, 13, C.yellow, { outline: C.black });
 
     panel(r, 6, 34, 266, 196);
-    drawText(g, `Przedmioty (poz. ${shop.depth})   sklep: poziom ${run.shopLevel}`, 14, 40, C.lavender);
-    drawText(g, 'Usługi i eliksiry', 14, 97, C.lavender);
-    if (this.rows > 2) drawText(g, `Forge: materials and scrolls (you have: stone ${run.mats.stone}, ore ${run.mats.ore})`, 14, 153, C.lavender);
-    else drawText(g, 'Forge materials: after you unlock the Forge (defeat a boss)', 14, 153, C.lavender);
+    // Grupy oferty jako sekcje karty (przygaszony nagłówek z linią).
+    const secW = 266 - 16;
+    sectionTitle(r, `Przedmioty (poz. ${shop.depth})   sklep: poziom ${run.shopLevel}`, 14, 41, secW);
+    sectionTitle(r, 'Usługi i eliksiry', 14, 98, secW);
+    if (this.rows > 2) sectionTitle(r, `Forge: materials and scrolls (you have: stone ${run.mats.stone}, ore ${run.mats.ore})`, 14, 154, secW);
+    else sectionTitle(r, 'Forge materials: after you unlock the Forge (defeat a boss)', 14, 154, secW);
     for (let cy = 0; cy < this.rows; cy++) {
       this.row(cy).forEach((e, cx) => {
         const [x, y] = this.cellPos(cx, cy);
@@ -259,10 +261,12 @@ export class ShopView {
         ly += 11;
       }
       const left = shop.stock[svc ? svc.id : `elixir:${el!.id}`] ?? 0;
-      drawText(g, `Zostało: ${left}`, cx, 160 + OY, C.lavender, { align: 'center' });
+      pill(r, cx, 160 + OY, `Zostało: ${left}`, left > 0 ? C.cyan : C.lavender, 'center');
       if (el) drawText(g, `Kupione eliksiry: ${run.elixirsBought}`, cx, 174 + OY, C.lavender, { align: 'center' });
     }
     if (!avail) return;
-    button(r, DET_X, BTN_Y, DET_W, 16, `Kup za ${price} zł`, { col: run.gold >= price ? C.yellow : C.red, accent: C.gold, pulse: run.gold >= price });
+    // Przycisk główny (BoardUI): wypełniony złotem, gdy stać gracza; inaczej ciemny z czerwonym napisem.
+    const can = run.gold >= price;
+    button(r, DET_X, BTN_Y, DET_W, 16, `Kup za ${price} zł`, can ? { active: true } : { col: C.red });
   }
 }

@@ -1289,12 +1289,15 @@ export class Run {
     this.sustain(h, faith);
   }
 
-  /** Sufit stałego leczenia (ułamek maks. HP na sekundę): niższy na wyższych poziomach map, Udręce i w głębokim Endless. */
-  /** DPS w duże cele (podłoga HP bossa i minibossa, BAL.bossTtk); 0, dopóki gracz nie walczył z elitą. */
+  /**
+   * DPS w duże cele (podłoga HP bossa i minibossa, BAL.bossTtk); 0, dopóki gracz nie walczył z elitą. Miniboss bierze
+   * większy z tego i DPS buildu × `emaFrac` (systems/spawner.ts).
+   */
   bigDps(): number {
     return this.bigTime > BAL.bossTtk.minTime ? this.bigDmg / this.bigTime : 0;
   }
 
+  /** Sufit stałego leczenia (ułamek maks. HP na sekundę): niższy na wyższych poziomach map, Udręce i w głębokim Endless. */
   sustainRate(): number {
     const S = BAL.sustain, ex = this.expedition;
     if (!ex) return Math.max(S.min, S.endless - S.perDepth * Math.max(0, this.depth - S.endlessFrom));

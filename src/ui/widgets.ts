@@ -7,14 +7,73 @@ import { UI, tile } from './theme';
 import { drawSprite } from '../gfx/sprites';
 
 /**
- * Okno (wspólny styl z HUD-em, ui/theme.ts): delikatny cień, płaskie grafitowo-granatowe wypełnienie i jedna cienka ramka
- * w kolorze akcentu. Bez połysku, gradientów i ozdobników w rogach.
+ * Karta (0.64, styl kart z paneli BoardUI): większe zaokrąglenie, miękki cień pod spodem, płaskie wypełnienie, cienka ramka
+ * i jaśniejsza linia przy górnej krawędzi. Kolor ramki tylko ze znaczeniem (rzadkość, stan), domyślnie stalowy.
  */
 export function panel(r: Renderer, x: number, y: number, w: number, h: number, accent: number = UI.border, fill: number = C.navy): void {
   x = Math.round(x); y = Math.round(y);
-  r.withAlpha(0.35, () => r.roundRect(x + 1, y + 2, w, h, UI.radius + 1, C.black));
-  r.withAlpha(0.94, () => r.roundRect(x, y, w, h, UI.radius + 1, fill));
-  r.roundFrame(x, y, w, h, UI.radius + 1, accent, 1);
+  const rad = UI.radius + 2;
+  r.withAlpha(0.3, () => r.roundRect(x, y + 2, w, h, rad, C.black));
+  r.withAlpha(0.95, () => r.roundRect(x, y, w, h, rad, fill));
+  r.withAlpha(0.5, () => r.rect(x + rad, y + 0.75, w - rad * 2, 0.5, C.dgray));
+  r.roundFrame(x, y, w, h, rad, accent, accent === UI.border ? 0.75 : 1);
+}
+
+/**
+ * Pigułka statusu (0.64, BoardUI: „Shipped”, „Delivery failed”): zaokrąglona plakietka z tłem w kolorze statusu (przygaszonym)
+ * i napisem w tym kolorze. Zwraca szerokość (pigułki w rzędzie).
+ */
+export function pill(r: Renderer, x: number, y: number, text: string, col: number, align: 'left' | 'center' | 'right' = 'left'): number {
+  const sc = smallS(), w = Math.round(textWidth(text) * sc + 8), h = sc > 0.75 ? 11 : 10;
+  const px = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  r.withAlpha(0.22, () => r.roundRect(px, y, w, h, h / 2, col));
+  r.withAlpha(0.8, () => r.roundFrame(px, y, w, h, h / 2, col, 0.5));
+  drawText(r.g, text, px + w / 2, y + 0.5, col, { align: 'center', scale: sc });
+  return w;
+}
+
+/** Kafelek liczby (BoardUI „stat card”): mała przygaszona etykieta u góry, duża wartość pod nią, opcjonalny dopisek po prawej. */
+export function statTile(r: Renderer, x: number, y: number, w: number, h: number, labelText: string, value: string, col: number = C.white, note?: string): void {
+  panel(r, x, y, w, h);
+  drawText(r.g, labelText, x + 6, y + 4, C.lavender, { scale: Math.min(smallS(), (w - 10) / Math.max(1, textWidth(labelText))) });
+  drawText(r.g, value, x + 6, y + 13, col, { shadow: C.black, scale: textWidth(value) > w - 10 ? 0.75 : 1 });
+  if (note) drawText(r.g, note, x + w - 5, y + 15, C.lavender, { align: 'right', scale: smallS() });
+}
+
+/**
+ * Zakładki segmentowe (BoardUI „segmented control”): ciemny tor, aktywna zakładka jako jaśniejsza pigułka ze złotą kreską
+ * pod spodem. Prostokąt zakładki do kliknięć: `tabRect` (te same liczby co przy rysowaniu).
+ */
+export function tabs(r: Renderer, x: number, y: number, w: number, h: number, labels: string[], active: number): void {
+  r.withAlpha(0.6, () => r.roundRect(x, y, w, h, h / 2, C.black));
+  labels.forEach((t, i) => {
+    const [tx, ty, tw, th] = tabRect(x, y, w, h, labels.length, i), on = i === active, hot = hovered(tx, ty, tw, th);
+    if (on) { r.roundRect(tx, ty, tw, th, th / 2, C.slate); r.withAlpha(0.9, () => r.rect(tx + th / 2, ty + th - 1, tw - th, 1, C.gold)); }
+    else if (hot) r.withAlpha(0.5, () => r.roundRect(tx, ty, tw, th, th / 2, C.slate));
+    const sc = Math.min(1, (tw - 6) / Math.max(1, textWidth(t)));
+    drawText(r.g, t, tx + tw / 2, ty + Math.round((th - 12 * sc) / 2), on ? C.white : hot ? C.lgray : C.lavender, { align: 'center', scale: sc });
+  });
+}
+
+export function tabRect(x: number, y: number, w: number, h: number, n: number, i: number): [number, number, number, number] {
+  const tw = (w - 4) / n;
+  return [x + 2 + i * tw, y + 1.5, tw, h - 3];
+}
+
+/** Pierścień-wskaźnik (BoardUI „progress ring”): tor w kolorze stali, łuk od góry zgodnie z ruchem wskazówek, zaokrąglone końce. */
+export function ring(r: Renderer, cx: number, cy: number, R: number, w: number, frac: number, col: number): void {
+  const g = r.g;
+  g.lineWidth = w; g.lineCap = 'round';
+  g.strokeStyle = PAL[C.slate]; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
+  if (frac > 0.005) { g.strokeStyle = PAL[col]; g.beginPath(); g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, frac)); g.stroke(); }
+  g.lineCap = 'butt';
+}
+
+/** Nagłówek sekcji w oknie: mała przygaszona etykieta i cienka linia do prawej krawędzi. */
+export function sectionTitle(r: Renderer, text: string, x: number, y: number, w: number): void {
+  drawText(r.g, text, x, y, C.lavender, { scale: smallS() });
+  const tw = textWidth(text) * smallS() + 4;
+  if (w > tw + 4) r.withAlpha(0.6, () => r.rect(x + tw, y + 4, w - tw, 0.5, C.slate));
 }
 
 /**
@@ -119,17 +178,21 @@ export interface ButtonOpts {
   scale?: number;
 }
 
-/** Przycisk: płaski, cienka ramka; pod myszą jaśniejszy, wybrany z ramką w kolorze akcentu. */
+/**
+ * Przycisk (0.64, BoardUI): zaokrąglony; wybrany (główna akcja) wypełniony kolorem akcentu z ciemnym napisem, zwykły ciemny
+ * z cienką ramką, pod myszą jaśniejszy.
+ */
 export function button(r: Renderer, x: number, y: number, w: number, h: number, label: string, o: ButtonOpts = {}): void {
-  const hot = hovered(x, y, w, h), acc = o.accent ?? C.gold;
+  const hot = hovered(x, y, w, h), acc = o.accent ?? C.gold, rad = UI.radius + 1;
   // Wciśnięty pod kursorem: przycisk „siada” o piksel (napis i ramka niżej, ciemniejsze tło).
   if (hot && pointer.down) { y += 1; h -= 1; }
   if (o.active && acc === C.gold) ember(r, x, y, w, h);
-  r.withAlpha(o.active ? 0.95 : 0.85, () => r.roundRect(x, y, w, h, UI.radius, o.active ? C.ddbrown : hot ? C.slate : C.navy));
-  r.roundFrame(x, y, w, h, UI.radius, o.active || hot ? acc : UI.border, o.active ? 1 : UI.line * 1.5);
-  if (o.pulse && !o.active) r.withAlpha(0.35 + 0.35 * Math.sin(performance.now() / 160), () => r.roundFrame(x - 1, y - 1, w + 2, h + 2, UI.radius + 1, C.yellow, 0.75));
-  const sc = o.scale ?? 1;
-  drawText(r.g, label, x + w / 2, y + Math.round((h - 12 * sc) / 2), o.col ?? (o.active || hot ? C.yellow : C.white), { align: 'center', shadow: C.black, scale: sc });
+  r.withAlpha(o.active ? 1 : 0.9, () => r.roundRect(x, y, w, h, rad, o.active ? acc : hot ? C.slate : C.navy));
+  if (!o.active) r.roundFrame(x, y, w, h, rad, hot ? C.lavender : UI.border, UI.line * 1.5);
+  if (o.pulse && !o.active) r.withAlpha(0.35 + 0.35 * Math.sin(performance.now() / 160), () => r.roundFrame(x - 1, y - 1, w + 2, h + 2, rad + 1, C.yellow, 0.75));
+  const sc = o.scale ?? 1, ty = y + Math.round((h - 12 * sc) / 2);
+  if (o.active) drawText(r.g, label, x + w / 2, ty, o.col ?? C.navy, { align: 'center', scale: sc });
+  else drawText(r.g, label, x + w / 2, ty, o.col ?? (hot ? C.white : C.lgray), { align: 'center', shadow: C.black, scale: sc });
 }
 
 /**
@@ -221,18 +284,6 @@ export function bar(r: Renderer, x: number, y: number, w: number, h: number, fra
   if (f > 0) r.roundRect(x, y, Math.max(1, f), h, Math.min(1.5, h / 2), ramp[Math.min(ramp.length - 1, 2)]);
   r.withAlpha(0.4, () => r.roundFrame(x, y, w, h, Math.min(1.5, h / 2), C.black, UI.line));
   if (w >= 60 && h >= 5) r.withAlpha(0.3, () => { for (let i = 1; i < 10; i++) r.rect(x + (w * i) / 10, y + 1, 0.5, h - 2, C.black); });
-}
-
-/** Kursor-strzałka menu (lekko kołysze się w poziomie). */
-export function cursor(r: Renderer, x: number, y: number): void {
-  const bob = Math.floor(performance.now() / 180) % 2;
-  const rows = ['#....', '##...', '#o#..', '#oo#.', '#o#..', '##...', '#....'];
-  rows.forEach((row, yy) => {
-    for (let xx = 0; xx < row.length; xx++) {
-      if (row[xx] === '#') r.rect(x + xx - bob, y + yy, 1, 1, C.black);
-      if (row[xx] === 'o') r.rect(x + xx - bob, y + yy, 1, 1, C.yellow);
-    }
-  });
 }
 
 /**
@@ -338,20 +389,18 @@ export class Menu {
       if (on) {
         // Podświetlenie co najmniej na wysokość litery z ogonkiem (ę, g, j), też przy gęstych listach.
         const hb = Math.max(h, LINE_H + 2), yb = y - (hb - h) / 2;
-        ember(r, x, yb, w, hb, 3);
-        r.withAlpha(0.9, () => r.roundRect(x, yb, w, hb, 3, C.dbrown, C.ddbrown));
-        r.roundFrame(x, yb, w, hb, 3, C.gold, 0.75);
-        r.withAlpha(0.5, () => r.rect(x + 3, yb + 0.5, w - 6, 0.5, C.yellow));
-        cursor(r, x + 6, y + Math.floor((h - 7) / 2));
+        // Aktywny wiersz (0.64, BoardUI: aktywna pozycja menu bocznego): jaśniejsze tło i złoty pasek po lewej.
+        r.withAlpha(0.95, () => r.roundRect(x, yb, w, hb, 3, C.slate));
+        r.roundRect(x + 2, yb + 3, 2, hb - 6, 1, C.gold);
       }
       const ty = y + Math.floor((h - LINE_H) / 2) + 1;
       if (it.value) {
-        drawText(r.g, it.label(), x + 16, ty, on ? C.yellow : C.lgray, { shadow: C.black });
-        drawText(r.g, it.left ? `< ${it.value()} >` : it.value(), x + w - 8, ty, on ? C.white : C.cyan, { align: 'right', shadow: C.black });
+        drawText(r.g, it.label(), x + 10, ty, on ? C.white : C.lgray, { shadow: C.black });
+        drawText(r.g, it.left ? `< ${it.value()} >` : it.value(), x + w - 8, ty, on ? C.yellow : C.cyan, { align: 'right', shadow: C.black });
         return;
       }
       const label = it.left ? `< ${it.label()} >` : it.label();
-      drawText(r.g, label, this.cx, ty, on ? C.yellow : C.lgray, { align: 'center', shadow: C.black });
+      drawText(r.g, label, this.cx, ty, on ? C.white : C.lgray, { align: 'center', shadow: C.black });
     });
   }
 }
@@ -365,4 +414,44 @@ export function slot(r: Renderer, x: number, y: number, s: number, border: numbe
 /** Półprzezroczysta płytka pod tekst (czytelność na ruchliwym tle) — ta sama co w HUD-zie. */
 export function plate(r: Renderer, x: number, y: number, w: number, h: number): void {
   tile(r, x, y, w, h);
+}
+
+/**
+ * Liczba w wierszu (0.64, BoardUI „inline stat”): mała przygaszona etykieta i wartość pełnym rozmiarem obok, w jednej
+ * linii (tam, gdzie nie ma miejsca na kafelek). `align: 'right'` = prawa krawędź w `x`. Zwraca szerokość.
+ */
+export function inlineStat(r: Renderer, x: number, y: number, labelText: string, value: string, col: number = C.white, align: 'left' | 'right' = 'left'): number {
+  const sc = smallS(), lw = textWidth(labelText) * sc, w = lw + 4 + textWidth(value);
+  const x0 = align === 'right' ? x - w : x;
+  drawText(r.g, labelText, x0, y + 2, C.lavender, { scale: sc });
+  drawText(r.g, value, x0 + lw + 4, y, col, { shadow: C.black });
+  return w;
+}
+
+/**
+ * Zakładki segmentowe na ciemnym tle ekranu menu (r.clear(C.black)): pod torem `tabs` granatowa podkładka z cienką ramką,
+ * żeby tor był widoczny. Kliknięcia jak w `tabs`: `tabRect` z tymi samymi liczbami.
+ */
+export function screenTabs(r: Renderer, x: number, y: number, w: number, h: number, labels: string[], active: number): void {
+  r.roundRect(x, y, w, h, h / 2, C.navy);
+  r.roundFrame(x, y, w, h, h / 2, UI.border, 0.75);
+  tabs(r, x, y, w, h, labels, active);
+}
+
+/**
+ * Wiersz tabeli (0.64, BoardUI: listy z wyrównanymi kolumnami): co drugi wiersz z delikatnym tłem, wiersz pod myszą
+ * jaśniejszy (bez rączki kursora: wiersz nie jest klikalny). `clip`: widoczny obszar przewijanej listy (hover tylko w nim).
+ * Zwraca, czy mysz jest nad wierszem.
+ */
+export function rowBg(r: Renderer, x: number, y: number, w: number, h: number, i: number, clip?: readonly [number, number, number, number]): boolean {
+  const hot = inside(pointer.x, pointer.y, x, y, w, h) && (!clip || inside(pointer.x, pointer.y, ...clip));
+  if (hot) r.withAlpha(0.7, () => r.roundRect(x, y, w, h, 2, C.slate));
+  else if (i % 2 === 0) r.withAlpha(0.3, () => r.roundRect(x, y, w, h, 2, C.black));
+  return hot;
+}
+
+/** Nagłówek kolumn tabeli: ciemny pas z przygaszonymi etykietami; kolumna = [napis, x, wyrównanie]. */
+export function tableHead(r: Renderer, x: number, y: number, w: number, cols: [string, number, 'left' | 'right'][]): void {
+  r.withAlpha(0.55, () => r.roundRect(x, y, w, 11, 2, C.black));
+  for (const [t, cx, align] of cols) drawText(r.g, t, cx, y + 1.5, C.lavender, { align, scale: smallS() });
 }

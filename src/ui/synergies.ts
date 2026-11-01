@@ -6,7 +6,7 @@ import { drawSprite } from '../gfx/sprites';
 import { SYNERGIES, SYNERGY_BY_TAG, VERSATILITY, tierOf, type SynergyDef } from '../data/synergies';
 import type { Tag } from '../data/cards';
 import type { Run } from '../game/run';
-import { dim, panel, hovered, backButton, backHit, Scroll } from './widgets';
+import { dim, panel, hovered, backButton, backHit, Scroll, ring, pill } from './widgets';
 import { UI, tile, iconSlot, cornerTag } from './theme';
 
 const OUT = { outline: C.black } as const;
@@ -110,6 +110,8 @@ export class SynergyView {
     const vt = run.versTier, vLines = VERSATILITY.tiers.map((t, k) => wrapText(`${VERSATILITY.thresholds[k]}: ${t.desc}`, (468 - 150) / descS()));
     const vh = Math.max(30, 6 + vLines.flat().length * lh);
     panel(r, 6, y, 468, vh, vt > 0 ? C.pink : C.slate);
+    // Postęp do następnego progu w pierścieniu wokół ikony (BoardUI: pierścień postępu).
+    ring(r, 18, y + 15, 10, 1.5, Math.min(1, run.versCount / VERSATILITY.thresholds[Math.min(vt, VERSATILITY.thresholds.length - 1)]), vt > 0 ? C.pink : C.lavender);
     drawSprite(g, 'syn_all', 18, y + 15);
     drawText(g, VERSATILITY.name, 30, y + 3, vt > 0 ? C.pink : C.white, { shadow: C.black });
     drawText(g, `aktywne synergie: ${run.versCount}`, 30, y + 15, C.lgray);
@@ -123,9 +125,10 @@ export class SynergyView {
         if (!d) continue;
         const x = 6 + (j % 2) * 236, pts = run.tagPts[d.tag], tier = run.synTiers[d.tag] ?? 0;
         panel(r, x, y, 232, rowH, tier > 0 ? C.gold : C.slate);
+        ring(r, x + 12, y + 10, 9, 1.5, tier >= d.thresholds.length ? 1 : pts / nextThreshold(d, tier), tier > 0 ? C.gold : C.lavender);
         drawSprite(g, `tag:${d.tag}`, x + 12, y + 10);
         drawText(g, d.tag, x + 24, y + 3, tier > 0 ? C.yellow : C.white, { shadow: C.black });
-        drawText(g, pts === 1 ? '1 pt' : `${pts} pts`, x + 224, y + 3, tier > 0 ? C.yellow : C.lgray, { align: 'right' });
+        pill(r, x + 225, y + 3, pts === 1 ? '1 pt' : `${pts} pts`, tier > 0 ? C.gold : C.lavender, 'right');
         let ty = y + 14;
         lines[j].forEach((ls, k) => { for (const l of ls) { drawText(g, l, x + 24, ty, k < tier ? C.lime : C.lavender, DESC); ty += lh; } });
       }

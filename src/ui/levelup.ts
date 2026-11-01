@@ -1,14 +1,14 @@
 import { W, type Renderer } from '../core/renderer';
 import { isTouch, type Input } from '../core/input';
 import { C } from '../core/palette';
-import { drawText, wrapText, textWidth, descS } from '../core/font';
+import { drawText, wrapText, textWidth, descS, smallS } from '../core/font';
 import { sfx } from '../core/audio';
 import { drawSprite } from '../gfx/sprites';
 import { RARITIES } from '../data/items';
 import { WEAPON_BY_ID, roleInfo } from '../data/weapons';
 import { generateOptions, offerCount, applyOption, canBanish, optionScore, reachesThreshold, type Option, type Recipe } from '../systems/levelup';
 import type { Run } from '../game/run';
-import { button, dim, inside, slot, cardFrame, cardBadge, cardIcon, REROLL_GUARD } from './widgets';
+import { button, dim, inside, slot, cardFrame, cardBadge, cardIcon, pill, REROLL_GUARD } from './widgets';
 import { hintShowing } from './hints';
 import { label } from './theme';
 import { drawTagGain } from './synergies';
@@ -35,7 +35,10 @@ function drawOptionCard(r: Renderer, run: Run, o: Option, x: number, y: number, 
   cardFrame(r, x, y, CARD_W, CARD_H, warn ? C.red : q ? qCol : evolve || piece ? C.gold : C.slate, selected);
   const augment = o.kind === 'augment';
   const tagCol = q ? RARITIES[q].color : evolve ? C.yellow : isNew ? C.white : augment ? C.cyan : C.lavender;
-  drawText(r.g, piece ? 'Evolution piece!' : o.tag, cx, y + 7, piece ? C.gold : tagCol, { align: 'center', shadow: C.black });
+  // Rodzaj karty jako pigułka statusu (BoardUI) w kolorze jakości / kategorii; za szeroka (polski) zwykłym napisem.
+  const kind = piece ? 'Evolution piece!' : o.tag;
+  if (textWidth(kind) * smallS() + 8 <= CARD_W - 10) pill(r, cx, y + 7, kind, piece ? C.gold : tagCol, 'center');
+  else drawText(r.g, kind, cx, y + 6, piece ? C.gold : tagCol, { align: 'center', shadow: C.black, scale: Math.min(1, (CARD_W - 8) / textWidth(kind)) });
   // Znaczek "Polecane" na górnej krawędzi karty (plakietka zamiast napisu nad kartą, który wchodził na wstęgę tytułu).
   if (recommended) cardBadge(r, cx, y, 'Polecane', C.yellow);
   cardIcon(r, o.icon, cx, y + 36, q ? RARITIES[q].color : evolve || piece ? C.gold : isNew ? C.lgray : augment ? C.cyan : C.dgray);

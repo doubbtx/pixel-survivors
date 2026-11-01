@@ -21,7 +21,7 @@ import {
 } from '../systems/anvil';
 import type { Run } from '../game/run';
 import { drawItemSlot, drawItemCard } from './items';
-import { button, backButton, backHit, Menu, dim, panel, inside } from './widgets';
+import { button, backButton, backHit, Menu, dim, panel, inside, ring, sectionTitle } from './widgets';
 
 const CELL = 24, STEP = 25;
 const GRID_X = 14, EQ_Y = 46, BAG_Y = 80;
@@ -344,8 +344,8 @@ export class AnvilView {
     });
 
     panel(r, 6, 32, 216, 152, this.stage === 'target' ? C.yellow : undefined);
-    drawText(g, 'Założone', GRID_X, 35, C.lavender);
-    drawText(g, `Plecak ${run.bag.length}/${BAL.bagSize}`, GRID_X, 69, C.lavender);
+    sectionTitle(r, 'Założone', GRID_X, 36, 200);
+    sectionTitle(r, `Plecak ${run.bag.length}/${BAL.bagSize}`, GRID_X, 70, 200);
     for (let cy = 0; cy < ROWS; cy++) {
       for (let cx = 0; cx < COLS; cx++) {
         const [x, y] = this.cellPos(cx, cy);
@@ -418,6 +418,10 @@ export class AnvilView {
     if (!s) return;
     const ch = forgeChance(it, this.opts), risks = failRisks(it, this.opts), pct = (v: number) => `${Math.round(v * 100)}%`;
     const parts = [pct(ch.base), ch.pity && `litość ${pct(ch.pity)}`, ch.dragon && `smok ${pct(ch.dragon)}`, ch.risk && `ryzyko ${pct(ch.risk)}`].filter(Boolean);
+    // Szansa w pierścieniu (BoardUI: pierścień postępu) po lewej stronie kowadła; kolor jak linia szansy pod spodem.
+    const chCol = ch.total >= 0.5 ? C.lime : ch.total >= 0.2 ? C.yellow : C.salmon;
+    ring(r, x + 32, 76, 13, 3.5, ch.total, chCol);
+    drawText(g, pct(ch.total), x + 32, 71, chCol, { align: 'center', shadow: C.black });
     drawText(g, `Szansa: ${parts.join(' + ')}${parts.length > 1 ? ` = ${pct(ch.total)}` : ''}`, x + 8, 103, ch.total >= 0.5 ? C.lime : ch.total >= 0.2 ? C.yellow : C.salmon);
     const mat = MAT_BY_ID[s.mat], have = run.mats[s.mat];
     drawSprite(g, mat.icon, x + 15, 120);
@@ -443,6 +447,6 @@ export class AnvilView {
       wrapText(`Próg +${tier.at} ${tier.name}: ${desc}`, DET_W - 16).slice(0, 2).forEach((l, k) => drawText(g, l, x + 8, 187 + k * 10, C.cyan));
     }
     const block = forgeBlock(run, it, this.opts);
-    button(r, x + 40, FORGE_BTN_Y, DET_W - 80, 16, this.hammer > 0 ? 'Kucie...' : block ?? (this.confirmRisk ? '[Enter] Na pewno?' : '[Enter] Kuj'), { accent: this.opts.risk ? C.red : C.gold, col: block ? C.salmon : undefined, pulse: !block && this.hammer <= 0 });
+    button(r, x + 40, FORGE_BTN_Y, DET_W - 80, 16, this.hammer > 0 ? 'Kucie...' : block ?? (this.confirmRisk ? '[Enter] Na pewno?' : '[Enter] Kuj'), { accent: this.opts.risk ? C.red : C.gold, col: block ? C.salmon : undefined, active: !block && this.hammer <= 0 });
   }
 }

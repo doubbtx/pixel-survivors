@@ -97,12 +97,15 @@ export class RelicPickView {
     this.list.forEach((rel, i) => {
       const x = this.cardX(i), y = CARD_Y - (i === this.sel ? 3 : 0), cx = x + CARD_W / 2;
       cardFrame(r, x, y, CARD_W, CARD_H, this.pending ? C.salmon : C.gold, i === this.sel);
+      r.withAlpha(0.18, () => r.circle(cx, y + 22, 17, C.gold, true));
       drawSprite(g, rel.icon, cx, y + 22, { scale: 2 });
       let ly = y + 42;
       for (const l of wrapText(rel.name, CARD_W - 12)) { drawText(g, l, cx, ly, C.yellow, { align: 'center', shadow: C.black }); ly += 11; }
       ly += 3;
       const tw = (CARD_W - 14) / descS(), lh = descLH();
       for (const l of wrapText(rel.desc, tw)) { drawText(g, l, cx, ly, C.lime, { ...DESC, align: 'center' }); ly += lh; }
+      // Zaleta i cena rozdzielone cienką linią (dwie grupy treści na jednej karcie).
+      r.withAlpha(0.5, () => r.rect(x + 14, ly + 1, CARD_W - 28, 0.5, C.slate));
       ly += 3;
       for (const l of wrapText(rel.drawback, tw)) { drawText(g, l, cx, ly, C.salmon, { ...DESC, align: 'center' }); ly += lh; }
       drawText(g, String(i + 1), x + 8, y + CARD_H - 14, C.lavender);

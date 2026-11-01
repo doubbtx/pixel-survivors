@@ -1,6 +1,6 @@
 import { BAL } from '../data/balance';
 import { WEAPON_BY_ID } from '../data/weapons';
-import { ENEMIES } from '../data/enemies';
+import { ENEMIES, BIOME_MINIBOSS } from '../data/enemies';
 import type { App, Screen } from '../ui/app';
 import type { Action } from '../core/input';
 import type { Mode, TelemetrySample } from '../game/run';
@@ -21,7 +21,7 @@ import { spawnEnemy } from '../systems/spawner';
  * i skrzynie, używa umiejętności, losowo wybiera awanse, karty i węzły mapy. Raport w `window.__bot` (dla Playwright):
  * przebieg runów, błędy, najwolniejsze kroki, odwiedzone stany i brakujące tłumaczenia.
  */
-export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; relics?: string[]; ult?: string; ultUses?: number; close?: number; parries?: number; tl?: TelemetrySample[]; maps?: BotMap[]; bosses?: number[]; statOnly?: number; offers?: number; statOffers?: number; sits?: { id: string; result: string; dur: number; taken: number }[]; dmg?: [string, number][]; wpn?: string[]; elem?: { ep: number; rp: number; rcd: number; any: number; cards: string[] } }
+export interface BotRun { hero: string; mode: Mode; result: string; time: number; level: number; kills: number; depth: number; act: number; byId?: Record<string, number>; build?: string[]; relics?: string[]; ult?: string; ultUses?: number; close?: number; parries?: number; tl?: TelemetrySample[]; maps?: BotMap[]; bosses?: number[]; minis?: number[]; statOnly?: number; offers?: number; statOffers?: number; sits?: { id: string; result: string; dur: number; taken: number }[]; dmg?: [string, number][]; wpn?: string[]; elem?: { ep: number; rp: number; rcd: number; any: number; cards: string[] } }
 /** Mapa w raporcie: czas, cel, rodzaj węzła, szczyt wrogich pocisków, najniższe HP (ułamek), udział pocisków w otrzymanych obrażeniach, `dead` = run skończył się na niej;
  *  akt, przerwy na awans w walce (`lv`, najwięcej w 4 s: `w4`), oferty kart (`prism` = pryzmatyczne), przedmioty Epickie+ w oknie łupu. */
 export interface BotMap { t: number; goal: string; node?: string; bul?: number; hp?: number; shot?: number; dead?: boolean; a?: number; lv?: number; w4?: number; cards?: number; prism?: number; epic?: number }
@@ -89,6 +89,9 @@ export class Bot {
   private statOffers = 0;
   private lastOffer: unknown = null;
   private bosses: number[] = [];
+  /** Czas życia minibossów mapy (bez Polowań): uid → sekundy, zakończone w `minis`. */
+  private miniT = new Map<number, number>();
+  private minis: number[] = [];
   private lastLt = 0;
   private bossT = 0;
   /** Nagrody na mapie: chwile otwarcia okien awansu (czas runu), liczba ofert kart, pryzmatycznych, przedmiotów Epickich+. */
@@ -217,6 +220,8 @@ export class Bot {
         if (this.hooked !== run) this.hookHurt(run);
         if (run.boss && run.boss.hp > 0) this.bossT += dt;
         else if (this.bossT > 0) { this.bosses.push(Math.round(this.bossT)); this.bossT = 0; }
+        if (run.levelInfo.objective.kind !== 'hunt') for (const e of run.enemies.items) if (!e.dead && BIOME_MINIBOSS.includes(e.def.id)) this.miniT.set(e.uid, (this.miniT.get(e.uid) ?? 0) + dt);
+        for (const [uid, t] of this.miniT) if (!run.enemies.items.some((e: any) => e.uid === uid && !e.dead)) { this.minis.push(Math.round(t * 10) / 10); this.miniT.delete(uid); } // eslint-disable-line @typescript-eslint/no-explicit-any
         if (this.kit.length) {
           if (!run.weapons.some((w: any) => this.kit.includes(w.def.id))) { // eslint-disable-line @typescript-eslint/no-explicit-any
             run.weapons.length = 0;
@@ -327,14 +332,14 @@ export class Bot {
     if (result !== 'gallery') this.pushMap(result === 'dead');
     this.report.runs.push({
       hero: run.hero.id, mode: this.mode, result, time: Math.round(run.totalTime), level: run.level, kills: run.kills,
-      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, sits: run.sitLog, maps: this.maps, bosses: this.bosses, statOnly: this.statOnly, offers: this.offers, statOffers: this.statOffers, relics: [...run.relics], ult: run.altUlt ? 'alt' : 'base', ultUses: run.ultUses, close: Math.round((run.closeHits / Math.max(1, run.hitsN)) * 100) / 100, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
+      depth: run.depth, act: run.expedition?.act ?? 0, byId: { ...this.app.save.bestiary }, parries: run.cardState['sec.parry'] ?? 0, tl: run.telemetry, sits: run.sitLog, maps: this.maps, bosses: this.bosses, minis: this.minis, statOnly: this.statOnly, offers: this.offers, statOffers: this.statOffers, relics: [...run.relics], ult: run.altUlt ? 'alt' : 'base', ultUses: run.ultUses, close: Math.round((run.closeHits / Math.max(1, run.hitsN)) * 100) / 100, build: [...run.weapons.map((w: any) => w.def.id), ...run.passives.map((p: any) => p.id + (p.evo ? '*' : ''))], // eslint-disable-line @typescript-eslint/no-explicit-any
       // Udział źródeł w zadanych obrażeniach i nazwy broni: ile daje broń, a ile wybuchy i reakcje.
       dmg: [...(run.dmgBySource as Map<string, number>).entries()].sort((a, b) => b[1] - a[1]).map(([k, v]): [string, number] => [k, Math.round((v / Math.max(1, run.dmgTotal)) * 1000) / 1000]).filter((x) => x[1] >= 0.002),
       wpn: run.weapons.map((w: any) => w.def.name), // eslint-disable-line @typescript-eslint/no-explicit-any
       elem: { ep: Math.round(run.stats.elemPower * 100) / 100, rp: run.flag('reactPower'), rcd: run.flag('reactCd'), any: run.flag('elemChance.any'), cards: run.cards.map((c: any) => c.id + (c.stacks > 1 ? 'x' + c.stacks : '')) }, // eslint-disable-line @typescript-eslint/no-explicit-any
     });
     this.steps = [];
-    this.maps = []; this.bosses = []; this.lastLt = 0; this.bulMax = 0; this.hpMin = 1; this.hurtShot = this.hurtAll = 0; this.bossT = 0; this.statOnly = this.offers = this.statOffers = 0;
+    this.maps = []; this.bosses = []; this.minis = []; this.miniT.clear(); this.lastLt = 0; this.bulMax = 0; this.hpMin = 1; this.hurtShot = this.hurtAll = 0; this.bossT = 0; this.statOnly = this.offers = this.statOffers = 0;
     this.app.save.slots[this.mode] = null;
     this.report.unlocks = [...this.app.save.unlocks];
     this.startNext();

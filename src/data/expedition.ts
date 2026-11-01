@@ -29,7 +29,7 @@ export interface NodeInfo {
 
 export const NODE_INFO: Record<NodeKind, NodeInfo> = {
   fight: { name: 'Mapa', icon: 'ex_fight', color: C.lgray, desc: 'Krótka walka bez bossa. Nagroda: złoto i karta.' },
-  elite: { name: 'Mapa elit', icon: 'ex_elite', color: C.orange, desc: 'Walka z częstymi elitami i minibossem. Nagroda: skrzynia elity i karta jak za elitę.' },
+  elite: { name: 'Mapa elit', icon: 'ex_elite', color: C.orange, desc: 'A fight full of elites and a miniboss, much harder than a normal map: risky early on or with a weak build. Reward: an elite chest and an elite card.' },
   dungeon: { name: 'Loch', icon: 'ex_dungeon', color: C.pink, desc: 'Arena z falami wrogów i strażnikiem. Nagroda: dwie skrzynie i złoto.' },
   treasure: { name: 'Skarb', icon: 'ex_chest', color: C.yellow, desc: 'Skrzynia z przedmiotem wysokiej jakości, bez walki.' },
   shop: { name: 'Sklep', icon: 'ex_shop', color: C.gold, desc: 'Sklep z przedmiotami, usługami i eliksirami.' },

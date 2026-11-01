@@ -12,7 +12,7 @@ import { RARITIES } from '../data/items';
 import { ELEMENTS, WEAPON_ELEMENT } from '../data/elements';
 import { passiveEvolves } from '../systems/levelup';
 import type { App, Screen } from './app';
-import { button, backButton, backHit, panel, slot, inside, Scroll, titleBar } from './widgets';
+import { backButton, backHit, panel, slot, inside, Scroll, titleBar, screenTabs, tabRect } from './widgets';
 import { lockText } from '../data/unlocks';
 
 /** Wpis księgi: przepis z ikon (składniki → wynik), tytuł, sposób zdobycia i opis. */
@@ -116,7 +116,6 @@ function upgradePage(): Page {
 
 const PAGES: Page[] = [weaponPage(), passivePage(), fusionPage(), abilityPage(), upgradePage()];
 const AREA = [12, 54, W - 24, H - 84] as const;
-const TAB_W = Math.floor((W - 20) / PAGES.length) - 3;
 const S = 18;
 
 /**
@@ -130,10 +129,6 @@ export class CodexScreen implements Screen {
 
   constructor(private readonly app: App, private readonly back: Screen) {}
 
-  private tabX(i: number): number {
-    return 10 + i * (TAB_W + 3);
-  }
-
   update(): void {
     const inp = this.app.input, n = PAGES.length;
     if (inp.pressed('back') || inp.pressed('pause') || backHit(inp)) { this.app.go(this.back); return; }
@@ -142,7 +137,7 @@ export class CodexScreen implements Screen {
     if (inp.pressed('left')) { this.page = (this.page - 1 + n) % n; sfx.play('select'); }
     if (inp.pressed('right') || inp.pressed('confirm') || inp.pressed('inventory')) { this.page = (this.page + 1) % n; sfx.play('select'); }
     if (inp.pressed('click')) {
-      PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, this.tabX(i), 30, TAB_W, 16)) { this.page = i; sfx.play('select'); } });
+      PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, ...tabRect(10, 30, W - 20, 16, PAGES.length, i))) { this.page = i; sfx.play('select'); } });
     }
     if (this.page !== before) this.scroll.reset();
   }
@@ -166,7 +161,7 @@ export class CodexScreen implements Screen {
     const r = this.app.r, g = r.g, pg = PAGES[this.page];
     r.clear(C.black);
     titleBar(r, 'Evolution book', 6);
-    PAGES.forEach((p, i) => button(r, this.tabX(i), 30, TAB_W, 16, `${p.title} (${p.entries.length})`, { active: i === this.page, accent: C.gold }));
+    screenTabs(r, 10, 30, W - 20, 16, PAGES.map((p) => `${p.title} (${p.entries.length})`), this.page);
     panel(r, 10, 52, W - 20, H - 80);
     const oy = this.scroll.begin(r, ...AREA), x = 20, tx = x + 3 * S + 2 * 8 + 8, tw = (W - tx - 20) / descS(), lh = descLH();
     let y = 60 - oy;

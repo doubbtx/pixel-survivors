@@ -3,7 +3,7 @@ import { C } from '../core/palette';
 import { drawText, wrapText, textWidth, descS } from '../core/font';
 import { sfx } from '../core/audio';
 import type { App, Screen } from './app';
-import { moreArrow, button, backButton, backHit, panel, inside, Scroll, titleBar } from './widgets';
+import { moreArrow, backButton, backHit, panel, inside, Scroll, titleBar, screenTabs, tabRect } from './widgets';
 
 /** Strony pomocy: tytuł i akapity (pierwsze słowa przed dwukropkiem wyróżnione). */
 const PAGES: { title: string; lines: string[] }[] = [
@@ -130,9 +130,6 @@ const PAGES: { title: string; lines: string[] }[] = [
 /** Przewijany obszar strony (x, y, w, h) w ramce pod zakładkami. */
 const AREA = [12, 54, W - 24, H - 84] as const;
 
-/** Szerokość zakładki: wszystkie strony w jednym rzędzie. */
-const TAB_W = Math.floor((W - 20) / PAGES.length) - 3;
-
 /**
  * Pomoc (menu główne i pauza): strony ze sterowaniem i zasadami. Strzałki lewo/prawo albo klik w zakładkę: strona, góra/dół: przewijanie, Esc: wróć.
  */
@@ -141,10 +138,6 @@ export class HelpScreen implements Screen {
   private scroll = new Scroll();
 
   constructor(private readonly app: App, private readonly back: Screen) {}
-
-  private tabX(i: number): number {
-    return 10 + i * (TAB_W + 3);
-  }
 
   update(): void {
     const inp = this.app.input, n = PAGES.length;
@@ -155,7 +148,7 @@ export class HelpScreen implements Screen {
     if (inp.pressed('left')) { this.page = (this.page - 1 + n) % n; sfx.play('select'); }
     if (inp.pressed('right') || inp.pressed('confirm')) { this.page = (this.page + 1) % n; sfx.play('select'); }
     if (inp.pressed('click')) {
-      PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, this.tabX(i), 30, TAB_W, 16)) { this.page = i; sfx.play('select'); } });
+      PAGES.forEach((_, i) => { if (inside(inp.mouse.x, inp.mouse.y, ...tabRect(10, 30, W - 20, 16, PAGES.length, i))) { this.page = i; sfx.play('select'); } });
     }
     if (this.page !== before) this.scroll.reset();
   }
@@ -164,10 +157,7 @@ export class HelpScreen implements Screen {
     const r = this.app.r, g = r.g;
     r.clear(C.black);
     titleBar(r, 'Pomoc', 6);
-    PAGES.forEach((p, i) => {
-      const on = i === this.page;
-      button(r, this.tabX(i), 30, TAB_W, 16, p.title, { active: on, accent: C.gold });
-    });
+    screenTabs(r, 10, 30, W - 20, 16, PAGES.map((p) => p.title), this.page);
     panel(r, 10, 52, W - 20, H - 80);
     // Strona, która nie mieści się w ramce: mniejszym tekstem, a przy dużym tekście (Ustawienia) przewijana.
     const lines = PAGES[this.page].lines;

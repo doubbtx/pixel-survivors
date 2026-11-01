@@ -14,7 +14,7 @@ import {
   type MapNode, TORMENT, type NodeKind } from '../data/expedition';
 import type { Run } from '../game/run';
 import { fmt, hpText } from '../util/format';
-import { panel, inside, hovered, button, Scroll } from './widgets';
+import { panel, inside, hovered, button, Scroll, pill } from './widgets';
 import { tile, iconSlot, UI } from './theme';
 import { CHUNK, groundChunk, groundBase, groundFrame } from '../gfx/ground';
 import { drawElemMark } from '../gfx/elemmark';
@@ -259,9 +259,7 @@ export class ExpeditionMapView {
     const bname = ex.voidKey && !secretAct ? `${biome.name}   Klucz Pustki` : biome.name, bx = MAP_X + 4 + X.acts * 8;
     drawText(g, bname, bx, 6, ex.voidKey ? C.hotpink : C.lavender);
     // Ukończone mapy: plakietka obok nazwy biomu.
-    const mt = `mapy ${ex.cleared}`, mw = textWidth(mt) * smallS() + 8, mx = bx + textWidth(bname) + 5;
-    tile(r, mx, 7, mw, 10, C.lgray);
-    drawText(g, mt, mx + mw / 2, 7.5, C.lgray, { align: 'center', scale: smallS() });
+    pill(r, bx + textWidth(bname) + 5, 7, `mapy ${ex.cleared}`, C.lgray);
     // Prawa strona nagłówka: plakietki stanu wyprawy.
     const bless = ex.blessing ? EX_BLESSINGS.find((b) => b.id === ex.blessing!.id) : null;
     // Esencja: nagrody modyfikatorów ukończonych map zwiększają esencję na koniec wyprawy (BAL.expedition.rewardEssence).
@@ -279,8 +277,7 @@ export class ExpeditionMapView {
       const w = textWidth(t) * smallS() + 8;
       cx -= w;
       if (cx < W / 2 + 90) break;
-      tile(r, cx, 7, w, 10, col);
-      drawText(g, t, cx + w / 2, 7.5, col, { align: 'center', scale: smallS() });
+      pill(r, cx, 7, t, col);
       if (help && hovered(cx, 7, w, 10)) tip = { text: help, x: cx + w };
       cx -= 3;
     }
@@ -389,7 +386,7 @@ export class ExpeditionMapView {
       const n = ex.torment ?? 0, open = this.tormentOpen();
       button(r, TOR_X, BTN_Y, TOR_W, BTN_H, n ? `${tr('Torment')} ${n}/${ex.tormentMax}${open ? ' [T]' : ''}` : `${tr('Torment')}: ${tr('off')}${open ? ' [T]' : ''}`, { accent: C.red, col: n ? C.salmon : C.lavender, active: n > 0, scale: smallS() });
     }
-    BTNS.forEach((b, i) => button(r, btnX(i), BTN_Y, b.w, BTN_H, b.label, b.act === 'go' ? { accent: C.gold, col: C.yellow, pulse: target !== undefined && !ex.offer, scale: smallS() } : { scale: smallS() }));
+    BTNS.forEach((b, i) => button(r, btnX(i), BTN_Y, b.w, BTN_H, b.label, b.act === 'go' ? (target !== undefined && !ex.offer ? { active: true, scale: smallS() } : { col: C.lavender, scale: smallS() }) : { scale: smallS() }));
     if (ex.offer) { this.renderOffer(r); return; }
     const [drow, dlane] = this.peek ?? [cur + 1, target];
     if (dlane === undefined) return;
@@ -406,7 +403,7 @@ export class ExpeditionMapView {
       drawText(g, m.name ?? kind.name, x0 + 26, y0, m.kind === 'boss' ? kind.color : rar.color, { shadow: C.black });
       const sub = m.kind === 'boss' ? `${kind.name}: ${lv.bossName}` : `${kind.name}, ${rar.name.toLowerCase()}`;
       drawText(g, sub, x0 + 26, y0 + 11, C.lavender);
-      if (this.peek) drawText(g, 'preview', x0 + 32 + textWidth(sub), y0 + 11, C.cyan);
+      if (this.peek) pill(r, x0 + 32 + textWidth(sub), y0 + 12, 'preview', C.cyan);
       const goal = lv.dungeon ? `Fale lochu: ${lv.dungeonKind === 'vault' ? BAL.secretsMap.vaultWaves : BAL.events.dungeonWaves}` : `Cel: ${objectiveLabel(lv.objective)}`;
       drawText(g, `${goal}   głębokość ${lv.depth}`, x0 + 26, y0 + 22, C.lgray);
       // Modyfikatory (ryzyko) po lewej: „nazwa: opis” zawijane, przewijane przy wielu modyfikatorach albo dużym tekście.
@@ -425,8 +422,8 @@ export class ExpeditionMapView {
       const sc = m.script ? SCRIPT_BY_ID[m.script] : null;
       if (sc) para(`${tr('Plan')}: ${tr(sc.name)}. ${tr(sc.desc)}`, C.yellow);
       if (m.eliteMods) para(`Elites: ${m.eliteMods.map((k) => tr(ELITE_MODS[k].name)).join(' + ')}`, C.orange);
-      // Węzły-wydarzenia: opis zasad (czym różnią się od zwykłej mapy) po informacjach, które zależą od buildu.
-      if (m.kind === 'ambush' || m.kind === 'hunt' || m.kind === 'vault') para(kind.desc, kind.color);
+      // Węzły-wydarzenia i mapa elit (0.64: ostrzeżenie o trudności): opis zasad po informacjach, które zależą od buildu.
+      if (m.kind === 'ambush' || m.kind === 'hunt' || m.kind === 'vault' || m.kind === 'elite') para(kind.desc, kind.color);
       for (const mod of mods) {
         wrapText(`${mod.name}: ${mod.desc}`, (aw - 6) / descS()).forEach((l, i) => {
           drawText(g, l, ax, my, C.lgray, DESC);
@@ -467,7 +464,7 @@ export class ExpeditionMapView {
           if (i > (this.run.expedition!.maxTier ?? 3)) {
             r.withAlpha(0.5, () => r.roundRect(bx, by, TIER_W, TIER_H, UI.radius, C.black));
             drawText(g, `${i + 1} ${rr.name}`, bx + TIER_W / 2, by + 3.5, C.lavender, { align: 'center', ...SMALL });
-            drawText(g, 'locked', bx + TIER_W / 2, by + TIER_H + 2, C.lavender, { align: 'center', ...SMALL });
+            pill(r, bx + TIER_W / 2, by + TIER_H + 1.5, 'locked', C.lavender, 'center');
             return;
           }
           // Akt w toku: poziom zablokowany (wybór tylko przed pierwszym węzłem aktu), inne poziomy przygaszone.
@@ -493,7 +490,7 @@ export class ExpeditionMapView {
       if (rew > 0) drawText(g, `Nagroda: +${rew}% łupu i jakości, +${Math.round(rew * X.rewardEssence)}% esencji`, rx, y0 + 58, C.gold, { align: 'right', ...SMALL });
     } else {
       drawText(g, kind.name, x0 + 26, y0, kind.color, { shadow: C.black });
-      if (this.peek) drawText(g, 'preview', x0 + 32 + textWidth(kind.name), y0, C.cyan);
+      if (this.peek) pill(r, x0 + 32 + textWidth(kind.name), y0 + 1, 'preview', C.cyan);
       wrapText(kind.desc, 300).forEach((l, i) => drawText(g, l, x0 + 26, y0 + 12 + i * 11, C.lgray));
       drawText(g, `Głębokość ${depthAt(ex.act, drow)}`, MAP_X + MAP_W - 8, y0, C.lavender, { align: 'right' });
     }

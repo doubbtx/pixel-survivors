@@ -548,10 +548,18 @@ export function rollRarity(depth: number, lvl: number, source: CardSource, luck 
   return 'silver';
 }
 
+/**
+ * Klątwy, które razem zostawiają bohatera na stałe na 1 HP (utrata HP bez leczenia): karta z jedną flagą nie trafia do
+ * oferty, gdy run ma już drugą (z karty albo z mapy, np. Pustka blokuje leczenie).
+ */
+const CURSE_CLASH: [string, string][] = [['hpDrain', 'noHeal']];
+const clashes = (run: Run, c: CardDef) => CURSE_CLASH.some(([a, b]) => (c.flags?.[a] && run.flag(b) > 0) || (c.flags?.[b] && run.flag(a) > 0));
+
 /** Karty, które można teraz wylosować (pasujący bohater i ultimate; unikalne tylko raz; bez kart zbanowanych w kolekcji). */
 export function cardPool(run: Run, rarity: Rarity, exclude: string[] = []): CardDef[] {
   return CARDS.filter((c) =>
     c.rarity === rarity &&
+    !clashes(run, c) &&
     !run.cardBans.has(c.id) &&
     (!c.unlock || run.unlocked.has(c.unlock)) &&
     (!CARD_LOCK[c.id] || run.content.has(CARD_LOCK[c.id])) &&

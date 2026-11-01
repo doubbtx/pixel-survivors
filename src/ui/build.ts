@@ -13,7 +13,7 @@ import { BAL } from '../data/balance';
 import { buildElements } from '../systems/tasks';
 import { bonusLines } from '../data/upgrades';
 import type { Run } from '../game/run';
-import { dim, panel, slot, inside, hovered, button, backButton, backHit, Scroll } from './widgets';
+import { dim, panel, slot, inside, hovered, button, backButton, backHit, Scroll, pill, sectionTitle } from './widgets';
 
 const CELL = 22, STEP = 26, GX = 16, WY = 50, PY = 116, COLS = 6;
 const DX = 186, SMALL: { readonly scale: number } = { get scale() { return smallS(); } };
@@ -104,8 +104,8 @@ export class BuildView {
     dim(r);
     drawText(g, 'Bronie i pasywki', W / 2, 6, C.yellow, { align: 'center', scale: 2, outline: C.black });
     panel(r, 6, 34, DX - 12, H - 66);
-    drawText(g, 'Bronie', GX, 38, C.lavender);
-    drawText(g, 'Pasywki', GX, PY - 12, C.lavender);
+    sectionTitle(r, 'Bronie', GX, 39, DX - 32);
+    sectionTitle(r, 'Pasywki', GX, PY - 11, DX - 32);
     const nw = run.weapons.length;
     for (let i = 0; i < this.count; i++) {
       const [x, y] = this.cellPos(i), w = run.weapons[i], p = run.passives[i - nw];
@@ -135,7 +135,8 @@ export class BuildView {
     drawText(g, `${d.fused ? 'Fuzja' : d.evolved ? 'Ewolucja' : `Poziom ${w.level}/${maxLevel(d)}`}${el ? `   ${ELEMENTS[el].name}` : ''}`, x + 28, y + 11, C.lavender);
     y += 26;
     const text = (s: string, col: number = C.lgray) => { for (const l of wrapText(s, tw)) { drawText(g, l, x, y, col, DESC); y += descLH(); } };
-    const head = (s: string, col: number) => { y += 3; drawText(g, s, x, y, col); y += 11; };
+    // Nagłówek grupy: kolor ze znaczeniem (fuzja / ewolucja) i cienka linia do prawej krawędzi.
+    const head = (s: string, col: number) => { y += 3; drawText(g, s, x, y, col); r.withAlpha(0.6, () => r.rect(x + textWidth(s) + 4, y + 5, W - DX - 30 - textWidth(s), 0.5, C.slate)); y += 11; };
     text(d.desc, C.white);
     const ri = roleInfo(d.role);
     text(ri.desc, ri.color);
@@ -172,7 +173,7 @@ export class BuildView {
       drawText(g, into.name, x + 86, y, C.yellow, SMALL);
       // Rola ewolucji (warianty mogą iść w bossa albo w tłum).
       const er = roleInfo(into.role);
-      drawText(g, er.name, x + 90 + textWidth(into.name) * SMALL.scale, y, er.color, SMALL);
+      pill(r, x + 90 + textWidth(into.name) * SMALL.scale, y - 0.5, er.name, er.color);
       drawText(g, `${has ? 'masz' : 'brak'}: ${pas.name}${maxed ? '' : `, broń: poziom ${maxLevel(d)}`}`, x + 86, y + 9, has ? C.lime : C.salmon, SMALL);
       y += 22;
     });

@@ -108,6 +108,9 @@ export function enterDungeon(run: Run, kind: DungeonKind): void {
   run.enemies.clear();
   run.bullets.clear();
   run.mapObjects = [];
+  // Zapowiedź sytuacji przepada (0.64): w lochu się nie odlicza, więc jej czerwona strzałka wisiała przez cały loch
+  // i wskazywała ścianę areny.
+  run.situation = null;
   // Polowanie: miniboss znika razem ze światem mapy — pojawi się ponownie po powrocie.
   if (run.levelInfo.objective.kind === 'hunt' && !run.huntKilled) run.minibossDone = false;
   run.dungeon = { rx: p.x, ry: p.y, cx: p.x + 100000, cy: p.y, wave: 0, cleared: false, kind };
@@ -203,7 +206,10 @@ export function updateEvents(run: Run, dt: number): void {
         grantMat(run, 'ore', BAL.forge.dungeonOre);
         for (let i = 0; i < 20; i++) run.spawnPickup(d.cx + rng.range(-30, 30), d.cy + rng.range(-30, 30), 'coin', 1);
         if (run.levelInfo.dungeon) { run.clearObjective(); return; }
-        run.mapObjects.push({ kind: 'exit', x: d.cx, y: d.cy - 40, blessing: 0, charge: 0, life: Infinity });
+        // Portal obok skrzyń, po stronie dalszej od gracza (0.64, tester: portal 40 nad środkiem stał pod górnym blokiem HUD-u,
+        // więc nie było go widać ani nie było strzałki — „na ekranie”). Z boku zostaje na środku wysokości ekranu.
+        const side = p.x > d.cx ? -1 : 1;
+        run.mapObjects.push({ kind: 'exit', x: d.cx + side * BAL.events.exitDx, y: d.cy, blessing: 0, charge: 0, life: Infinity });
         run.showBanner(d.kind === 'barrow' ? 'Zapomniany Król pokonany! Portal powrotny' : 'Loch oczyszczony! Skarb i portal powrotny');
         sfx.play('levelup');
       }
